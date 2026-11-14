@@ -14,6 +14,9 @@ export class InputController {
     getTargetedBlock,
     harvestCrop,
     isRoverActive = () => false,
+    isGymActive = () => false,
+    onGymAction = () => {},
+    onGymLook = () => {},
     onInteract = () => {},
     onRoverAction = () => {},
     onToggleShield = () => {},
@@ -42,6 +45,9 @@ export class InputController {
     this.getTargetedBlock = getTargetedBlock;
     this.harvestCrop = harvestCrop;
     this.isRoverActive = isRoverActive;
+    this.isGymActive = isGymActive;
+    this.onGymAction = onGymAction;
+    this.onGymLook = onGymLook;
     this.onInteract = onInteract;
     this.onRoverAction = onRoverAction;
     this.onRoverLook = onRoverLook;
@@ -156,6 +162,15 @@ export class InputController {
 
   _handleTouchAction(action, button, pointerId) {
     if (!this.isTouchMode || !this.isLocked || this.survival.isDead || this.hud.isInventoryOpen || this.isStationOpen?.()) return;
+
+    if (this.isGymActive?.()) {
+      if (action === 'jump' || action === 'mine' || action === 'use') {
+        this.onGymAction?.();
+      } else if (action === 'interact') {
+        this.onInteract?.();
+      }
+      return;
+    }
 
     if (action === 'jump' || action === 'mine') {
       this.touchHeldActions.set(pointerId, action);
@@ -383,6 +398,10 @@ export class InputController {
         this.onRoverLook(e.movementX, e.movementY);
         return;
       }
+      if (this.isGymActive?.()) {
+        this.onGymLook?.(e.movementX, e.movementY);
+        return;
+      }
       applyMouseLook(this.player, e.movementX, e.movementY, this.isZoomed);
     });
 
@@ -392,6 +411,19 @@ export class InputController {
       if (this.isMissionModalOpen()) {
         if (e.code === 'KeyF' && !e.repeat) this.onInteract();
         if (e.code === 'KeyC' && !e.repeat) this.onToggleCrewPanel();
+        return;
+      }
+      if (this.isGymActive?.()) {
+        if (e.code === 'Space' && !e.repeat) {
+          e.preventDefault();
+          this.onGymAction?.();
+        } else if (e.code === 'KeyF' && !e.repeat) {
+          e.preventDefault();
+          this.onInteract?.();
+        } else if (e.code === 'KeyT' && !e.repeat) {
+          this.sky.advanceTime(1.5);
+          this.hud.showToast('Time advanced (+1h 30m on Mars)');
+        }
         return;
       }
       if (this.hud.isInventoryOpen && e.code !== 'KeyE') return;
@@ -491,6 +523,11 @@ export class InputController {
     window.addEventListener('mousedown', (e) => {
       if (!this.isLocked || this.survival.isDead || this.isRoverActive()) return;
 
+      if (this.isGymActive?.()) {
+        if (e.button === 0) this.onGymAction?.();
+        return;
+      }
+
       const interaction = this.getInteraction?.();
       if (interaction && ['treadmill', 'bike', 'medical'].includes(interaction.type) && (e.button === 0 || e.button === 2)) {
         this.onInteract?.();
@@ -540,6 +577,7 @@ export class InputController {
       const boundedDx = Math.max(-100, Math.min(100, dx));
       const boundedDy = Math.max(-100, Math.min(100, dy));
       if (this.isRoverActive()) this.onRoverLook(boundedDx, boundedDy);
+      else if (this.isGymActive?.()) this.onGymLook?.(boundedDx, boundedDy);
       else applyMouseLook(this.player, boundedDx, boundedDy, this.isZoomed);
     });
 
