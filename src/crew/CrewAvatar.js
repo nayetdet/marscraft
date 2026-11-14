@@ -15,6 +15,7 @@ const SUIT_COLOR = new THREE.Color(0xf8fafc);
 const WEAK_COLOR = new THREE.Color(0xb8c0cc);
 
 function createVisorTexture() {
+  if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas');
   canvas.width = 32;
   canvas.height = 16;
@@ -48,6 +49,7 @@ function createVisorTexture() {
 }
 
 function createChestDcmTexture() {
+  if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas');
   canvas.width = 32;
   canvas.height = 32;
@@ -82,6 +84,11 @@ function createChestDcmTexture() {
 }
 
 function makeNameLabel(text, accentColor) {
+  if (typeof document === 'undefined') {
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ depthWrite: false }));
+    sprite.scale.set(1.05, 0.24, 1);
+    return sprite;
+  }
   const canvas = document.createElement('canvas');
   canvas.width = 192;
   canvas.height = 44;

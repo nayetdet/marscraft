@@ -25,6 +25,7 @@ import { InputController } from '../player/InputController.js';
 import { HudManager } from '../ui/HudManager.js';
 import { DebugOverlay } from '../ui/DebugOverlay.js';
 import { RoverController } from '../rover/RoverController.js';
+import { GymEquipmentController } from '../player/GymEquipmentController.js';
 import { MissionSystem as ExpeditionSystem } from './MissionSystem.js';
 import { Airlock } from '../world/Airlock.js';
 import { StationSystem } from './StationSystem.js';
@@ -135,6 +136,20 @@ export class GameEngine {
       },
     });
 
+    this.gymController = new GymEquipmentController({
+      scene: this.scene,
+      camera: this.camera,
+      player: this.player,
+      stations: this.stations,
+      expedition: this.expedition,
+      hud: this.hud,
+      onPlaySound: (f1, d, f2) => this._playGymTone(f1, d, f2),
+      onDismount: () => {
+        this.playerHand.handGroup.visible = !this.isZoomed && !this.roverController.isActive;
+        this.hud.showToast('Stepped off gym equipment');
+      },
+    });
+
     this._initBaseLights();
     this._initHighlightWireframe();
     this._initScanner();
@@ -175,7 +190,7 @@ export class GameEngine {
       onToggleZoom: (scannerOpen, zoomed) => {
         this.isScannerOpen = scannerOpen;
         this.isZoomed = zoomed;
-        if (!this.roverController.isActive) {
+        if (!this.roverController.isActive && !this.gymController.isActive) {
           this.playerHand.handGroup.visible = !zoomed;
         }
       },
@@ -187,6 +202,9 @@ export class GameEngine {
         else this.scannerHud.closeJournal();
       },
       isRoverActive: () => this.roverController.isActive,
+      isGymActive: () => this.gymController.isActive,
+      onGymAction: () => this.gymController.triggerRep(),
+      onGymLook: (dx, dy) => this.gymController.look(dx, dy),
       onInteract: () => this.handlePlayerInteract(),
       onRoverAction: () => this.handleRoverAction(),
       onRoverLook: (dx, dy) => this.roverController.look(dx, dy),
@@ -231,7 +249,7 @@ export class GameEngine {
     this._growCrops(dt);
     if (this.survival.health <= 0) this.survival.isDead = true;
     const hasPriorityInteraction = ['crew', 'water_dispenser', 'rover_terminal', 'mav', 'greenhouse'].includes(this.currentInteraction);
-    document.getElementById('interaction-hint').textContent = hasPriorityInteraction ? '' : (this._getInteraction()?.label ?? '');
+    document.getElementById('interaction-hint').textContent = (hasPriorityInteraction || this.gymController.isActive) ? '' : (this._getInteraction()?.label ?? '');
     document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
     document.getElementById('mission-objective').textContent = this.expedition.objective;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
@@ -272,8 +290,8 @@ export class GameEngine {
       ...this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' })),
       { type: 'power', x: 4.6, y: 11.4, z: -1.5, label: 'Press F: life support' },
       { type: 'greenhouse', x: -17, y: 11.4, z: 0, label: 'Press F: greenhouse' },
-      { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: space treadmill (bone density)' },
-      { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: exercise bike (muscle & cardio)' },
+      { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
+      { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
       { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
     ];
     for (const candidate of candidates) {
@@ -292,9 +310,49 @@ export class GameEngine {
     if (!target) return;
     let message;
     if (target.type === 'door') message = this.airlock.request(target.door, this.player.pos);
-    else { this.stationPanel.open(target.type); return; }
+    else if (target.type === 'treadmill' || target.type === 'bike') {
+      this.mountGym(target.type);
+      return;
+    } else {
+      this.stationPanel.open(target.type);
+      return;
+    }
     this.hud.showToast(message);
     if (target.type === 'door' && (message.startsWith('Opening') || message.startsWith('Closing'))) this._playDoorSound();
+  }
+
+  mountGym(mode) {
+    this.gymController.mount(mode);
+    this.playerHand.handGroup.visible = false;
+    this.highlightBox.visible = false;
+    this.currentInteraction = null;
+    this.hud.setInteractionPrompt(false);
+    document.getElementById('interaction-hint').textContent = '';
+  }
+
+  dismountGym() {
+    if (!this.gymController.isActive) return;
+    this.gymController.dismount();
+  }
+
+  _playGymTone(freq = 360, duration = 0.08, secondFreq = null) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    this._audioContext ??= new AudioContextClass();
+    const audio = this._audioContext;
+    if (audio.state === 'suspended') audio.resume();
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(freq, audio.currentTime);
+    if (secondFreq) {
+      oscillator.frequency.setValueAtTime(secondFreq, audio.currentTime + duration * 0.45);
+    }
+    gain.gain.setValueAtTime(0.03, audio.currentTime);
+    gain.gain.linearRampToValueAtTime(0, audio.currentTime + duration);
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start();
+    oscillator.stop(audio.currentTime + duration);
   }
 
   _playDoorSound() {
@@ -712,7 +770,7 @@ export class GameEngine {
   }
 
   _checkAstronautInteractions() {
-    if (this.roverController.isActive) {
+    if (this.roverController.isActive || this.gymController.isActive) {
       this.currentInteraction = null;
       this.hud.setInteractionPrompt(false);
       return;
@@ -793,6 +851,11 @@ export class GameEngine {
       return;
     }
 
+    if (this.gymController.isActive) {
+      this.dismountGym();
+      return;
+    }
+
     const station = this._getInteraction();
     if (station && !['water_dispenser', 'rover_terminal', 'greenhouse'].includes(this.currentInteraction) && station.type !== 'mav') {
       this._interact();
@@ -848,6 +911,13 @@ export class GameEngine {
           this._updateSurvival(dt);
           this.highlightBox.visible = false;
           this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: false, isRoverActive: true, roverTelemetry: this.roverController.getTelemetry(), mission: this.mission });
+        } else if (this.gymController.isActive) {
+          if (this.scanHighlight.mesh) this.scanHighlight.clear();
+          this.gymController.update(dt);
+          this.sky.update(dt, this.player.pos);
+          this._updateSurvival(dt);
+          this.highlightBox.visible = false;
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: false, isRoverActive: false, mission: this.mission });
         } else {
           this.player.update(dt, this.input.keys);
           this._updateSurvival(dt);
@@ -878,7 +948,8 @@ export class GameEngine {
         }
       } else {
         if (this.roverController.isActive) this.roverController.update(dt, {});
-        this._updateCamera();
+        else if (this.gymController.isActive) this.gymController.update(dt);
+        else this._updateCamera();
         this.sky.update(dt, this.player.pos);
       }
 
