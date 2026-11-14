@@ -1,7 +1,23 @@
 # NPCs tripulantes: design
 
 > Status: aprovado no brainstorming de 2026-11-14 · Base de código: `main` em `c55a0a6`
-> Depende de: #35 (MOXIE / suporte de vida) e #40 (estações da base) · Relacionadas: #43 (DONKI), #45 (multiplayer)
+> Depende de: #35 (MOXIE / suporte de vida) e #40 (estações da base) · Relacionadas: #43 (DONKI), #45 (multiplayer), #48 (papéis da tripulação)
+
+## Revisão na implementação (2026-11-14)
+
+A implementação foi feita em cima do PR #44 (energia, O2 pago pela bateria, tempestades solares), porque #35/#40 ainda não existiam. O que mudou em relação ao texto abaixo:
+
+- **Estações mínimas criadas aqui** (`src/crew/stations.js`), seguindo o contrato `Station`. #35/#40 podem enriquecê-las depois.
+- **Modelo de manutenção:** cada estação tem `health`, que cai sem operador e sobe com operador. O trabalho gasta `WORK_ENERGY_PER_HOUR` da bateria. O contrato virou `update(hours, effort, base)`, `problems(base)` e `canOperate(base)`.
+  - Estufa: produz comida para a tripulação (precisa de irrigação).
+  - Reciclador de água: devolve 98% da água usada pela tripulação ([Ref] ISS).
+  - Gerador de O2: `health` baixa encarece o O2 do habitat até 2× (filtros de CO2 saturados), para o jogador e para a tripulação.
+  - **Enfermaria** (nova, papel da #48): cura o comandante dentro da base e é a **única** fonte de aviso de radiação alta e de vida baixa.
+- **O2 do tripulante custa energia** (`OXYGEN_ENERGY_PER_HOUR`), como o O2 do jogador no PR #44, e não um estoque de O2 separado.
+- **Papéis da #48:** 1, 2 ou 3 tripulantes = Ana (Flight Engineer: O2 e água), Leo (Botanist: estufa) e Maya (Medical Officer: enfermaria). Cada um começa na sua estação e rende 1,5× nela (`SPECIALIST_EFFORT`). Qualquer um pode receber qualquer ordem.
+- **Ordens:** Oxygen · Water · Greenhouse · Medical bay · Rest. Falar exige **olhar** para o tripulante (para não roubar o [F] do bebedouro).
+- **Evacuação** após `EVACUATE_AFTER_HOURS = 12` horas de jogo (~10 min reais) em vez de 2 sols, para caber numa partida.
+- Ficaram para outras issues: limpeza de poeira dos painéis (#35), treino no ARED (#40) e bônus de imunidade das rações frescas (#48).
 
 ## Objetivo
 

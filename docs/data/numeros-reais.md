@@ -70,6 +70,8 @@ Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG
 | Tempestades usadas | CMEs reais ≥ 500 km/s de 01/11 a 13/11/2026 | [API, DONKI] `src/data/donkiCme.json`, gerado por `node scripts/fetch-donki-cme.mjs` |
 | Limite de carreira exibido na vitória | **600 mSv** | [Ref] NASA-STD-3001 (2022) |
 | O2 em kg no resumo da vitória | 1 sol respirando lá fora = **0,84 kg** | [Ref] NASA BVAD |
+| Consumo da tripulação NPC (`CREW_CONFIG`) | água : comida = 0,5 L : 0,3 ração por hora de jogo (proporção BVAD ~3 kg : ~1,8 kg por pessoa/dia); O2 pago em energia | [Ref] NASA BVAD |
+| Reciclador de água (`STATION_CONFIG.WATER_RECOVERY`) | **98 %** da água usada volta ao tanque | [Ref] NASA, sistema de recuperação de água da ISS (2023) |
 
 Escala de jogo (não é dado real): capacidade da bateria, custos de energia em %, duração da tempestade (3 h de jogo), dano por mSv e o limite de 3 mSv/h a partir do qual a radiação machuca.
 
