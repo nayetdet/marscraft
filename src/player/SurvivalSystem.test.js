@@ -28,6 +28,27 @@ describe('SurvivalSystem', () => {
     survival.update(2.0, { x: -18, y: 11.7, z: 0 });
     expect(survival.oxygen).toBeGreaterThan(afterOutside);
   });
+
+  it('manages base water reserves, greenhouse hydration, and drinking from habitat dispenser', () => {
+    const survival = new SurvivalSystem();
+    expect(survival.baseWater).toBeGreaterThan(0);
+    expect(survival.greenhouseHydration).toBe(100);
+
+    // Adiciona água à base
+    const added = survival.addBaseWater(30);
+    expect(added).toBe(30);
+
+    // Simula sede
+    survival.water = 5.0;
+    const drinkResult = survival.drinkFromBaseDispenser();
+    expect(drinkResult.success).toBe(true);
+    expect(survival.water).toBe(survival.maxStat);
+
+    // Esgota a água e testa hidratação da estufa caindo
+    survival.baseWater = 0;
+    survival.update(10.0, { x: 0, y: 11.7, z: 0 });
+    expect(survival.greenhouseHydration).toBeLessThan(100);
+  });
 });
 
 describe('harvested carrots', () => {

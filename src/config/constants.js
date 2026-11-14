@@ -58,3 +58,16 @@ export const SURVIVAL_CONFIG = {
   // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
   HEAL_MIN_OXYGEN: 5,
 };
+
+export const WATER_SYSTEM_CONFIG = {
+  MAX_BASE_WATER: 100, // Litros
+  INITIAL_BASE_WATER: 25,
+  ICE_CARGO_MAX: 50, // kg de gelo na caçamba do rover
+  ICE_PER_DRILL: 10, // kg coletados por perfuração
+  LITERS_PER_KG_ICE: 1.0, // 1 kg de gelo = 1 L de água purificada
+  GREENHOUSE_WATER_CONSUMPTION: 0.04, // L/s de irrigação na estufa
+  DRINK_AMOUNT_FROM_DISPENSER: 2.0, // L consumidos por gole no purificador da base
+  ICE_CRATER_CENTER: { x: 22, z: -22 },
+  ICE_DEPOT_POS: { x: 5.5, y: 9.0, z: 9.5 },
+  WATER_DISPENSER_POS: { x: 4.4, y: 10.0, z: 2.4 },
+};

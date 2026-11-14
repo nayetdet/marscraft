@@ -13,6 +13,10 @@ export class InputController {
     onToggleZoom,
     getTargetedBlock,
     harvestCrop,
+    isRoverActive = () => false,
+    onInteract = () => {},
+    onToggleRoverCamera = () => {},
+    onRoverAction = () => {},
   }) {
     this.domElement = domElement;
     this.player = player;
@@ -24,6 +28,10 @@ export class InputController {
     this.onToggleZoom = onToggleZoom;
     this.getTargetedBlock = getTargetedBlock;
     this.harvestCrop = harvestCrop;
+    this.isRoverActive = isRoverActive;
+    this.onInteract = onInteract;
+    this.onToggleRoverCamera = onToggleRoverCamera;
+    this.onRoverAction = onRoverAction;
 
     this.keys = {};
     this.isLocked = false;
@@ -148,7 +156,7 @@ export class InputController {
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (!this.isLocked || this.survival.isDead) return;
+      if (!this.isLocked || this.survival.isDead || this.isRoverActive()) return;
       applyMouseLook(this.player, e.movementX, e.movementY, this.isZoomed);
     });
 
@@ -162,6 +170,24 @@ export class InputController {
         this.lastForwardTapAt = now;
       }
       this.keys[e.code] = true;
+
+      if (e.code === 'KeyF') {
+        e.preventDefault();
+        this.onInteract();
+        return;
+      }
+
+      if (e.code === 'KeyV' && this.isRoverActive()) {
+        e.preventDefault();
+        this.onToggleRoverCamera();
+        return;
+      }
+
+      if (e.code === 'Space' && this.isRoverActive()) {
+        e.preventDefault();
+        this.onRoverAction();
+        return;
+      }
 
       if (e.code.startsWith('Digit')) {
         const num = parseInt(e.code.replace('Digit', ''), 10);
@@ -221,7 +247,7 @@ export class InputController {
     });
 
     window.addEventListener('mousedown', (e) => {
-      if (!this.isLocked || this.survival.isDead) return;
+      if (!this.isLocked || this.survival.isDead || this.isRoverActive()) return;
 
       if (e.button === 0) {
         this.isBreakButtonHeld = true;

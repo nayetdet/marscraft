@@ -123,9 +123,8 @@ export function buildNasaCustomModels(scene) {
   }
 
   // 6. Rover Marciano NASA 3D detalhado (Estacionado na frente da base: x = 7.5, z = 10.5)
-  const rover = createMarsRoverModel(mats, 7.5, groundTopY, 10.5);
+  const { roverGroup: rover, wheels: roverWheels } = createMarsRoverModel(mats, 7.5, groundTopY, 10.5);
   group.add(rover);
-  solidObjects.push(rover);
 
   // 7. Painéis Solares Inclinados 3D e Antena Parabólica Externa
   const { solarArrays, dish } = createExteriorSolarAndDish(mats, 0, groundTopY, 0);
@@ -135,6 +134,11 @@ export function buildNasaCustomModels(scene) {
   }
   group.add(dish);
   solidObjects.push(dish);
+
+  // 8. Doca e Usina Externa de Recepção de Gelo e Conversão em Água
+  const iceDepot = createIceProcessingDepotModel(mats, 5.5, groundTopY, 9.5);
+  group.add(iceDepot);
+  solidObjects.push(iceDepot);
 
   group.updateMatrixWorld(true);
 
@@ -156,18 +160,17 @@ export function buildNasaCustomModels(scene) {
     }
   }
 
-  // Colliders acima saem das caixas individuais; so depois junta as malhas.
-  // As plantas ficam como objetos separados porque podem ser colhidas (raycast + remocao).
-  const merged = mergeByMaterial(group, plants);
+  // Keep plants and the driven rover as independent objects; merge static scenery.
+  const merged = mergeByMaterial(group, [...plants, rover], [rover]);
   scene.add(merged);
-  return { group: merged, colliders, plants };
+  return { group: merged, colliders, plants, rover, roverWheels };
 }
 
 // Junta as centenas de caixas em uma malha por material (de ~300 draw calls para ~20).
 // Os modelos sao estaticos, entao a transformacao de cada caixa e "assada" na geometria.
 // Objetos em `separateObjects` mantem a identidade (e o userData), so que cada um vira
 // uma unica malha com cor por vertice.
-export function mergeByMaterial(group, separateObjects = []) {
+export function mergeByMaterial(group, separateObjects = [], preserveObjects = []) {
   group.updateMatrixWorld(true);
   const separate = new Set(separateObjects);
   const buckets = new Map();
@@ -195,8 +198,9 @@ export function mergeByMaterial(group, separateObjects = []) {
   }
 
   const vertexColorMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const preserve = new Set(preserveObjects);
   for (const obj of separateObjects) {
-    bakeIntoSingleMesh(obj, vertexColorMat);
+    if (!preserve.has(obj)) bakeIntoSingleMesh(obj, vertexColorMat);
     merged.attach(obj); // preserva a posicao no mundo ao trocar de pai
   }
   return merged;
@@ -396,12 +400,15 @@ function createGreenhouseCropsModel(mats, centerX, floorTopY, centerZ) {
 function createMarsRoverModel(mats, x, y, z) {
   const r = new THREE.Group();
   r.position.set(x, y, z);
+  const wheels = [];
 
   for (const wx of [-1.2, 1.2]) {
     for (const wz of [-1.35, 0, 1.35]) {
-      addBox(r, 0.38, 0.65, 0.65, mats.charcoal, wx, 0.32, wz);
+      const wheelMesh = addBox(r, 0.38, 0.65, 0.65, mats.charcoal, wx, 0.32, wz);
       addBox(r, 0.42, 0.22, 0.22, mats.lightGray, wx, 0.32, wz);
+      // Braço da suspensão
       addBox(r, 0.12, 0.55, 0.12, mats.lightGray, wx * 0.82, 0.62, wz);
+      wheels.push(wheelMesh);
     }
   }
 
@@ -417,7 +424,7 @@ function createMarsRoverModel(mats, x, y, z) {
   addBox(r, 0.16, 0.16, 1.1, mats.lightGray, -0.45, 0.85, -1.75, 0.25, 0, 0);
   addBox(r, 0.28, 0.28, 0.32, mats.darkSlate, -0.45, 0.68, -2.28);
 
-  return r;
+  return { roverGroup: r, wheels };
 }
 
 function createExteriorSolarAndDish(mats, x, y, z) {
@@ -449,4 +456,36 @@ function createExteriorSolarAndDish(mats, x, y, z) {
   dish.add(bowl);
 
   return { solarArrays, dish };
+}
+
+
+function createIceProcessingDepotModel(mats, x, y, z) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+
+  // Plataforma de desacoplamento de gelo no solo
+  addBox(g, 2.8, 0.14, 2.8, mats.darkSlate, 0, 0.07, 0);
+
+  // Guias laterais amarelas e pretas para o rover estacionar
+  addBox(g, 0.2, 0.28, 2.6, mats.yellowBtn, -1.3, 0.2, 0);
+  addBox(g, 0.2, 0.28, 2.6, mats.yellowBtn, 1.3, 0.2, 0);
+
+  // Funil / Moega de Recepção de Gelo
+  addBox(g, 1.4, 0.9, 1.2, mats.whiteMetal, 0, 0.55, -0.6);
+  addBox(g, 1.2, 0.25, 1.0, mats.charcoal, 0, 0.95, -0.6);
+  addBox(g, 1.0, 0.12, 0.8, mats.waterGlass, 0, 0.98, -0.6);
+
+  // Tanque vertical de liquefação e purificação com indicador de nível de água
+  addBox(g, 0.8, 1.8, 0.8, mats.whiteMetal, -0.9, 1.0, -0.7);
+  addBox(g, 0.6, 1.2, 0.6, mats.waterGlass, -0.9, 1.1, -0.7);
+  addBox(g, 0.7, 0.15, 0.7, mats.nasaBlue, -0.9, 1.95, -0.7);
+
+  // Tubulação conectada ao Habitat Principal
+  addBox(g, 0.16, 0.16, 1.8, mats.lightGray, 0, 0.45, -1.8);
+
+  // Sinalizador luminoso azul (indicador de água e doca)
+  addBox(g, 0.12, 1.4, 0.12, mats.lightGray, 1.1, 0.8, -0.8);
+  addBox(g, 0.28, 0.28, 0.28, mats.cyanGlow, 1.1, 1.55, -0.8);
+
+  return g;
 }

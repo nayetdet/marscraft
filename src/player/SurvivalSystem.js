@@ -1,5 +1,5 @@
 import { BLOCK_IDS, HOTBAR_BLOCKS } from '../config/blockTypes.js';
-import { SURVIVAL_CONFIG } from '../config/constants.js';
+import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { isInsidePressurizedVolume } from '../world/habitatLayout.js';
 
 export class SurvivalSystem {
@@ -16,6 +16,11 @@ export class SurvivalSystem {
     this.food = this.maxStat;
     this.isDead = false;
     this.insidePressurizedShip = false;
+
+    // Sistema de Água Potável e Irrigação da Base
+    this.baseWater = WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER;
+    this.maxBaseWater = WATER_SYSTEM_CONFIG.MAX_BASE_WATER;
+    this.greenhouseHydration = 100;
   }
 
   resetInventory() {
@@ -63,6 +68,15 @@ export class SurvivalSystem {
 
     this.water = Math.max(0, this.water - SURVIVAL_CONFIG.WATER_DRAIN_RATE * dt);
     this.food = Math.max(0, this.food - SURVIVAL_CONFIG.FOOD_DRAIN_RATE * dt);
+
+    // Irrigação da estufa a partir da reserva de água da base
+    if (this.baseWater > 0) {
+      const waterUsed = WATER_SYSTEM_CONFIG.GREENHOUSE_WATER_CONSUMPTION * dt;
+      this.baseWater = Math.max(0, this.baseWater - waterUsed);
+      this.greenhouseHydration = Math.min(100, this.greenhouseHydration + dt * 2.5);
+    } else {
+      this.greenhouseHydration = Math.max(0, this.greenhouseHydration - dt * 0.9);
+    }
 
     // Regeneração natural se comida e água estiverem altas (estilo Minecraft)
     if (this.food >= 16 && this.water >= 12 && this.canHeal() && this.health < this.maxStat) {
@@ -147,5 +161,43 @@ export class SurvivalSystem {
     if (!slot || slot.count <= 0) return false;
     slot.count--;
     return true;
+  }
+
+  addBaseWater(liters) {
+    const prev = this.baseWater;
+    this.baseWater = Math.min(this.maxBaseWater, this.baseWater + liters);
+    return Math.round(this.baseWater - prev);
+  }
+
+  drinkFromBaseDispenser() {
+    if (this.baseWater < 1.0) {
+      return { success: false, message: 'Base water reservoir is dry! Collect ice with the Rover.' };
+    }
+    if (this.water >= this.maxStat - 0.5) {
+      return { success: false, message: 'Your hydration is already full.' };
+    }
+
+    const consumed = Math.min(this.baseWater, WATER_SYSTEM_CONFIG.DRINK_AMOUNT_FROM_DISPENSER);
+    this.baseWater -= consumed;
+    this.water = this.maxStat;
+    return {
+      success: true,
+      message: `Drank clean water from habitat purifier (+Hydration full). Base reserve: ${Math.round(this.baseWater)}L`,
+    };
+  }
+
+  harvestGreenhouseCrop() {
+    if (this.greenhouseHydration < 20) {
+      return { success: false, message: 'Crops are dry! Supply water to the habitat to irrigate.' };
+    }
+    // Id 12 é HYDRO_PLANT
+    const added = this.addBlockToInventory(12);
+    if (added) {
+      return {
+        success: true,
+        message: 'Harvested fresh potato from irrigated greenhouse (+1 Food item)!',
+      };
+    }
+    return { success: false, message: 'Inventory is full.' };
   }
 }

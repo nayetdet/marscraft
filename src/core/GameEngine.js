@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CAMERA_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { createCarrotTexture } from '../graphics/carrotTexture.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { createBlockMaterials } from '../graphics/blockMaterials.js';
@@ -13,6 +13,7 @@ import { SurvivalSystem } from '../player/SurvivalSystem.js';
 import { InputController } from '../player/InputController.js';
 import { HudManager } from '../ui/HudManager.js';
 import { DebugOverlay } from '../ui/DebugOverlay.js';
+import { RoverController } from '../rover/RoverController.js';
 
 export class GameEngine {
   constructor(container) {
@@ -45,10 +46,18 @@ export class GameEngine {
     this.world = new VoxelWorld(this.scene, materials, atlas, carrot.texture);
 
     // Modelos 3D detalhados estilo Mod de Minecraft + Caixas de Colisão AABB
-    const { group: customModels, colliders, plants } = buildNasaCustomModels(this.scene);
+    const { group: customModels, colliders, plants, rover, roverWheels } = buildNasaCustomModels(this.scene);
     this.customModels = customModels;
     this.plants = plants;
     this.customColliders = colliders;
+
+    this.roverController = new RoverController({
+      roverGroup: rover,
+      wheels: roverWheels,
+      world: this.world,
+      camera: this.camera,
+    });
+    this.canInteractWithConsole = false;
 
     this.player = new PlayerPhysics(this.world, colliders);
     this.survival = new SurvivalSystem();
@@ -81,10 +90,23 @@ export class GameEngine {
       hud: this.hud,
       onToggleZoom: (zoomed) => {
         this.isZoomed = zoomed;
-        this.playerHand.handGroup.visible = !zoomed;
+        if (!this.roverController.isActive) {
+          this.playerHand.handGroup.visible = !zoomed;
+        }
       },
       getTargetedBlock: () => this._getTargetedBlock(),
       harvestCrop: (plant) => removeCrop(plant, this.plants, this.customColliders),
+      isRoverActive: () => this.roverController.isActive,
+      onInteract: () => this.handlePlayerInteract(),
+      onRoverAction: () => this.handleRoverAction(),
+      onToggleRoverCamera: () => {
+        this.roverController.toggleCameraMode();
+        const modeName =
+          this.roverController.cameraMode === 'mastcam'
+            ? 'Mastcam (1st-person)'
+            : 'Tactical 3rd-person';
+        this.hud.showToast(`Camera: ${modeName}`);
+      },
     });
 
     this._lookDir = new THREE.Vector3();
@@ -143,6 +165,99 @@ export class GameEngine {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
+  handleRoverAction() {
+    if (!this.roverController.isActive) return;
+
+    if (this.roverController.canUnloadIce()) {
+      const res = this.roverController.unloadIce();
+      if (res.success) {
+        const added = this.survival.addBaseWater(
+          res.amount * WATER_SYSTEM_CONFIG.LITERS_PER_KG_ICE
+        );
+        this.hud.showToast(`Offloaded ${res.amount}kg ice! +${added}L purified water into habitat.`);
+      }
+    } else if (this.roverController.canCollectIce()) {
+      const res = this.roverController.collectIce();
+      this.hud.showToast(res.message || res.reason);
+    } else {
+      this.hud.showToast('No ice deposits nearby or not at habitat water intake bay');
+    }
+  }
+
+  _checkAstronautInteractions() {
+    if (this.roverController.isActive) {
+      this.currentInteraction = null;
+      this.hud.setInteractionPrompt(false);
+      return;
+    }
+
+    // 1. Console de Comando do Rover (x: 0, z: -3.6, y: ~11)
+    const distConsole = Math.hypot(this.player.pos.x - 0, this.player.pos.z - (-3.6));
+    const dyConsole = Math.abs(this.player.pos.y - 11.0);
+    if (distConsole < 3.2 && dyConsole < 2.2) {
+      this.currentInteraction = 'rover_terminal';
+      this.hud.setInteractionPrompt(true, '[F] Operate Rover Remote Terminal');
+      return;
+    }
+
+    // 2. Purificador / Dispensador de Água do Laboratório (x: 4.4, z: 2.4, y: ~11)
+    const distWater = Math.hypot(
+      this.player.pos.x - WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.x,
+      this.player.pos.z - WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.z
+    );
+    const dyWater = Math.abs(this.player.pos.y - 11.0);
+    if (distWater < 2.5 && dyWater < 2.2) {
+      this.currentInteraction = 'water_dispenser';
+      this.hud.setInteractionPrompt(true, '[F] Drink Clean Water (Habitat Reservoir)');
+      return;
+    }
+
+    // 3. Estufa / Plantações de Batata (x: -18, z: 0)
+    const distGreenhouse = Math.hypot(this.player.pos.x + 18, this.player.pos.z);
+    const dyGreenhouse = Math.abs(this.player.pos.y - 11.0);
+    if (distGreenhouse < 5.8 && dyGreenhouse < 2.2) {
+      this.currentInteraction = 'greenhouse';
+      this.hud.setInteractionPrompt(true, '[F] Harvest Potato (Irrigated Greenhouse)');
+      return;
+    }
+
+    this.currentInteraction = null;
+    this.hud.setInteractionPrompt(false);
+  }
+
+  handlePlayerInteract() {
+    if (this.roverController.isActive) {
+      this.toggleRoverMode();
+      return;
+    }
+
+    if (this.currentInteraction === 'rover_terminal') {
+      this.toggleRoverMode();
+    } else if (this.currentInteraction === 'water_dispenser') {
+      const res = this.survival.drinkFromBaseDispenser();
+      this.hud.showToast(res.message);
+    } else if (this.currentInteraction === 'greenhouse') {
+      const res = this.survival.harvestGreenhouseCrop();
+      this.hud.showToast(res.message);
+      this.hud.renderHotbar(this.survival.slots);
+    }
+  }
+
+  toggleRoverMode() {
+    if (this.roverController.isActive) {
+      this.roverController.deactivate();
+      this.hud.setRoverMode(false);
+      this.playerHand.handGroup.visible = !this.isZoomed;
+      this.hud.showToast('Disconnected from Rover Remote Terminal');
+    } else if (this.currentInteraction === 'rover_terminal') {
+      this.roverController.activate();
+      this.hud.setRoverMode(true);
+      this.playerHand.handGroup.visible = false;
+      this.highlightBox.visible = false;
+      this.hud.showToast('Connected: NASA Mars Rover (RF Link Active)');
+    }
+  }
+
   start() {
     const loop = () => {
       requestAnimationFrame(loop);
@@ -152,12 +267,45 @@ export class GameEngine {
       const dt = Math.min(frameMs / 1000, 0.05);
       this.lastTime = now;
 
-      // player.update so roda com o jogo travado; fora disso isMoving ficaria congelado.
       const isGameRunning = this.input.isLocked && !this.survival.isDead;
       if (isGameRunning) {
-        this.player.update(dt, this.input.keys);
-        this.survival.update(dt, this.player.pos);
-        this.input.update(dt);
+        if (this.roverController.isActive) {
+          this.roverController.update(dt, this.input.keys);
+          this.sky.update(dt, this.roverController.pos);
+          this.survival.update(dt, this.player.pos);
+          this.highlightBox.visible = false;
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isZoomed: false, isRoverActive: true, roverTelemetry: this.roverController.getTelemetry() });
+        } else {
+          this.player.update(dt, this.input.keys);
+          this.survival.update(dt, this.player.pos);
+          this.input.update(dt);
+          this.roverController.update(dt, {});
+          this.playerHand.update(dt, this.player.isMoving);
+          this._updateCamera();
+          this.sky.update(dt, this.player.pos);
+          this._checkAstronautInteractions();
+
+          const hit = this._getTargetedBlock();
+          if (hit.hit) {
+            this.highlightBox.visible = true;
+            if (hit.type === 'crop') {
+              const bounds = new THREE.Box3().setFromObject(hit.plant);
+              bounds.getCenter(this.highlightBox.position);
+              bounds.getSize(this.highlightBox.scale);
+            } else {
+              this.highlightBox.scale.set(1, 1, 1);
+              this.highlightBox.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+            }
+          } else {
+            this.highlightBox.visible = false;
+          }
+
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isZoomed: this.isZoomed, isRoverActive: false });
+        }
+      } else {
+        if (this.roverController.isActive) this.roverController.update(dt, {});
+        this._updateCamera();
+        this.sky.update(dt, this.player.pos);
       }
 
       const pickedUpBlocks = this.world.updateDrops(dt, this.player.pos, (id) => id === BLOCK_IDS.HYDRO_PLANT ? this.survival.addHarvestedCrop() : this.survival.addBlockToInventory(id));
@@ -168,33 +316,7 @@ export class GameEngine {
         this.hud.showToast(pickedUpBlocks.every((id) => id === BLOCK_IDS.HYDRO_PLANT) ? 'Picked up a Mars carrot' : `Picked up ${pickedUpBlocks.length} item${pickedUpBlocks.length > 1 ? 's' : ''}`);
       }
 
-      this.playerHand.update(dt, isGameRunning && this.player.isMoving);
-      this._updateCamera();
-      this.sky.update(dt, this.player.pos);
-
-      const hit = this._getTargetedBlock();
-      if (hit.hit) {
-        this.highlightBox.visible = true;
-        if (hit.type === 'crop') {
-          const bounds = new THREE.Box3().setFromObject(hit.plant);
-          bounds.getCenter(this.highlightBox.position);
-          bounds.getSize(this.highlightBox.scale);
-        } else {
-          this.highlightBox.scale.set(1, 1, 1);
-          this.highlightBox.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
-        }
-      } else {
-        this.highlightBox.visible = false;
-      }
-
-      this.hud.update({
-        player: this.player,
-        survival: this.survival,
-        sky: this.sky,
-        camera: this.camera,
-        isZoomed: this.isZoomed,
-      });
-
+      if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
       this.renderer.render(this.scene, this.camera);
       this.debug.frame(frameMs);
     };
