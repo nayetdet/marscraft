@@ -63,7 +63,11 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       icon: 'storm',
       tone: 'danger',
       title: `SOLAR STORM! ${formatHours(hoursLeft)} left`,
-      text: shielded ? 'The shield is protecting you. Stay in the bubble.' : 'Go inside the base or turn on the shield [R].',
+      text: shielded
+        ? 'The shield is protecting you. Stay in the bubble.'
+        : mission.insideShelter
+          ? 'You are in the storm shelter. Stay here until it passes.'
+          : 'Stand in the storm shelter (SHL-1) or turn on the shield [R].',
       fill: clamp01(hoursLeft / Math.max(0.01, storm.end - storm.arrival)),
       source: stormSourceShort(storm, fetchedIso),
     });

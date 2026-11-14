@@ -22,3 +22,14 @@ describe('radiation', () => {
     expect(radiationDamage(stormInsideShielded, 1)).toBe(0);
   });
 });
+
+describe('storm shelter', () => {
+  it('keeps even the fastest storm below the harm threshold, but only inside the habitat', () => {
+    const fastest = { stormMultiplier: 1000 };
+    const inHabitat = doseRateMsvPerHour({ ...fastest, insideHabitat: true });
+    const inShelter = doseRateMsvPerHour({ ...fastest, insideHabitat: true, insideShelter: true });
+    expect(radiationDamage(inHabitat, 1)).toBeGreaterThan(0);
+    expect(radiationDamage(inShelter, 1)).toBe(0);
+    expect(doseRateMsvPerHour({ ...fastest, insideShelter: true })).toBe(doseRateMsvPerHour(fastest));
+  });
+});

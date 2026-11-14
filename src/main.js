@@ -13,6 +13,8 @@ window.addEventListener('DOMContentLoaded', () => {
       try {
         const engine = new GameEngine(container);
         engine.start();
+        // So no servidor de desenvolvimento: acesso ao motor pelo console, para depurar e tirar screenshots
+        if (import.meta.env.DEV) window.__minemars = engine;
         requestAnimationFrame(() => {
           loadingOverlay.classList.add('is-leaving');
           setTimeout(() => loadingOverlay.classList.add('hidden'), 350);

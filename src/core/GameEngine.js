@@ -38,6 +38,9 @@ import { isInsideShieldZone, SHIELD_ZONE } from '../mission/shieldZone.js';
 import { ShieldBubble } from '../graphics/shieldBubble.js';
 import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
+import { buildBaseDecor } from '../base/baseDecor.js';
+import { isInsideStormShelter } from '../base/baseZones.js';
+import { MenuScreens } from '../ui/MenuScreens.js';
 
 // Raio angular (rad) em que a mira da luneta "pega" cada astro. A Lua fica a ~0,047 rad da
 // Terra, então os dois raios precisam ser menores que isso para não se sobreporem.
@@ -92,6 +95,11 @@ export class GameEngine {
     this.customModels = customModels;
     this.plants = plants;
     this.customColliders = colliders;
+
+    // Zonas, placas, posteres e telas vivas da base (as caixas de colisao entram em `colliders`)
+    this.baseDecor = buildBaseDecor(this.scene, colliders, { donkiDate: formatDateDMY(donkiCme.fetched) });
+    for (const point of this.baseDecor.infoPoints) point.type = 'info';
+    this._displayTimer = 1;
 
     this.roverController = new RoverController({
       roverGroup: rover,
@@ -166,6 +174,10 @@ export class GameEngine {
       onChange: (size) => this._buildCrew(size),
     });
     this.talkTarget = null;
+    this.menuScreens = new MenuScreens({
+      donkiDate: formatDateDMY(donkiCme.fetched),
+      onDemo: (action) => this._runDemo(action),
+    });
 
     this.input = new InputController({
       domElement: this.renderer.domElement,
@@ -217,7 +229,7 @@ export class GameEngine {
   _updateExpedition(dt) {
     const inside = this.survival.isPlayerInsideShip(this.player.pos);
     const insideCore = inside && !(Math.abs(this.player.pos.x - 0.5) < 1.5 && this.player.pos.z >= 6);
-    const shelter = insideCore && this.player.pos.x > -3 && this.player.pos.x < -1 && Math.abs(this.player.pos.z - 0.5) < 1.3;
+    const shelter = insideCore && isInsideStormShelter(this.player.pos);
     this.expedition.greenhousePowered = this.expedition.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
     if (this.expedition.stage === 'outside' && !inside) this.expedition.stage = 'sample';
     if (this.expedition.stage === 'return' && inside) this.expedition.stage = 'report';
@@ -233,7 +245,7 @@ export class GameEngine {
     this.airlock.update(dt, this.player.pos);
     this._growCrops(dt);
     if (this.survival.health <= 0) this.survival.isDead = true;
-    const hasPriorityInteraction = ['crew', 'water_dispenser', 'rover_terminal', 'mav', 'greenhouse'].includes(this.currentInteraction);
+    const hasPriorityInteraction = ['crew', 'water_dispenser', 'rover_terminal', 'mav', 'greenhouse', 'info'].includes(this.currentInteraction);
     document.getElementById('interaction-hint').textContent = hasPriorityInteraction ? '' : (this._getInteraction()?.label ?? '');
     document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
     document.getElementById('mission-objective').textContent = this.expedition.objective;
@@ -287,6 +299,14 @@ export class GameEngine {
         best = candidate; bestDistance = distance;
       }
     }
+    // Posteres e equipamentos explicativos: cone de mira mais fechado, para nao roubar o [F] das estacoes
+    for (const point of this.baseDecor.infoPoints) {
+      this._interactionOffset.set(point.x, point.y, point.z).sub(this.player.pos);
+      const distance = this._interactionOffset.length();
+      if (distance < Math.min(bestDistance, 3.6) && distance > 0 && this._interactionOffset.dot(dir) / distance > 0.93) {
+        best = point; bestDistance = distance;
+      }
+    }
     return best;
   }
 
@@ -294,6 +314,7 @@ export class GameEngine {
     const target = this._getInteraction();
     if (!target) return;
     let message;
+    if (target.type === 'info') { this.hud.showToast(target.text(this._baseState()), 8000); return; }
     if (target.type === 'door') message = this.airlock.request(target.door, this.player.pos);
     else { this.stationPanel.open(target.type); return; }
     this.hud.showToast(message);
@@ -340,10 +361,6 @@ export class GameEngine {
       frame.position.set(x, 11.4, z); screen.position.set(x, 11.4, z + 0.04);
       this.scene.add(frame, screen);
     }
-    // Glowing archway indicator above the Southwest Gym Wing corridor entrance
-    const gymSign = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.22, 0.14), new THREE.MeshLambertMaterial({ color: 0x38bdf8, emissive: 0x0ea5e9, emissiveIntensity: 0.45 }));
-    gymSign.position.set(-5.0, 13.2, 4.9);
-    this.scene.add(gymSign);
   }
 
   _initBaseLights() {
@@ -588,6 +605,7 @@ export class GameEngine {
     const damage = this.mission.update(this._skyHours(), {
       insideHabitat: this.survival.insidePressurizedShip,
       insideShield: isInsideShieldZone(this.player.pos),
+      insideShelter: this.survival.insidePressurizedShip && isInsideStormShelter(this.player.pos),
       active,
     });
     if (active) this.survival.takeDamage(damage * (this.stations.upgraded && !this.survival.insidePressurizedShip ? STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR : 1));
@@ -610,6 +628,67 @@ export class GameEngine {
       this._panelRefreshTimer = 0;
       this._refreshMavPanel();
     }
+  }
+
+  // Estado do jogo que as telas e os pontos de informacao da base mostram
+  _baseState() {
+    const m = this.mission;
+    const storm = m.storm;
+    const crop = this.stations.crop;
+    return {
+      sol: this.sky.solCount,
+      timeOfDay: Math.floor(this.sky.timeOfDay * 6) / 6, // relogio de 10 em 10 min: menos redesenhos
+      batteryPct: m.battery.percent,
+      chargeRate: m.chargeRate,
+      shieldOn: m.shieldOn,
+      factoryOn: m.factoryOn,
+      factoryBusy: m.factoryOn && m.iceStock > 0 && m.propellant < 100,
+      greenhousePowered: this.expedition.greenhousePowered,
+      dusty: this.stations.contaminated,
+      freshFood: this.stations.freshFood > 0,
+      storm: {
+        phase: storm.phase,
+        hoursUntil: storm.hoursUntil,
+        hoursLeft: storm.hoursLeft ?? 0,
+        speedKmS: storm.storm?.cme.speedKmS ?? 0,
+        date: storm.storm ? formatDateDMY(storm.storm.cme.startTime) : '',
+      },
+      doseRate: m.doseRate,
+      totalDose: m.totalDoseMsv,
+      water: this.survival.baseWater,
+      maxWater: this.survival.maxBaseWater,
+      crop: crop ? { type: crop.type, progress: Math.min(1, crop.progress / STATION_CONFIG.CROP_GROWTH_TIME) } : null,
+      inShelter: m.insideShelter,
+      donkiDate: formatDateDMY(donkiCme.fetched),
+    };
+  }
+
+  _updateBaseDisplays(dt) {
+    this._displayTimer += dt;
+    if (this._displayTimer < 0.5) return;
+    this._displayTimer = 0;
+    this.baseDecor.displays.update(this._baseState());
+  }
+
+  // Controles de demo do menu (para jurados e para gravar o video): mexem so no relogio e na bateria
+  _runDemo(action) {
+    if (action === 'storm') {
+      return this.mission.triggerStormSoon()
+        ? 'Storm warning sent. Press Back, then Play: the solar storm hits in about 10 seconds.'
+        : 'A solar storm is already hitting the base.';
+    }
+    if (action === 'night' || action === 'noon') {
+      const target = action === 'night' ? 21 : 12;
+      this.sky.advanceTime((target - this.sky.timeOfDay + 24) % 24);
+      return action === 'night'
+        ? 'It is now night on Mars: the solar panels make no power.'
+        : 'It is now noon on Mars: the solar panels are charging the battery.';
+    }
+    if (action === 'battery') {
+      this.mission.battery.charge = Math.min(this.mission.battery.charge, this.mission.battery.capacity * 0.1);
+      return 'Battery drained to 10%. Watch what the base has to give up.';
+    }
+    return '';
   }
 
   _buildCrew(size) {
@@ -752,6 +831,14 @@ export class GameEngine {
       this.currentInteraction = 'crew';
       this.talkTarget = member.id;
       this.hud.setInteractionPrompt(true, `[F] Talk to ${member.name} (${member.role}) · [C] Crew panel`);
+      return;
+    }
+
+    // Poster ou equipamento explicativo na mira: ler vem antes das acoes por proximidade
+    const aimed = this._getInteraction();
+    if (aimed?.type === 'info') {
+      this.currentInteraction = 'info';
+      this.hud.setInteractionPrompt(true, aimed.label);
       return;
     }
 
@@ -920,6 +1007,7 @@ export class GameEngine {
       if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
       this._updateMission(dt);
       this._updateCrew(dt);
+      this._updateBaseDisplays(dt);
       if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
 
       this._updateStormFog(this.roverController.isActive ? this.roverController.pos : this.player.pos);

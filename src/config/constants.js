@@ -122,6 +122,10 @@ export const RADIATION_CONFIG = {
   STORM_MULTIPLIER_MAX: 1000,
   HABITAT_FACTOR: 0.25, // paredes do habitat seguram parte das particulas
   SHIELD_FACTOR: 0.2, // blindagem ligada
+  // Abrigo de tempestade dentro do habitat (bolsas de agua + sacos de regolito sobre a cabeca).
+  // Escala de jogo: soma-se ao HABITAT_FACTOR e deixa ate a CME mais rapida abaixo do limite
+  // que machuca. O custo e ficar parado ali, sem trabalhar, enquanto a tempestade passa.
+  SHELTER_FACTOR: 0.4,
   // Dose acima desta taxa (mSv/h) machuca; abaixo, o corpo aguenta durante a tempestade
   HARM_THRESHOLD_MSV_PER_HOUR: 3,
   DAMAGE_PER_EXCESS_MSV: 1.5, // pontos de vida por mSv acima do limite
@@ -139,6 +143,8 @@ export const STORM_CONFIG = {
   FIRST_WARNING_AFTER_HOURS: 1,
   GAP_BETWEEN_STORMS_HOURS: 2,
   DURATION_HOURS: 3,
+  // Controle de demo (menu "Demo controls"): aviso curto antes da tempestade chegar (~10 s reais)
+  DEMO_LEAD_HOURS: 0.2,
 };
 
 export const MAV_CONFIG = {

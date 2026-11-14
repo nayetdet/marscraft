@@ -59,6 +59,8 @@ src/player/
   InputController.js       teclado/mouse/pointer lock e controles touch em paisagem (joystick, câmera por arrasto, ações, hotbar e atalhos de missão/tripulação)
   SurvivalSystem.js        barras O2/vida/água/comida, áreas pressurizadas, inventário (9 slots de hotbar + 27 de mochila)
   PlayerHand.js            mão/bloco em 1ª pessoa
+src/base/                  organizacao da base: zonas e abrigo de tempestade (baseZones), posteres e placas (basePosters),
+                           telas vivas (baseDisplayText, baseCanvas) e a decoracao 3D que junta tudo (baseDecor)
 src/sky/                   céu marciano: shader de atmosfera, Sol, Terra+Lua, Fobos/Deimos, ciclo de sols
 src/graphics/              texturas procedurais em canvas e materiais dos blocos
 src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades, ordens, avisos), estações

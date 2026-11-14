@@ -15,6 +15,15 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Vite, sem backend, de
 | Céu astronômico | `src/sky/*` | Sol, Terra e Lua vistos de Marte, Fobos e Deimos, ciclo dia/noite em "sols", luneta (tecla Z), avanço de tempo (tecla T) |
 | HUD | `src/ui/HudManager.js`, `index.html` | Barras estilo Minecraft, hotbar de 9 slots, inventário (tecla E, 36 slots), toasts, tela de morte e rótulos no céu. **UI em inglês.** |
 
+## Organização da base (`src/base/`)
+
+A base é dividida em zonas com placa, cor no piso e função: `CMD-1` comando, `LSS-1` suporte de vida, `HAB-1` beliches, `SHL-1` abrigo de tempestade, `MED-1` enfermaria, `GAL-1` cozinha, `GRN-1` estufa, `GYM-1` academia e `AL-1` airlock.
+
+- **Telas vivas** (`baseDisplayText.js` + `baseCanvas.js`): status da base no comando, mapa de energia e banco de baterias (1 luz = 10 %), medidor de radiação no abrigo e painel da estufa. Redesenham só quando o conteúdo muda.
+- **Abrigo de tempestade** (`baseZones.js`): ficar parado sob as bolsas de água reduz a dose (`RADIATION_CONFIG.SHELTER_FACTOR`). Não gasta energia, mas o jogador não trabalha dali; a alternativa é a blindagem [R], que gasta bateria.
+- **Pôsteres educativos** (`basePosters.js`): 8 pôsteres com um quadro "REAL DATA" e a fonte. Mirar e apertar [F] mostra o dado.
+- **Menu**: "NASA Data" (fontes e aviso de que o dado é embutido, não ao vivo) e "Demo Controls" (adiantar a próxima tempestade real, noite, meio-dia e bateria a 10 %), pensado para jurados e para gravar o vídeo.
+
 ## Comparação com o que o desafio pede
 
 | Requisito do desafio | Situação | Gap |
@@ -28,7 +37,7 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Vite, sem backend, de
 | **Atraso de comunicação** | ❌ | Não existe. |
 | **Toda escolha tem custo (trade-off)** | ❌ | **Este é o gap principal.** Hoje não há nenhuma decisão com custo: a estratégia ótima é ficar dentro da nave. |
 | **Dados reais da NASA** | ❌ | Nenhum dado real. O céu é "inspirado", não alimentado por dados. |
-| **Atribuição de fontes no jogo** | ❌ | Não há tela de créditos ou fontes. |
+| **Atribuição de fontes no jogo** | ✅ | Tela "NASA Data" no menu e fonte em cada pôster e tela da base. |
 | Público de 7 a 12 anos, linguagem simples | 🟡 | O texto é simples, mas o jogo **não ensina** nenhuma restrição real. Vale explicar termos como "sol" e "dose". |
 | Navegador, sem conta | ✅ | — |
 | Rejogabilidade | 🟡 | Mundo fixo e sem eventos aleatórios. |

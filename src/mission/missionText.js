@@ -30,7 +30,7 @@ export function stormEventMessage(event, fetchedIso) {
     case 'storm-warning':
       return `Solar storm coming! The Sun threw out a cloud of fast particles (a CME). It reaches Mars in ${formatHours(storm.leadHours)}. ${stormSourceText(storm, fetchedIso)}.`;
     case 'storm-start':
-      return 'SOLAR STORM! Radiation is very high. Go inside the base or turn on the shield [R].';
+      return 'SOLAR STORM! Radiation is very high. Stand in the storm shelter inside the base, or turn on the shield [R].';
     case 'storm-survived':
       return 'The solar storm is over. You made it!';
     case 'storm-failed':

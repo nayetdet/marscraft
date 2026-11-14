@@ -507,3 +507,47 @@
     visibility: hidden;
   }
 }
+
+/* Menu: fontes dos dados da NASA e controles de demo */
+.menu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mc-menu-card .menu-row .mc-btn { font-size: 14px; padding: 10px 8px; }
+
+.controls-screen.info-screen {
+  display: block;
+  max-height: calc(100vh - 72px);
+  max-height: calc(100dvh - 72px);
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+/* Com uma tela de informacao aberta, o titulo e o seletor de tripulacao saem para ela caber */
+.mc-overlay.menu-info-open .mc-title-wrap,
+.mc-overlay.menu-info-open .crew-picker { display: none; }
+.mc-overlay.menu-info-open .mc-menu-card { padding-top: 0; }
+.controls-screen.info-screen.hidden { display: none; }
+.info-note { margin: 0 0 10px; font-size: 12px; line-height: 1.45; color: #d6d0c8; text-align: left; }
+.info-list { display: grid; gap: 4px; margin-bottom: 10px; }
+.info-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 24%) 1fr;
+  gap: 10px;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  background: rgba(32, 25, 19, 0.64);
+  border-left: 3px solid #bd603c;
+}
+.info-row b { color: #ffffa0; }
+.demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mc-menu-card .demo-grid .mc-btn { min-height: 44px; font-size: 13px; padding: 8px; }
+.demo-feedback { min-height: 34px; margin-top: 10px; color: #ffffa0; }
+.controls-screen.info-screen > .mc-btn { margin-top: 10px; }
+
+/* Celular em paisagem: Controls e Reset dividem uma linha, para o menu nao crescer */
+@media (max-height: 460px) {
+  #menu-main { display: grid; grid-template-columns: 1fr 1fr; }
+  #menu-main.hidden { display: none; }
+  #menu-main > #start-btn, #menu-main > .menu-row { grid-column: 1 / -1; }
+  .mc-menu-card .mc-btn { min-height: 44px; padding: 8px 10px; }
+  .controls-screen.info-screen { max-height: calc(100dvh - 48px); }
+}

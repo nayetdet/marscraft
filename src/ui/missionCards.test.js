@@ -49,7 +49,9 @@ describe('missionStatus', () => {
     const storm = { phase: 'active', storm: STORM, hoursUntil: 0, hoursLeft: 2 };
     const open = missionStatus(fakeMission({ storm, doseRate: 5 }), FETCHED);
     expect(open.alerts[0]).toMatchObject({ tone: 'danger', fill: 0.5 });
-    expect(open.alerts[0].text).toContain('Go inside');
+    expect(open.alerts[0].text).toContain('storm shelter');
+    const sheltered = missionStatus(fakeMission({ storm, doseRate: 1.9, insideShelter: true }), FETCHED);
+    expect(sheltered.alerts[0].text).toContain('Stay here');
     expect(open.alerts.map((a) => a.id)).not.toContain('radiation');
 
     const safe = missionStatus(fakeMission({ storm, doseRate: 0.1, shieldOn: true }), FETCHED);

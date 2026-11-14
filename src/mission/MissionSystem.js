@@ -2,6 +2,7 @@ import {
   ENERGY_CONFIG,
   MAV_CONFIG,
   MISSION_CONFIG,
+  STORM_CONFIG,
   SURVIVAL_CONFIG,
 } from '../config/constants.js';
 import { Battery, solarChargePerHour } from './energy.js';
@@ -41,6 +42,8 @@ export class MissionSystem {
     this.shieldOn = false;
     // Jogador dentro da bolha do escudo (shieldZone). O escudo só reduz a dose de quem está nela.
     this.insideShield = true;
+    // Jogador parado no abrigo de tempestade do habitat (baseZones.js)
+    this.insideShelter = false;
     this.factoryOn = true;
     this.iceStock = 0; // blocos de gelo esperando na fabrica
     this.propellant = 0; // %
@@ -71,8 +74,9 @@ export class MissionSystem {
   // Avanca a missao ate `hours`. `active` = jogo rodando (sem pausa e jogador vivo):
   // so entao a radiacao atinge o jogador. Devolve o dano de radiacao a aplicar na vida.
   // `insideShield` = jogador dentro da bolha do escudo; fora dela o escudo ligado nao protege.
-  update(hours, { insideHabitat = false, insideShield = true, active = true } = {}) {
+  update(hours, { insideHabitat = false, insideShield = true, insideShelter = false, active = true } = {}) {
     this.insideShield = insideShield;
+    this.insideShelter = insideShelter;
     let remaining = hours - this.lastHours;
     let damage = 0;
     while (remaining > 1e-9) {
@@ -103,7 +107,7 @@ export class MissionSystem {
     this._updateStormPhase();
 
     const multiplier = this.storm.phase === 'active' ? this.storm.storm.multiplier : 1;
-    this.doseRate = doseRateMsvPerHour({ stormMultiplier: multiplier, insideHabitat, shieldOn: this.shieldOn && this.insideShield });
+    this.doseRate = doseRateMsvPerHour({ stormMultiplier: multiplier, insideHabitat, shieldOn: this.shieldOn && this.insideShield, insideShelter: this.insideShelter });
     if (!active) return 0;
 
     if (this.storm.phase === 'active') this._playedDuringStorm = true;
@@ -158,6 +162,21 @@ export class MissionSystem {
     if (this.storm.phase === 'active') {
       this._emit('storm-start', this.storm.storm);
     }
+  }
+
+  // Controle de demo: adianta a proxima tempestade para daqui a `leadHours` horas de jogo.
+  // Usa a mesma CME real da fila; so o relogio muda. Devolve false se ja ha tempestade ativa.
+  triggerStormSoon(leadHours = STORM_CONFIG.DEMO_LEAD_HOURS) {
+    if (this.storm.phase === 'active') return false;
+    const now = this.lastHours;
+    const next = this.schedule.find((storm) => storm.end > now);
+    if (!next) return false;
+    const arrival = now + leadHours;
+    if (next.arrival <= arrival) return true; // ja chega antes disso
+    next.warningStart = Math.min(next.warningStart, now);
+    next.arrival = arrival;
+    next.end = arrival + STORM_CONFIG.DURATION_HOURS;
+    return true;
   }
 
   _emit(type, storm = null) {
