@@ -76,6 +76,12 @@ export const WATER_SYSTEM_CONFIG = {
 // Taxas "por hora de jogo": com autoAdvanceSpeed = 0.02, 1 hora de jogo = 50 s reais.
 // Fontes dos numeros reais em docs/data/numeros-reais.md.
 export const MISSION_CONFIG = {
+  MAX_ENERGY: 100, START_ENERGY: 80, SOLAR_RATE: 0.22,
+  GREENHOUSE_RATE: 0.025, OXYGEN_ENERGY_RATE: 0.18,
+  AIRLOCK_COST: 1, AIRLOCK_CYCLE: 3, DOOR_SPEED: 0.7,
+  CROP_GROWTH_TIME: 90, STORM_INTERVAL: 240, STORM_DURATION: 35, STORM_WARNING: 20,
+  RADIATION_RATE: 0.04, STORM_RADIATION_RATE: 0.25,
+
   // Hora de jogo por segundo real (igual a MarsSkySystem.autoAdvanceSpeed)
   GAME_HOURS_PER_SECOND: 0.02,
   // Passo maximo de simulacao, para avancos de tempo grandes (tecla T) nao pularem eventos
@@ -188,4 +194,13 @@ export const STATION_CONFIG = {
   // Enfermaria: a medica cura o jogador dentro da base e avisa da radiacao alta
   MEDBAY_HEAL_PER_HOUR: 2, // pontos de vida por hora de jogo
   MEDBAY_LOW_HEALTH: 8,
+  FILTER_DECAY: 0.2, CO2_RISE: 0.08, CO2_CLEAR: 0.12,
+  DUST_DAMAGE: 0.015, DECONTAMINATION_COST: 2, FILTER_COST: 4,
+  EXERCISE_COST: 3, TREATMENT_COST: 5, FOOD_COST: 3,
+  COMMS_COST: 3, COMMS_DELAY: 40, SCIENCE_PER_SAMPLE: 2, UPGRADE_COST: 4,
+  FITNESS_DECAY: 0.015, FRESH_FOOD_DURATION: 120,
+  CROP_WATER_COST: 2, CROP_ENERGY_COST: 3, CROP_GROWTH_TIME: 60,
+  CROP_NUTRITION: 5, TOOL_UPGRADE_COST: 4, MAV_REQUIRED_SAMPLES: 2,
+  MAV_TRANSMISSION_COST: 5,
+  SUIT_RADIATION_DAMAGE_FACTOR: 0.65,
 };

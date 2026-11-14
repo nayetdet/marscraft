@@ -25,6 +25,7 @@
   </div>
 
   <div id="game-container"></div>
+  <div id="co2-overlay" style="position:fixed;inset:0;background:#070d10;opacity:0;pointer-events:none;z-index:9"></div>
 
   <!-- HUD Estilo Minecraft Survival -->
   <div id="hud" class="hud">
@@ -32,6 +33,9 @@
       <div id="sol-time">Sol 1 - 17:15</div>
       <div id="player-coords">XYZ: 0 / 13 / 19</div>
       <div id="env-status">Environment: Martian Crater (using oxygen)</div>
+      <div id="mission-status"></div>
+      <div id="mission-objective"></div>
+      <div id="station-warning" style="color:#ffcf64"></div>
       <div id="base-water-status">Base Water: 25L · Greenhouse: 100% (Hydrated)</div>
     </div>
 
@@ -57,6 +61,7 @@
 
     <!-- Mira classica em cruz (+) do Minecraft -->
     <div class="mc-crosshair"></div>
+    <div id="interaction-hint" style="position:absolute;top:54%;width:100%;text-align:center;color:white;text-shadow:2px 2px #000;pointer-events:none"></div>
 
     <!-- Prompt de Interacao com Objetos (Ex: Terminal do Rover) -->
     <div id="interaction-prompt" class="interaction-prompt hidden">
@@ -153,6 +158,7 @@
             <div class="control-row"><kbd>Q</kbd><span>Drop item</span></div>
             <div class="control-row"><kbd>Z</kbd><span>Scope</span></div>
             <div class="control-row"><kbd>F</kbd><span>Interact</span></div>
+            <div class="control-row"><kbd>V</kbd><span>Open mission console</span></div>
           </div>
           <div class="controls-section">
             <h3>Rover</h3>
@@ -163,8 +169,24 @@
           </div>
           <button id="controls-back-btn" class="mc-btn secondary">Back</button>
         </section>
+        <details style="color:white;text-align:left;margin:12px">
+          <summary>Mission science &amp; sources</summary>
+          <p>Energy, growth and radiation are accelerated game simulations. A sol is a Martian day. Solar storms in this mission are simulated, not live.</p>
+          <p>Code created with AI assistance. Game rates and gravity are adjusted for play.</p>
+          <p>Data used in this simulation: <a href="https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49353/-1" target="_blank" rel="noopener">NASA DONKI: historical solar event</a>; <a href="https://visualization.osdr.nasa.gov/radlab/" target="_blank" rel="noopener">NASA RadLab: Curiosity radiation data</a>. Archived data collected 2026-11-14. Neither is live; the game simulates the storm and scales its effects.</p>
+          <p>Further NASA reading: <a href="https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html" target="_blank" rel="noopener">Mars Fact Sheet</a>; <a href="https://osdr.nasa.gov/bio/repo/data/studies/OSD-342" target="_blank" rel="noopener">OSDR-342</a>; <a href="https://trek.nasa.gov/mars/" target="_blank" rel="noopener">Mars Trek</a>. These references are not live game data.</p>
+        </details>
       </div>
     </div>
+  </div>
+
+  <div id="station-overlay" class="station-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="station-title">
+    <section class="station-window">
+      <header><span id="station-title"></span><button id="station-close" aria-label="Close station">X</button></header>
+      <div class="station-screen"><pre id="station-content"></pre><div id="gym-interactive" class="gym-interactive hidden"></div><div id="station-sources" class="station-sources"></div><p id="station-feedback" role="status"></p></div>
+      <div id="station-actions"></div>
+      <p class="station-footer">MISSION SYSTEMS // SIMULATION PAUSED</p>
+    </section>
   </div>
 
   <div id="inventory-overlay" class="inventory-overlay hidden">

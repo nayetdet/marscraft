@@ -37,6 +37,8 @@ describe('isInsidePressurizedVolume', () => {
     ['airlock corridor', 0.5, 11.7, 7.5],
     ['pressurized tunnel', -9.5, 11.7, 0.5],
     ['greenhouse dome', -17.5, 11.7, 2.5],
+    ['gym corridor', -5.5, 11.7, 6.5],
+    ['gym module', -8.5, 11.7, 10.5],
   ])('counts the %s as pressurized', (_, x, y, z) => {
     expect(isInsidePressurizedVolume(x, y, z)).toBe(true);
   });

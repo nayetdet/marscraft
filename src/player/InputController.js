@@ -15,12 +15,16 @@ export class InputController {
     harvestCrop,
     isRoverActive = () => false,
     onInteract = () => {},
+    onStationInteract = () => {},
     onRoverAction = () => {},
     onToggleShield = () => {},
     onToggleCrewPanel = () => {},
     onSendData = () => {},
     isMissionModalOpen = () => false,
     onRoverLook = () => {},
+    getInteraction,
+    isStationOpen,
+    getWorkSpeed,
   }) {
     this.onToggleShield = onToggleShield;
     this.onToggleCrewPanel = onToggleCrewPanel;
@@ -38,8 +42,12 @@ export class InputController {
     this.harvestCrop = harvestCrop;
     this.isRoverActive = isRoverActive;
     this.onInteract = onInteract;
+    this.onStationInteract = onStationInteract;
     this.onRoverAction = onRoverAction;
     this.onRoverLook = onRoverLook;
+    this.getInteraction = getInteraction;
+    this.isStationOpen = isStationOpen;
+    this.getWorkSpeed = getWorkSpeed;
 
     this.keys = {};
     this.isLocked = false;
@@ -103,7 +111,7 @@ export class InputController {
       return;
     }
 
-    target.progress = Math.min(1, target.progress + dt / BLOCK_INTERACTION_CONFIG.BREAK_TIME);
+    target.progress = Math.min(1, target.progress + dt * (this.getWorkSpeed?.() ?? 1) / BLOCK_INTERACTION_CONFIG.BREAK_TIME);
     if (target.type === 'crop') this.world.updateCropBreakCracks(target.plant, target.progress);
     else this.world.updateBreakCracks(target.x, target.y, target.z, target.progress);
     this.breakSwingTimer += dt;
@@ -172,7 +180,7 @@ export class InputController {
         this.keys = {};
         this.player.isMoving = false;
       }
-      if (!this.survival.isDead && !this.hud.isInventoryOpen && !this.isMissionModalOpen()) {
+      if (!this.survival.isDead && !this.hud.isInventoryOpen && !this.isMissionModalOpen() && !this.isStationOpen?.()) {
         overlay.classList.toggle('hidden', this.isLocked);
       }
     });
@@ -187,7 +195,7 @@ export class InputController {
     });
 
     window.addEventListener('keydown', (e) => {
-      if (this.survival.isDead) return;
+      if (this.survival.isDead || this.isStationOpen?.()) return;
       // Painel do MAV, da tripulacao ou vitoria abertos: so [F] e [C] (fechar o painel) funcionam
       if (this.isMissionModalOpen()) {
         if (e.code === 'KeyF' && !e.repeat) this.onInteract();
@@ -209,6 +217,11 @@ export class InputController {
       if (e.code === 'KeyF') {
         e.preventDefault();
         this.onInteract();
+        return;
+      }
+
+      if (e.code === 'KeyV' && this.isLocked && !e.repeat && this.getInteraction?.()?.type === 'console') {
+        this.onStationInteract();
         return;
       }
 
@@ -235,6 +248,11 @@ export class InputController {
           this.hud.openInventory(this.survival.inventorySlots);
           document.exitPointerLock();
         }
+        return;
+      }
+
+      if (e.code === 'KeyF' && this.isLocked && !e.repeat) {
+        this.onInteract?.();
         return;
       }
 
@@ -277,6 +295,12 @@ export class InputController {
 
     window.addEventListener('mousedown', (e) => {
       if (!this.isLocked || this.survival.isDead || this.isRoverActive()) return;
+
+      const interaction = this.getInteraction?.();
+      if (interaction && ['treadmill', 'bike', 'medical'].includes(interaction.type) && (e.button === 0 || e.button === 2)) {
+        this.onInteract?.();
+        return;
+      }
 
       if (e.button === 0) {
         this.isBreakButtonHeld = true;
