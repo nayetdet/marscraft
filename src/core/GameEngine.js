@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CAMERA_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.js';
 import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
 import { createBaseStock } from '../crew/baseStock.js';
@@ -61,6 +61,7 @@ export class GameEngine {
     this.container = container;
     this.scene = new THREE.Scene();
     this.isScannerOpen = false;
+    this.scene.fog = new THREE.FogExp2(0x9a4d2e, 0.0015);
     this.isZoomed = false;
 
     this.camera = new THREE.PerspectiveCamera(
@@ -112,6 +113,8 @@ export class GameEngine {
     });
     this.airlock = new Airlock(this.scene, colliders, this.expedition);
     this.stations = new StationSystem(this.expedition);
+    this.airlock.stations = this.stations;
+    this.airlock.onEvent = (type) => this._onAirlockEvent(type);
     this.stationPanel = new StationPanel(this);
     this._buildStationMarkers();
     this.growingCrops = [];
@@ -353,6 +356,16 @@ export class GameEngine {
     oscillator.connect(gain).connect(audio.destination);
     oscillator.start();
     oscillator.stop(audio.currentTime + duration);
+  }
+
+  // Fim da limpeza do traje no airlock: um fato real na primeira vez, aviso quando falta energia
+  _onAirlockEvent(type) {
+    if (type === 'clean-skipped') {
+      this.hud.showToast('No power to clean your suit: Mars dust came inside with you!', 4500);
+    } else if (type === 'suit-cleaned' && !this._dustFactShown) {
+      this._dustFactShown = true;
+      this.hud.showToast('Suit clean! Apollo astronauts got "lunar hay fever" from dust that came inside on their suits.', 6000);
+    }
   }
 
   _playDoorSound() {
@@ -649,7 +662,7 @@ export class GameEngine {
       if (message) this.hud.showToast(message, event.type === 'storm-warning' ? 8000 : 4500);
     }
 
-    this.missionHud.update(this.mission);
+    this.missionHud.update(this.mission, { survival: this.survival, stations: this.stations });
     this._panelRefreshTimer = (this._panelRefreshTimer ?? 0) + dt;
     if (this.missionHud.isMavPanelOpen && this._panelRefreshTimer > 0.25) {
       this._panelRefreshTimer = 0;
@@ -748,6 +761,14 @@ export class GameEngine {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  _updateStormFog(position) {
+    const distance = Math.hypot(position.x + 4, position.z);
+    const fogStart = SURVIVAL_CONFIG.DUST_STORM_START_RADIUS;
+    const fogRange = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS - fogStart;
+    const strength = Math.max(0, Math.min(1, (distance - fogStart) / fogRange));
+    this.scene.fog.density = 0.0015 + strength * 0.14;
   }
 
   handleRoverAction() {
@@ -943,7 +964,7 @@ export class GameEngine {
             this.highlightBox.visible = false;
           }
 
-          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: this.isScannerOpen, isRoverActive: false, mission: this.mission });
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: this.isScannerOpen, isRoverActive: false, mission: this.mission, airlock: this.airlock });
           this._updateScanner(dt);
         }
       } else {
@@ -972,6 +993,7 @@ export class GameEngine {
       this._updateCrew(dt);
       if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
 
+      this._updateStormFog(this.roverController.isActive ? this.roverController.pos : this.player.pos);
       this.renderer.render(this.scene, this.camera);
       this.debug.frame(frameMs);
     };

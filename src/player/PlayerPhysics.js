@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { PHYSICS_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { PHYSICS_CONFIG } from '../config/constants.js';
 
 const _lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
 
@@ -35,8 +35,8 @@ export class PlayerPhysics {
     this.isCrouching = false;
     this.pos.set(
       PHYSICS_CONFIG.SPAWN_POS.x,
-      PHYSICS_CONFIG.SPAWN_POS.y + 0.5,
-      PHYSICS_CONFIG.SPAWN_POS.z - 1.0
+      PHYSICS_CONFIG.SPAWN_POS.y,
+      PHYSICS_CONFIG.SPAWN_POS.z
     );
     this.vel.set(0, 0, 0);
     this.yaw = PHYSICS_CONFIG.SPAWN_YAW;
@@ -97,11 +97,6 @@ export class PlayerPhysics {
   }
 
   _checkCollision(pos) {
-    const distFromCenter = Math.hypot(pos.x, pos.z);
-    if (distFromCenter >= WORLD_CONFIG.CRATER_RADIUS - 2.5) {
-      return true;
-    }
-
     if (this._hitsCustomCollider(pos)) {
       return true;
     }

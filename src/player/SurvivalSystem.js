@@ -16,6 +16,7 @@ export class SurvivalSystem {
     this.food = this.maxStat;
     this.isDead = false;
     this.insidePressurizedShip = false;
+    this.dustStormIntensity = 0;
 
     // Sistema de Água Potável e Irrigação da Base
     this.baseWater = WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER;
@@ -59,6 +60,11 @@ export class SurvivalSystem {
     if (this.isDead) return;
 
     this.insidePressurizedShip = this.isPlayerInsideShip(playerPos);
+    const distanceFromBase = Math.hypot(playerPos.x + 4, playerPos.z);
+    const stormRange = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS - SURVIVAL_CONFIG.DUST_STORM_START_RADIUS;
+    this.dustStormIntensity = this.insidePressurizedShip
+      ? 0
+      : Math.max(0, Math.min(1, (distanceFromBase - SURVIVAL_CONFIG.DUST_STORM_START_RADIUS) / stormRange));
 
     if (this.insidePressurizedShip) {
       this.lastOxygenRefilled = Math.max(0, Math.min(
@@ -98,6 +104,12 @@ export class SurvivalSystem {
     if (this.oxygen <= 0) damageRate += SURVIVAL_CONFIG.STARVE_DAMAGE_RATE * 1.6;
     if (this.water <= 0) damageRate += SURVIVAL_CONFIG.STARVE_DAMAGE_RATE;
     if (this.food <= 0) damageRate += SURVIVAL_CONFIG.STARVE_DAMAGE_RATE * 0.8;
+    // The first gusts are a warning. Exposure hurts only after the storm has
+    // become strong enough that the player should already be heading back.
+    const damagingStorm = Math.max(0, (this.dustStormIntensity - 0.55) / 0.45);
+    if (damagingStorm > 0) {
+      damageRate += damagingStorm * SURVIVAL_CONFIG.DUST_STORM_DAMAGE_RATE;
+    }
 
     if (damageRate > 0) {
       this.health = Math.max(0, this.health - damageRate * dt);

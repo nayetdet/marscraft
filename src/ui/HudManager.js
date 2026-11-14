@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.js';
+import { airlockProgress } from './airlockProgress.js';
 
 const ICONS_PER_BAR = 10;
 
@@ -44,7 +45,10 @@ export class HudManager {
       this._createIconBar(this.waterBarEl, 'water'),
       this._createIconBar(this.foodBarEl, 'food'),
     ];
-    this.energyBar = this._createIconBar(document.getElementById('energy-bar'), 'energy');
+    this.airlockEl = document.getElementById('airlock-progress');
+    this.airlockTitleEl = this.airlockEl.querySelector('.airlock-progress-title');
+    this.airlockFillEl = this.airlockEl.querySelector('.airlock-progress-track i');
+    this.airlockTextEl = this.airlockEl.querySelector('.airlock-progress-text');
 
     // Ultimos valores escritos no DOM: so reescreve quando algo muda
     this._lastClockText = '';
@@ -69,9 +73,14 @@ export class HudManager {
     this.roverIceEl = document.getElementById('rover-ice');
     this.roverActionBannerEl = document.getElementById('rover-action-banner');
     this.roverActionTextEl = document.getElementById('rover-action-text');
-    this.baseWaterStatusEl = document.getElementById('base-water-status');
     this.bottomAreaEl = document.querySelector('.mc-bottom-area');
     this.crosshairEl = document.querySelector('.mc-crosshair');
+    this.hudEl = document.getElementById('hud');
+    this.gameContainerEl = document.getElementById('game-container');
+    this.damageOverlayEl = document.getElementById('damage-overlay');
+    this.dustStormEl = document.getElementById('dust-storm-warning');
+    this.dustStormTitleEl = this.dustStormEl?.querySelector('strong');
+    this.dustStormDetailEl = this.dustStormEl?.querySelector('span');
 
     this.renderHotbar(initialSlots);
     this._initSkyLabels();
@@ -277,6 +286,21 @@ export class HudManager {
     }
   }
 
+  // Barra do ciclo do airlock: so reescreve o DOM quando algo muda
+  _updateAirlock(airlock) {
+    const view = airlockProgress(airlock?.status() ?? null);
+    const cls = view ? `airlock-progress ${view.tone}` : 'airlock-progress hidden';
+    if (this.airlockEl._cls !== cls) {
+      this.airlockEl._cls = cls;
+      this.airlockEl.className = cls;
+    }
+    if (!view) return;
+    if (this.airlockTitleEl.textContent !== view.title) this.airlockTitleEl.textContent = view.title;
+    if (this.airlockTextEl.textContent !== view.text) this.airlockTextEl.textContent = view.text;
+    const width = `${Math.round(view.fill * 100)}%`;
+    if (this.airlockFillEl.style.width !== width) this.airlockFillEl.style.width = width;
+  }
+
   _setLabelVisible(label, visible) {
     if (label.visible === visible) return;
     label.visible = visible;
@@ -308,11 +332,33 @@ export class HudManager {
     }
   }
 
-  update({ player, survival, sky, camera, isScopeOpen = false, isRoverActive = false, roverTelemetry = null, mission }) {
+  update({ player, survival, sky, camera, isScopeOpen = false, isRoverActive = false, roverTelemetry = null, mission, airlock = null }) {
     if (survival.isDead) {
       this.showDeathScreen();
       return;
     }
+
+    const stormIntensity = survival.dustStormIntensity ?? 0;
+    if (this.dustStormEl) {
+      this.dustStormEl.classList.toggle('hidden', stormIntensity <= 0);
+      this.dustStormEl.classList.toggle('strong', stormIntensity >= 0.45);
+      this.dustStormEl.classList.toggle('critical', stormIntensity >= 0.75);
+      this.dustStormEl.style.setProperty('--storm-strength', stormIntensity.toFixed(2));
+      if (this.dustStormTitleEl) {
+        this.dustStormTitleEl.textContent = stormIntensity >= 0.65 ? 'Return now' : 'Return to base';
+      }
+      if (this.dustStormDetailEl) {
+        this.dustStormDetailEl.textContent = stormIntensity >= 0.65 ? 'Storm exposure is fatal' : 'Dust storm ahead';
+      }
+    }
+
+    const damageIntensity = Math.max(0, Math.min(1, (survival.maxStat * 0.7 - survival.health) / (survival.maxStat * 0.7)));
+    if (this.damageOverlayEl) {
+      this.damageOverlayEl.classList.toggle('hidden', damageIntensity <= 0);
+      this.damageOverlayEl.style.setProperty('--damage-strength', damageIntensity.toFixed(2));
+      this.damageOverlayEl.classList.toggle('critical', damageIntensity >= 0.55);
+    }
+    if (this.gameContainerEl) this.gameContainerEl.classList.toggle('damage-shake', damageIntensity >= 0.55);
 
     if (isRoverActive && roverTelemetry) {
       if (this.roverSpeedEl) this.roverSpeedEl.textContent = `Speed: ${roverTelemetry.speedKmh} km/h`;
@@ -338,15 +384,6 @@ export class HudManager {
       }
     } else if (this.roverActionBannerEl) {
       this.roverActionBannerEl.classList.add('hidden');
-    }
-
-    // Status da Agua da Base e Estufa
-    if (this.baseWaterStatusEl && survival) {
-      const waterL = Math.round(survival.baseWater ?? 0);
-      const hydr = Math.round(survival.greenhouseHydration ?? 100);
-      const hydrLabel = hydr > 20 ? 'Hydrated' : 'Dry - Needs Water!';
-      this.baseWaterStatusEl.textContent = `Base Water: ${waterL}L · Greenhouse: ${hydr}% (${hydrLabel})`;
-      this.baseWaterStatusEl.style.color = hydr > 20 ? '#38bdf8' : '#f87171';
     }
 
     const { clockText } = sky.getFormattedTime();
@@ -385,9 +422,7 @@ export class HudManager {
     this._updateIconBar(oxygenBar, survival.oxygen);
     this._updateIconBar(waterBar, survival.water);
     this._updateIconBar(foodBar, survival.food);
-    if (mission) {
-      this._updateIconBar(this.energyBar, (mission.battery.charge / mission.battery.capacity) * survival.maxStat);
-    }
+    this._updateAirlock(airlock);
 
     // Os nomes no céu só aparecem com a luneta (Z) aberta, como parte do modo telescópio.
     if (!isScopeOpen) {

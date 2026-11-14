@@ -1,4 +1,4 @@
-import { BLOCK_INTERACTION_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { BLOCK_INTERACTION_CONFIG } from '../config/constants.js';
 import { applyMouseLook, requestRawPointerLock } from './mouseLook.js';
 
 export class InputController {
@@ -256,7 +256,7 @@ export class InputController {
   _canBreak(hit) {
     if (!hit.hit) return false;
     if (hit.type === 'crop') return Boolean(hit.plant);
-    return hit.y > 0 && Math.hypot(hit.x, hit.z) < WORLD_CONFIG.CRATER_RADIUS - 4;
+    return hit.y > 0;
   }
 
   _startBreaking() {

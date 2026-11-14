@@ -67,19 +67,13 @@ export class RoverController {
   }
 
   isPositionBlocked(nextX, nextZ, currentY) {
-    // 1. Limite circular da cratera
-    const distFromCenter = Math.hypot(nextX, nextZ);
-    if (distFromCenter >= WORLD_CONFIG.CRATER_RADIUS - 3.2) {
-      return true;
-    }
-
-    // 2. Não subir em degraus mais altos que a capacidade do rover (paredes da base, rochas verticais)
+    // 1. Não subir em degraus mais altos que a capacidade do rover (paredes da base, rochas verticais)
     const targetHeight = this.getTerrainHeight(nextX, nextZ);
     if (targetHeight - currentY > 1.15) {
       return true;
     }
 
-    // 3. Área construída da base principal para evitar atravessar paredes do habitat
+    // 2. Área construída da base principal para evitar atravessar paredes do habitat
     if (
       nextX >= -9.0 &&
       nextX <= 9.0 &&

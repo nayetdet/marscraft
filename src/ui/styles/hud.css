@@ -9,6 +9,105 @@
   padding: 10px 14px;
 }
 
+.damage-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 32%, rgba(130, 10, 7, calc(var(--damage-strength) * .7)) 100%);
+  mix-blend-mode: screen;
+}
+
+.damage-overlay.hidden { display: none; }
+
+#game-container.damage-shake {
+  animation: damage-shake .13s steps(2, end) infinite;
+}
+
+@keyframes damage-shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 1px); }
+  75% { transform: translate(2px, -1px); }
+}
+
+.dust-storm-warning {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 12vh;
+  color: #ffd36e;
+  background:
+    radial-gradient(ellipse at center, rgba(115, 68, 30, calc(var(--storm-strength) * .12)) 8%, rgba(27, 12, 5, calc(var(--storm-strength) * .82)) 100%),
+    repeating-linear-gradient(112deg, transparent 0 28px, rgba(215, 143, 66, calc(var(--storm-strength) * .14)) 29px 31px, transparent 32px 62px);
+  background-size: 100% 100%, 180px 180px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-shadow: 3px 3px 0 #251409;
+  animation: dust-storm-drift 1.8s linear infinite;
+}
+
+.dust-storm-warning::before,
+.dust-storm-warning::after {
+  content: '';
+  position: absolute;
+  inset: -25%;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(108deg,
+      transparent 0 30px,
+      rgba(226, 163, 87, calc(var(--storm-strength) * .45)) 31px 33px,
+      transparent 34px 72px),
+    radial-gradient(circle at 25% 30%, rgba(238, 177, 96, calc(var(--storm-strength) * .8)) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 70% 65%, rgba(151, 87, 42, calc(var(--storm-strength) * .8)) 0 1px, transparent 1.6px);
+  background-size: 180px 180px, 9px 9px, 13px 13px;
+  opacity: calc(var(--storm-strength) * .9);
+  animation: wind-gust 3.2s linear infinite;
+}
+
+.dust-storm-warning::after {
+  background:
+    repeating-linear-gradient(104deg,
+      transparent 0 46px,
+      rgba(244, 190, 109, calc(var(--storm-strength) * .36)) 47px 48px,
+      transparent 49px 92px),
+    radial-gradient(circle at 50% 50%, rgba(242, 191, 110, calc(var(--storm-strength) * .9)) 0 1px, transparent 1.7px);
+  background-size: 110px 110px, 7px 7px;
+  opacity: calc(var(--storm-strength) * .5);
+  animation-duration: 2.4s;
+  animation-direction: reverse;
+}
+
+.dust-storm-warning strong {
+  position: relative;
+  z-index: 1;
+  padding: 5px 10px 2px;
+  font-size: 24px;
+  letter-spacing: 1px;
+}
+
+.dust-storm-warning span { position: relative; z-index: 1; font-size: 14px; }
+.dust-storm-warning.strong { animation-duration: 1.1s; }
+.dust-storm-warning.strong::before { animation-duration: 1.65s; }
+.dust-storm-warning.strong::after { animation-duration: 1.15s; }
+.dust-storm-warning.critical { color: #ff8e58; }
+.dust-storm-warning.critical::before { animation-duration: .9s; }
+.dust-storm-warning.critical::after { animation-duration: .62s; }
+.dust-storm-warning.hidden { display: none; }
+
+@keyframes dust-storm-drift {
+  from { background-position: center, 0 0; }
+  to { background-position: center, 180px -90px; }
+}
+
+@keyframes wind-gust {
+  from { transform: translate3d(-12%, 8%, 0); }
+  to { transform: translate3d(12%, -8%, 0); }
+}
+
 /* Texto de debug/coordenadas estilo Minecraft F3 no topo esquerdo */
 .mc-top-info {
   display: flex;
@@ -347,8 +446,41 @@
   }
 }
 
-/* Parte Inferior da HUD (Estilo Minecraft Survival) */
+/* Barra do ciclo do airlock, no centro da tela (estilo barra de progresso do Minecraft) */
+.airlock-progress {
+  position: fixed;
+  top: 62%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, calc(100vw - 32px));
+  padding: 8px 12px 9px;
+  text-align: center;
+  background: rgba(16, 4, 16, 0.86);
+  border: 2px solid #1a031a;
+  box-shadow: inset 0 0 0 2px #4f1f8c, 3px 3px 0 rgba(0, 0, 0, 0.45);
+}
+.airlock-progress.hidden { display: none; }
+.airlock-progress.warn { box-shadow: inset 0 0 0 2px #c9a227, 3px 3px 0 rgba(0, 0, 0, 0.45); }
+.airlock-progress-title { font-size: 13px; color: #cfcfcf; letter-spacing: 1px; text-shadow: 1px 1px 0 #000; }
+.airlock-progress-track { height: 12px; margin: 6px 0; background: #2a2a2a; border: 2px solid #000; position: relative; }
+.airlock-progress-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), #000 calc(10% - 2px) 10%);
+}
+.airlock-progress-track i { display: block; height: 100%; width: 0; background: #7cfc00; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
+.airlock-progress.warn .airlock-progress-track i { background: #ffd23f; }
+.airlock-progress-text { font-size: 13px; line-height: 1.3; color: #ececec; text-shadow: 1px 1px 0 #000; }
+.airlock-progress.warn .airlock-progress-text { color: #ffd23f; }
+.airlock-progress.clean { box-shadow: inset 0 0 0 2px #2f8fd8, 3px 3px 0 rgba(0, 0, 0, 0.45); }
+.airlock-progress.clean .airlock-progress-track i { background: #6fd3ff; }
+.airlock-progress.clean .airlock-progress-text { color: #9fe3ff; }
+
+/* Parte Inferior da HUD (Estilo Minecraft Survival). margin-top: auto prende a area no rodape
+   mesmo quando os blocos de cima estao escondidos (senao o space-between a joga para o topo). */
 .mc-bottom-area {
+  margin-top: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -446,40 +578,192 @@
 .mc-stat-icon.food.full { color: #d98738; }
 .mc-stat-icon.energy.full { color: #f2d43d; }
 
-/* Caixa da missao no canto superior direito: energia, radiacao, tempestade, MAV */
+/* Painel da base no canto superior direito (estilo jogos de gestao + tooltip do Minecraft):
+   cada recurso = icone, nome, barra, valor e tendencia. Alertas aparecem embaixo so quando
+   e preciso agir, com a cor da gravidade. */
 .mission-box {
-  position: fixed;
-  top: 10px;
-  right: 14px;
-  max-width: min(360px, 46vw);
+  width: 292px;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
-  font-size: 14px;
-  line-height: 1.25;
+  gap: 6px;
   color: #ffffff;
-  text-align: right;
 }
 
-.mission-box div {
-  background: rgba(0, 0, 0, 0.35);
-  padding: 2px 6px;
+.base-panel,
+.mission-alert {
+  background: rgba(16, 4, 16, 0.86);
+  border: 2px solid #1a031a;
+  box-shadow: inset 0 0 0 2px #4f1f8c, 3px 3px 0 rgba(0, 0, 0, 0.45);
 }
 
-.mission-box .hidden { display: none; }
-.mission-box .warn { color: #ffff55; }
-.mission-box .danger { color: #ff5555; animation: mission-blink 1s steps(2, end) infinite; }
-.mission-box .ok { color: #7cfc00; }
-.mission-source { font-size: 11px; color: #d0d0d0; }
-.mission-source:empty { display: none; }
+.base-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+}
+
+.res-row {
+  display: grid;
+  grid-template-columns: 18px 84px 1fr 58px 14px;
+  align-items: center;
+  column-gap: 6px;
+  height: 20px;
+}
+
+.res-icon,
+.res-trend,
+.alert-icon {
+  display: block;
+  filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.8));
+}
+.res-icon { width: 18px; height: 18px; color: #f2d43d; }
+.res-trend { width: 12px; height: 12px; }
+.res-icon svg, .res-trend svg, .alert-icon svg { display: block; width: 100%; height: 100%; }
+
+.res-name { font-size: 12px; color: #cfcfcf; letter-spacing: 0.5px; text-shadow: 1px 1px 0 #000; }
+.res-value { font-size: 15px; text-align: right; text-shadow: 2px 2px 0 #000; }
+
+/* Barra em 10 blocos, como as barras do Minecraft */
+.res-meter {
+  position: relative;
+  height: 10px;
+  background: #2a2a2a;
+  border: 1px solid #000;
+  box-shadow: inset 1px 1px 0 #151515;
+}
+.res-meter::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), #000 calc(10% - 1px) 10%);
+}
+.res-fill { display: block; height: 100%; width: 0; background: #f2d43d; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
+
+/* Radiacao como semaforo de 3 niveis */
+.res-levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; height: 10px; }
+.res-levels i { background: #2a2a2a; border: 1px solid #000; }
+.res-levels i.on.l1 { background: #7cfc00; }
+.res-levels i.on.l2 { background: #ffd23f; }
+.res-levels i.on.l3 { background: #ff4b4b; }
+
+.res-key {
+  width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  line-height: 1;
+  color: #bdbdbd;
+  background: #3a3a3a;
+  border: 1px solid #000;
+  text-shadow: none;
+}
+.res-key.on { color: #ffffff; background: #2f8fd8; }
+
+/* Cores por estado */
+#res-power .res-value { color: #f2d43d; }
+#res-power.warn .res-fill { background: #ff9f1c; }
+#res-power.warn .res-value { color: #ff9f1c; }
+#res-power.danger .res-fill { background: #ff4b4b; }
+#res-power.danger .res-value,
+#res-power.danger .res-icon { color: #ff4b4b; animation: mission-blink 1s steps(2, end) infinite; }
+.res-trend.up { color: #7cfc00; }
+.res-trend.down { color: #ff6b6b; }
+
+#res-water .res-icon, #res-water .res-value { color: #4aa8ff; }
+#res-water .res-fill { background: #3b8fe0; }
+#res-air .res-icon, #res-air .res-value { color: #9fe7ff; }
+#res-air .res-fill { background: #8fdcf2; }
+#res-water.warn .res-value, #res-air.warn .res-value { color: #ffd23f; }
+#res-water.warn .res-fill, #res-air.warn .res-fill { background: #ffd23f; }
+#res-water.danger .res-value, #res-air.danger .res-value { color: #ff4b4b; animation: mission-blink 1s steps(2, end) infinite; }
+#res-water.danger .res-fill, #res-air.danger .res-fill { background: #ff4b4b; }
+.res-trend.dry { color: #c7743a; animation: mission-blink 1s steps(2, end) infinite; }
+
+/* "+12 L" / "-2 L" saindo da linha da agua, para a esquerda do painel */
+.res-row { position: relative; }
+.res-delta {
+  position: absolute;
+  right: calc(100% + 18px);
+  top: 50%;
+  font-size: 16px;
+  text-shadow: 2px 2px 0 #000;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+.res-delta.show { animation: res-delta 1.8s steps(12) forwards; }
+.res-delta.up { color: #6fc3ff; }
+.res-delta.down { color: #ff8a8a; }
+@keyframes res-delta {
+  0% { opacity: 1; transform: translateY(-50%); }
+  70% { opacity: 1; transform: translateY(-140%); }
+  100% { opacity: 0; transform: translateY(-170%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .res-delta.show { animation: none; opacity: 1; }
+}
+
+#res-radiation.ok .res-icon, #res-radiation.ok .res-value { color: #7cfc00; }
+#res-radiation.warn .res-icon, #res-radiation.warn .res-value { color: #ffd23f; }
+#res-radiation.danger .res-icon, #res-radiation.danger .res-value { color: #ff4b4b; animation: mission-blink 1s steps(2, end) infinite; }
+#res-radiation.shield .res-icon, #res-radiation.shield .res-value { color: #6fd3ff; }
+#res-radiation.shield .res-levels i { background: #1d4f73; }
+
+#res-rocket .res-icon { color: #e8e8e8; }
+#res-rocket .res-fill { background: #cfcfcf; }
+#res-rocket .res-value { color: #e8e8e8; }
+#res-rocket.ok .res-icon, #res-rocket.ok .res-value { color: #7cfc00; }
+#res-rocket.ok .res-fill { background: #7cfc00; }
+
+/* Alertas (estilo Oxygen Not Included): titulo curto, o que fazer, contagem e fonte do dado */
+.mission-alerts { display: flex; flex-direction: column; gap: 6px; }
+.mission-alert {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  animation: scan-slide-in 0.3s steps(6) both;
+}
+.mission-alert.hidden { display: none; }
+.mission-alert.warn { box-shadow: inset 0 0 0 2px #c9a227, 3px 3px 0 rgba(0, 0, 0, 0.45); }
+.mission-alert.danger { box-shadow: inset 0 0 0 2px #d93a3a, 3px 3px 0 rgba(0, 0, 0, 0.45); background: rgba(48, 4, 4, 0.88); }
+.mission-alert.ok { box-shadow: inset 0 0 0 2px #4caf2a, 3px 3px 0 rgba(0, 0, 0, 0.45); }
+
+.alert-icon { flex: 0 0 26px; width: 26px; height: 26px; }
+.mission-alert.warn .alert-icon, .mission-alert.warn .alert-title { color: #ffd23f; }
+.mission-alert.danger .alert-icon, .mission-alert.danger .alert-title { color: #ff5555; }
+.mission-alert.danger .alert-title { animation: mission-blink 1s steps(2, end) infinite; }
+.mission-alert.ok .alert-icon, .mission-alert.ok .alert-title { color: #7cfc00; }
+
+.alert-body { flex: 1; min-width: 0; }
+.alert-title { font-size: 14px; text-shadow: 2px 2px 0 #000; }
+.alert-text { margin-top: 3px; font-size: 12px; line-height: 1.3; color: #ececec; text-shadow: 1px 1px 0 #000; }
+.alert-timer { margin-top: 6px; height: 6px; background: #2a2a2a; border: 1px solid #000; }
+.alert-timer.hidden { display: none; }
+.alert-timer i { display: block; height: 100%; width: 0; background: currentColor; }
+.mission-alert.warn .alert-timer { color: #ffd23f; }
+.mission-alert.danger .alert-timer { color: #ff5555; }
+.alert-source { margin-top: 5px; font-size: 10px; line-height: 1.3; color: #a9a9a9; text-shadow: none; }
+.alert-source:empty { display: none; }
 
 @keyframes mission-blink {
   50% { opacity: 0.55; }
 }
 
-@media (max-width: 600px) {
-  .mission-box { font-size: 11px; }
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  .mission-box { width: 236px; gap: 4px; }
+  .base-panel { padding: 6px 8px; gap: 3px; }
+  .res-row { grid-template-columns: 14px 62px 1fr 50px 12px; column-gap: 4px; height: 16px; }
+  .res-icon { width: 14px; height: 14px; }
+  .res-trend, .res-key { width: 12px; height: 12px; }
+  .res-name { font-size: 10px; }
+  .res-value { font-size: 11px; }
+  .mission-alert { padding: 6px 8px; }
+  .alert-icon { flex-basis: 20px; width: 20px; height: 20px; }
+  .alert-title { font-size: 12px; }
+  .alert-text { font-size: 11px; }
 }
 
 /* Hotbar Clássica do Minecraft (9 Slots Chanfrados) */
@@ -778,9 +1062,10 @@
   border-radius: 2px;
 }
 
-#base-water-status {
-  color: #38bdf8;
-}
+/* Textos antigos do canto superior esquerdo (Sol, XYZ, ambiente, objetivo...): escondidos para
+   deixar a tela limpa. Agua e O2 da base ficam no painel da direita. */
+#astronaut-info { display: none; }
+
 
 .rover-controls-hint {
   text-align: center;
