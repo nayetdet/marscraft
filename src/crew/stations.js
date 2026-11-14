@@ -129,7 +129,7 @@ const PROBLEM_TEXT = {
     : `Commander, the ${s.name} is breaking down. It needs care.`),
   'no-water': () => 'Commander, the plants are dry! The base water tank is empty.',
   'tank-low': () => 'Commander, the water tank is almost empty! Bring ice with the rover.',
-  'radiation-high': () => 'Commander, your radiation dose is too high! Get inside the base or turn on the shield [R].',
+  'radiation-high': () => 'Commander, your radiation dose is too high! Get inside the base or use the Shield Remote to turn on the shield.',
   'health-low': () => 'Commander, you are hurt! Come to the medical bay inside the base.',
   frozen: (s) => `Commander, it is freezing! The ${s.name} stopped. Turn the heater on in the power room.`,
   'lights-off': () => 'Commander, the greenhouse lights are off. The plants stopped growing.',

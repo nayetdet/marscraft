@@ -32,10 +32,11 @@ describe('SurvivalSystem', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('starts with the Scope in slot one and carrots in slot two', () => {
+  it('starts with the Scope, carrots and the Shield Remote in the first three slots', () => {
     const survival = new SurvivalSystem();
     expect(survival.slots[0]?.id).toBe(BLOCK_IDS.SCOPE);
     expect(survival.slots[1]?.id).toBe(BLOCK_IDS.HYDRO_PLANT);
+    expect(survival.slots[2]).toMatchObject({ id: BLOCK_IDS.SHIELD_REMOTE, count: 1, equipment: true });
   });
 
   it('detects player inside Main White Habitat, Pressurized Tunnel, and Greenhouse Dome', () => {

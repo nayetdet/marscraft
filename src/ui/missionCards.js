@@ -69,7 +69,7 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       title: `SOLAR STORM! ${formatHours(hoursLeft)} left`,
       text: mission.insideShelter
         ? `In the storm shelter: ${Math.round(mission.shelterWaterL ?? 0)} L of water in the wall.`
-        : shielded ? 'The shield is protecting you. Stay in the bubble.' : 'Hide in the storm shelter (water wall) or turn on the shield [R].',
+        : shielded ? 'The shield is protecting you. Stay in the bubble.' : 'Hide in the storm shelter (water wall) or use the Shield Remote to turn on the shield.',
       fill: clamp01(hoursLeft / Math.max(0.01, storm.end - storm.arrival)),
       source: stormSourceShort(storm, fetchedIso),
     });

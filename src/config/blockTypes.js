@@ -19,6 +19,7 @@ export const BLOCK_IDS = {
   LETTUCE: 15,
   SOY: 16,
   SCOPE: 17,
+  SHIELD_REMOTE: 18, // item de mao, nao e bloco do mundo
 };
 
 export const HOTBAR_BLOCKS = [
@@ -34,6 +35,13 @@ export const HOTBAR_BLOCKS = [
     name: 'Mars Carrot (Right-click to eat)',
     initialCount: 3,
     consumable: { type: 'food', amount: 6, heal: 2 },
+  },
+  {
+    id: BLOCK_IDS.SHIELD_REMOTE,
+    name: 'Shield Remote (Use to turn the radiation shield on/off)',
+    initialCount: 1,
+    consumable: null,
+    equipment: true,
   },
   {
     id: BLOCK_IDS.REGOLITH,
