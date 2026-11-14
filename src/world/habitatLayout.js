@@ -23,15 +23,15 @@ export const HABITAT_LAYOUT = {
   // Cupula de observacao sobre o teto: ar em |x|, |z| <= 2, y = 15..17.
   CUPOLA_HALF: 2,
   CUPOLA_HEIGHT: 3,
-  // Tunel ate a estufa: ar em x = -12..-7, |z| <= 2 (cinco blocos de largura), tres de altura.
-  TUNNEL_X_MIN: -12,
+  // Tunel ate a estufa: ar em x = -14..-7, |z| <= 2 (cinco blocos de largura), tres de altura.
+  TUNNEL_X_MIN: -14,
   TUNNEL_X_MAX: -7,
   TUNNEL_HALF_Z: 2,
   TUNNEL_HEIGHT: 3,
   // Redoma da estufa: hemisferio levemente achatado (dy * 1.05) com casca de 0.65 bloco.
-  DOME_X: -18,
+  DOME_X: -27,
   DOME_Z: 0,
-  DOME_RADIUS: 7,
+  DOME_RADIUS: 14,
   DOME_SHELL: 0.65,
   DOME_Y_SQUASH: 1.05,
   // Corredor pressurizado Sudoeste ate o Modulo da Academia: ar em x = -6..-5, z = 5..7, y = 10..13.
@@ -78,6 +78,19 @@ export function northLinkBox(room) {
 }
 
 const L = HABITAT_LAYOUT;
+
+// Planta do piso da estufa, em blocos a partir do centro da redoma (dx, dz):
+// 'ring' (fundacao), 'plaza' (praca central), 'walk' (cruz de 5 blocos, anel de caminhada e
+// borda), 'crop' (canteiros de dentro, com plantas que se colhem) e 'field' (bandejas de fora).
+export function domeFloorCell(dx, dz) {
+  const r = Math.hypot(dx, dz);
+  if (r > L.DOME_RADIUS - 0.8) return 'ring';
+  if (r < 4.5) return 'plaza';
+  if (Math.abs(dx) <= 2 || Math.abs(dz) <= 2) return 'walk';
+  if (r < 7.5) return 'crop';
+  if (r < 8.8) return 'walk';
+  return r <= L.DOME_RADIUS - 1.9 ? 'field' : 'walk';
+}
 
 // Diz se a coluna (bx, bz) do habitat principal e 'air', 'wall' ou nada (null).
 // Regra dos cantos: a 1 passo do canto fica fora, a 2 passos e parede (octogono alongado).

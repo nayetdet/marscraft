@@ -1,5 +1,6 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { MAV_CONFIG, WATER_SYSTEM_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { HABITAT_LAYOUT } from './habitatLayout.js';
 
 function noise2D(x, z) {
   return Math.sin(x * 0.045) * Math.cos(z * 0.045) * 2.1 + Math.sin((x + z) * 0.12) * 0.75;
@@ -41,6 +42,12 @@ export function generateMartianTerrain(world) {
       const padDistance = Math.hypot(padDx, padDz);
       if (padDistance < NORTH_PAD.blend) {
         const blend = padDistance / NORTH_PAD.blend;
+        height = groundY * (1 - blend) + height * blend;
+      }
+      // Terreno plano sob a redoma da estufa, que passa do disco plano da base
+      const domeEdge = Math.hypot(x - HABITAT_LAYOUT.DOME_X, z - HABITAT_LAYOUT.DOME_Z) - (HABITAT_LAYOUT.DOME_RADIUS + 2);
+      if (domeEdge < 3) {
+        const blend = Math.max(0, domeEdge / 3);
         height = groundY * (1 - blend) + height * blend;
       }
       const surfaceY = Math.min(world.sizeY - 2, Math.max(2, Math.floor(height)));

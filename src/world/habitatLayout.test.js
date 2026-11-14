@@ -18,7 +18,7 @@ describe('isInsidePressurizedVolume', () => {
     const world = createMapWorld();
     buildNasaSpaceshipAndBase(world);
     const wrong = [];
-    for (let x = -30; x <= 30; x++) {
+    for (let x = -45; x <= 30; x++) {
       for (let y = 0; y <= 30; y++) {
         for (let z = -50; z <= 30; z++) {
           if (!isInsidePressurizedVolume(x + 0.5, y + 0.5, z + 0.5)) continue;
@@ -37,6 +37,7 @@ describe('isInsidePressurizedVolume', () => {
     ['airlock corridor', 0.5, 11.7, 7.5],
     ['pressurized tunnel', -9.5, 11.7, 0.5],
     ['greenhouse dome', -17.5, 11.7, 2.5],
+    ['greenhouse dome, high up near the centre', -26.5, 20.7, 0.5],
     ['gym corridor', -5.5, 11.7, 6.5],
     ['gym module', -8.5, 11.7, 10.5],
     ['main habitat, new north-east corner', 10.5, 11.7, -9.5],
@@ -53,7 +54,7 @@ describe('isInsidePressurizedVolume', () => {
     ['outside next to the airlock', 4.5, 11.7, 7.5],
     ['outside in a chamfered corner', 12.5, 11.7, 5.5],
     ['on the tunnel roof', -9.5, 15.7, 0.5],
-    ['on the side of the greenhouse dome', -17.5, 15.7, 5.5],
+    ['above the side of the greenhouse dome', -17.5, 22.7, 5.5],
     ['on the open surface', 0.5, 11.7, 24.5],
     ['outside between the power and bathroom modules', -15.5, 11.7, -27.5],
     ['outside between the spine and the kitchen', 2.5, 11.7, -17.5],

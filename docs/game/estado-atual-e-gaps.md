@@ -25,6 +25,8 @@ A base é dividida em zonas com placa, cor no piso e função: `CMD-1` comando, 
 
 A ala norte (`NORTH_WING` em `habitatLayout.js`) é um corredor central envidraçado que liga quatro módulos separados, cada um com a sua função: energia e aquecimento, cozinha, banheiro e oficina. O campo solar fica a oeste do módulo de energia.
 
+A estufa é a maior estrutura da base: redoma de raio 14 (`DOME_X`, `DOME_RADIUS` em `habitatLayout.js`) com praça central, anel de caminhada, canteiros de dentro que se colhem e bandejas de fora só de cenário, por quadrante (`domeFloorCell`). As bandejas de fora usam piso de metal para não virarem comida de graça ao quebrar o bloco.
+
 O abrigo de tempestade, o terminal de rádio e o módulo norte são da issue #56 (`nasaModelsBuilder.js`); `baseDecor.js` só acrescenta placa, pôster e medidor a eles.
 
 ## Comparação com o que o desafio pede

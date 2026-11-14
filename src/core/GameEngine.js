@@ -390,7 +390,7 @@ export class GameEngine {
       { type: 'hygiene', x: -16.0, y: 11.1, z: -38.3, label: 'Press F: bathroom & water recycler' },
       { type: 'hygiene', x: -19.85, y: 11.6, z: -32.5, label: 'Press F: bathroom & water recycler' },
       { type: 'workshop', x: 11.5, y: 11.5, z: -38.1, label: 'Press F: 3D printer workshop' },
-      { type: 'greenhouse', x: -17, y: 11.4, z: 0, label: 'Press F: harvest carrot' },
+      { type: 'greenhouse', x: HABITAT_LAYOUT.DOME_X - 2.5, y: 11.4, z: HABITAT_LAYOUT.DOME_Z - 2.5, label: 'Press F: harvest carrot' },
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
       { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
@@ -533,7 +533,7 @@ export class GameEngine {
     const dark = new THREE.MeshLambertMaterial({ color: 0x293b43 });
     // Voxel hydroponic tray and grow lights.
     this.stationCrop = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.7, 0.65), new THREE.MeshLambertMaterial({ color: 0x61b54c }));
-    this.stationCrop.position.set(-16.5, 10.7, 0); this.stationCrop.visible = false; this.scene.add(this.stationCrop);
+    this.stationCrop.position.set(HABITAT_LAYOUT.DOME_X - 2.5, 10.7, HABITAT_LAYOUT.DOME_Z - 2.5); this.stationCrop.visible = false; this.scene.add(this.stationCrop);
     const colors = { treadmill: 0x38bdf8, bike: 0x4ade80, medical: 0xe76b65 };
     for (const [type, x, z] of [['treadmill', -9.2, 9.2], ['bike', -5.8, 9.5], ['medical', -7.6, 12.4]]) {
       const frame = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.12), dark);
@@ -550,8 +550,8 @@ export class GameEngine {
     this.scene.add(habLight);
 
     // Luz clara dentro da Redoma de Estufa
-    const domeLight = new THREE.PointLight(0xf0fdf4, 1.5, 18);
-    domeLight.position.set(-18, 13.5, 0);
+    const domeLight = new THREE.PointLight(0xf0fdf4, 1.7, 38);
+    domeLight.position.set(HABITAT_LAYOUT.DOME_X + 0.5, 18, HABITAT_LAYOUT.DOME_Z + 0.5);
     this.scene.add(domeLight);
 
     // Luz do Modulo Norte (issue #56)
@@ -1231,10 +1231,13 @@ export class GameEngine {
       return;
     }
 
-    // 3. Estufa / Plantações de Batata (x: -18, z: 0)
-    const distGreenhouse = Math.hypot(this.player.pos.x + 18, this.player.pos.z);
+    // 3. Estufa / Plantações (redoma de HABITAT_LAYOUT)
+    const distGreenhouse = Math.hypot(
+      this.player.pos.x - (HABITAT_LAYOUT.DOME_X + 0.5),
+      this.player.pos.z - (HABITAT_LAYOUT.DOME_Z + 0.5)
+    );
     const dyGreenhouse = Math.abs(this.player.pos.y - 11.0);
-    if (distGreenhouse < 5.8 && dyGreenhouse < 2.2) {
+    if (distGreenhouse < HABITAT_LAYOUT.DOME_RADIUS - 2 && dyGreenhouse < 2.2) {
       this.currentInteraction = 'greenhouse';
       this.hud.setInteractionPrompt(true, '[F] Harvest Carrot (Irrigated Greenhouse)');
       return;
