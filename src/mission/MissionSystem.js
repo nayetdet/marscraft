@@ -3,11 +3,12 @@ import {
   MAV_CONFIG,
   MISSION_CONFIG,
   STORM_CONFIG,
+  RADIATION_CONFIG,
   SURVIVAL_CONFIG,
 } from '../config/constants.js';
 import { Battery, solarChargePerHour } from './energy.js';
 import { doseRateMsvPerHour, radiationDamage } from './radiation.js';
-import { buildStormSchedule, stormStateAt } from './solarStorms.js';
+import { buildStormSchedule, rescheduleStorms, stormStateAt } from './solarStorms.js';
 
 const PROPELLANT_PER_ICE = 100 / MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
 
@@ -34,15 +35,20 @@ export function mavProgress({ propellant, stormsSurvived, dataSent }) {
 // Energia, tempestades solares, radiacao e o MAV. Sem DOM nem Three.js, para testar com Vitest.
 // O tempo vem do relogio do ceu em horas de jogo totais: (sol - 1) * 24 + hora do dia.
 export class MissionSystem {
-  constructor({ cmes, startHours }) {
+  // `stormsStarted: false` deixa o clima espacial calmo ate `startStorms()` (a historia so
+  // solta as tempestades no ato 2, para nenhuma CME cair no meio do tutorial).
+  constructor({ cmes, startHours, stormsStarted = true }) {
     this.battery = new Battery();
-    this.schedule = buildStormSchedule(cmes, startHours);
+    this.cmes = cmes;
+    this.stormsStarted = stormsStarted;
+    this.schedule = stormsStarted ? buildStormSchedule(cmes, startHours) : [];
     this.lastHours = startHours;
 
     this.shieldOn = false;
     // Jogador dentro da bolha do escudo (shieldZone). O escudo só reduz a dose de quem está nela.
     this.insideShield = true;
-    // Jogador parado no abrigo de tempestade do habitat (baseZones.js)
+    // Abrigo de tempestade (issue #56): litros guardados na parede de agua e jogador dentro dele
+    this.shelterWaterL = 0;
     this.insideShelter = false;
     this.factoryOn = true;
     this.iceStock = 0; // blocos de gelo esperando na fabrica
@@ -107,12 +113,26 @@ export class MissionSystem {
     this._updateStormPhase();
 
     const multiplier = this.storm.phase === 'active' ? this.storm.storm.multiplier : 1;
-    this.doseRate = doseRateMsvPerHour({ stormMultiplier: multiplier, insideHabitat, shieldOn: this.shieldOn && this.insideShield, insideShelter: this.insideShelter });
+    this.doseRate = doseRateMsvPerHour({
+      stormMultiplier: multiplier,
+      insideHabitat,
+      shieldOn: this.shieldOn && this.insideShield,
+      shelterWaterL: this.insideShelter ? this.shelterWaterL : 0,
+    });
     if (!active) return 0;
 
     if (this.storm.phase === 'active') this._playedDuringStorm = true;
     this.totalDoseMsv += this.doseRate * h;
     return radiationDamage(this.doseRate, h);
+  }
+
+  // Comeca a fila de tempestades a partir de `hours`. Chamar de novo nao refaz a fila.
+  startStorms(hours) {
+    if (this.stormsStarted) return;
+    this.stormsStarted = true;
+    this.schedule = buildStormSchedule(this.cmes, hours);
+    this.storm = stormStateAt(this.schedule, hours);
+    this._phaseKey = this._keyFor(this.storm);
   }
 
   _runFactory(h) {
@@ -169,6 +189,7 @@ export class MissionSystem {
   triggerStormSoon(leadHours = STORM_CONFIG.DEMO_LEAD_HOURS) {
     if (this.storm.phase === 'active') return false;
     const now = this.lastHours;
+    this.startStorms(now); // a historia so solta as tempestades no ato 2; o controle de demo nao espera
     const next = this.schedule.find((storm) => storm.end > now);
     if (!next) return false;
     const arrival = now + leadHours;
@@ -200,9 +221,38 @@ export class MissionSystem {
     this.oxygenProducedPoints += points;
   }
 
+  // Painel de admin: forca o aviso, a tempestade ou o fim dela agora
+  forceStorm(target) {
+    this.schedule = rescheduleStorms(this.schedule, this.lastHours, target);
+    this._updateStormPhase();
+    return this.storm.phase;
+  }
+
   // Morrer durante a tempestade nao conta como ter sobrevivido a ela
   markDeath() {
     if (this.storm.phase === 'active') this._diedDuringStorm = true;
+  }
+
+  // Move agua do tanque da base (`tank.baseWater`) para a parede do abrigo. Agua na parede
+  // protege da radiacao, mas nao serve para beber nem para a estufa.
+  fillShelterWall(tank) {
+    const room = RADIATION_CONFIG.SHELTER_WALL_MAX_L - this.shelterWaterL;
+    if (room <= 0) return 'The water wall is already full.';
+    const liters = Math.min(RADIATION_CONFIG.SHELTER_FILL_STEP_L, room, tank.baseWater);
+    if (liters < 1) return 'The base water tank is empty. Bring ice with the rover first.';
+    tank.baseWater -= liters;
+    this.shelterWaterL += liters;
+    return `Moved ${Math.round(liters)} L into the wall. Less water to drink, more protection.`;
+  }
+
+  drainShelterWall(tank) {
+    if (this.shelterWaterL <= 0) return 'The water wall is already empty.';
+    const room = tank.maxBaseWater - tank.baseWater;
+    const liters = Math.min(RADIATION_CONFIG.SHELTER_FILL_STEP_L, this.shelterWaterL, room);
+    if (liters < 1) return 'The base water tank is full.';
+    tank.baseWater += liters;
+    this.shelterWaterL -= liters;
+    return `Moved ${Math.round(liters)} L back to the tank. More water to drink, less protection.`;
   }
 
   toggleShield() {

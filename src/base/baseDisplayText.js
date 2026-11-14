@@ -25,11 +25,6 @@ export function formatSpan(hours) {
   return h > 0 ? `${h} h ${pad2(m)} min` : `${m} min`;
 }
 
-// Quantas das 10 luzes do banco de baterias ficam acesas (1 luz = 10 %)
-export function batteryLights(pct) {
-  return Math.max(0, Math.min(10, Math.ceil(pct / 10 - 1e-9)));
-}
-
 const ratio = (value, max) => (max > 0 ? Math.max(0, Math.min(1, value / max)) : 0);
 
 function weatherValue(storm) {
@@ -90,10 +85,10 @@ export function shelterModel(s) {
     rows: [
       { label: 'YOU NOW', value: formatRate(s.doseRate), tone: doseTone(s.doseRate) },
       { label: 'YOUR TOTAL', value: `${s.totalDose.toFixed(1)} mSv` },
-      { label: 'CAREER LIMIT', value: `${RADIATION_CONFIG.CAREER_LIMIT_MSV} mSv` },
+      { label: 'WATER WALL', value: `${Math.round(s.shelterWaterL)} L`, tone: s.shelterWaterL > 0 ? 'water' : 'warn' },
       { label: 'STATUS', value: status, tone: stormMode(s.storm) },
     ],
-    footer: 'mSv = how much radiation a body got',
+    footer: `mSv = radiation a body got. Career limit: ${RADIATION_CONFIG.CAREER_LIMIT_MSV} mSv`,
     mode: stormMode(s.storm),
   };
 }

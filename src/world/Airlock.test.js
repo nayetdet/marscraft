@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Airlock } from './Airlock.js';
 import { MissionSystem } from '../core/MissionSystem.js';
 import { StationSystem } from '../core/StationSystem.js';
+import { MISSION_CONFIG as C } from '../config/constants.js';
 
 const away = { x: 5, z: 5 };
 const outside = { x: 0.5, z: 11 };
@@ -23,12 +24,12 @@ describe('airlock', () => {
 
     // Para abrir para Marte, o ar sai primeiro: a porta de fora so abre depois do ciclo
     airlock.request(outer, inChamber);
-    run(airlock, inChamber, 1);
+    run(airlock, inChamber, C.AIRLOCK_CYCLE / 2);
     expect(inner.openness).toBe(0);
     expect(outer.openness).toBe(0);
     expect(airlock.status().step).toBe('depressurize');
     expect(airlock.vapor.visible).toBe(true);
-    run(airlock, inChamber, 4);
+    run(airlock, inChamber, C.AIRLOCK_CYCLE + 0.5);
     expect(outer.openness).toBe(1);
     expect(airlock.pressurized).toBe(false);
     expect(colliders).toContain(inner.collider);
@@ -48,10 +49,10 @@ describe('airlock', () => {
     stations.dirtySuit = true;
 
     airlock.request(inner, inChamber);
-    run(airlock, inChamber, 4);
+    run(airlock, inChamber, 0.2 + C.AIRLOCK_CYCLE + C.SUIT_CLEAN_TIME / 2);
     expect(airlock.status().step).toBe('clean');
     expect(inner.openness).toBe(0);
-    run(airlock, inChamber, 3);
+    run(airlock, inChamber, C.SUIT_CLEAN_TIME + 0.5);
     expect(inner.openness).toBe(1);
     expect(stations.dirtySuit).toBe(false);
     expect(events).toEqual(['suit-cleaned']);

@@ -31,6 +31,7 @@
     <h2 id="rotate-device-title">Rotate your device</h2>
     <p>MineMars is best played in landscape.</p>
   </div>
+  <div id="danger-vignette" class="danger-vignette hidden" aria-hidden="true"></div>
 
   <!-- HUD Estilo Minecraft Survival -->
   <div id="hud" class="hud">
@@ -48,6 +49,16 @@
       <div id="mission-status"></div>
       <div id="mission-objective"></div>
       <div id="station-warning" style="color:#ffcf64"></div>
+    </div>
+
+    <!-- Historia: objetivo atual (canto superior esquerdo) e seta que aponta para onde ir -->
+    <section id="story-objective" class="story-objective hidden" aria-live="polite">
+      <header id="story-objective-act"></header>
+      <p id="story-objective-text"></p>
+    </section>
+    <div id="waypoint" class="waypoint hidden" aria-hidden="true">
+      <span class="waypoint-bob"><span id="waypoint-arrow" class="waypoint-arrow"></span></span>
+      <span class="waypoint-tag"><b id="waypoint-name"></b><i id="waypoint-dist"></i></span>
     </div>
 
     <!-- Coluna da direita: caixa da missao em cima e, abaixo, o scanner (toast + ficha) -->
@@ -256,9 +267,9 @@
             <h3>Astronaut</h3>
             <div class="control-row"><kbd>W A S D</kbd><span>Move</span></div>
             <div class="control-row"><kbd>W</kbd><span>Tap twice to sprint</span></div>
+            <div class="control-row"><kbd>Shift</kbd><span>Hold to sprint</span></div>
             <div class="control-row"><kbd>Mouse</kbd><span>Look around</span></div>
             <div class="control-row"><kbd>Space</kbd><span>Jump</span></div>
-            <div class="control-row"><kbd>Shift</kbd><span>Crouch</span></div>
             <div class="control-row"><kbd>Hold LMB</kbd><span>Break blocks</span></div>
             <div class="control-row"><kbd>RMB</kbd><span>Place or use item</span></div>
             <div class="control-row"><kbd>Wheel</kbd><span>Select hotbar item (zoom while scanning)</span></div>
@@ -372,6 +383,33 @@
       <p id="victory-sources" class="victory-sources"></p>
       <button id="play-again-btn" class="mc-btn primary">Play again</button>
     </div>
+  </div>
+
+  <!-- Historia: card de radio com as mensagens do Controle da Missao (nao pausa o jogo) -->
+  <aside id="story-card" class="story-card hidden" role="status" aria-live="polite">
+    <header><span class="story-card-signal" aria-hidden="true"></span><strong id="story-card-title"></strong></header>
+    <p id="story-card-text"></p>
+    <small id="story-card-source"></small>
+    <button id="story-card-ok" class="mc-btn story-card-ok" type="button">OK <span class="story-key">[Enter]</span></button>
+  </aside>
+
+  <!-- Fim alternativo: a janela de lancamento fechou antes da decolagem -->
+  <div id="window-overlay" class="mc-overlay victory-overlay hidden">
+    <div class="mc-menu">
+      <h1 id="window-title" class="mc-death-title"></h1>
+      <p id="window-text" class="mc-death-sub victory-sub"></p>
+      <p id="window-source" class="victory-sources"></p>
+      <button id="window-play-again-btn" class="mc-btn primary">Play again</button>
+    </div>
+  </div>
+
+  <!-- Camada das animacoes de chegada e de decolagem -->
+  <div id="cutscene-layer" class="cutscene-layer hidden" aria-live="polite">
+    <div id="cutscene-fade" class="cutscene-fade"></div>
+    <div class="cutscene-bar top"></div>
+    <div class="cutscene-bar bottom"><p id="cutscene-caption" class="cutscene-caption"></p></div>
+    <div id="cutscene-title" class="cutscene-title hidden"><strong id="cutscene-title-main"></strong><span id="cutscene-title-sub"></span></div>
+    <button id="cutscene-skip" class="mc-btn cutscene-skip" type="button">Skip <span class="story-key">[Enter]</span></button>
   </div>
 
   <script type="module" src="/src/main.js"></script>

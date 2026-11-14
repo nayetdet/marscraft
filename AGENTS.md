@@ -35,6 +35,7 @@ O desafio, em uma frase: um jogo em que **crianças de 7 a 12 anos** administram
 
 - **JavaScript (ES modules) puro + [Three.js](https://threejs.org/) `^0.181` + Vite 6.** Sem framework de UI: o HUD é HTML/CSS em `index.html` e `src/ui/`.
 - `npm install` · `npm run dev` (Vite com `--host`) · `npm run build` (gera `dist/`) · `npm run preview`
+- **Painel de admin (testes manuais):** `F8` no `npm run dev`, ou `?admin` na URL (também no Pages, com botão ADMIN para touch). Força tempestade, mexe em bateria, água e tempo, e teleporta para as salas (`src/ui/AdminPanel.js`).
 - **Testes:** `npm test` (Vitest, `vitest run`). Os testes ficam ao lado do arquivo (`src/**/<nome>.test.js`) e cobrem lógica pura: física, sobrevivência, terreno. Não há linter. Há `shell.nix` (Node 22) para quem usa Nix.
 - **Deploy:** push na `main` dispara `.github/workflows/deploy.yml`, que publica no GitHub Pages. O `vite.config.js` usa `base: '/nasa-space-apps/'`, então caminhos de assets precisam ser relativos ou usar `import.meta.env.BASE_URL`.
 - **Sem backend.** Qualquer API chamada em runtime precisa liberar CORS. Veja a tabela em `docs/data/apis-nasa.md`: DONKI (`api.nasa.gov`), tiles do Trek e NASA Images podem ser chamados do navegador; **RadLab e OSDR não**, então devem ser baixados por script e embutidos como JSON.
@@ -59,13 +60,17 @@ src/player/
   InputController.js       teclado/mouse/pointer lock e controles touch em paisagem (joystick, câmera por arrasto, ações, hotbar e atalhos de missão/tripulação)
   SurvivalSystem.js        barras O2/vida/água/comida, áreas pressurizadas, inventário (9 slots de hotbar + 27 de mochila)
   PlayerHand.js            mão/bloco em 1ª pessoa
-src/base/                  organizacao da base: zonas e abrigo de tempestade (baseZones), posteres e placas (basePosters),
+src/base/                  organizacao visual da base: posteres e placas (basePosters),
                            telas vivas (baseDisplayText, baseCanvas) e a decoracao 3D que junta tudo (baseDecor)
 src/sky/                   céu marciano: shader de atmosfera, Sol, Terra+Lua, Fobos/Deimos, ciclo de sols
 src/graphics/              texturas procedurais em canvas e materiais dos blocos
 src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades, ordens, avisos), estações
                            (estufa, reciclador de água, gerador de O2, enfermaria), trilhos e avatar voxel
-src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu), CrewPanel + CSS
+src/story/                 história em 3 atos: StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
+                           waypoints (para onde a seta do objetivo aponta) e WaypointBeacon (seta 3D)
+  cutscene/                animações de chegada e de decolagem: timeline (keyframes), CutscenePlayer, efeitos, cápsula
+src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu), CrewPanel, StoryHud
+                           (card de rádio), WaypointHud (seta na tela), CutsceneHud (legendas, pular) + CSS
 docs/                      contexto do desafio, APIs e dados reais
 ```
 

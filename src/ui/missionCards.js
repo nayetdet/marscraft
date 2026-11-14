@@ -63,11 +63,9 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       icon: 'storm',
       tone: 'danger',
       title: `SOLAR STORM! ${formatHours(hoursLeft)} left`,
-      text: shielded
-        ? 'The shield is protecting you. Stay in the bubble.'
-        : mission.insideShelter
-          ? 'You are in the storm shelter. Stay here until it passes.'
-          : 'Stand in the storm shelter (SHL-1) or turn on the shield [R].',
+      text: mission.insideShelter
+        ? `In the storm shelter: ${Math.round(mission.shelterWaterL ?? 0)} L of water in the wall.`
+        : shielded ? 'The shield is protecting you. Stay in the bubble.' : 'Hide in the storm shelter (water wall) or turn on the shield [R].',
       fill: clamp01(hoursLeft / Math.max(0.01, storm.end - storm.arrival)),
       source: stormSourceShort(storm, fetchedIso),
     });
@@ -77,10 +75,13 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       icon: 'storm',
       tone: 'warn',
       title: `Solar storm in ${formatHours(hoursUntil)}`,
-      text: 'The Sun threw out fast particles. Get ready to hide!',
+      text: 'The Sun threw out fast particles. Fill the shelter water wall and get ready to hide!',
       fill: clamp01(hoursUntil / Math.max(0.01, storm.arrival - storm.warningStart)),
       source: stormSourceShort(storm, fetchedIso),
     });
+  }
+  if (mission.radioBlackout) {
+    alerts.push({ id: 'radio', icon: 'sun', tone: 'warn', title: 'Radio silent', text: 'The Sun is between Mars and Earth. Decide on your own!' });
   }
   if (mission.shieldOn && !mission.insideShield) {
     alerts.push({ id: 'bubble', icon: 'shield', tone: 'warn', title: 'Outside the shield!', text: 'Walk back into the blue bubble.' });

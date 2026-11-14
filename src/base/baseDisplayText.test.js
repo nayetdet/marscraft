@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  batteryLights, commandModel, formatClock, formatSpan, greenhouseModel, modelKey, powerModel, shelterModel,
+  commandModel, formatClock, formatSpan, greenhouseModel, modelKey, powerModel, shelterModel,
 } from './baseDisplayText.js';
 
 function state(overrides = {}) {
@@ -8,7 +8,7 @@ function state(overrides = {}) {
     sol: 2, timeOfDay: 9.5, batteryPct: 64, chargeRate: 12, shieldOn: false,
     factoryOn: true, factoryBusy: false, greenhousePowered: true, dusty: false,
     storm: { phase: 'calm', hoursUntil: 5, hoursLeft: 0, speedKmS: 894, date: '01/11/2026' },
-    doseRate: 0.005, totalDose: 1.26, water: 60, maxWater: 120, crop: null, inShelter: false,
+    doseRate: 0.005, totalDose: 1.26, water: 60, maxWater: 120, crop: null, inShelter: false, shelterWaterL: 20,
     donkiDate: '14/11/2026',
     ...overrides,
   };
@@ -19,14 +19,6 @@ describe('base display text', () => {
     expect(formatClock(9.5)).toBe('09:30');
     expect(formatSpan(2.5)).toBe('2 h 30 min');
     expect(formatSpan(0.2)).toBe('12 min');
-  });
-
-  it('one battery light is 10% of charge', () => {
-    expect(batteryLights(0)).toBe(0);
-    expect(batteryLights(1)).toBe(1);
-    expect(batteryLights(50)).toBe(5);
-    expect(batteryLights(51)).toBe(6);
-    expect(batteryLights(100)).toBe(10);
   });
 
   it('command screen says where the storm data comes from and never calls it live', () => {
@@ -55,6 +47,7 @@ describe('base display text', () => {
     expect(shelterModel(state({ storm })).rows.at(-1).value).toBe('STAND HERE!');
     expect(shelterModel(state({ storm, inShelter: true })).rows.at(-1).value).toBe('YOU ARE SAFE HERE');
     expect(shelterModel(state()).rows.at(-1).value).toBe('NO STORM');
+    expect(shelterModel(state()).rows[2].value).toBe('20 L');
   });
 
   it('greenhouse screen follows the crop and the redraw key changes only with the content', () => {

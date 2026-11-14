@@ -14,12 +14,16 @@ export class InputController {
     getTargetedBlock,
     harvestCrop,
     isRoverActive = () => false,
+    isGymActive = () => false,
+    onGymAction = () => {},
+    onGymLook = () => {},
     onInteract = () => {},
     onRoverAction = () => {},
     onToggleShield = () => {},
     onToggleCrewPanel = () => {},
     onSendData = () => {},
     isMissionModalOpen = () => false,
+    isInputBlocked = () => false,
     onRoverLook = () => {},
     getInteraction,
     isStationOpen,
@@ -31,6 +35,8 @@ export class InputController {
     this.onToggleCrewPanel = onToggleCrewPanel;
     this.onSendData = onSendData;
     this.isMissionModalOpen = isMissionModalOpen;
+    // Animacao (cutscene) rodando: teclado, mouse e toque nao controlam o jogador
+    this.isInputBlocked = isInputBlocked;
     this.domElement = domElement;
     this.player = player;
     this.playerHand = playerHand;
@@ -42,6 +48,9 @@ export class InputController {
     this.getTargetedBlock = getTargetedBlock;
     this.harvestCrop = harvestCrop;
     this.isRoverActive = isRoverActive;
+    this.isGymActive = isGymActive;
+    this.onGymAction = onGymAction;
+    this.onGymLook = onGymLook;
     this.onInteract = onInteract;
     this.onRoverAction = onRoverAction;
     this.onRoverLook = onRoverLook;
@@ -156,6 +165,16 @@ export class InputController {
 
   _handleTouchAction(action, button, pointerId) {
     if (!this.isTouchMode || !this.isLocked || this.survival.isDead || this.hud.isInventoryOpen || this.isStationOpen?.()) return;
+    if (this.isInputBlocked?.()) return;
+
+    if (this.isGymActive?.()) {
+      if (action === 'jump' || action === 'mine' || action === 'use') {
+        this.onGymAction?.();
+      } else if (action === 'interact') {
+        this.onInteract?.();
+      }
+      return;
+    }
 
     if (action === 'jump' || action === 'mine') {
       this.touchHeldActions.set(pointerId, action);
@@ -312,16 +331,19 @@ export class InputController {
     const controlsBackBtn = document.getElementById('controls-back-btn');
     const menuMain = document.getElementById('menu-main');
     const controlsScreen = document.getElementById('controls-screen');
+    const menu = document.querySelector('.mc-menu');
     const respawnBtn = document.getElementById('respawn-btn');
 
     controlsBtn.addEventListener('click', () => {
       menuMain.classList.add('hidden');
       controlsScreen.classList.remove('hidden');
+      menu.classList.add('is-controls');
     });
 
     controlsBackBtn.addEventListener('click', () => {
       controlsScreen.classList.add('hidden');
       menuMain.classList.remove('hidden');
+      menu.classList.remove('is-controls');
     });
 
     window.addEventListener('resize', () => this._updateOrientationMode());
@@ -375,20 +397,37 @@ export class InputController {
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (!this.isLocked || this.survival.isDead) return;
+      if (!this.isLocked || this.survival.isDead || this.isInputBlocked()) return;
       if (this.isRoverActive()) {
         this.onRoverLook(e.movementX, e.movementY);
+        return;
+      }
+      if (this.isGymActive?.()) {
+        this.onGymLook?.(e.movementX, e.movementY);
         return;
       }
       applyMouseLook(this.player, e.movementX, e.movementY, this.isZoomed);
     });
 
     window.addEventListener('keydown', (e) => {
-      if (this.survival.isDead || this.isStationOpen?.()) return;
+      if (this.survival.isDead || this.isStationOpen?.() || this.isInputBlocked()) return;
       // Painel do MAV, da tripulacao ou vitoria abertos: so [F] e [C] (fechar o painel) funcionam
       if (this.isMissionModalOpen()) {
         if (e.code === 'KeyF' && !e.repeat) this.onInteract();
         if (e.code === 'KeyC' && !e.repeat) this.onToggleCrewPanel();
+        return;
+      }
+      if (this.isGymActive?.()) {
+        if (e.code === 'Space' && !e.repeat) {
+          e.preventDefault();
+          this.onGymAction?.();
+        } else if (e.code === 'KeyF' && !e.repeat) {
+          e.preventDefault();
+          this.onInteract?.();
+        } else if (e.code === 'KeyT' && !e.repeat) {
+          this.sky.advanceTime(1.5);
+          this.hud.showToast('Time advanced (+1h 30m on Mars)');
+        }
         return;
       }
       if (this.hud.isInventoryOpen && e.code !== 'KeyE') return;
@@ -474,7 +513,7 @@ export class InputController {
     window.addEventListener('blur', () => { this.keys = {}; });
 
     window.addEventListener('wheel', (e) => {
-      if (!this.isLocked || this.survival.isDead) return;
+      if (!this.isLocked || this.survival.isDead || this.isInputBlocked()) return;
       const dir = Math.sign(e.deltaY);
       // Com o scanner aberto, a rodinha controla o zoom (para cima aproxima) em vez da hotbar.
       if (this.isScannerOpen) {
@@ -486,7 +525,12 @@ export class InputController {
     });
 
     window.addEventListener('mousedown', (e) => {
-      if (!this.isLocked || this.survival.isDead || this.isRoverActive()) return;
+      if (!this.isLocked || this.survival.isDead || this.isRoverActive() || this.isInputBlocked()) return;
+
+      if (this.isGymActive?.()) {
+        if (e.button === 0) this.onGymAction?.();
+        return;
+      }
 
       const interaction = this.getInteraction?.();
       if (interaction && ['treadmill', 'bike', 'medical'].includes(interaction.type) && (e.button === 0 || e.button === 2)) {
@@ -520,7 +564,7 @@ export class InputController {
 
     const joystick = document.getElementById('mobile-joystick');
     joystick.addEventListener('pointerdown', (e) => {
-      if (!this.isTouchMode || this.survival.isDead || this.hud.isInventoryOpen) return;
+      if (!this.isTouchMode || this.survival.isDead || this.hud.isInventoryOpen || this.isInputBlocked()) return;
       e.preventDefault();
       this.joystickPointerId = e.pointerId;
       joystick.setPointerCapture(e.pointerId);
@@ -537,6 +581,7 @@ export class InputController {
       const boundedDx = Math.max(-100, Math.min(100, dx));
       const boundedDy = Math.max(-100, Math.min(100, dy));
       if (this.isRoverActive()) this.onRoverLook(boundedDx, boundedDy);
+      else if (this.isGymActive?.()) this.onGymLook?.(boundedDx, boundedDy);
       else applyMouseLook(this.player, boundedDx, boundedDy, this.isZoomed);
     });
 
@@ -545,7 +590,7 @@ export class InputController {
 
     this.domElement.addEventListener('pointerdown', (e) => {
       if (!this.isTouchMode || e.pointerType === 'mouse' || e.clientX < window.innerWidth * 0.4) return;
-      if (this.survival.isDead || this.hud.isInventoryOpen) return;
+      if (this.survival.isDead || this.hud.isInventoryOpen || this.isInputBlocked()) return;
       e.preventDefault();
       this.lookPointerId = e.pointerId;
       this.lastTouchLookX = e.clientX;
@@ -595,7 +640,7 @@ export class InputController {
 
   _isBrowserShortcut(e) {
     // Suppress browser accelerators while the game owns the pointer. Keep the
-    // key event itself flowing so movement, crouch, and debug controls still work.
+    // key event itself flowing so movement, sprint, and debug controls still work.
     if (e.ctrlKey || e.metaKey || e.altKey) return true;
     if (e.shiftKey) return true;
 

@@ -163,6 +163,24 @@ export function buildNasaCustomModels(scene) {
   group.add(gymMedbay);
   solidObjects.push(gymMedbay);
 
+  // Issue #56: abrigo de tempestade com parede de agua e terminal de comunicacao
+  const shelter = createStormShelterModel(mats, floorTopY);
+  for (const wall of shelter.walls) {
+    group.add(wall);
+    solidObjects.push(wall);
+  }
+  group.add(shelter.roof); // teto so visual, fora da colisao para nao fechar a cabine
+
+  // Modulo norte (issue #56, parte B): cada movel e um objeto solido separado
+  for (const obj of createNorthModuleModels(mats, floorTopY)) {
+    group.add(obj);
+    if (!obj.userData.noCollide) solidObjects.push(obj);
+  }
+
+  const commsTerminal = createCommsTerminalModel(mats, 3.75, floorTopY, -4.65);
+  group.add(commsTerminal);
+  solidObjects.push(commsTerminal);
+
   group.updateMatrixWorld(true);
 
   // Extrai caixas de colisão AABB tanto do objeto inteiro quanto de cada malha individual
@@ -187,9 +205,10 @@ export function buildNasaCustomModels(scene) {
   }
 
   // Keep plants and the driven rover as independent objects; merge static scenery.
-  const merged = mergeByMaterial(group, [...plants, rover], [rover]);
+  // O foguete do MAV tambem fica separado: ele sobe na animacao de decolagem.
+  const merged = mergeByMaterial(group, [...plants, rover, rocket], [rover]);
   scene.add(merged);
-  return { group: merged, colliders, plants, rover, roverWheels };
+  return { group: merged, colliders, plants, rover, roverWheels, rocket };
 }
 
 // Junta as centenas de caixas em uma malha por material (de ~300 draw calls para ~20).
@@ -458,7 +477,7 @@ function createExteriorSolarAndDish(mats, x, y, z) {
 
   for (const sx of [-9, -4.5, 0, 4.5, 9]) {
     const array = new THREE.Group();
-    array.position.set(x + sx, y, z - 10.5);
+    array.position.set(x + sx - 3, y, z - 25); // atras do modulo norte (issue #56)
     addBox(array, 0.25, 1.4, 0.25, mats.lightGray, 0, 0.7, 0);
     addBox(array, 3.4, 0.1, 2.2, mats.whiteMetal, 0, 1.45, 0, 0.38, 0, 0);
     addBox(array, 3.2, 0.12, 2.0, mats.solarPanel, 0, 1.47, 0, 0.38, 0, 0);
@@ -674,4 +693,171 @@ function createGymMedbayModel(mats, x, y, z) {
   addBox(g, 0.36, 0.1, 0.36, mats.cyanGlow, 0.42, 1.42, 0.05);
 
   return g;
+}
+
+// Abrigo de tempestade (issue #56, A1): cabine aberta para oeste no canto sudeste do habitat.
+// As paredes guardam tanques de agua; o nivel da agua e desenhado no GameEngine.
+// Cada parede e um objeto solido separado para a colisao nao fechar a entrada.
+function createStormShelterModel(mats, y) {
+  const walls = [];
+  const wall = (cx, cz, w, d) => {
+    const g = new THREE.Group();
+    g.position.set(cx, y, cz);
+    addBox(g, w, 2.4, d, mats.whiteMetal, 0, 1.2, 0);
+    // Faixas de tanque (aros escuros) para ler como parede de agua
+    for (const ty of [0.35, 1.2, 2.05]) addBox(g, w + 0.02, 0.06, d + 0.02, mats.darkSlate, 0, ty, 0);
+    walls.push(g);
+    return g;
+  };
+  wall(4.3, 3.775, 3.2, 0.15); // norte
+  wall(4.3, 5.875, 3.2, 0.15); // sul
+  const east = wall(5.825, 4.825, 0.15, 1.95); // leste, com o painel
+  addBox(east, 0.06, 0.62, 0.8, mats.charcoal, -0.24, 1.3, 0);
+  addBox(east, 0.03, 0.5, 0.68, mats.cyanGlow, -0.28, 1.3, 0);
+  addBox(east, 0.05, 0.1, 0.1, mats.yellowBtn, -0.25, 0.88, -0.2);
+  addBox(east, 0.05, 0.1, 0.1, mats.redBtn, -0.25, 0.88, 0.2);
+  // Teto e faixa amarela de aviso na entrada
+  const roof = new THREE.Group();
+  roof.position.set(4.3, y, 4.825);
+  addBox(roof, 3.2, 0.14, 2.25, mats.whiteMetal, 0, 2.47, 0);
+  addBox(roof, 0.08, 0.18, 2.25, mats.yellowBtn, -1.58, 2.3, 0);
+  return { walls, roof };
+}
+
+// Terminal de comunicacao e computador da missao (issue #56, A2/A3), na parede norte,
+// embaixo da antena parabolica do teto. Tela azul = computador da missao, verde = ciencia e radio.
+function createCommsTerminalModel(mats, x, y, z) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  addBox(g, 3.0, 0.12, 0.6, mats.whiteMetal, 0, 0.9, 0);
+  addBox(g, 0.2, 0.9, 0.55, mats.lightGray, -1.4, 0.45, 0);
+  addBox(g, 0.2, 0.9, 0.55, mats.lightGray, 1.4, 0.45, 0);
+  for (const [mx, screen] of [[-0.75, mats.cyanGlow], [0.75, mats.greenGlow]]) {
+    addBox(g, 1.1, 0.7, 0.08, mats.charcoal, mx, 1.55, -0.2);
+    addBox(g, 1.0, 0.6, 0.04, screen, mx, 1.55, -0.15);
+    addBox(g, 0.7, 0.05, 0.22, mats.darkSlate, mx, 0.99, 0.08);
+  }
+  // Cabo ate a antena do teto
+  addBox(g, 0.1, 3.0, 0.1, mats.darkSlate, 1.45, 2.4, -0.22);
+  addBox(g, 0.12, 0.12, 0.12, mats.redBtn, 1.45, 1.2, -0.12);
+  return g;
+}
+
+// Placa com o nome da sala (texto em canvas, sem emoji)
+function createRoomSign(text, x, y, z, rotY) {
+  const { texture } = makeCanvasTexture((ctx) => {
+    ctx.fillStyle = '#0f2a33';
+    ctx.fillRect(0, 0, 128, 32);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(0, 0, 128, 3);
+    ctx.fillRect(0, 29, 128, 3);
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 15px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 64, 17);
+  }, 128, 32);
+  const sign = new THREE.Group();
+  sign.position.set(x, y, z);
+  sign.rotation.y = rotY;
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide }));
+  sign.add(board);
+  sign.userData.noCollide = true;
+  return sign;
+}
+
+// Moveis do modulo norte (issue #56). Coordenadas do mundo; ar do modulo em x = -11..8, z = -20..-10.
+// Sudoeste: energia e aquecimento. Sudeste: cozinha e despensa. Noroeste: banheiro. Nordeste: oficina.
+function createNorthModuleModels(mats, y) {
+  const objs = [];
+  const group = (x, z) => {
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    objs.push(g);
+    return g;
+  };
+  const orange = new THREE.MeshLambertMaterial({ color: 0xfb923c, emissive: 0xea580c, emissiveIntensity: 0.5 });
+  const rations = [mats.goldFoil, mats.nasaBlue, mats.redBtn, mats.greenGlow];
+
+  // --- B1 Banco de baterias (parede oeste) ---
+  for (const bz of [-13.3, -12.1, -10.9]) {
+    const bat = group(-10.55, bz);
+    addBox(bat, 0.8, 2.0, 1.0, mats.darkSlate, 0, 1.0, 0);
+    for (let i = 0; i < 4; i++) addBox(bat, 0.04, 0.28, 0.7, i < 3 ? mats.greenGlow : mats.yellowBtn, 0.42, 0.35 + i * 0.42, 0);
+  }
+  // Painel de distribuicao de energia (parede sul)
+  const dist = group(-7.2, -10.25);
+  addBox(dist, 2.0, 1.4, 0.3, mats.lightGray, 0, 1.45, 0);
+  addBox(dist, 1.7, 0.9, 0.04, mats.screenMat, 0, 1.55, -0.17);
+  for (let i = 0; i < 6; i++) addBox(dist, 0.12, 0.12, 0.06, i % 2 ? mats.greenGlow : mats.redBtn, -0.75 + i * 0.3, 0.9, -0.17);
+  addBox(dist, 0.16, 3.0, 0.16, mats.darkSlate, 0.9, 2.5, 0.05); // cabos ate o teto
+  // B2 Aquecedor (radiador com resistencias laranja)
+  const heater = group(-5.2, -13.3);
+  addBox(heater, 1.4, 1.2, 0.5, mats.whiteMetal, 0, 0.6, 0);
+  for (let i = 0; i < 5; i++) addBox(heater, 0.08, 0.9, 0.04, orange, -0.5 + i * 0.25, 0.65, 0.27);
+  addBox(heater, 0.4, 0.2, 0.06, mats.screenMat, 0.35, 1.1, 0.27);
+
+  // --- B3 Cozinha (bancada na parede sul) e despensa (prateleiras a leste) ---
+  const counter = group(4.0, -10.45);
+  addBox(counter, 5.0, 0.95, 0.8, mats.whiteMetal, 0, 0.475, 0);
+  addBox(counter, 5.1, 0.08, 0.9, mats.lightGray, 0, 0.99, 0);
+  addBox(counter, 0.9, 0.6, 0.6, mats.charcoal, -1.4, 1.33, 0.05); // forno de aquecer comida
+  addBox(counter, 0.6, 0.35, 0.04, orange, -1.4, 1.33, -0.27);
+  addBox(counter, 0.7, 0.12, 0.5, mats.darkSlate, 0.4, 1.06, 0); // pia
+  addBox(counter, 0.08, 0.4, 0.08, mats.lightGray, 0.4, 1.3, 0.2);
+  addBox(counter, 0.5, 0.4, 0.04, mats.screenMat, 1.6, 1.35, 0.3); // painel da cozinha
+  const pantry = group(7.55, -12.4);
+  addBox(pantry, 0.8, 2.4, 2.8, mats.lightGray, 0, 1.2, 0);
+  for (let row = 0; row < 4; row++) {
+    addBox(pantry, 0.82, 0.06, 2.82, mats.whiteMetal, 0, 0.3 + row * 0.55, 0);
+    for (let col = 0; col < 5; col++) addBox(pantry, 0.3, 0.32, 0.4, rations[(row + col) % 4], -0.32, 0.5 + row * 0.55, -1.1 + col * 0.55);
+  }
+  const table = group(3.5, -12.9);
+  addBox(table, 1.6, 0.08, 1.0, mats.whiteMetal, 0, 0.78, 0);
+  addBox(table, 0.12, 0.74, 0.12, mats.lightGray, 0, 0.37, 0);
+  for (const sx of [-1.05, 1.05]) {
+    const stool = group(3.5 + sx, -12.9);
+    addBox(stool, 0.45, 0.08, 0.45, mats.nasaBlue, 0, 0.5, 0);
+    addBox(stool, 0.1, 0.46, 0.1, mats.lightGray, 0, 0.23, 0);
+  }
+
+  // --- B4 Banheiro: processador de agua, pia e cabine ---
+  const processor = group(-10.4, -18.2);
+  addBox(processor, 1.0, 2.4, 1.6, mats.whiteMetal, 0, 1.2, 0);
+  addBox(processor, 0.06, 1.3, 0.7, mats.waterGlass, 0.52, 1.25, -0.35);
+  addBox(processor, 0.06, 0.7, 0.4, mats.screenMat, 0.52, 1.6, 0.45);
+  addBox(processor, 0.06, 0.12, 0.12, mats.greenGlow, 0.52, 1.1, 0.45);
+  const sink = group(-7.5, -19.65);
+  addBox(sink, 1.2, 0.9, 0.6, mats.whiteMetal, 0, 0.45, 0);
+  addBox(sink, 0.8, 0.12, 0.45, mats.darkSlate, 0, 0.95, 0.02);
+  addBox(sink, 1.0, 0.8, 0.04, mats.lightGray, 0, 1.75, -0.28); // espelho
+  addBox(sink, 0.08, 0.3, 0.08, mats.lightGray, 0, 1.15, -0.18);
+  const stall = group(-5.0, -18.9);
+  addBox(stall, 0.08, 2.3, 2.0, mats.lightGray, -0.9, 1.15, 0);
+  addBox(stall, 1.8, 2.3, 0.08, mats.lightGray, 0, 1.15, -1.0);
+  addBox(stall, 0.6, 0.45, 0.6, mats.whiteMetal, 0, 0.23, -0.6); // vaso com coleta de urina
+  addBox(stall, 0.4, 0.06, 0.4, mats.nasaBlue, 0, 0.48, -0.6);
+
+  // --- B5 Oficina: bancada, impressora 3D e prateleira de pecas ---
+  const bench = group(3.0, -19.55);
+  addBox(bench, 4.0, 0.92, 0.8, mats.lightGray, 0, 0.46, 0);
+  addBox(bench, 4.1, 0.08, 0.9, mats.darkSlate, 0, 0.96, 0);
+  addBox(bench, 1.0, 1.0, 0.8, mats.whiteMetal, 0, 1.5, 0); // impressora 3D
+  addBox(bench, 0.8, 0.7, 0.04, mats.waterGlass, 0, 1.5, 0.41);
+  addBox(bench, 0.12, 0.12, 0.12, mats.cyanGlow, 0, 1.75, 0.1);
+  addBox(bench, 0.35, 0.18, 0.35, mats.potato, 0, 1.12, 0.1); // peca de regolito sendo impressa
+  addBox(bench, 0.5, 0.3, 0.04, mats.screenMat, 0.8, 1.25, 0.42);
+  for (const tx of [-1.4, -0.9]) addBox(bench, 0.12, 0.3, 0.12, mats.darkSlate, tx, 1.15, 0.1);
+  const shelf = group(7.55, -18.0);
+  addBox(shelf, 0.7, 2.2, 2.4, mats.darkSlate, 0, 1.1, 0);
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) addBox(shelf, 0.3, 0.25, 0.3, mats.potato, -0.25, 0.5 + row * 0.6, -0.7 + col * 0.7);
+  }
+
+  // Placas das salas, viradas para o corredor central (x = -4..-1)
+  objs.push(createRoomSign('POWER & HEAT', -4.3, 13.0 - 10 + y, -12.2, Math.PI / 2));
+  objs.push(createRoomSign('KITCHEN', -0.7, 13.0 - 10 + y, -12.2, -Math.PI / 2));
+  objs.push(createRoomSign('BATHROOM', -4.3, 13.0 - 10 + y, -18.2, Math.PI / 2));
+  objs.push(createRoomSign('WORKSHOP', -0.7, 13.0 - 10 + y, -18.2, -Math.PI / 2));
+  return objs;
 }

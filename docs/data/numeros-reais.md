@@ -51,6 +51,22 @@ A pressão baixíssima explica por que **não dá para respirar nem ficar sem tr
 | Luz solar disponível (irradiância) | ~**43 %** da Terra (~590 W/m²) e cai muito em tempestades de poeira | ~igual à da Terra (~1.361 W/m²), mas some na noite lunar de 14 dias | fact sheets |
 | Atraso de comunicação (só ida) | **~3 a ~22 min**, conforme a posição dos planetas | **~1,3 s** | distância ÷ velocidade da luz |
 
+### Números da história (atos e animações)
+
+Usados nos textos de `src/story/storyChapters.js` e nas legendas de `src/story/cutscene/`. Coletados em 2026-11-14.
+
+A distância e o atraso de rádio que aparecem no jogo **não são constantes**: vêm do `CommsLink` (`src/mission/earthMars.js`, issue #56), que calcula a posição dos planetas para a data real da partida. As duas primeiras linhas abaixo são a conferência desse cálculo contra o JPL Horizons.
+
+| Grandeza | Valor | Uso no jogo | Fonte |
+|---|---|---|---|
+| Distância Terra–Marte em 14/11/2026 | **1,32436 UA = 198,1 milhões de km** | Conferência: `earthMarsGeometry` dá 198,12 milhões de km para a mesma data. Aparece no card do rádio e na legenda do pouso | [NASA JPL Horizons](https://ssd.jpl.nasa.gov/horizons/): alvo `499` (Marte), observador `500@399` (geocentro), quantidade 20, 2026-11-14 00:00 UT |
+| Atraso de rádio nesse dia | **661 s ≈ 11 min** só de ida, **22 min** ida e volta | Conferência: `earthMarsGeometry` dá 11,01 min. A espera pela resposta usa a escala do rádio da base (`COMMS_CONFIG.GAME_SECONDS_PER_LIGHT_MINUTE = 3`): 22 min de ida e volta ≈ 66 s reais | distância ÷ velocidade da luz (299.792,458 km/s) |
+| Duração da viagem Terra–Marte | **~7 meses** (Mars 2020: 30/07/2020 a 18/02/2021, 203 dias) | Legenda da chegada | [NASA Mars 2020](https://science.nasa.gov/mission/mars-2020-perseverance/) |
+| Pressão na superfície | Marte **6,36 mbar** × Terra **1.014 mbar** (~0,6 %) | Legenda "Mars air is 100 times thinner" (a NASA usa "about 100 times thinner") | [Mars Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html) |
+| Período sinódico de Marte | **779,94 dias ≈ 26 meses** | Fim alternativo: a janela de lançamento só reabre em ~26 meses | [Mars Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html) |
+
+A janela de lançamento do jogo (`STORY_CONFIG.WINDOW_HOURS = 8` horas de jogo) é **escala de jogo**, não um número real: o que é real é a existência da janela e o intervalo de ~26 meses.
+
 Essas constantes geram trade-offs prontos:
 - **Lua:** a noite de 14 dias obriga a guardar energia (baterias) ou cortar sistemas. É um dilema forte de energia contra suporte de vida.
 - **Marte:** o painel solar rende menos e a poeira derruba ainda mais. O atraso de até 22 min impede o "controle da missão" de salvar o jogador em tempo real, então ele precisa decidir sozinho.
@@ -72,6 +88,13 @@ Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG
 | O2 em kg no resumo da vitória | 1 sol respirando lá fora = **0,84 kg** | [Ref] NASA BVAD |
 | Consumo da tripulação NPC (`CREW_CONFIG`) | água : comida = 0,5 L : 0,3 ração por hora de jogo (proporção BVAD ~3 kg : ~1,8 kg por pessoa/dia); O2 pago em energia | [Ref] NASA BVAD |
 | Reciclador de água (`STATION_CONFIG.WATER_RECOVERY`) | **98 %** da água usada volta ao tanque | [Ref] NASA, sistema de recuperação de água da ISS (2023) |
+| Parede de água do abrigo de tempestade (`RADIATION_CONFIG.SHELTER_WATER_CURVE`, issue #56) | redução média da dose das tempestades solares de 2012: **1 g/cm² → 42 %**, **5 g/cm² → 79 %**, **10 g/cm² → 83 %** (10 g/cm² de água é a referência de "abrigo de tempestade") | [Ref] Quinn et al., *Modeling shielding in the Earth-Moon-Mars radiation environment using PREDICCS* (pôster, UNH, com dados do MSL/RAD): [PDF](https://posters.unh.edu/private_media/4209/). Paredes de água no alojamento como abrigo: [Clowdsley, NASA LaRC, 2021](https://ntrs.nasa.gov/citations/20210009760) |
+| Aquecedor do módulo norte (`UTILITY_CONFIG.HEATER_*`, issue #56 B2) | **1 %/h** de dia e **4 %/h** à noite (escala de jogo); desligado à noite, o reciclador de água e a estufa param | Temperatura real: média ~−62 °C, mínima **−97,7 °C** (InSight, tabela de clima acima). A potência é de jogo: não achamos um número oficial de aquecimento para uma base em Marte |
+| Primeira impressão 3D no espaço (oficina, issue #56 B5) | **novembro de 2014**, na ISS (impressora da Made In Space, peça de plástico ABS) | [NASA: 3-D Printer Creates First Object in Space](https://www.nasa.gov/missions/station/open-for-business-3-d-printer-creates-first-object-in-space-on-international-space-station/) |
+| Cozinha e despensa (issue #56 B3) | ~**1,8 kg** de comida por pessoa por dia; na ISS a comida vem embalada e é aquecida na cozinha | [Ref] NASA BVAD (linha da tripulação acima). A ração do jogo sai da mesma despensa da tripulação |
+| Atraso do rádio Terra–Marte (`src/mission/earthMars.js`, issue #56 A2) | calculado para a data do jogo: em 14/11/2026, **~198 milhões de km = ~11 min só de ida**; oposição de 16/01/2025: 96 milhões de km (5,4 min); conjunção de 09/01/2026: ~360 milhões de km (20 min) | [Ref] NASA/JPL, [Approximate Positions of the Planets](https://ssd.jpl.nasa.gov/planets/approx_pos.html) (tabela 1, válida de 1800 a 2050); velocidade da luz 299.792,458 km/s. No jogo, cada minuto real de luz vira 3 s de espera |
+| Conjunção solar (`COMMS_CONFIG.CONJUNCTION_SUN_ANGLE_DEG`) | os comandos para Marte param quando o Sol fica a **menos de ~2°** de Marte no céu da Terra, por **~2 semanas**, a cada **~26 meses** | [Ref] NASA/JPL: [What's Mars Solar Conjunction, and Why Does It Matter?](https://www.nasa.gov/solar-system/whats-mars-solar-conjunction-and-why-does-it-matter/). A próxima real é só em 2028, então o jogo encena uma por partida (6 h de jogo) e a chama de "simulated" |
+| Água na parede cheia | **40 L = 10 g/cm²** (escala de jogo: 0,25 g/cm² por litro) | Uma parede real de 10 cm em volta de uma cabine pede centenas de litros; o jogo encolhe para caber no tanque de 100 L da base |
 
 | Pôster "How we make air" | MOXIE (rover Perseverance) produziu **122 g** de O2 em 16 rodadas, pico de **12 g/h** | [Ref] [NASA, 06/09/2023](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/) |
 | Pôster "Why we exercise" | ossos perdem **~1 %** de densidade por mês no espaço sem exercício; tripulações da ISS treinam **~2 h por dia** | [Ref] [NASA, 01/12/2023](https://www.nasa.gov/missions/station/iss-research/counteracting-bone-and-muscle-loss-in-microgravity/) |
@@ -79,7 +102,7 @@ Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG
 
 Os textos dos pôsteres ficam em `src/base/basePosters.js`; a tela "NASA Data" do menu (`index.html`) lista as mesmas fontes.
 
-Escala de jogo (não é dado real): fator do abrigo de tempestade (`RADIATION_CONFIG.SHELTER_FACTOR = 0,4`, somado ao do habitat, para que a CME mais rápida fique abaixo do limite que machuca), capacidade da bateria, custos de energia em %, duração da tempestade (3 h de jogo), dano por mSv e o limite de 3 mSv/h a partir do qual a radiação machuca.
+Escala de jogo (não é dado real): capacidade da bateria, custos de energia em %, duração da tempestade (3 h de jogo), dano por mSv e o limite de 3 mSv/h a partir do qual a radiação machuca.
 
 Simplificação a explicar: a "blindagem ligada" (tecla R) é um escudo ativo que gasta energia e só protege dentro da bolha em volta da base. Escudos magnéticos ativos ainda são pesquisa; nas bases reais, o abrigo de tempestade usa massa (água, regolito). Detalhes e fontes em [`protecao-radiacao.md`](protecao-radiacao.md).
 

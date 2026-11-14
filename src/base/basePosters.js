@@ -11,7 +11,6 @@ export const ZONE_COLORS = {
   gym: '#22d3ee',
   airlock: '#fb923c',
   shelter: '#f472b6',
-  galley: '#fdba74',
 };
 
 export const SIGNS = {
@@ -24,7 +23,6 @@ export const SIGNS = {
   mainHab: { code: 'HAB-1', name: 'MAIN HAB', color: ZONE_COLORS.quarters },
   airlock: { code: 'AL-1', name: 'AIRLOCK', color: ZONE_COLORS.airlock },
   shelter: { code: 'SHL-1', name: 'STORM SHELTER', color: ZONE_COLORS.shelter },
-  galley: { code: 'GAL-1', name: 'GALLEY', color: ZONE_COLORS.galley },
 };
 
 // `donkiDate` = data de coleta do JSON embutido do DONKI, ja em DD/MM/AAAA
@@ -81,8 +79,8 @@ export function buildPosters(donkiDate) {
       lines: [
         'Radiation is tiny, very fast particles from the Sun and space.',
         'Thick stuff stops them: water and Mars dirt (regolith).',
-        'This shelter has water bags and dirt bags over your head.',
-        'In a storm, stand here. You cannot work, but you stay safe.',
+        'This shelter has walls you can fill with water.',
+        'Fill the wall, then stand here in a storm.',
       ],
       fact: 'Dose is counted in mSv. NASA lets an astronaut collect 600 mSv in a whole career.',
       source: 'NASA-STD-3001 (2022)',

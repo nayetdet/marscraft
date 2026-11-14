@@ -4,12 +4,27 @@ import { RADIATION_CONFIG } from '../config/constants.js';
 export const BASE_DOSE_MSV_PER_HOUR =
   (RADIATION_CONFIG.MARS_SURFACE_DOSE_UGY_PER_HOUR * RADIATION_CONFIG.QUALITY_FACTOR) / 1000;
 
-export function doseRateMsvPerHour({ stormMultiplier = 1, insideHabitat = false, shieldOn = false, insideShelter = false } = {}) {
+// Fracao da dose que atravessa a parede de agua do abrigo (1 = parede vazia).
+// Interpola a curva do PREDICCS em g/cm2 de agua.
+export function shelterDoseFactor(waterL) {
+  const curve = RADIATION_CONFIG.SHELTER_WATER_CURVE;
+  const gcm2 = Math.max(0, waterL) * RADIATION_CONFIG.SHELTER_G_CM2_PER_L;
+  for (let i = 1; i < curve.length; i++) {
+    const [x1, y1] = curve[i];
+    if (gcm2 <= x1) {
+      const [x0, y0] = curve[i - 1];
+      return y0 + ((gcm2 - x0) / (x1 - x0)) * (y1 - y0);
+    }
+  }
+  return curve[curve.length - 1][1];
+}
+
+// `shelterWaterL` so conta quando o jogador esta dentro do abrigo (0 fora dele).
+export function doseRateMsvPerHour({ stormMultiplier = 1, insideHabitat = false, shieldOn = false, shelterWaterL = 0 } = {}) {
   let rate = BASE_DOSE_MSV_PER_HOUR * stormMultiplier;
   if (insideHabitat) rate *= RADIATION_CONFIG.HABITAT_FACTOR;
   if (shieldOn) rate *= RADIATION_CONFIG.SHIELD_FACTOR;
-  // O abrigo so existe dentro do habitat: do lado de fora nao ha massa sobre a cabeca
-  if (insideShelter && insideHabitat) rate *= RADIATION_CONFIG.SHELTER_FACTOR;
+  if (shelterWaterL > 0) rate *= shelterDoseFactor(shelterWaterL);
   return rate;
 }
 

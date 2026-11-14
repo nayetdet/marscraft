@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MissionSystem, mavProgress, oxygenPointsToKg } from './MissionSystem.js';
-import { ENERGY_CONFIG, MAV_CONFIG } from '../config/constants.js';
+import { ENERGY_CONFIG, MAV_CONFIG, STORM_CONFIG } from '../config/constants.js';
 
 const cmes = [{ id: 'cme', startTime: '2026-11-05T20:00Z', speedKmS: 900 }];
 
@@ -182,6 +182,27 @@ describe('oxygenPointsToKg', () => {
   it('one sol of breathing outside equals 0.84 kg of O2', () => {
     expect(oxygenPointsToKg(0.32 * 1200)).toBeCloseTo(0.84);
   });
+
+  it('keeps space weather calm until the story starts the storms', () => {
+    const mission = new MissionSystem({ cmes, startHours: 0, stormsStarted: false });
+    mission.update(60, { insideHabitat: false });
+    expect(mission.storm.phase).toBe('calm');
+    expect(mission.stormsSurvived).toBe(0);
+    expect(mission.drainEvents().some((e) => e.type.startsWith('storm'))).toBe(false);
+  });
+
+  it('schedules the first warning from the hour the storms start, only once', () => {
+    const mission = new MissionSystem({ cmes, startHours: 0, stormsStarted: false });
+    mission.update(30);
+    mission.startStorms(30);
+    expect(mission.schedule[0].warningStart).toBe(30 + STORM_CONFIG.FIRST_WARNING_AFTER_HOURS);
+
+    mission.startStorms(50);
+    expect(mission.schedule[0].warningStart).toBe(30 + STORM_CONFIG.FIRST_WARNING_AFTER_HOURS);
+
+    mission.update(30 + STORM_CONFIG.FIRST_WARNING_AFTER_HOURS + 0.01);
+    expect(mission.storm.phase).toBe('warning');
+  });
 });
 
 describe('MissionSystem demo storm control', () => {
@@ -212,9 +233,10 @@ describe('MissionSystem demo storm control', () => {
     expect(other.schedule[0].arrival).toBe(arrival);
   });
 
-  it('the shelter lowers the dose rate only for a player inside the habitat', () => {
+  it('the demo storm works with the shelter water wall', () => {
     const mission = createMission(12);
     mission.triggerStormSoon(0.2);
+    mission.shelterWaterL = 40;
     mission.update(12.3, { insideHabitat: true });
     const habitat = mission.doseRate;
     mission.update(12.4, { insideHabitat: true, insideShelter: true });

@@ -199,34 +199,6 @@ export function hazardTexture(aspect) {
   return toTexture(canvas);
 }
 
-// Marca do abrigo no piso: moldura de aviso e o nome da zona (fundo transparente)
-export function shelterFloorTexture(aspect) {
-  const W = 512;
-  const H = Math.round(W / aspect);
-  const canvas = createCanvas(W, H);
-  const ctx = canvas.getContext('2d');
-  const edge = 26;
-  drawHazard(ctx, 0, 0, W, H, 18);
-  ctx.clearRect(edge, edge, W - edge * 2, H - edge * 2);
-  ctx.fillStyle = 'rgba(244, 114, 182, 0.2)';
-  ctx.fillRect(edge, edge, W - edge * 2, H - edge * 2);
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.lineJoin = 'round';
-  const text = (label, y, max) => {
-    fitFont(ctx, label, W - edge * 2 - 30, max);
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = INK;
-    ctx.strokeText(label, W / 2, y);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(label, W / 2, y);
-  };
-  text('STORM SHELTER', H * 0.4, 58);
-  text('STAND HERE IN A SOLAR STORM', H * 0.64, 26);
-  return toTexture(canvas);
-}
-
 const SCREEN_THEMES = {
   ok: { bg: '#04201f', accent: '#2bd4c0', text: '#d8fff9', dim: '#7fbdb5' },
   warn: { bg: '#241a04', accent: '#facc15', text: '#fff4c2', dim: '#c9b56a' },
