@@ -58,6 +58,8 @@ export class MissionSystem {
     this._diedDuringStorm = false;
     this._playedDuringStorm = false;
     this.events = [];
+    // Filtros de ar gastos encarecem o O2 do habitat (gerador de O2 da tripulacao, issue #47)
+    this.oxygenCostMultiplier = 1;
   }
 
   get progress() {
@@ -166,12 +168,12 @@ export class MissionSystem {
 
   // O2 que a bateria consegue pagar agora
   oxygenRefillBudget() {
-    return this.battery.charge / ENERGY_CONFIG.OXYGEN_COST_PER_POINT;
+    return this.battery.charge / (ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier);
   }
 
   chargeOxygen(points) {
     if (points <= 0) return;
-    this.battery.drain(points * ENERGY_CONFIG.OXYGEN_COST_PER_POINT);
+    this.battery.drain(points * ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier);
     this.oxygenProducedPoints += points;
   }
 

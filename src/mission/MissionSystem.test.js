@@ -31,6 +31,15 @@ describe('MissionSystem energy', () => {
     expect(night.battery.charge).toBe(10);
   });
 
+  it('worn air filters (crew oxygen generator) make habitat oxygen cost more', () => {
+    const mission = createMission(0);
+    mission.battery.charge = 6;
+    mission.oxygenCostMultiplier = 2;
+    expect(mission.oxygenRefillBudget()).toBeCloseTo(6 / (2 * ENERGY_CONFIG.OXYGEN_COST_PER_POINT));
+    mission.chargeOxygen(1);
+    expect(mission.battery.charge).toBeCloseTo(6 - 2 * ENERGY_CONFIG.OXYGEN_COST_PER_POINT);
+  });
+
   it('oxygen refill is limited by the battery and costs energy', () => {
     const mission = createMission(0);
     mission.battery.charge = 3;
