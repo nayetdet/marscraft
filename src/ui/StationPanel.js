@@ -215,6 +215,210 @@ export class StationPanel {
     }
   }
 
+  _buildGymIllustrationSvg(isBike) {
+    if (isBike) {
+      return `
+        <svg class="gym-svg" viewBox="0 0 160 124" shape-rendering="crispEdges">
+          <!-- Floor & base stabilizers -->
+          <rect x="0" y="108" width="160" height="16" fill="#132c33"/>
+          <rect x="20" y="104" width="120" height="5" fill="#334155"/>
+          <rect x="28" y="100" width="22" height="5" fill="#64748b"/>
+          <rect x="108" y="100" width="24" height="5" fill="#64748b"/>
+
+          <!-- CEVIS Bike frame, seat backrest & handlebar post -->
+          <rect x="34" y="54" width="6" height="24" fill="#94a3b8"/>
+          <rect x="40" y="64" width="18" height="6" fill="#0284c7"/>
+          <rect x="44" y="70" width="6" height="32" fill="#cbd5e1"/>
+          <rect x="50" y="88" width="54" height="6" fill="#0284c7"/>
+          <rect x="70" y="76" width="36" height="6" fill="#cbd5e1"/>
+          <rect x="108" y="42" width="6" height="60" fill="#cbd5e1"/>
+          <rect x="94" y="44" width="16" height="5" fill="#334155"/>
+          <!-- Console display -->
+          <rect x="110" y="30" width="20" height="14" fill="#1e293b"/>
+          <rect x="113" y="33" width="14" height="8" fill="#38bdf8"/>
+
+          <!-- Magnetic Flywheel -->
+          <rect x="98" y="70" width="26" height="26" fill="#475569"/>
+          <rect x="101" y="73" width="20" height="20" fill="#e2e8f0"/>
+          <rect x="105" y="77" width="12" height="12" fill="#0284c7"/>
+          <g class="pose-0">
+            <rect x="109" y="73" width="4" height="20" fill="#334155"/>
+            <rect x="101" y="81" width="20" height="4" fill="#334155"/>
+          </g>
+          <g class="pose-1">
+            <rect x="103" y="75" width="4" height="4" fill="#334155"/>
+            <rect x="115" y="75" width="4" height="4" fill="#334155"/>
+            <rect x="103" y="87" width="4" height="4" fill="#334155"/>
+            <rect x="115" y="87" width="4" height="4" fill="#334155"/>
+          </g>
+          <rect x="109" y="81" width="4" height="4" fill="#38bdf8"/>
+
+          <!-- Back leg (Alternates with pose) -->
+          <g class="pose-0">
+            <rect x="52" y="62" width="20" height="9" fill="#cbd5e1"/>
+            <rect x="66" y="66" width="9" height="16" fill="#cbd5e1"/>
+            <rect x="65" y="80" width="14" height="6" fill="#475569"/>
+            <rect x="63" y="85" width="16" height="3" fill="#facc15"/>
+          </g>
+          <g class="pose-1">
+            <rect x="52" y="64" width="16" height="12" fill="#cbd5e1"/>
+            <rect x="62" y="74" width="10" height="20" fill="#cbd5e1"/>
+            <rect x="61" y="92" width="15" height="6" fill="#475569"/>
+            <rect x="60" y="97" width="16" height="3" fill="#facc15"/>
+          </g>
+
+          <!-- PLSS Backpack & Astronaut Torso -->
+          <rect x="38" y="34" width="12" height="24" fill="#cbd5e1"/>
+          <rect x="40" y="36" width="8" height="6" fill="#0284c7"/>
+          <rect x="40" y="45" width="4" height="10" fill="#64748b"/>
+          <rect x="48" y="34" width="20" height="28" fill="#f8fafc"/>
+          <rect x="48" y="42" width="20" height="4" fill="#ef4444"/>
+          <rect x="48" y="56" width="20" height="6" fill="#334155"/>
+          <!-- Chest DCM -->
+          <rect x="66" y="38" width="6" height="12" fill="#cbd5e1"/>
+          <rect x="69" y="40" width="3" height="4" fill="#4ade80"/>
+
+          <!-- Astronaut Helmet & Gold Reflective Visor -->
+          <rect x="50" y="10" width="24" height="22" fill="#f8fafc"/>
+          <rect x="54" y="8" width="16" height="4" fill="#f8fafc"/>
+          <rect x="58" y="6" width="8" height="3" fill="#0284c7"/>
+          <rect x="52" y="31" width="18" height="3" fill="#334155"/>
+          <rect x="62" y="14" width="13" height="13" fill="#1e293b"/>
+          <rect x="63" y="15" width="11" height="11" fill="#d97706"/>
+          <rect x="65" y="16" width="8" height="6" fill="#f59e0b"/>
+          <rect x="66" y="17" width="5" height="2" fill="#fef3c7"/>
+          <rect x="55" y="17" width="5" height="8" fill="#475569"/>
+
+          <!-- Front leg & Crank Pedal -->
+          <g class="pose-0">
+            <rect x="54" y="64" width="16" height="12" fill="#f8fafc"/>
+            <rect x="64" y="72" width="10" height="5" fill="#0284c7"/>
+            <rect x="64" y="76" width="10" height="18" fill="#f8fafc"/>
+            <rect x="63" y="92" width="16" height="6" fill="#334155"/>
+            <rect x="62" y="97" width="18" height="3" fill="#facc15"/>
+          </g>
+          <g class="pose-1">
+            <rect x="54" y="60" width="22" height="10" fill="#f8fafc"/>
+            <rect x="70" y="62" width="10" height="5" fill="#0284c7"/>
+            <rect x="70" y="66" width="10" height="16" fill="#f8fafc"/>
+            <rect x="69" y="80" width="16" height="6" fill="#334155"/>
+            <rect x="68" y="85" width="18" height="3" fill="#facc15"/>
+          </g>
+
+          <!-- Astronaut Arm gripping handlebars -->
+          <rect x="60" y="36" width="18" height="8" fill="#f8fafc"/>
+          <rect x="74" y="38" width="5" height="7" fill="#334155"/>
+          <rect x="78" y="40" width="16" height="7" fill="#f8fafc"/>
+          <rect x="92" y="40" width="8" height="8" fill="#94a3b8"/>
+        </svg>`;
+    }
+
+    return `
+      <svg class="gym-svg" viewBox="0 0 160 124" shape-rendering="crispEdges">
+        <!-- Floor & vibration isolators -->
+        <rect x="0" y="108" width="160" height="16" fill="#132c33"/>
+        <rect x="26" y="102" width="10" height="6" fill="#f59e0b"/>
+        <rect x="114" y="102" width="10" height="6" fill="#f59e0b"/>
+
+        <!-- T2 Space Treadmill Deck & Belt -->
+        <rect x="16" y="92" width="120" height="11" fill="#334155"/>
+        <rect x="20" y="90" width="112" height="5" fill="#0284c7"/>
+        <rect x="24" y="88" width="104" height="4" fill="#1e293b"/>
+        <g class="pose-0">
+          <rect x="30" y="88" width="8" height="3" fill="#cbd5e1"/>
+          <rect x="52" y="88" width="8" height="3" fill="#cbd5e1"/>
+          <rect x="74" y="88" width="8" height="3" fill="#cbd5e1"/>
+          <rect x="96" y="88" width="8" height="3" fill="#cbd5e1"/>
+          <rect x="116" y="88" width="8" height="3" fill="#cbd5e1"/>
+        </g>
+        <g class="pose-1">
+          <rect x="40" y="88" width="8" height="3" fill="#cbd5e1"/>
+          <rect x="62" y="88" width="8" height="3" fill="#cbd5e1"/>
+          <rect x="84" y="88" width="8" height="3" fill="#cbd5e1"/>
+          <rect x="106" y="88" width="8" height="3" fill="#cbd5e1"/>
+          <rect x="70" y="85" width="16" height="2" fill="#38bdf8"/>
+        </g>
+
+        <!-- Treadmill Front Console & Handrails -->
+        <rect x="118" y="34" width="7" height="58" fill="#cbd5e1"/>
+        <rect x="88" y="54" width="32" height="5" fill="#64748b"/>
+        <rect x="112" y="24" width="22" height="14" fill="#1e293b"/>
+        <rect x="115" y="27" width="16" height="8" fill="#38bdf8"/>
+
+        <!-- 0.85G Bungee Harness Straps (Bone Density Loading) -->
+        <rect x="48" y="60" width="3" height="30" fill="#38bdf8"/>
+        <rect x="78" y="60" width="3" height="30" fill="#38bdf8"/>
+
+        <!-- Back Arm & Back Leg (Alternating Run Stride) -->
+        <g class="pose-0">
+          <!-- Back arm forward -->
+          <rect x="70" y="38" width="16" height="8" fill="#cbd5e1"/>
+          <rect x="84" y="36" width="8" height="8" fill="#64748b"/>
+          <!-- Back leg kicking back -->
+          <rect x="46" y="62" width="12" height="14" fill="#cbd5e1"/>
+          <rect x="38" y="72" width="12" height="12" fill="#cbd5e1"/>
+          <rect x="34" y="80" width="14" height="7" fill="#475569"/>
+        </g>
+        <g class="pose-1">
+          <!-- Back arm back -->
+          <rect x="42" y="42" width="14" height="8" fill="#cbd5e1"/>
+          <rect x="36" y="46" width="8" height="8" fill="#64748b"/>
+          <!-- Back leg stepping forward -->
+          <rect x="64" y="62" width="12" height="14" fill="#cbd5e1"/>
+          <rect x="70" y="74" width="10" height="12" fill="#cbd5e1"/>
+          <rect x="70" y="82" width="16" height="6" fill="#475569"/>
+        </g>
+
+        <!-- PLSS Life-Support Backpack -->
+        <rect x="44" y="32" width="12" height="26" fill="#cbd5e1"/>
+        <rect x="46" y="34" width="8" height="6" fill="#ef4444"/>
+        <rect x="46" y="43" width="4" height="11" fill="#64748b"/>
+        <rect x="47" y="29" width="4" height="3" fill="#4ade80"/>
+
+        <!-- Astronaut Torso & Waist Harness -->
+        <rect x="54" y="32" width="22" height="26" fill="#f8fafc"/>
+        <rect x="54" y="40" width="22" height="4" fill="#0284c7"/>
+        <rect x="52" y="56" width="26" height="6" fill="#334155"/>
+        <rect x="60" y="57" width="10" height="4" fill="#38bdf8"/>
+        <!-- Chest DCM -->
+        <rect x="74" y="36" width="6" height="12" fill="#cbd5e1"/>
+        <rect x="77" y="38" width="3" height="4" fill="#4ade80"/>
+
+        <!-- Astronaut Helmet & Gold Reflective Visor -->
+        <rect x="54" y="8" width="24" height="22" fill="#f8fafc"/>
+        <rect x="58" y="6" width="16" height="4" fill="#f8fafc"/>
+        <rect x="62" y="4" width="8" height="3" fill="#ef4444"/>
+        <rect x="56" y="29" width="18" height="3" fill="#334155"/>
+        <rect x="66" y="12" width="13" height="13" fill="#1e293b"/>
+        <rect x="67" y="13" width="11" height="11" fill="#d97706"/>
+        <rect x="69" y="14" width="8" height="6" fill="#f59e0b"/>
+        <rect x="70" y="15" width="5" height="2" fill="#fef3c7"/>
+        <rect x="59" y="15" width="5" height="8" fill="#475569"/>
+
+        <!-- Front Leg & Front Arm (Alternating Run Stride) -->
+        <g class="pose-0">
+          <!-- Front leg planting on belt -->
+          <rect x="62" y="62" width="12" height="14" fill="#f8fafc"/>
+          <rect x="66" y="72" width="11" height="4" fill="#0284c7"/>
+          <rect x="66" y="76" width="10" height="10" fill="#f8fafc"/>
+          <rect x="66" y="82" width="16" height="6" fill="#1e293b"/>
+          <!-- Front arm swinging back -->
+          <rect x="46" y="38" width="14" height="8" fill="#f8fafc"/>
+          <rect x="40" y="42" width="8" height="8" fill="#94a3b8"/>
+        </g>
+        <g class="pose-1">
+          <!-- Front leg striding back -->
+          <rect x="50" y="62" width="12" height="14" fill="#f8fafc"/>
+          <rect x="44" y="72" width="11" height="4" fill="#0284c7"/>
+          <rect x="42" y="76" width="10" height="10" fill="#f8fafc"/>
+          <rect x="38" y="82" width="15" height="6" fill="#1e293b"/>
+          <!-- Front arm pumping forward -->
+          <rect x="64" y="38" width="16" height="8" fill="#f8fafc"/>
+          <rect x="78" y="35" width="8" height="8" fill="#94a3b8"/>
+        </g>
+      </svg>`;
+  }
+
   _renderGymInteractive() {
     const { expedition: mission, stations } = this.engine;
     const isBike = this.gymMode === 'bike';
@@ -227,7 +431,7 @@ export class StationPanel {
       <div class="gym-summary"><span>${isBike ? 'Muscle' : 'Bones'} <strong>${stat}%</strong></span><span>Power <strong>${Math.round(mission.energy)}%</strong></span><details class="gym-learn"><summary aria-label="Why exercise?" title="Why exercise?">i</summary><p>Lower gravity means astronauts need to exercise their muscles and bones. Training effects are simulated.</p></details></div>
       <div class="gym-stage">
         <div class="gym-illustration ${isBike ? 'bike' : 'treadmill'}" data-phase="${this.stridePhase}" aria-hidden="true">
-          ${isBike ? '<div class="gym-wheel"></div><div class="gym-bike-frame"></div><div class="gym-pedal"></div><div class="gym-seat"></div>' : '<div class="gym-belt"></div><div class="gym-rail"></div><div class="gym-runner"><i></i><b></b><em></em></div>'}
+          ${this._buildGymIllustrationSvg(isBike)}
         </div>
         <div class="gym-stage-copy"><h2>${isBike ? 'Ready to ride?' : 'Find your stride'}</h2><p>${isBike ? 'Alternate left and right pedals.' : 'Step when the marker is in the green zone.'}</p></div>
       </div>
