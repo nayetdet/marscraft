@@ -1,0 +1,29 @@
+import { describe, it, expect } from 'vitest';
+import { formatDateDMY, formatDose, formatHours, stormEventMessage } from './missionText.js';
+
+describe('missionText', () => {
+  it('formats dates as DD/MM/YYYY', () => {
+    expect(formatDateDMY('2026-11-05T20:00Z')).toBe('05/11/2026');
+    expect(formatDateDMY('2026-11-14')).toBe('14/11/2026');
+  });
+
+  it('formats game hours', () => {
+    expect(formatHours(2.0833)).toBe('2h 05m');
+    expect(formatHours(-1)).toBe('0h 00m');
+  });
+
+  it('formats doses with sensible precision', () => {
+    expect(formatDose(0.0211)).toBe('0.02 mSv');
+    expect(formatDose(3.456)).toBe('3.5 mSv');
+    expect(formatDose(57.4)).toBe('57 mSv');
+  });
+
+  it('storm warnings cite the real CME and say "real data", never "live"', () => {
+    const storm = { leadHours: 2.9, cme: { startTime: '2026-11-01T00:00Z', speedKmS: 894 } };
+    const msg = stormEventMessage({ type: 'storm-warning', storm }, '2026-11-14');
+    expect(msg).toContain('01/11/2026');
+    expect(msg).toContain('894 km/s');
+    expect(msg).toContain('real data from 14/11/2026');
+    expect(msg.toLowerCase()).not.toContain('live');
+  });
+});
