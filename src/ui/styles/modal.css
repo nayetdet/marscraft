@@ -112,6 +112,9 @@
 .mc-btn.primary { max-width: none; color: #ffffa0; }
 .mc-btn:disabled { color: #b5b5b5; cursor: default; filter: brightness(.72); }
 
+#loading-overlay.hidden { display: none; }
+#loading-overlay.mc-loading-error .loading-track { display: none; }
+
 .mc-death-title {
   font-size: 48px;
   color: #ffffff;
