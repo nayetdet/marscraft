@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { PlayerPhysics } from './PlayerPhysics.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { PHYSICS_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { PHYSICS_CONFIG } from '../config/constants.js';
 
 function createMockWorld(blocks = {}) {
   return {
@@ -86,16 +86,15 @@ describe('PlayerPhysics', () => {
     expect(player.overlapsBlock(3, 10, 3)).toBe(false);
   });
 
-  it('prevents player from crossing the outer crater rim boundary', () => {
+  it('does not use an invisible radial boundary away from solid terrain', () => {
     const world = createMockWorld();
     const player = new PlayerPhysics(world, []);
-    const limit = WORLD_CONFIG.CRATER_RADIUS - 2.6;
-    player.pos.set(0, 15, -limit);
+    player.pos.set(0, 15, -54);
     player.yaw = 0;
     player.onGround = true;
 
     player.update(0.1, { KeyW: true });
-    expect(Math.hypot(player.pos.x, player.pos.z)).toBeLessThan(WORLD_CONFIG.CRATER_RADIUS - 2.4);
+    expect(player.pos.z).toBeLessThan(-54);
   });
 });
 

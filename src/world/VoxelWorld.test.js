@@ -75,15 +75,11 @@ describe('VoxelWorld meshing', () => {
     world = createWorld();
   });
 
-  it('nao gera faces voltadas para fora do mundo (fundo e paredes laterais)', () => {
+  it('nao gera faces voltadas para baixo no fundo do mundo', () => {
     const outward = [];
     forEachFace(world, ({ normal, min, max }) => {
-      const [nx, ny, nz] = normal;
+      const [, ny] = normal;
       if (ny === -1 && min[1] === 0) outward.push('fundo');
-      if (nx === 1 && max[0] === world.halfX) outward.push('+x');
-      if (nx === -1 && min[0] === -world.halfX) outward.push('-x');
-      if (nz === 1 && max[2] === world.halfZ) outward.push('+z');
-      if (nz === -1 && min[2] === -world.halfZ) outward.push('-z');
     });
     expect(outward).toEqual([]);
   });

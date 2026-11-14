@@ -1,9 +1,8 @@
 export const WORLD_CONFIG = {
-  SIZE_X: 112,
+  SIZE_X: 224,
   SIZE_Y: 48,
-  SIZE_Z: 112,
+  SIZE_Z: 224,
   GROUND_LEVEL: 8,
-  CRATER_RADIUS: 50, // Borda suave da cratera para nao bloquear a visao do ceu e dos planetas
 };
 
 export const PHYSICS_CONFIG = {
@@ -15,7 +14,7 @@ export const PHYSICS_CONFIG = {
   PLAYER_HEIGHT: 1.7,
   CROUCH_HEIGHT: 1.15,
   PLAYER_RADIUS: 0.34,
-  SPAWN_POS: { x: 0, y: 11.0, z: 24.0 },
+  SPAWN_POS: { x: 0, y: 10.75, z: 11.5 },
   SPAWN_YAW: 0.0,
   SPAWN_PITCH: 0.1,
 };
@@ -24,7 +23,7 @@ export const CAMERA_CONFIG = {
   BASE_FOV: 72,
   ZOOM_FOV: 14,
   NEAR: 0.1,
-  FAR: 900,
+  FAR: 1200,
   REACH_DISTANCE: 6.5,
 };
 
@@ -57,6 +56,9 @@ export const SURVIVAL_CONFIG = {
   STARVE_DAMAGE_RATE: 0.8,
   // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
   HEAL_MIN_OXYGEN: 5,
+  DUST_STORM_START_RADIUS: 52,
+  DUST_STORM_FATAL_RADIUS: 82,
+  DUST_STORM_DAMAGE_RATE: 20,
 };
 
 export const WATER_SYSTEM_CONFIG = {
