@@ -444,6 +444,46 @@
   font-weight: 700;
 }
 
+.telemetry-item.highlight-cyan {
+  border-color: #38bdf8;
+  background: rgba(14, 165, 233, 0.2);
+}
+
+.rover-action-banner {
+  position: absolute;
+  top: 68%;
+  left: 50%;
+  transform: translate(-50%, 0);
+  background: rgba(2, 132, 199, 0.9);
+  border: 2px solid #38bdf8;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.6);
+  color: #ffffff;
+  padding: 8px 18px;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  animation: prompt-pulse 1.2s ease-in-out infinite;
+}
+
+.rover-action-banner.hidden {
+  display: none;
+}
+
+.rover-action-banner .key-badge {
+  background: #facc15;
+  color: #0f172a;
+  padding: 2px 7px;
+  font-weight: 800;
+  border-radius: 2px;
+}
+
+#base-water-status {
+  color: #38bdf8;
+}
+
 .rover-controls-hint {
   text-align: center;
   font-size: 13px;

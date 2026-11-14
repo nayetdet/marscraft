@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { WORLD_CONFIG } from '../config/constants.js';
+import { WORLD_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 
 export class RoverController {
   constructor({ roverGroup, wheels = [], world, camera }) {
@@ -32,6 +32,11 @@ export class RoverController {
 
     this.battery = 98.5;
     this.distanceTraveled = 0;
+
+    // Carga de Gelo e Perfuração Robótica
+    this.iceCargo = 0;
+    this.maxIceCargo = WATER_SYSTEM_CONFIG.ICE_CARGO_MAX;
+    this.drillCooldown = 0;
 
     // Cache de vetores para evitar alocações constantes no loop
     this._forward = new THREE.Vector3();
@@ -104,6 +109,63 @@ export class RoverController {
     this.speed = 0;
   }
 
+  canCollectIce() {
+    const distToIceCrater = Math.hypot(
+      this.pos.x - WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER.x,
+      this.pos.z - WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER.z
+    );
+    const blockBelow = this.world?.getBlock(
+      Math.floor(this.pos.x),
+      Math.floor(this.pos.y) - 1,
+      Math.floor(this.pos.z)
+    );
+    // Id 4 é MARS_ICE
+    return distToIceCrater <= 10.5 || blockBelow === 4;
+  }
+
+  canUnloadIce() {
+    const distToDepot = Math.hypot(
+      this.pos.x - WATER_SYSTEM_CONFIG.ICE_DEPOT_POS.x,
+      this.pos.z - WATER_SYSTEM_CONFIG.ICE_DEPOT_POS.z
+    );
+    return distToDepot <= 5.8 && this.iceCargo > 0;
+  }
+
+  collectIce() {
+    if (!this.canCollectIce()) {
+      return { success: false, reason: 'No water ice nearby. Navigate to Northeast Ice Crater!' };
+    }
+    if (this.iceCargo >= this.maxIceCargo) {
+      return { success: false, reason: `Ice hold is full (${this.maxIceCargo}kg). Offload at Habitat Bay!` };
+    }
+
+    const amount = Math.min(WATER_SYSTEM_CONFIG.ICE_PER_DRILL, this.maxIceCargo - this.iceCargo);
+    this.iceCargo += amount;
+    this.drillCooldown = 0.8;
+    this.battery = Math.max(5, this.battery - 1.2);
+
+    return {
+      success: true,
+      amount,
+      total: this.iceCargo,
+      message: `Drill active! Collected +${amount}kg Water Ice (${this.iceCargo}/${this.maxIceCargo}kg)`,
+    };
+  }
+
+  unloadIce() {
+    if (!this.canUnloadIce()) {
+      return { success: false, reason: 'Not in range of base water converter intake.' };
+    }
+
+    const offloaded = this.iceCargo;
+    this.iceCargo = 0;
+    return {
+      success: true,
+      amount: offloaded,
+      message: `Offloaded ${offloaded}kg ice to base! Converted to ${offloaded}L Purified Water.`,
+    };
+  }
+
   getTelemetry() {
     let headingDeg = THREE.MathUtils.radToDeg(-this.yaw) % 360;
     if (headingDeg < 0) headingDeg += 360;
@@ -122,11 +184,20 @@ export class RoverController {
       battery: Math.max(1, Math.min(100, Math.round(this.battery))),
       distanceTraveled: Math.round(this.distanceTraveled),
       cameraMode: this.cameraMode,
+      iceCargo: this.iceCargo,
+      maxIceCargo: this.maxIceCargo,
+      canCollectIce: this.canCollectIce(),
+      canUnloadIce: this.canUnloadIce(),
+      isDrilling: this.drillCooldown > 0,
     };
   }
 
   update(dt, keys = {}) {
     if (!this.roverGroup) return;
+
+    if (this.drillCooldown > 0) {
+      this.drillCooldown = Math.max(0, this.drillCooldown - dt);
+    }
 
     if (this.isActive) {
       let throttle = 0;

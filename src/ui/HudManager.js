@@ -61,6 +61,10 @@ export class HudManager {
     this.roverHeadingEl = document.getElementById('rover-heading');
     this.roverCoordsEl = document.getElementById('rover-coords');
     this.roverBatteryEl = document.getElementById('rover-battery');
+    this.roverIceEl = document.getElementById('rover-ice');
+    this.roverActionBannerEl = document.getElementById('rover-action-banner');
+    this.roverActionTextEl = document.getElementById('rover-action-text');
+    this.baseWaterStatusEl = document.getElementById('base-water-status');
     this.roverCamLabelEl = document.getElementById('rover-cam-label');
     this.bottomAreaEl = document.querySelector('.mc-bottom-area');
     this.crosshairEl = document.querySelector('.mc-crosshair');
@@ -299,12 +303,41 @@ export class HudManager {
       if (this.roverHeadingEl) this.roverHeadingEl.textContent = `${roverTelemetry.headingDeg}° ${roverTelemetry.headingCard}`;
       if (this.roverCoordsEl) this.roverCoordsEl.textContent = `X: ${roverTelemetry.x} Y: ${roverTelemetry.y} Z: ${roverTelemetry.z}`;
       if (this.roverBatteryEl) this.roverBatteryEl.textContent = `${roverTelemetry.battery}%`;
+      if (this.roverIceEl) this.roverIceEl.textContent = `${roverTelemetry.iceCargo} / ${roverTelemetry.maxIceCargo} kg`;
+
       if (this.roverCamLabelEl) {
         this.roverCamLabelEl.textContent =
           roverTelemetry.cameraMode === 'mastcam'
             ? 'CAM: MASTCAM (1ST-PERSON)'
             : 'CAM: TACTICAL 3RD-PERSON';
       }
+
+      // Banner de acao contextual do Rover (Perfurar ou Descarregar)
+      if (this.roverActionBannerEl && this.roverActionTextEl) {
+        if (roverTelemetry.canUnloadIce) {
+          this.roverActionTextEl.textContent = 'OFFLOAD ICE TO WATER CONVERTER';
+          this.roverActionBannerEl.classList.remove('hidden');
+        } else if (roverTelemetry.canCollectIce) {
+          const isFull = roverTelemetry.iceCargo >= roverTelemetry.maxIceCargo;
+          this.roverActionTextEl.textContent = isFull
+            ? 'ICE HOLD FULL - RETURN TO BASE'
+            : 'DRILL & COLLECT WATER ICE';
+          this.roverActionBannerEl.classList.remove('hidden');
+        } else {
+          this.roverActionBannerEl.classList.add('hidden');
+        }
+      }
+    } else if (this.roverActionBannerEl) {
+      this.roverActionBannerEl.classList.add('hidden');
+    }
+
+    // Status da Agua da Base e Estufa
+    if (this.baseWaterStatusEl && survival) {
+      const waterL = Math.round(survival.baseWater ?? 0);
+      const hydr = Math.round(survival.greenhouseHydration ?? 100);
+      const hydrLabel = hydr > 20 ? 'Hydrated' : 'Dry - Needs Water!';
+      this.baseWaterStatusEl.textContent = `Base Water: ${waterL}L · Greenhouse: ${hydr}% (${hydrLabel})`;
+      this.baseWaterStatusEl.style.color = hydr > 20 ? '#38bdf8' : '#f87171';
     }
 
     const { clockText } = sky.getFormattedTime();

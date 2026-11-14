@@ -135,6 +135,11 @@ export function buildNasaCustomModels(scene) {
   group.add(dish);
   solidObjects.push(dish);
 
+  // 8. Doca e Usina Externa de Recepção de Gelo e Conversão em Água
+  const iceDepot = createIceProcessingDepotModel(mats, 5.5, groundTopY, 9.5);
+  group.add(iceDepot);
+  solidObjects.push(iceDepot);
+
   group.updateMatrixWorld(true);
 
   // Extrai caixas de colisão AABB tanto do objeto inteiro quanto de cada malha individual
@@ -156,7 +161,7 @@ export function buildNasaCustomModels(scene) {
   }
 
   // Keep plants and the driven rover as independent objects; merge static scenery.
-  const merged = mergeByMaterial(group, [...plants, rover]);
+  const merged = mergeByMaterial(group, [...plants, rover], [rover]);
   scene.add(merged);
   return { group: merged, colliders, plants, rover, roverWheels };
 }
@@ -165,7 +170,7 @@ export function buildNasaCustomModels(scene) {
 // Os modelos sao estaticos, entao a transformacao de cada caixa e "assada" na geometria.
 // Objetos em `separateObjects` mantem a identidade (e o userData), so que cada um vira
 // uma unica malha com cor por vertice.
-export function mergeByMaterial(group, separateObjects = []) {
+export function mergeByMaterial(group, separateObjects = [], preserveObjects = []) {
   group.updateMatrixWorld(true);
   const separate = new Set(separateObjects);
   const buckets = new Map();
@@ -193,8 +198,9 @@ export function mergeByMaterial(group, separateObjects = []) {
   }
 
   const vertexColorMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const preserve = new Set(preserveObjects);
   for (const obj of separateObjects) {
-    bakeIntoSingleMesh(obj, vertexColorMat);
+    if (!preserve.has(obj)) bakeIntoSingleMesh(obj, vertexColorMat);
     merged.attach(obj); // preserva a posicao no mundo ao trocar de pai
   }
   return merged;
@@ -450,4 +456,36 @@ function createExteriorSolarAndDish(mats, x, y, z) {
   dish.add(bowl);
 
   return { solarArrays, dish };
+}
+
+
+function createIceProcessingDepotModel(mats, x, y, z) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+
+  // Plataforma de desacoplamento de gelo no solo
+  addBox(g, 2.8, 0.14, 2.8, mats.darkSlate, 0, 0.07, 0);
+
+  // Guias laterais amarelas e pretas para o rover estacionar
+  addBox(g, 0.2, 0.28, 2.6, mats.yellowBtn, -1.3, 0.2, 0);
+  addBox(g, 0.2, 0.28, 2.6, mats.yellowBtn, 1.3, 0.2, 0);
+
+  // Funil / Moega de Recepção de Gelo
+  addBox(g, 1.4, 0.9, 1.2, mats.whiteMetal, 0, 0.55, -0.6);
+  addBox(g, 1.2, 0.25, 1.0, mats.charcoal, 0, 0.95, -0.6);
+  addBox(g, 1.0, 0.12, 0.8, mats.waterGlass, 0, 0.98, -0.6);
+
+  // Tanque vertical de liquefação e purificação com indicador de nível de água
+  addBox(g, 0.8, 1.8, 0.8, mats.whiteMetal, -0.9, 1.0, -0.7);
+  addBox(g, 0.6, 1.2, 0.6, mats.waterGlass, -0.9, 1.1, -0.7);
+  addBox(g, 0.7, 0.15, 0.7, mats.nasaBlue, -0.9, 1.95, -0.7);
+
+  // Tubulação conectada ao Habitat Principal
+  addBox(g, 0.16, 0.16, 1.8, mats.lightGray, 0, 0.45, -1.8);
+
+  // Sinalizador luminoso azul (indicador de água e doca)
+  addBox(g, 0.12, 1.4, 0.12, mats.lightGray, 1.1, 0.8, -0.8);
+  addBox(g, 0.28, 0.28, 0.28, mats.cyanGlow, 1.1, 1.55, -0.8);
+
+  return g;
 }

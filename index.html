@@ -34,7 +34,7 @@
       <div id="player-coords">XYZ: 0 / 13 / 19</div>
       <div id="env-status">Environment: Martian Crater (using oxygen)</div>
       <div id="base-water-status">Base Water: 25L · Greenhouse: 100% (Hydrated)</div>
-      <div class="mc-help-line">[E] Inventory · [Q] Drop item · [Z] Scope · [F] Terminal · [W]×2 Sprint</div>
+      <div class="mc-help-line">[E] Inventory · [Q] Drop item · [Z] Scope · [F] Interact · [W]×2 Sprint</div>
     </div>
 
     <!-- Rotulos simples no ceu (sem emojis) -->
@@ -76,6 +76,10 @@
           <span class="telemetry-label">ROVER POS</span>
           <span id="rover-coords" class="telemetry-val">X: 7.5 Y: 8.5 Z: 10.5</span>
         </div>
+        <div class="telemetry-item highlight-cyan">
+          <span class="telemetry-label">ICE CARGO</span>
+          <span id="rover-ice" class="telemetry-val">0 / 50 kg</span>
+        </div>
         <div class="telemetry-item">
           <span class="telemetry-label">BATTERY</span>
           <span id="rover-battery" class="telemetry-val">99%</span>
@@ -90,8 +94,13 @@
         </div>
       </div>
 
+      <!-- Banner de Acao do Rover (Perfurar Gelo ou Descarregar na Base) -->
+      <div id="rover-action-banner" class="rover-action-banner hidden">
+        <span class="key-badge">[SPACE]</span> <span id="rover-action-text">DRILL WATER ICE SAMPLE</span>
+      </div>
+
       <div class="rover-controls-hint">
-        [WASD / Arrows] Drive Rover &nbsp;·&nbsp; [V] Toggle Camera &nbsp;·&nbsp; [F] Exit Terminal
+        [WASD / Arrows] Drive &nbsp;·&nbsp; [SPACE] Drill / Offload Ice &nbsp;·&nbsp; [V] Toggle Camera &nbsp;·&nbsp; [F] Exit Terminal
       </div>
     </div>
 

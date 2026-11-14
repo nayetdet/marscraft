@@ -66,4 +66,35 @@ describe('RoverController', () => {
     expect(controller.distanceTraveled).toBeGreaterThan(0);
     expect(dummyWheel.rotation.x).not.toBe(0);
   });
+
+  it('drills and offloads water ice correctly based on proximity to ice crater and habitat bay', () => {
+    const roverGroup = new THREE.Group();
+    // Inicia longe do gelo
+    roverGroup.position.set(0, 9, 0);
+
+    const controller = new RoverController({ roverGroup, wheels: [] });
+    expect(controller.canCollectIce()).toBe(false);
+    expect(controller.collectIce().success).toBe(false);
+
+    // Move para a cratera de gelo (x: 22, z: -22)
+    controller.pos.set(22, 9, -22);
+    expect(controller.canCollectIce()).toBe(true);
+
+    const collectResult = controller.collectIce();
+    expect(collectResult.success).toBe(true);
+    expect(controller.iceCargo).toBe(10);
+    expect(controller.drillCooldown).toBeGreaterThan(0);
+
+    // Tenta descarregar na cratera (longe da doca da base)
+    expect(controller.canUnloadIce()).toBe(false);
+
+    // Move de volta para a doca de descarregamento da base (x: 5.5, z: 9.5)
+    controller.pos.set(5.5, 9, 9.5);
+    expect(controller.canUnloadIce()).toBe(true);
+
+    const unloadResult = controller.unloadIce();
+    expect(unloadResult.success).toBe(true);
+    expect(unloadResult.amount).toBe(10);
+    expect(controller.iceCargo).toBe(0);
+  });
 });

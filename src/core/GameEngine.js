@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CAMERA_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { createCarrotTexture } from '../graphics/carrotTexture.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { createBlockMaterials } from '../graphics/blockMaterials.js';
@@ -97,7 +97,8 @@ export class GameEngine {
       getTargetedBlock: () => this._getTargetedBlock(),
       harvestCrop: (plant) => removeCrop(plant, this.plants, this.customColliders),
       isRoverActive: () => this.roverController.isActive,
-      onInteract: () => this.toggleRoverMode(),
+      onInteract: () => this.handlePlayerInteract(),
+      onRoverAction: () => this.handleRoverAction(),
       onToggleRoverCamera: () => {
         this.roverController.toggleCameraMode();
         const modeName =
@@ -164,33 +165,82 @@ export class GameEngine {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-  _checkConsoleProximity() {
+  handleRoverAction() {
+    if (!this.roverController.isActive) return;
+
+    if (this.roverController.canUnloadIce()) {
+      const res = this.roverController.unloadIce();
+      if (res.success) {
+        const added = this.survival.addBaseWater(
+          res.amount * WATER_SYSTEM_CONFIG.LITERS_PER_KG_ICE
+        );
+        this.hud.showToast(`Offloaded ${res.amount}kg ice! +${added}L purified water into habitat.`);
+      }
+    } else if (this.roverController.canCollectIce()) {
+      const res = this.roverController.collectIce();
+      this.hud.showToast(res.message || res.reason);
+    } else {
+      this.hud.showToast('No ice deposits nearby or not at habitat water intake bay');
+    }
+  }
+
+  _checkAstronautInteractions() {
     if (this.roverController.isActive) {
-      this.canInteractWithConsole = false;
+      this.currentInteraction = null;
       this.hud.setInteractionPrompt(false);
       return;
     }
 
-    // O console de comando fica em x: 0, z: -3.6 no piso do habitat (y: ~11)
-    const dx = this.player.pos.x - 0;
-    const dz = this.player.pos.z - (-3.6);
-    const dist = Math.hypot(dx, dz);
-    const dy = Math.abs(this.player.pos.y - 11.0);
-
-    if (dist < 3.2 && dy < 2.2) {
-      const lookDir = this.player.getLookDirection();
-      const toConsole = new THREE.Vector3(-dx, 0, -dz).normalize();
-      const dot = lookDir.dot(toConsole);
-
-      if (dot > 0.2) {
-        this.canInteractWithConsole = true;
-        this.hud.setInteractionPrompt(true, '[F] Operate Rover Remote Terminal');
-        return;
-      }
+    // 1. Console de Comando do Rover (x: 0, z: -3.6, y: ~11)
+    const distConsole = Math.hypot(this.player.pos.x - 0, this.player.pos.z - (-3.6));
+    const dyConsole = Math.abs(this.player.pos.y - 11.0);
+    if (distConsole < 3.2 && dyConsole < 2.2) {
+      this.currentInteraction = 'rover_terminal';
+      this.hud.setInteractionPrompt(true, '[F] Operate Rover Remote Terminal');
+      return;
     }
 
-    this.canInteractWithConsole = false;
+    // 2. Purificador / Dispensador de Água do Laboratório (x: 4.4, z: 2.4, y: ~11)
+    const distWater = Math.hypot(
+      this.player.pos.x - WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.x,
+      this.player.pos.z - WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.z
+    );
+    const dyWater = Math.abs(this.player.pos.y - 11.0);
+    if (distWater < 2.5 && dyWater < 2.2) {
+      this.currentInteraction = 'water_dispenser';
+      this.hud.setInteractionPrompt(true, '[F] Drink Clean Water (Habitat Reservoir)');
+      return;
+    }
+
+    // 3. Estufa / Plantações de Batata (x: -18, z: 0)
+    const distGreenhouse = Math.hypot(this.player.pos.x + 18, this.player.pos.z);
+    const dyGreenhouse = Math.abs(this.player.pos.y - 11.0);
+    if (distGreenhouse < 5.8 && dyGreenhouse < 2.2) {
+      this.currentInteraction = 'greenhouse';
+      this.hud.setInteractionPrompt(true, '[F] Harvest Potato (Irrigated Greenhouse)');
+      return;
+    }
+
+    this.currentInteraction = null;
     this.hud.setInteractionPrompt(false);
+  }
+
+  handlePlayerInteract() {
+    if (this.roverController.isActive) {
+      this.toggleRoverMode();
+      return;
+    }
+
+    if (this.currentInteraction === 'rover_terminal') {
+      this.toggleRoverMode();
+    } else if (this.currentInteraction === 'water_dispenser') {
+      const res = this.survival.drinkFromBaseDispenser();
+      this.hud.showToast(res.message);
+    } else if (this.currentInteraction === 'greenhouse') {
+      const res = this.survival.harvestGreenhouseCrop();
+      this.hud.showToast(res.message);
+      this.hud.renderHotbar(this.survival.slots);
+    }
   }
 
   toggleRoverMode() {
@@ -199,7 +249,7 @@ export class GameEngine {
       this.hud.setRoverMode(false);
       this.playerHand.handGroup.visible = !this.isZoomed;
       this.hud.showToast('Disconnected from Rover Remote Terminal');
-    } else if (this.canInteractWithConsole) {
+    } else if (this.currentInteraction === 'rover_terminal') {
       this.roverController.activate();
       this.hud.setRoverMode(true);
       this.playerHand.handGroup.visible = false;
@@ -232,7 +282,7 @@ export class GameEngine {
           this.playerHand.update(dt, this.player.isMoving);
           this._updateCamera();
           this.sky.update(dt, this.player.pos);
-          this._checkConsoleProximity();
+          this._checkAstronautInteractions();
 
           const hit = this._getTargetedBlock();
           if (hit.hit) {

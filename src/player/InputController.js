@@ -15,6 +15,7 @@ export class InputController {
     isRoverActive = () => false,
     onInteract = () => {},
     onToggleRoverCamera = () => {},
+    onRoverAction = () => {},
   }) {
     this.domElement = domElement;
     this.player = player;
@@ -29,6 +30,7 @@ export class InputController {
     this.isRoverActive = isRoverActive;
     this.onInteract = onInteract;
     this.onToggleRoverCamera = onToggleRoverCamera;
+    this.onRoverAction = onRoverAction;
 
     this.keys = {};
     this.isLocked = false;
@@ -177,6 +179,12 @@ export class InputController {
       if (e.code === 'KeyV' && this.isRoverActive()) {
         e.preventDefault();
         this.onToggleRoverCamera();
+        return;
+      }
+
+      if (e.code === 'Space' && this.isRoverActive()) {
+        e.preventDefault();
+        this.onRoverAction();
         return;
       }
 
