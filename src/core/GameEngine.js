@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { CAMERA_CONFIG } from '../config/constants.js';
+import { createCarrotTexture } from '../graphics/carrotTexture.js';
+import { BLOCK_IDS } from '../config/blockTypes.js';
 import { createBlockMaterials } from '../graphics/blockMaterials.js';
 import { MarsSkySystem } from '../sky/MarsSkySystem.js';
 import { VoxelWorld } from '../world/VoxelWorld.js';
@@ -37,8 +39,10 @@ export class GameEngine {
     this.container.appendChild(this.renderer.domElement);
 
     const { materials, previews, atlas } = createBlockMaterials();
+    const carrot = createCarrotTexture();
+    previews[BLOCK_IDS.HYDRO_PLANT] = carrot.dataUrl;
     this.sky = new MarsSkySystem(this.scene);
-    this.world = new VoxelWorld(this.scene, materials, atlas);
+    this.world = new VoxelWorld(this.scene, materials, atlas, carrot.texture);
 
     // Modelos 3D detalhados estilo Mod de Minecraft + Caixas de Colisão AABB
     const { group: customModels, colliders, plants } = buildNasaCustomModels(this.scene);
@@ -50,7 +54,7 @@ export class GameEngine {
     this.survival = new SurvivalSystem();
 
     // Maozinha 3D do jogador em primeira pessoa
-    this.playerHand = new PlayerHand(this.camera, materials);
+    this.playerHand = new PlayerHand(this.camera, materials, carrot.texture);
     const firstSlot = this.survival.slots[0];
     this.playerHand.setHeldBlock(firstSlot.id, firstSlot.count);
 
@@ -154,13 +158,12 @@ export class GameEngine {
         this.input.update(dt);
       }
 
-      const pickedUpBlocks = this.world.updateDrops(dt, this.player.pos);
+      const pickedUpBlocks = this.world.updateDrops(dt, this.player.pos, (id) => id === BLOCK_IDS.HYDRO_PLANT ? this.survival.addHarvestedCrop() : this.survival.addBlockToInventory(id));
       if (pickedUpBlocks.length > 0) {
-        pickedUpBlocks.forEach((blockId) => this.survival.addBlockToInventory(blockId));
         this.hud.renderHotbar(this.survival.slots);
         const heldSlot = this.survival.slots[this.hud.selectedSlot];
         this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
-        this.hud.showToast(`Picked up ${pickedUpBlocks.length} block${pickedUpBlocks.length > 1 ? 's' : ''}`);
+        this.hud.showToast(pickedUpBlocks.every((id) => id === BLOCK_IDS.HYDRO_PLANT) ? 'Picked up a Mars carrot' : `Picked up ${pickedUpBlocks.length} item${pickedUpBlocks.length > 1 ? 's' : ''}`);
       }
 
       this.playerHand.update(dt, this.player.isMoving);

@@ -36,9 +36,7 @@ export class InputController {
 
   _syncHandWithSlot() {
     const slot = this.survival.slots[this.hud.selectedSlot];
-    if (slot) {
-      this.playerHand.setHeldBlock(slot.id, slot.count);
-    }
+    this.playerHand.setHeldBlock(slot?.id, slot?.count ?? 0);
   }
 
   _canBreak(hit) {
@@ -98,10 +96,8 @@ export class InputController {
 
     if (target.progress >= 1) {
       if (target.type === 'crop') {
-        if (this.survival.addHarvestedCrop() && this.harvestCrop(target.plant)) {
-          this.hud.renderHotbar(this.survival.slots);
-          this._syncHandWithSlot();
-        }
+        const position = target.plant.getWorldPosition(target.plant.position.clone());
+        if (this.harvestCrop(target.plant)) this.world.spawnCropDrop(position);
       } else {
         this.world.breakBlock(target.x, target.y, target.z);
       }
@@ -183,6 +179,16 @@ export class InputController {
         return;
       }
 
+      if (e.code === 'KeyQ' && this.isLocked && !e.repeat) {
+        const slot = this.survival.slots[this.hud.selectedSlot];
+        if (slot && this.survival.useBlockFromSlot(this.hud.selectedSlot)) {
+          this.world.spawnPlayerDrop(this.player.pos, this.player.yaw, slot.id);
+          this.hud.renderHotbar(this.survival.slots);
+          this._syncHandWithSlot();
+        }
+        return;
+      }
+
       if (e.code === 'KeyZ') {
         this.isZoomed = !this.isZoomed;
         this.onToggleZoom(this.isZoomed);
@@ -218,7 +224,6 @@ export class InputController {
         return;
       }
 
-      this.playerHand.triggerSwing();
       const hit = this.getTargetedBlock();
 
       if (e.button === 2) {
@@ -227,7 +232,9 @@ export class InputController {
 
         // Se for consumível (Gelo de Agua ou Batata de Marte), consome para recuperar Água/Comida
         if (slot.consumable) {
+          const previousCount = slot.count;
           const msg = this.survival.consumeSlotItem(this.hud.selectedSlot);
+          if (slot.count < previousCount && slot.consumable.type === 'food') this.playerHand.triggerEat();
           if (msg) {
             this.hud.showToast(msg);
             this.hud.renderHotbar(this.survival.slots);
@@ -236,6 +243,7 @@ export class InputController {
           }
         }
 
+        this.playerHand.triggerSwing();
         // Caso contrário, coloca o bloco no mundo
         if (!hit.hit || hit.type === 'crop') return;
         const nx = hit.x + hit.normal.x;

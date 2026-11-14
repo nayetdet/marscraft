@@ -29,3 +29,27 @@ describe('SurvivalSystem', () => {
     expect(survival.oxygen).toBeGreaterThan(afterOutside);
   });
 });
+
+describe('harvested carrots', () => {
+  it('stacks carrots in the backpack and refuses pickup when inventory is full', () => {
+    const survival = new SurvivalSystem();
+    const carrot = survival.slots[4];
+    survival.inventorySlots[4] = null;
+    survival.inventorySlots[9] = carrot;
+    survival.slots = survival.inventorySlots.slice(0, 9);
+    expect(survival.addHarvestedCrop()).toBe(true);
+    expect(carrot.count).toBe(6);
+    survival.inventorySlots.fill({ id: 999, count: 64 });
+    expect(survival.addHarvestedCrop()).toBe(false);
+  });
+
+  it('consumes a carrot only when food or health needs replenishing', () => {
+    const survival = new SurvivalSystem();
+    expect(survival.consumeSlotItem(4)).toContain('already full');
+    expect(survival.slots[4].count).toBe(5);
+    survival.food = 10;
+    expect(survival.consumeSlotItem(4)).toContain('carrot');
+    expect(survival.food).toBe(16);
+    expect(survival.slots[4].count).toBe(4);
+  });
+});

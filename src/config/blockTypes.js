@@ -42,7 +42,7 @@ export const HOTBAR_BLOCKS = [
   },
   {
     id: BLOCK_IDS.HYDRO_PLANT,
-    name: 'Mars Potato (Right-click to eat)',
+    name: 'Mars Carrot (Right-click to eat)',
     initialCount: 5,
     consumable: { type: 'food', amount: 6, heal: 2 },
   },
