@@ -24,6 +24,18 @@ export class SurvivalSystem {
       count: b.initialCount,
       consumable: b.consumable,
     }));
+    // The first nine inventory spaces are the hotbar; the rest are backpack slots.
+    this.inventorySlots = [...this.slots, ...Array(27).fill(null)];
+  }
+
+  swapInventorySlots(fromIndex, toIndex) {
+    if (fromIndex === toIndex) return this.inventorySlots;
+    [this.inventorySlots[fromIndex], this.inventorySlots[toIndex]] = [
+      this.inventorySlots[toIndex],
+      this.inventorySlots[fromIndex],
+    ];
+    this.slots = this.inventorySlots.slice(0, 9);
+    return this.inventorySlots;
   }
 
   isPlayerInsideShip(pos) {
@@ -92,13 +104,13 @@ export class SurvivalSystem {
   }
 
   addBlockToInventory(blockId) {
-    const slot = this.slots.find((s) => s.id === blockId);
+    const slot = this.slots.find((s) => s?.id === blockId);
     if (slot) {
       slot.count = Math.min(64, slot.count + 1);
       return true;
     }
     // Blocos especiais da nave (metal, console, farol) viram Bloco da Nave no inventário
-    const hullSlot = this.slots[5];
+    const hullSlot = this.slots.find((s) => s?.id === HOTBAR_BLOCKS[5].id);
     if (hullSlot) {
       hullSlot.count = Math.min(64, hullSlot.count + 1);
     }
@@ -110,22 +122,22 @@ export class SurvivalSystem {
     if (!slot || slot.count <= 0 || !slot.consumable) return null;
 
     if (slot.consumable.type === 'water') {
-      if (this.water >= this.maxStat - 0.5) return 'Sua sede ja esta cheia';
+      if (this.water >= this.maxStat - 0.5) return 'Your water level is already full';
       this.water = Math.min(this.maxStat, this.water + slot.consumable.amount);
       slot.count--;
-      return 'Voce bebeu Agua de Gelo Marciano (+Agua)';
+      return 'You drank Martian ice water (+Water)';
     }
 
     if (slot.consumable.type === 'food') {
       if (this.food >= this.maxStat - 0.5 && this.health >= this.maxStat - 0.5) {
-        return 'Sua fome ja esta cheia';
+        return 'Your food level is already full';
       }
       this.food = Math.min(this.maxStat, this.food + slot.consumable.amount);
       if (slot.consumable.heal) {
         this.health = Math.min(this.maxStat, this.health + slot.consumable.heal);
       }
       slot.count--;
-      return 'Voce comeu Batata de Marte (+Comida)';
+      return 'You ate a Mars potato (+Food)';
     }
 
     return null;

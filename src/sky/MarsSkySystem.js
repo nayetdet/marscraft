@@ -166,7 +166,7 @@ export class MarsSkySystem {
     const hh = String(hours).padStart(2, '0');
     const mm = String(mins).padStart(2, '0');
     return {
-      clockText: `Sol ${this.solCount} - ${hh}:${mm}`,
+      clockText: `Sol ${this.solCount} — ${hh}:${mm}`,
     };
   }
 }
