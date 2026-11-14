@@ -42,23 +42,22 @@ export class InputController {
   }
 
   _canBreak(hit) {
-    return hit.hit && hit.y > 0 && Math.hypot(hit.x, hit.z) < WORLD_CONFIG.CRATER_RADIUS - 4;
+    if (!hit.hit) return false;
+    if (hit.type === 'crop') return Boolean(hit.plant);
+    return hit.y > 0 && Math.hypot(hit.x, hit.z) < WORLD_CONFIG.CRATER_RADIUS - 4;
   }
 
   _startBreaking() {
     const hit = this.getTargetedBlock();
     if (!this._canBreak(hit)) return;
 
-    this.breakState = {
-      x: hit.x,
-      y: hit.y,
-      z: hit.z,
-      block: hit.block,
-      progress: 0,
-    };
+    this.breakState = hit.type === 'crop'
+      ? { type: 'crop', plant: hit.plant, progress: 0 }
+      : { x: hit.x, y: hit.y, z: hit.z, block: hit.block, progress: 0 };
     this.breakSwingTimer = 0;
     this.playerHand.triggerSwing();
-    this.world.updateBreakCracks(hit.x, hit.y, hit.z, 0.01);
+    if (hit.type === 'crop') this.world.updateCropBreakCracks(hit.plant, 0.01);
+    else this.world.updateBreakCracks(hit.x, hit.y, hit.z, 0.01);
   }
 
   _cancelBreaking() {
@@ -80,14 +79,17 @@ export class InputController {
 
     const hit = this.getTargetedBlock();
     const target = this.breakState;
-    const isSameBlock = hit.hit && hit.x === target.x && hit.y === target.y && hit.z === target.z && hit.block === target.block;
-    if (!this.isLocked || !isSameBlock) {
+    const isSameTarget = target.type === 'crop'
+      ? hit.hit && hit.type === 'crop' && hit.plant === target.plant
+      : hit.hit && hit.type !== 'crop' && hit.x === target.x && hit.y === target.y && hit.z === target.z && hit.block === target.block;
+    if (!this.isLocked || !isSameTarget) {
       this._cancelBreaking();
       return;
     }
 
     target.progress = Math.min(1, target.progress + dt / BLOCK_INTERACTION_CONFIG.BREAK_TIME);
-    this.world.updateBreakCracks(target.x, target.y, target.z, target.progress);
+    if (target.type === 'crop') this.world.updateCropBreakCracks(target.plant, target.progress);
+    else this.world.updateBreakCracks(target.x, target.y, target.z, target.progress);
     this.breakSwingTimer += dt;
     if (this.breakSwingTimer >= 0.18) {
       this.playerHand.triggerSwing();
@@ -95,7 +97,14 @@ export class InputController {
     }
 
     if (target.progress >= 1) {
-      this.world.breakBlock(target.x, target.y, target.z);
+      if (target.type === 'crop') {
+        if (this.survival.addHarvestedCrop() && this.harvestCrop(target.plant)) {
+          this.hud.renderHotbar(this.survival.slots);
+          this._syncHandWithSlot();
+        }
+      } else {
+        this.world.breakBlock(target.x, target.y, target.z);
+      }
       this._cancelBreaking();
     }
   }

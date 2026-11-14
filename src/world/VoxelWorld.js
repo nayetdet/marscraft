@@ -111,6 +111,17 @@ export class VoxelWorld {
   updateBreakCracks(x, y, z, progress) {
     const stage = Math.max(1, Math.min(9, Math.ceil(progress * 9)));
     this.breakOverlay.position.set(x + 0.5, y + 0.5, z + 0.5);
+    this.breakOverlay.scale.set(1, 1, 1);
+    this.breakOverlay.material = this.breakMaterials[stage];
+    this.breakOverlay.visible = true;
+  }
+
+  updateCropBreakCracks(plant, progress) {
+    const stage = Math.max(1, Math.min(9, Math.ceil(progress * 9)));
+    const bounds = new THREE.Box3().setFromObject(plant);
+    bounds.getCenter(this.breakOverlay.position);
+    bounds.getSize(this.breakOverlay.scale);
+    this.breakOverlay.scale.multiplyScalar(1.012);
     this.breakOverlay.material = this.breakMaterials[stage];
     this.breakOverlay.visible = true;
   }
