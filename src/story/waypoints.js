@@ -1,3 +1,5 @@
+import { nextRocketJob } from './objectiveView.js';
+
 // Para onde a seta do objetivo aponta. Funcoes puras: o GameEngine sabe a posicao de cada
 // lugar no mundo, e aqui so se decide QUAL lugar vale para o objetivo atual.
 
@@ -11,11 +13,14 @@ export const WAYPOINT_LABELS = {
 // Lugares que ficam dentro da base: de fora, o caminho ate eles passa pelo airlock
 const INDOOR = new Set(['console']);
 
-// Lugar que o objetivo pede: 'airlock' | 'console' | 'ice' | 'mav' | null (nenhum lugar)
-export function objectiveTarget(objectiveId, { iceCount = 0, iceNeeded = 0 } = {}) {
+// Lugar de cada trabalho do foguete (nextRocketJob); fabrica trabalhando e tempestades nao tem lugar
+const JOB_PLACES = { ice: 'ice', load: 'mav', data: 'console' };
+
+// Lugar que o objetivo pede: 'airlock' | 'console' | 'ice' | 'mav' | null (nenhum lugar).
+// `s` e o retrato do jogo ({ iceCount, iceNeeded, propellantPct, dataSent }).
+export function objectiveTarget(objectiveId, s = {}) {
   switch (objectiveId) {
     case 'enter-base':
-    case 'return-base':
     case 'storm-guide':
       return 'airlock';
     case 'report':
@@ -27,9 +32,8 @@ export function objectiveTarget(objectiveId, { iceCount = 0, iceNeeded = 0 } = {
       return 'mav';
     case 'act2':
     case 'fuel':
-      // Tanque incompleto: com gelo na mochila, leve ao foguete; sem gelo, va buscar na cratera
-      if (iceNeeded <= 0) return null;
-      return iceCount > 0 ? 'mav' : 'ice';
+      // A seta segue o mesmo trabalho que o painel do objetivo mostra
+      return JOB_PLACES[nextRocketJob(s)] ?? null;
     default:
       return null;
   }

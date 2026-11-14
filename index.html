@@ -52,9 +52,42 @@
     </div>
 
     <!-- Historia: objetivo atual (canto superior esquerdo) e seta que aponta para onde ir -->
-    <section id="story-objective" class="story-objective hidden" aria-live="polite">
-      <header id="story-objective-act"></header>
-      <p id="story-objective-text"></p>
+    <section id="story-objective" class="story-objective hidden">
+      <header>
+        <span id="story-acts" class="story-acts" aria-hidden="true"><i></i><i></i><i></i></span>
+        <b id="story-objective-act"></b>
+      </header>
+      <div class="story-task">
+        <span id="story-task-icon" class="story-task-icon"></span>
+        <strong id="story-objective-text" aria-live="polite"></strong>
+        <span id="story-task-key" class="story-key story-task-key"></span>
+      </div>
+      <!-- Ato 1: os 3 passos do tutorial -->
+      <div id="story-steps" class="story-steps" aria-hidden="true">
+        <span class="story-step"></span><i></i><span class="story-step"></span><i></i><span class="story-step"></span>
+      </div>
+      <!-- Atos 2 e 3: o que falta para o foguete (combustivel, tempestades, dados enviados) -->
+      <div id="story-goals" class="story-goals">
+        <div id="story-goal-fuel" class="story-goal" title="Rocket fuel">
+          <span class="story-goal-icon" data-icon="rocket"></span>
+          <span class="story-bar"><i></i></span>
+          <b></b>
+        </div>
+        <div id="story-goal-storms" class="story-goal" title="Solar storms survived">
+          <span class="story-goal-icon" data-icon="storm"></span>
+          <span class="story-pips"></span>
+        </div>
+        <div id="story-goal-data" class="story-goal" title="Science data sent to Earth">
+          <span class="story-goal-icon" data-icon="radio"></span>
+          <span class="story-tick"></span>
+        </div>
+      </div>
+      <!-- Relogio da janela de lancamento fechando (ato 3) -->
+      <div id="story-timer" class="story-timer">
+        <span id="story-timer-icon" class="story-goal-icon"></span>
+        <span class="story-bar"><i></i></span>
+        <b id="story-timer-label"></b>
+      </div>
     </section>
     <div id="waypoint" class="waypoint hidden" aria-hidden="true">
       <span class="waypoint-bob"><span id="waypoint-arrow" class="waypoint-arrow"></span></span>
@@ -386,9 +419,16 @@
   </div>
 
   <!-- Historia: card de radio com as mensagens do Controle da Missao (nao pausa o jogo) -->
+  <!-- Card do radio recolhido: a mensagem viajando ate a Terra e a resposta voltando -->
+  <div id="story-signal" class="story-signal hidden" aria-hidden="true">
+    <span class="story-planet mars"><i></i></span>
+    <span class="story-signal-track"><i id="story-signal-dot"></i></span>
+    <span class="story-planet earth"><i></i></span>
+    <b id="story-signal-label"></b>
+  </div>
   <aside id="story-card" class="story-card hidden" role="status" aria-live="polite">
     <header><span class="story-card-signal" aria-hidden="true"></span><strong id="story-card-title"></strong></header>
-    <p id="story-card-text"></p>
+    <div id="story-card-body" class="story-card-body"></div>
     <small id="story-card-source"></small>
     <button id="story-card-ok" class="mc-btn story-card-ok" type="button">OK <span class="story-key">[Enter]</span></button>
   </aside>
