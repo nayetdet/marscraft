@@ -118,16 +118,14 @@ export class SurvivalSystem {
   }
 
   addBlockToInventory(blockId) {
-    const slot = this.slots.find((s) => s?.id === blockId);
-    if (slot) {
-      slot.count = Math.min(64, slot.count + 1);
-      return true;
-    }
-    // Blocos especiais da nave (metal, console, farol) viram Bloco da Nave no inventário
-    const hullSlot = this.slots.find((s) => s?.id === HOTBAR_BLOCKS[5].id);
-    if (hullSlot) {
-      hullSlot.count = Math.min(64, hullSlot.count + 1);
-    }
+    // Special habitat blocks become hull blocks in the inventory.
+    const block = HOTBAR_BLOCKS.find((item) => item.id === blockId) ?? HOTBAR_BLOCKS[5];
+    const slot = this.inventorySlots.find((item) => item?.id === block.id && item.count < 64);
+    if (slot) { slot.count++; return true; }
+    const emptyIndex = this.inventorySlots.findIndex((item) => !item || item.count <= 0);
+    if (emptyIndex < 0) return false;
+    this.inventorySlots[emptyIndex] = { id: block.id, name: block.name, count: 1, consumable: block.consumable };
+    this.slots = this.inventorySlots.slice(0, 9);
     return true;
   }
 
@@ -151,7 +149,7 @@ export class SurvivalSystem {
         this.health = Math.min(this.maxStat, this.health + slot.consumable.heal);
       }
       slot.count--;
-      return 'You ate a Mars potato (+Food)';
+      return 'You ate a Mars carrot (+Food)';
     }
 
     return null;
