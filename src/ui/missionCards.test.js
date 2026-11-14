@@ -49,12 +49,15 @@ describe('missionStatus', () => {
     const storm = { phase: 'active', storm: STORM, hoursUntil: 0, hoursLeft: 2 };
     const open = missionStatus(fakeMission({ storm, doseRate: 5 }), FETCHED);
     expect(open.alerts[0]).toMatchObject({ tone: 'danger', fill: 0.5 });
-    expect(open.alerts[0].text).toContain('Go inside');
+    expect(open.alerts[0].text).toContain('storm shelter');
     expect(open.alerts.map((a) => a.id)).not.toContain('radiation');
 
     const safe = missionStatus(fakeMission({ storm, doseRate: 0.1, shieldOn: true }), FETCHED);
     expect(safe.radiation).toMatchObject({ word: 'SHIELD', tone: 'shield', icon: 'shield' });
     expect(safe.alerts[0].text).toContain('Stay in the bubble');
+
+    const sheltered = missionStatus(fakeMission({ storm, doseRate: 1, insideShelter: true, shelterWaterL: 30 }), FETCHED);
+    expect(sheltered.alerts[0].text).toContain('30 L of water');
   });
 
   it('warns when the shield is on but the player left the bubble', () => {

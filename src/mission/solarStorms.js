@@ -48,3 +48,19 @@ export function stormStateAt(schedule, hours) {
   }
   return { phase: 'calm', storm: null, hoursUntil: Infinity };
 }
+
+// Painel de admin (testes): move a tempestade atual ou a proxima, e todas as seguintes, para que
+// `target` comece agora: 'warning' (aviso), 'active' (tempestade) ou 'end' (acabou).
+export function rescheduleStorms(schedule, hours, target) {
+  const i = schedule.findIndex((storm) => hours < storm.end);
+  if (i < 0) return schedule;
+  const storm = schedule[i];
+  const anchor = target === 'warning' ? storm.warningStart : target === 'active' ? storm.arrival : storm.end;
+  const delta = hours - anchor - 1e-6;
+  return schedule.map((s, j) => (j < i ? s : {
+    ...s,
+    warningStart: s.warningStart + delta,
+    arrival: s.arrival + delta,
+    end: s.end + delta,
+  }));
+}

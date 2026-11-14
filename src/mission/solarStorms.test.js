@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildStormSchedule, leadTimeHours, stormMultiplier, stormStateAt } from './solarStorms.js';
+import { buildStormSchedule, leadTimeHours, rescheduleStorms, stormMultiplier, stormStateAt } from './solarStorms.js';
 import { STORM_CONFIG } from '../config/constants.js';
 import donki from '../data/donkiCme.json';
 
@@ -57,5 +57,16 @@ describe('stormStateAt', () => {
     expect(warning.hoursUntil).toBeCloseTo(storm.arrival - storm.warningStart - 0.1);
     expect(stormStateAt([storm], storm.arrival + 0.1).phase).toBe('active');
     expect(stormStateAt([storm], storm.end + 0.1)).toMatchObject({ phase: 'calm', storm: null });
+  });
+});
+
+describe('admin storm controls', () => {
+  it('moves the next storm so the chosen phase starts now', () => {
+    const cmes = [{ speedKmS: 900, startTime: '2026-11-01T00:00Z' }];
+    const schedule = buildStormSchedule(cmes, 0, 3);
+    for (const [target, phase] of [['warning', 'warning'], ['active', 'active'], ['end', 'calm']]) {
+      const moved = rescheduleStorms(schedule, 0.5, target);
+      expect(stormStateAt(moved, 0.5).phase).toBe(phase);
+    }
   });
 });

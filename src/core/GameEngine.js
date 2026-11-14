@@ -30,12 +30,16 @@ import { MissionSystem as ExpeditionSystem } from './MissionSystem.js';
 import { Airlock } from '../world/Airlock.js';
 import { StationSystem } from './StationSystem.js';
 import { StationPanel } from '../ui/StationPanel.js';
+import { AdminPanel } from '../ui/AdminPanel.js';
+import { UtilityModule } from './UtilityModule.js';
+import { CommsLink } from '../mission/commsLink.js';
 import { getCategoryLabel } from '../data/scanCatalog.js';
 import { ScanJournal } from '../scanner/scanJournal.js';
 import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js';
 import { resolveScanTarget, collectScanBlocks } from '../scanner/scanTargeting.js';
 import { ScanHighlight } from '../scanner/scanHighlight.js';
 import { isInsideShieldZone, SHIELD_ZONE } from '../mission/shieldZone.js';
+import { HABITAT_LAYOUT, isInsideShelter } from '../world/habitatLayout.js';
 import { ShieldBubble } from '../graphics/shieldBubble.js';
 import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
@@ -47,6 +51,8 @@ const SKY_SCAN_RADII = { sun: 0.05, earth: 0.035, moon: 0.02, phobos: 0.04, deim
 const SKY_HIGHLIGHT_RADII = { sun: 10, earth: 8.5, moon: 3, phobos: 7, deimos: 3.5 };
 // Alvos de terreno pintam a mancha em volta do bloco mirado, então a chave inclui o bloco.
 const TERRAIN_PATCH_IDS = new Set(['regolith', 'sandstone', 'crater-rock', 'water-ice', 'crater-rim']);
+// Topo do piso do habitat (y = 10), onde a agua do abrigo comeca
+const SHELTER_FLOOR_TOP = HABITAT_LAYOUT.FLOOR_Y + 1;
 
 function getLocalStorage() {
   try {
@@ -106,6 +112,9 @@ export class GameEngine {
     this.player = new PlayerPhysics(this.world, colliders);
     this.survival = new SurvivalSystem();
     this.mission = new MissionSystem({ cmes: donkiCme.cmes, startHours: this._skyHours() });
+    // Radio Terra-Marte (issue #56, A2): atraso pela distancia real de hoje e conjuncao solar
+    this.comms = new CommsLink({ startDate: new Date(), startHours: this._skyHours() });
+    this._wasBlackout = false;
     this.expedition = new ExpeditionSystem();
     Object.defineProperty(this.expedition, 'energy', {
       get: () => this.mission.battery.charge,
@@ -116,6 +125,7 @@ export class GameEngine {
     this.airlock.stations = this.stations;
     this.airlock.onEvent = (type) => this._onAirlockEvent(type);
     this.stationPanel = new StationPanel(this);
+    this.adminPanel = new AdminPanel(this); // F8 no dev ou ?admin: testes (tempestade, agua, teleporte)
     this._buildStationMarkers();
     this.growingCrops = [];
     this._interactionDir = new THREE.Vector3();
@@ -170,6 +180,9 @@ export class GameEngine {
 
     // Tripulacao NPC (issues #47 e #48): o tamanho e escolhido no menu antes do primeiro Play
     this.crewStock = createBaseStock({ survival: this.survival, mission: this.mission });
+    // Modulo norte (issue #56, parte B): energia/aquecimento, cozinha, banheiro e oficina
+    this.utility = new UtilityModule({ mission: this.mission, survival: this.survival, stations: this.stations, base: this.crewStock });
+    this._utilityHours = null;
     this.crewAvatars = [];
     this._buildCrew(CREW_CONFIG.DEFAULT_CREW);
     this.crewPanel = new CrewPanel({
@@ -217,7 +230,7 @@ export class GameEngine {
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown || this.crewPanel.isOpen,
       getInteraction: () => this._getInteraction(),
-      isStationOpen: () => this.stationPanel.isOpen,
+      isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen,
       getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || !this.stations.freshFood ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
     });
 
@@ -235,12 +248,13 @@ export class GameEngine {
   _updateExpedition(dt) {
     const inside = this.survival.isPlayerInsideShip(this.player.pos);
     const insideCore = inside && !(Math.abs(this.player.pos.x - 0.5) < 1.5 && this.player.pos.z >= 6);
-    const shelter = insideCore && this.player.pos.x > -3 && this.player.pos.x < -1 && Math.abs(this.player.pos.z - 0.5) < 1.3;
-    this.expedition.greenhousePowered = this.expedition.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
+    this._updateUtility();
+    const greenhouseLit = this.utility.greenhouseLightsOn && !this.utility.cold;
+    this.expedition.greenhousePowered = greenhouseLit && this.expedition.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
     if (this.expedition.stage === 'outside' && !inside) this.expedition.stage = 'sample';
     if (this.expedition.stage === 'return' && inside) this.expedition.stage = 'report';
-    const storm = this.mission.storm.phase === 'active';
-    this.stations.update(dt, insideCore, shelter, this.survival, storm, !inside);
+    this.stations.update(dt, insideCore, this.survival, !inside);
+    this._updateShelterWater();
     this.expedition.radiation = Math.min(100, this.mission.totalDoseMsv / RADIATION_CONFIG.CAREER_LIMIT_MSV * 100);
     const crop = this.stations.crop;
     this.stationCrop.visible = Boolean(crop);
@@ -257,6 +271,53 @@ export class GameEngine {
     document.getElementById('mission-objective').textContent = this.expedition.objective;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
     document.getElementById('station-warning').textContent = this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : '';
+  }
+
+  // Avanca o modulo norte no relogio do ceu e repassa o estado para a tripulacao
+  _updateUtility() {
+    const hours = this._skyHours();
+    const delta = this._utilityHours === null ? 0 : Math.max(0, hours - this._utilityHours);
+    this._utilityHours = hours;
+    this.utility.update(delta);
+    this.crewStock.frozen = this.utility.cold;
+    this.crewStock.greenhouseDark = !this.utility.greenhouseLightsOn;
+    this.crewStock.waterRecovery = this.utility.waterRecovery;
+
+    this.comms.update(hours);
+    this.mission.radioBlackout = this.comms.blackout;
+    if (this.comms.blackout !== this._wasBlackout) {
+      this._wasBlackout = this.comms.blackout;
+      this.hud.showToast(this.comms.blackout
+        ? 'SOLAR CONJUNCTION: the Sun is between Mars and Earth. The radio is silent, so you must decide on your own!'
+        : 'The Sun moved away: radio contact with Earth is back.', 7000);
+    }
+    if (this.stations.arrived) {
+      this.hud.showToast(this.stations.arrived, 8000);
+      this.stations.arrived = null;
+    }
+  }
+
+  // Resposta do Controle da Missao, montada com a situacao do momento do envio.
+  // Ela chega atrasada: ate la, a situacao pode ter mudado.
+  missionControlAdvice() {
+    const m = this.mission;
+    const phase = m.storm.phase;
+    if (phase === 'active' || phase === 'warning') return 'A solar storm is on the way. Fill the shelter water wall and hide in the storm shelter.';
+    if (m.battery.percent < 30) return 'Your battery is low. Turn off the fuel factory or the greenhouse lights until the Sun is back, but keep the heater on at night.';
+    if (m.shelterWaterL < 20 && this.survival.baseWater > 30) return 'Put some water in the storm shelter wall before the next storm.';
+    if (this.utility.waterFilter < 30) return 'Your water filter is dirty. Clean it in the bathroom so you get back more water.';
+    if ((this.crew?.stations ?? []).some((st) => st.health < 0.5)) return 'A crew station is wearing out. Print a spare part in the workshop.';
+    if (this.comms.hoursUntilConjunction < 12) return 'Solar conjunction is coming: the radio will go silent for a while. Plan ahead!';
+    return 'Everything looks good from here. Keep collecting ice and science samples.';
+  }
+
+  // Opcoes de envio do radio no estado atual
+  radioOptions(withAdvice = false) {
+    return {
+      delaySeconds: this.comms.roundTripGameSeconds,
+      blackout: this.comms.blackout,
+      advice: withAdvice ? this.missionControlAdvice() : null,
+    };
   }
 
   _harvestCrop(plant) {
@@ -292,6 +353,16 @@ export class GameEngine {
     const candidates = [
       ...this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' })),
       { type: 'power', x: 4.6, y: 11.4, z: -1.5, label: 'Press F: life support' },
+      { type: 'console', x: 3.0, y: 11.5, z: -4.8, label: 'Press F: mission computer' },
+      { type: 'science', x: 4.5, y: 11.5, z: -4.8, label: 'Press F: science & radio to Earth' },
+      { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
+      { type: 'powerroom', x: -7.2, y: 11.5, z: -10.5, label: 'Press F: power & heat control' },
+      { type: 'powerroom', x: -5.2, y: 10.8, z: -13.0, label: 'Press F: power & heat control' },
+      { type: 'galley', x: 5.6, y: 11.35, z: -10.2, label: 'Press F: kitchen' },
+      { type: 'galley', x: 7.1, y: 11.3, z: -12.4, label: 'Press F: pantry & kitchen' },
+      { type: 'hygiene', x: -7.5, y: 11.1, z: -19.3, label: 'Press F: bathroom & water recycler' },
+      { type: 'hygiene', x: -9.85, y: 11.6, z: -18.2, label: 'Press F: bathroom & water recycler' },
+      { type: 'workshop', x: 3.0, y: 11.5, z: -19.1, label: 'Press F: 3D printer workshop' },
       { type: 'greenhouse', x: -17, y: 11.4, z: 0, label: 'Press F: harvest carrot' },
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
@@ -386,7 +457,43 @@ export class GameEngine {
     oscillator.stop(audio.currentTime + 0.25);
   }
 
+  // Nivel da agua nas paredes do abrigo de tempestade (issue #56)
+  _buildShelterWater() {
+    const L = HABITAT_LAYOUT;
+    const material = new THREE.MeshLambertMaterial({ color: 0x38bdf8, emissive: 0x0369a1, emissiveIntensity: 0.25, transparent: true, opacity: 0.75 });
+    const floor = SHELTER_FLOOR_TOP;
+    const midX = (L.SHELTER_X_MIN + L.SHELTER_X_MAX) / 2;
+    const midZ = (L.SHELTER_Z_MIN + L.SHELTER_Z_MAX) / 2;
+    const width = L.SHELTER_X_MAX - L.SHELTER_X_MIN;
+    const depth = L.SHELTER_Z_MAX - L.SHELTER_Z_MIN;
+    this.shelterWater = [
+      [midX, L.SHELTER_Z_MIN + 0.07, width, 0.1],
+      [midX, L.SHELTER_Z_MAX - 0.07, width, 0.1],
+      [L.SHELTER_X_MAX - 0.07, midZ, 0.1, depth - 0.2],
+    ].map(([x, z, w, d]) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, 1, d), material);
+      mesh.position.set(x, floor, z);
+      mesh.visible = false;
+      this.scene.add(mesh);
+      return mesh;
+    });
+    this._shelterWaterShown = -1;
+  }
+
+  _updateShelterWater() {
+    const liters = this.mission.shelterWaterL;
+    if (liters === this._shelterWaterShown) return;
+    this._shelterWaterShown = liters;
+    const height = 2.2 * liters / RADIATION_CONFIG.SHELTER_WALL_MAX_L;
+    for (const mesh of this.shelterWater) {
+      mesh.visible = height > 0.01;
+      mesh.scale.y = Math.max(0.01, height);
+      mesh.position.y = SHELTER_FLOOR_TOP + 0.05 + height / 2;
+    }
+  }
+
   _buildStationMarkers() {
+    this._buildShelterWater();
     const dark = new THREE.MeshLambertMaterial({ color: 0x293b43 });
     // Voxel hydroponic tray and grow lights.
     this.stationCrop = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.7, 0.65), new THREE.MeshLambertMaterial({ color: 0x61b54c }));
@@ -414,6 +521,11 @@ export class GameEngine {
     const domeLight = new THREE.PointLight(0xf0fdf4, 1.5, 18);
     domeLight.position.set(-18, 13.5, 0);
     this.scene.add(domeLight);
+
+    // Luz do Modulo Norte (issue #56)
+    const northLight = new THREE.PointLight(0xf8fafc, 1.6, 24);
+    northLight.position.set(-2, 13.0, -15);
+    this.scene.add(northLight);
 
     // Luz clara dentro do Módulo da Academia (Gym & MedBay)
     const gymLight = new THREE.PointLight(0xe0f2fe, 1.5, 16);
@@ -581,6 +693,10 @@ export class GameEngine {
       this.hud.showToast('Go to the command console inside the base to send science data.');
       return;
     }
+    if (this.comms.blackout) {
+      this.hud.showToast('Radio silent: the Sun is between Mars and Earth. Send the data after the solar conjunction.', 5000);
+      return;
+    }
     const result = this.mission.sendData();
     const messages = {
       sent: 'Science data sent! Radio waves take 3 to 22 minutes to reach Earth, so Mission Control cannot help you right away.',
@@ -634,7 +750,9 @@ export class GameEngine {
     ];
     const sources = `Solar storms: real CMEs from NASA DONKI (real data from ${formatDateDMY(donkiCme.fetched)}). ` +
       'Radiation: Curiosity RAD on the Mars surface (NASA RadLab). Sunlight on Mars: 43% of Earth (NASA Mars Fact Sheet). ' +
-      'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station.';
+      'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station. ' +
+      'Storm shelter water wall: PREDICCS shielding model (University of New Hampshire, Curiosity RAD data) and NASA storm shelter studies. ' +
+      'Radio delay: Earth-Mars distance from NASA/JPL planet orbits; solar conjunction rules from NASA/JPL.';
     this.missionHud.showVictory(rows, sources);
     document.exitPointerLock();
   }
@@ -646,6 +764,7 @@ export class GameEngine {
     const damage = this.mission.update(this._skyHours(), {
       insideHabitat: this.survival.insidePressurizedShip,
       insideShield: isInsideShieldZone(this.player.pos),
+      insideShelter: this.survival.insidePressurizedShip && isInsideShelter(this.player.pos.x, this.player.pos.z),
       active,
     });
     if (active) this.survival.takeDamage(damage * (this.stations.upgraded && !this.survival.insidePressurizedShip ? STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR : 1));
@@ -816,7 +935,7 @@ export class GameEngine {
     // 1. Console de Comando do Rover (x: 0, z: -3.6, y: ~11)
     const distConsole = Math.hypot(this.player.pos.x - 0, this.player.pos.z - (-3.6));
     const dyConsole = Math.abs(this.player.pos.y - 11.0);
-    if (distConsole < 3.2 && dyConsole < 2.2) {
+    if (distConsole < 2.6 && dyConsole < 2.2) {
       this.currentInteraction = 'rover_terminal';
       const dataHint = this.mission.dataSent ? '' : ' · [G] Send science data to Earth';
       this.hud.setInteractionPrompt(true, `[F] Operate Rover Remote Terminal${dataHint}`);
@@ -829,7 +948,7 @@ export class GameEngine {
       this.player.pos.z - WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.z
     );
     const dyWater = Math.abs(this.player.pos.y - 11.0);
-    if (distWater < 2.5 && dyWater < 2.2) {
+    if (distWater < 1.6 && dyWater < 2.2) {
       this.currentInteraction = 'water_dispenser';
       this.hud.setInteractionPrompt(true, '[F] Drink Clean Water (Habitat Reservoir)');
       return;
