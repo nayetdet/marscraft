@@ -7,7 +7,6 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  overflow-y: auto;
   box-sizing: border-box;
 }
 
@@ -142,10 +141,15 @@
   border-right: 3px solid #8b8b8b;
   border-bottom: 3px solid #8b8b8b;
   text-align: left;
-  max-height: min(70dvh, 560px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
+
+.mc-menu.is-controls .controls-screen { padding: 8px; }
+.mc-menu.is-controls .controls-screen h2 { margin-bottom: 6px; padding-bottom: 4px; }
+.mc-menu.is-controls .controls-section { padding: 4px 6px; }
+.mc-menu.is-controls .controls-section h3 { margin-bottom: 2px; font-size: 12px; }
+.mc-menu.is-controls .control-row { min-height: 18px; font-size: 11px; }
+.mc-menu.is-controls .control-row kbd { font-size: 9px; }
+.mc-menu.is-controls .controls-screen > .mc-btn { min-height: 38px; margin-top: 8px; }
 
 .controls-screen.hidden,
 #menu-main.hidden { display: none; }
