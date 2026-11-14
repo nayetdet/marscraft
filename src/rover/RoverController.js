@@ -10,7 +10,6 @@ export class RoverController {
     this.colliders = colliders;
 
     this.isActive = false;
-    this.cameraMode = 'third_person'; // 'third_person' | 'mastcam'
 
     // Posição e orientação inicial a partir do modelo 3D
     this.pos = new THREE.Vector3();
@@ -120,10 +119,6 @@ export class RoverController {
     return false;
   }
 
-  toggleCameraMode() {
-    this.cameraMode = this.cameraMode === 'third_person' ? 'mastcam' : 'third_person';
-  }
-
   look(dx, dy, sensitivity = 0.0021) {
     this.cameraYaw -= dx * sensitivity;
     this.cameraPitch = THREE.MathUtils.clamp(this.cameraPitch - dy * sensitivity, -1.15, 1.15);
@@ -216,7 +211,6 @@ export class RoverController {
       z: this.pos.z.toFixed(1),
       battery: Math.max(1, Math.min(100, Math.round(this.battery))),
       distanceTraveled: Math.round(this.distanceTraveled),
-      cameraMode: this.cameraMode,
       iceCargo: this.iceCargo,
       maxIceCargo: this.maxIceCargo,
       canCollectIce: this.canCollectIce(),
@@ -375,26 +369,13 @@ export class RoverController {
       -cosYaw * cosPitch
     );
 
-    if (this.cameraMode === 'mastcam') {
-      // Visão em 1ª pessoa no mastro da Mastcam do Rover
-      const mastOffsetLocal = new THREE.Vector3(0.45, 2.45, -1.15);
-      mastOffsetLocal.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+    // Third-person chase camera stays behind and above the rover.
+    const distBehind = 5.2;
+    this._camLookAt.set(this.pos.x, this.pos.y + 1.0, this.pos.z);
+    this._camTargetPos.copy(this._camLookAt).addScaledVector(lookDir, -distBehind);
 
-      const eyePos = this.pos.clone().add(mastOffsetLocal);
-      this.camera.position.copy(eyePos);
-
-      const lookDist = 12.0;
-      this._camLookAt.copy(eyePos).addScaledVector(lookDir, lookDist);
-      this.camera.lookAt(this._camLookAt);
-    } else {
-      // Visão em 3ª pessoa tática atrás e acima do rover
-      const distBehind = 5.2;
-      this._camLookAt.set(this.pos.x, this.pos.y + 1.0, this.pos.z);
-      this._camTargetPos.copy(this._camLookAt).addScaledVector(lookDir, -distBehind);
-
-      // Suaviza a posição da câmera
-      this.camera.position.lerp(this._camTargetPos, Math.min(1.0, dt * 12));
-      this.camera.lookAt(this._camLookAt);
-    }
+    // Smooth the camera position to avoid abrupt movement over rough terrain.
+    this.camera.position.lerp(this._camTargetPos, Math.min(1.0, dt * 12));
+    this.camera.lookAt(this._camLookAt);
   }
 }

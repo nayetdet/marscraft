@@ -199,7 +199,7 @@ export class SurvivalSystem {
     if (added) {
       return {
         success: true,
-        message: 'Harvested fresh potato from irrigated greenhouse (+1 Food item)!',
+        message: 'Harvested a fresh carrot from the irrigated greenhouse (+1 Food item)!',
       };
     }
     return { success: false, message: 'Inventory is full.' };

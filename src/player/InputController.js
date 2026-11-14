@@ -15,7 +15,6 @@ export class InputController {
     harvestCrop,
     isRoverActive = () => false,
     onInteract = () => {},
-    onToggleRoverCamera = () => {},
     onRoverAction = () => {},
     onRoverLook = () => {},
   }) {
@@ -31,7 +30,6 @@ export class InputController {
     this.harvestCrop = harvestCrop;
     this.isRoverActive = isRoverActive;
     this.onInteract = onInteract;
-    this.onToggleRoverCamera = onToggleRoverCamera;
     this.onRoverAction = onRoverAction;
     this.onRoverLook = onRoverLook;
 
@@ -194,12 +192,6 @@ export class InputController {
       if (e.code === 'KeyF') {
         e.preventDefault();
         this.onInteract();
-        return;
-      }
-
-      if (e.code === 'KeyV' && this.isRoverActive()) {
-        e.preventDefault();
-        this.onToggleRoverCamera();
         return;
       }
 
