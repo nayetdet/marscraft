@@ -103,17 +103,18 @@ export function createBlockMaterials() {
 
   // 8. Painel Solar Fotovoltaico
   register(BLOCK_IDS.SOLAR_PANEL, (ctx) => {
-    ctx.fillStyle = '#1e3a8a';
+    ctx.fillStyle = '#aab7c4';
     ctx.fillRect(0, 0, 16, 16);
-    ctx.fillStyle = '#2563eb';
-    for (let y = 1; y < 15; y += 4) {
-      for (let x = 1; x < 15; x += 4) {
+    ctx.fillStyle = '#263747';
+    ctx.fillRect(1, 1, 14, 14);
+    for (let y = 2; y < 14; y += 4) {
+      for (let x = 2; x < 14; x += 4) {
+        ctx.fillStyle = (x + y) % 8 === 0 ? '#18304a' : '#203c56';
         ctx.fillRect(x, y, 3, 3);
+        ctx.fillStyle = '#688093';
+        ctx.fillRect(x + 1, y, 1, 3);
       }
     }
-    ctx.fillStyle = '#93c5fd';
-    ctx.fillRect(0, 7, 16, 1);
-    ctx.fillRect(7, 0, 1, 16);
   });
 
   // 9. Luminaria LED Branca de Habitat
