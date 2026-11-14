@@ -94,13 +94,13 @@ export function shelterModel(s) {
 }
 
 export function greenhouseModel(s) {
-  const crop = s.crop ? `${s.crop.type.toUpperCase()} ${Math.round(s.crop.progress * 100)}%` : 'EMPTY TRAY';
   return {
     title: 'GREENHOUSE',
     rows: [
       { label: 'GROW LIGHTS', value: s.greenhousePowered ? 'ON' : 'NO POWER', tone: s.greenhousePowered ? 'ok' : 'alert' },
       { label: 'WATER TANK', value: `${Math.round(s.water)} L`, bar: ratio(s.water, s.maxWater), tone: 'water' },
-      { label: 'TRAY', value: crop, bar: s.crop ? s.crop.progress : undefined },
+      { label: 'FIELDS', value: `${s.fields.planted}/${s.fields.total} PLANTED`, bar: ratio(s.fields.planted, s.fields.total) },
+      { label: 'HARVEST', value: s.fields.ready ? `${s.fields.ready} READY` : 'NOTHING YET', tone: s.fields.ready ? 'warn' : undefined },
       { label: 'AIR', value: s.dusty ? 'DUSTY: CLEAN UP' : 'CLEAN', tone: s.dusty ? 'alert' : 'ok' },
     ],
     footer: 'Plants need light, water and power',

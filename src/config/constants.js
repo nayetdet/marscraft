@@ -284,6 +284,10 @@ export const CUTSCENE_CONFIG = {
   LAUNCH_ACCEL: 2.2,
 };
 
+// Tamanho de cada tipo de campo da estufa: multiplica o custo de plantar (agua e energia) e o
+// numero de itens da colheita. Campo maior rende mais, mas bebe mais agua de uma vez.
+export const GREENHOUSE_PLOT_YIELD = Object.freeze({ garden: 1, inner: 2, outer: 3 });
+
 // Design choices, not NASA agronomic measurements. Seconds are accelerated.
 export const CROP_CONFIG = Object.freeze({
   lettuce: { water: 1, energy: 2, seconds: 7, nutrition: 3, strategy: 'Quick snack, small harvest' },

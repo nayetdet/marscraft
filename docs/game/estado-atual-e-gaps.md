@@ -27,7 +27,7 @@ A ala norte (`NORTH_WING` em `habitatLayout.js`) é um corredor central envidra�
 
 O dormitório é um módulo próprio a leste do habitat (`EAST_WING` em `habitatLayout.js`), com três beliches, armários e mesa. A mobília de cenário de cada seção fica em `src/base/baseFurniture.js`.
 
-A estufa é a maior estrutura da base: redoma de raio 14 (`DOME_X`, `DOME_RADIUS` em `habitatLayout.js`) com praça central, anel de caminhada e bandejas de cultivo de cenário por quadrante (`domeFloorCell`). As bandejas usam piso de metal para não virarem comida de graça ao quebrar o bloco. A comida de verdade vem do jardim ao lado do monitor de comida (`greenhouseLayout.js`).
+A estufa é a maior estrutura da base: redoma de raio 14 (`DOME_X`, `DOME_RADIUS` em `habitatLayout.js`) com praça central e anel de caminhada. Toda a plantação é plantável: o canteiro do jardim e oito campos, quatro de dentro (A1 a A4) e quatro de fora (B1 a B4), em `GREENHOUSE_PLOTS` (`greenhouseLayout.js`). O monitor de comida mostra a estufa vista de cima (`src/ui/greenhouseMap.js`): o jogador toca num campo e escolhe a cultura. Campo maior custa mais água e energia de uma vez e rende mais refeições (`GREENHOUSE_PLOT_YIELD`). As plantas 3D de cada campo ficam em `src/base/greenhouseFields.js`.
 
 O abrigo de tempestade, o terminal de rádio e o módulo norte são da issue #56 (`nasaModelsBuilder.js`); `baseDecor.js` só acrescenta placa, pôster e medidor a eles.
 
