@@ -87,7 +87,7 @@ export class VoxelWorld {
     // beyond the crater rim. It has no collision and sits below the playable map.
     this.horizonGround = new THREE.Mesh(
       new THREE.CircleGeometry(1100, 96),
-      new THREE.MeshLambertMaterial({ color: 0x8d4b31, side: THREE.DoubleSide })
+      new THREE.MeshLambertMaterial({ color: 0x9a6040, side: THREE.DoubleSide })
     );
     this.horizonGround.rotation.x = -Math.PI / 2;
     this.horizonGround.position.y = -3;
