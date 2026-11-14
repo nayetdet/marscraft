@@ -38,7 +38,8 @@
     <!-- Coluna da direita: caixa da missao em cima e, abaixo, o scanner (toast + ficha) -->
     <div class="hud-right">
     <!-- Missao: energia, radiacao, tempestade solar e progresso do MAV -->
-    <div id="mission-box" class="mission-box">
+    <!-- Caixa da missao escondida por enquanto (HUD mais limpo); o MissionHud ainda a atualiza -->
+    <div id="mission-box" class="mission-box hud-temporarily-hidden">
       <div id="mission-power">Power: 80%</div>
       <div id="mission-radiation">Radiation: 0.02 mSv/h</div>
       <div id="mission-shield">Shield [R]: OFF</div>
@@ -114,7 +115,8 @@
             <span class="mc-bar-label">HEALTH</span>
             <div id="health-bar" class="mc-icon-row"></div>
           </div>
-          <div class="mc-bar-row">
+          <!-- Barra de energia escondida por enquanto (HUD mais limpo); o MissionHud ainda a atualiza -->
+          <div class="mc-bar-row hud-temporarily-hidden">
             <span class="mc-bar-label">ENERGY</span>
             <div id="energy-bar" class="mc-icon-row"></div>
           </div>

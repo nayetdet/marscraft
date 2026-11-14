@@ -176,6 +176,12 @@
   50% { opacity: 0; }
 }
 
+/* Partes do HUD escondidas por enquanto para a tela ficar mais limpa (caixa da missão e barra
+   de energia). Os elementos continuam no HTML para o MissionHud/HudManager não quebrarem. */
+.hud-temporarily-hidden {
+  display: none !important;
+}
+
 /* Coluna da direita: a caixa da missão em cima e o scanner (toast + ficha) logo abaixo,
    empilhados para nunca se sobreporem, mesmo quando a caixa da missão cresce. */
 .hud-right {
