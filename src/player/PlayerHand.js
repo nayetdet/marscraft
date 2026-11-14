@@ -41,8 +41,10 @@ export class PlayerHand {
     const armGeo = new THREE.BoxGeometry(0.24, 0.68, 0.24);
     const armMat = new THREE.MeshLambertMaterial({
       map: texture,
-      depthTest: false,
-      depthWrite: false,
+      transparent: false,
+      opacity: 1,
+      depthTest: true,
+      depthWrite: true,
     });
 
     this.armMesh = new THREE.Mesh(armGeo, armMat);
@@ -67,8 +69,8 @@ export class PlayerHand {
       const baseMat = this.materials[blockId];
       if (!baseMat) return null;
       const cloned = baseMat.clone();
-      cloned.depthTest = false;
-      cloned.depthWrite = false;
+      cloned.depthTest = true;
+      cloned.depthWrite = !cloned.transparent;
       this._handMaterials[blockId] = cloned;
     }
     return this._handMaterials[blockId];
