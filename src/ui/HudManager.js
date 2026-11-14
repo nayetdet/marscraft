@@ -54,8 +54,44 @@ export class HudManager {
     this._deimosPos = new THREE.Vector3();
     this._scratch = new THREE.Vector3();
 
+    // Elementos de interação e controle do Rover
+    this.interactionPromptEl = document.getElementById('interaction-prompt');
+    this.roverOverlayEl = document.getElementById('rover-overlay');
+    this.roverSpeedEl = document.getElementById('rover-speed');
+    this.roverHeadingEl = document.getElementById('rover-heading');
+    this.roverCoordsEl = document.getElementById('rover-coords');
+    this.roverBatteryEl = document.getElementById('rover-battery');
+    this.roverCamLabelEl = document.getElementById('rover-cam-label');
+    this.bottomAreaEl = document.querySelector('.mc-bottom-area');
+    this.crosshairEl = document.querySelector('.mc-crosshair');
+
     this.renderHotbar(initialSlots);
     this._initSkyLabels();
+  }
+
+  setInteractionPrompt(visible, text = '[F] Operate Rover Remote Terminal') {
+    if (!this.interactionPromptEl) return;
+    if (visible) {
+      this.interactionPromptEl.innerHTML = `<span class="key-badge">[F]</span> ${text.replace(/^\[F\]\s*/, '')}`;
+      this.interactionPromptEl.classList.remove('hidden');
+    } else {
+      this.interactionPromptEl.classList.add('hidden');
+    }
+  }
+
+  setRoverMode(active) {
+    if (this.roverOverlayEl) {
+      this.roverOverlayEl.classList.toggle('hidden', !active);
+    }
+    if (this.bottomAreaEl) {
+      this.bottomAreaEl.style.display = active ? 'none' : '';
+    }
+    if (this.crosshairEl) {
+      this.crosshairEl.style.display = active ? 'none' : '';
+    }
+    if (this.interactionPromptEl && active) {
+      this.interactionPromptEl.classList.add('hidden');
+    }
   }
 
   renderHotbar(slots) {
@@ -252,10 +288,23 @@ export class HudManager {
     }
   }
 
-  update({ player, survival, sky, camera, isZoomed }) {
+  update({ player, survival, sky, camera, isZoomed, isRoverActive = false, roverTelemetry = null }) {
     if (survival.isDead) {
       this.showDeathScreen();
       return;
+    }
+
+    if (isRoverActive && roverTelemetry) {
+      if (this.roverSpeedEl) this.roverSpeedEl.textContent = `${roverTelemetry.speedKmh} km/h`;
+      if (this.roverHeadingEl) this.roverHeadingEl.textContent = `${roverTelemetry.headingDeg}° ${roverTelemetry.headingCard}`;
+      if (this.roverCoordsEl) this.roverCoordsEl.textContent = `X: ${roverTelemetry.x} Y: ${roverTelemetry.y} Z: ${roverTelemetry.z}`;
+      if (this.roverBatteryEl) this.roverBatteryEl.textContent = `${roverTelemetry.battery}%`;
+      if (this.roverCamLabelEl) {
+        this.roverCamLabelEl.textContent =
+          roverTelemetry.cameraMode === 'mastcam'
+            ? 'CAM: MASTCAM (1ST-PERSON)'
+            : 'CAM: TACTICAL 3RD-PERSON';
+      }
     }
 
     const { clockText } = sky.getFormattedTime();

@@ -12,6 +12,9 @@ export class InputController {
     onToggleZoom,
     getTargetedBlock,
     harvestCrop,
+    isRoverActive = () => false,
+    onInteract = () => {},
+    onToggleRoverCamera = () => {},
   }) {
     this.domElement = domElement;
     this.player = player;
@@ -23,6 +26,9 @@ export class InputController {
     this.onToggleZoom = onToggleZoom;
     this.getTargetedBlock = getTargetedBlock;
     this.harvestCrop = harvestCrop;
+    this.isRoverActive = isRoverActive;
+    this.onInteract = onInteract;
+    this.onToggleRoverCamera = onToggleRoverCamera;
 
     this.keys = {};
     this.isLocked = false;
@@ -143,7 +149,7 @@ export class InputController {
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (!this.isLocked || this.survival.isDead) return;
+      if (!this.isLocked || this.survival.isDead || this.isRoverActive()) return;
       const sensitivity = this.isZoomed ? 0.00055 : 0.0021;
       this.player.yaw -= e.movementX * sensitivity;
       this.player.pitch -= e.movementY * sensitivity;
@@ -161,6 +167,18 @@ export class InputController {
         this.lastForwardTapAt = now;
       }
       this.keys[e.code] = true;
+
+      if (e.code === 'KeyF') {
+        e.preventDefault();
+        this.onInteract();
+        return;
+      }
+
+      if (e.code === 'KeyV' && this.isRoverActive()) {
+        e.preventDefault();
+        this.onToggleRoverCamera();
+        return;
+      }
 
       if (e.code.startsWith('Digit')) {
         const num = parseInt(e.code.replace('Digit', ''), 10);
@@ -220,7 +238,7 @@ export class InputController {
     });
 
     window.addEventListener('mousedown', (e) => {
-      if (!this.isLocked || this.survival.isDead) return;
+      if (!this.isLocked || this.survival.isDead || this.isRoverActive()) return;
 
       if (e.button === 0) {
         this.isBreakButtonHeld = true;

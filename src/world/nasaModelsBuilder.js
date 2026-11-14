@@ -123,9 +123,8 @@ export function buildNasaCustomModels(scene) {
   }
 
   // 6. Rover Marciano NASA 3D detalhado (Estacionado na frente da base: x = 7.5, z = 10.5)
-  const rover = createMarsRoverModel(mats, 7.5, groundTopY, 10.5);
+  const { roverGroup: rover, wheels: roverWheels } = createMarsRoverModel(mats, 7.5, groundTopY, 10.5);
   group.add(rover);
-  solidObjects.push(rover);
 
   // 7. Painéis Solares Inclinados 3D e Antena Parabólica Externa
   const { solarArrays, dish } = createExteriorSolarAndDish(mats, 0, groundTopY, 0);
@@ -156,11 +155,10 @@ export function buildNasaCustomModels(scene) {
     }
   }
 
-  // Colliders acima saem das caixas individuais; so depois junta as malhas.
-  // As plantas ficam como objetos separados porque podem ser colhidas (raycast + remocao).
-  const merged = mergeByMaterial(group, plants);
+  // Keep plants and the driven rover as independent objects; merge static scenery.
+  const merged = mergeByMaterial(group, [...plants, rover]);
   scene.add(merged);
-  return { group: merged, colliders, plants };
+  return { group: merged, colliders, plants, rover, roverWheels };
 }
 
 // Junta as centenas de caixas em uma malha por material (de ~300 draw calls para ~20).
@@ -396,12 +394,15 @@ function createGreenhouseCropsModel(mats, centerX, floorTopY, centerZ) {
 function createMarsRoverModel(mats, x, y, z) {
   const r = new THREE.Group();
   r.position.set(x, y, z);
+  const wheels = [];
 
   for (const wx of [-1.2, 1.2]) {
     for (const wz of [-1.35, 0, 1.35]) {
-      addBox(r, 0.38, 0.65, 0.65, mats.charcoal, wx, 0.32, wz);
+      const wheelMesh = addBox(r, 0.38, 0.65, 0.65, mats.charcoal, wx, 0.32, wz);
       addBox(r, 0.42, 0.22, 0.22, mats.lightGray, wx, 0.32, wz);
+      // Braço da suspensão
       addBox(r, 0.12, 0.55, 0.12, mats.lightGray, wx * 0.82, 0.62, wz);
+      wheels.push(wheelMesh);
     }
   }
 
@@ -417,7 +418,7 @@ function createMarsRoverModel(mats, x, y, z) {
   addBox(r, 0.16, 0.16, 1.1, mats.lightGray, -0.45, 0.85, -1.75, 0.25, 0, 0);
   addBox(r, 0.28, 0.28, 0.32, mats.darkSlate, -0.45, 0.68, -2.28);
 
-  return r;
+  return { roverGroup: r, wheels };
 }
 
 function createExteriorSolarAndDish(mats, x, y, z) {
