@@ -482,6 +482,17 @@
   .mission-box { font-size: 11px; }
 }
 
+@media (max-width: 900px) and (orientation: landscape) {
+  .touch-device .mission-box {
+    top: 42px;
+    font-size: 11px;
+  }
+
+  .touch-device .mission-source {
+    display: none;
+  }
+}
+
 /* Hotbar Clássica do Minecraft (9 Slots Chanfrados) */
 .mc-hotbar {
   display: flex;
