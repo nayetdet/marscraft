@@ -312,16 +312,19 @@ export class InputController {
     const controlsBackBtn = document.getElementById('controls-back-btn');
     const menuMain = document.getElementById('menu-main');
     const controlsScreen = document.getElementById('controls-screen');
+    const menu = document.querySelector('.mc-menu');
     const respawnBtn = document.getElementById('respawn-btn');
 
     controlsBtn.addEventListener('click', () => {
       menuMain.classList.add('hidden');
       controlsScreen.classList.remove('hidden');
+      menu.classList.add('is-controls');
     });
 
     controlsBackBtn.addEventListener('click', () => {
       controlsScreen.classList.add('hidden');
       menuMain.classList.remove('hidden');
+      menu.classList.remove('is-controls');
     });
 
     window.addEventListener('resize', () => this._updateOrientationMode());
