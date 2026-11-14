@@ -29,21 +29,26 @@ export class PlayerHand {
   }
 
   _buildArmMesh() {
-    // Textura pixelada do braço/mão do jogador (estilo Minecraft com manga de astronauta)
+    // Textura pixelada da manga pressurizada e luva EVA do astronauta NASA
     const { texture } = makeCanvasTexture((ctx) => {
-      // Manga do traje (branco/cinza com faixa laranja)
-      ctx.fillStyle = '#e2e8f0';
+      // Manga térmica branca com costuras técnicas
+      ctx.fillStyle = '#f1f5f9';
       ctx.fillRect(0, 0, 16, 10);
-      ctx.fillStyle = '#d97706';
-      ctx.fillRect(0, 7, 16, 2);
-      // Mão / Luva na ponta
-      ctx.fillStyle = '#d6a17c';
-      ctx.fillRect(0, 10, 16, 6);
-      ctx.fillStyle = '#b8825e';
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(0, 0, 2, 10);
+      ctx.fillRect(14, 0, 2, 10);
+      // Faixa vermelha/laranja de comandante + anel azul de acoplamento do punho
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect(0, 3, 16, 2);
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(0, 8, 16, 2);
+      // Luva pressurizada EVA cinza-prata com palma aderente escura
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(0, 10, 16, 4);
+      ctx.fillStyle = '#334155';
       ctx.fillRect(0, 14, 16, 2);
     });
 
-    const armGeo = new THREE.BoxGeometry(0.24, 0.68, 0.24);
     const armMat = new THREE.MeshLambertMaterial({
       map: texture,
       transparent: false,
@@ -51,10 +56,45 @@ export class PlayerHand {
       depthTest: true,
       depthWrite: true,
     });
+    const cuffMat = new THREE.MeshLambertMaterial({ color: 0x0284c7 });
+    const screenCaseMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+    const screenGlowMat = new THREE.MeshLambertMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.55,
+    });
+    const gloveGripMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
 
-    this.armMesh = new THREE.Mesh(armGeo, armMat);
-    this.armMesh.renderOrder = 999;
+    this.armMesh = new THREE.Group();
     this.armMesh.rotation.x = -Math.PI * 0.32;
+
+    const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.68, 0.24), armMat);
+    sleeve.renderOrder = 999;
+    this.armMesh.add(sleeve);
+
+    // Anel metálico de pressurização do punho
+    const wristRing = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.06, 0.26), cuffMat);
+    wristRing.position.set(0, 0.14, 0);
+    wristRing.renderOrder = 999;
+    this.armMesh.add(wristRing);
+
+    // Computador de pulso EVA no antebraço
+    const wristPad = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, 0.05), screenCaseMat);
+    wristPad.position.set(-0.02, 0.0, 0.13);
+    wristPad.renderOrder = 999;
+    this.armMesh.add(wristPad);
+
+    const wristScreen = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.13, 0.02), screenGlowMat);
+    wristScreen.position.set(-0.02, 0.0, 0.155);
+    wristScreen.renderOrder = 999;
+    this.armMesh.add(wristScreen);
+
+    // Polegar articulado da luva espacial
+    const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.12, 0.09), gloveGripMat);
+    thumb.position.set(-0.13, 0.25, 0.05);
+    thumb.renderOrder = 999;
+    this.armMesh.add(thumb);
+
     this.handGroup.add(this.armMesh);
   }
 

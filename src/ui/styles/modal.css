@@ -427,21 +427,11 @@
 .gym-stage-copy { flex: 1; }
 .gym-stage-copy h2 { margin: 0 0 9px; color: #fff; font-size: 20px; }
 .station-screen .gym-stage-copy p { margin: 0; color: #b8d4d2; line-height: 1.5; font-size: 13px; }
-.gym-illustration { position: relative; width: 145px; height: 120px; flex: 0 0 145px; overflow: hidden; background: #183c45; border: 3px solid #537079; image-rendering: pixelated; }
-.gym-illustration::before { content: ''; position: absolute; left: 0; right: 0; bottom: 13px; height: 5px; background: #43666b; }
-.gym-belt { position:absolute; left:20px; bottom:15px; width:102px; height:13px; background:#80999a; border:4px solid #263d42; box-shadow:inset 0 -4px #536f71; }
-.gym-rail { position:absolute; right:23px; bottom:29px; width:7px; height:68px; background:#aac7c7; box-shadow: -14px -4px 0 -1px #aac7c7; transform:skew(-12deg); }
-.gym-runner { position:absolute; left:48px; top:19px; width:20px; height:20px; background:#ffe2ab; box-shadow:0 -4px #e9f2dc, -4px 0 #edf7e7, 4px 0 #edf7e7; }
-.gym-runner i { position:absolute; top:23px; left:0; width:20px; height:26px; background:#f0f6ea; box-shadow:inset -5px 0 #80aeb2; }
-.gym-runner b,.gym-runner em { position:absolute; top:46px; left:2px; width:8px; height:27px; background:#aacbd0; transform-origin:top; transform:rotate(27deg); }
-.gym-runner em { left:11px; transform:rotate(-27deg); }
-.gym-illustration[data-phase="1"] .gym-runner b { transform:rotate(-27deg); }.gym-illustration[data-phase="1"] .gym-runner em { transform:rotate(27deg); }
-.gym-wheel { position:absolute; bottom:21px; right:23px; width:54px; height:54px; border:7px solid #94b4b6; border-radius:50%; box-shadow:inset 0 0 0 5px #264b54; }
-.gym-wheel::after { content:''; position:absolute; left:23px; top:0; width:7px; height:54px; background:#7da2a5; }
-.gym-bike-frame { position:absolute; left:29px; bottom:27px; width:62px; height:8px; background:#79c9d0; transform:rotate(-38deg); box-shadow: 11px -15px 0 -1px #79c9d0; }
-.gym-seat { position:absolute; left:39px; top:34px; width:32px; height:8px; background:#ecbe65; box-shadow:9px 8px #aac7c7; }
-.gym-pedal { position:absolute; right:48px; bottom:43px; width:31px; height:6px; background:#e9bb63; transform:rotate(35deg); }
-.gym-illustration[data-phase="1"] .gym-pedal { transform:rotate(-35deg); }
+.gym-illustration { position: relative; width: 156px; height: 124px; flex: 0 0 156px; overflow: hidden; background: radial-gradient(circle at 50% 35%, #204c59, #132d35); border: 3px solid #537079; box-shadow: inset 0 0 0 2px #0d2026; image-rendering: pixelated; }
+.gym-svg { display: block; width: 100%; height: 100%; }
+.gym-illustration .pose-1 { display: none; }
+.gym-illustration[data-phase="1"] .pose-0 { display: none; }
+.gym-illustration[data-phase="1"] .pose-1 { display: inline; }
 .gym-rhythm-track { position:relative; height:18px; background:#26373c; border:2px solid #527078; overflow:hidden; }
 .gym-rhythm-zone { position:absolute; left:34%; width:32%; top:0; bottom:0; background:#3d966a; border-left:2px solid #85e6a4; border-right:2px solid #85e6a4; }
 .gym-rhythm-cursor { position:absolute; top:0; bottom:0; width:8px; margin-left:-4px; background:#ffdc70; }
