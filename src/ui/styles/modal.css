@@ -1,0 +1,120 @@
+.mc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 12, 8, 0.82);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.mc-overlay.hidden,
+.mc-death-overlay.hidden {
+  display: none;
+}
+
+.mc-death-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(110, 12, 12, 0.78);
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.mc-menu {
+  max-width: 580px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.mc-title-wrap {
+  position: relative;
+  margin-bottom: 6px;
+}
+
+.mc-title {
+  font-size: 56px;
+  letter-spacing: 4px;
+  color: #d4d4d4;
+  text-shadow: 4px 4px 0px #373737, 0 6px 0 #1a1a1a;
+}
+
+.mc-splash {
+  color: #ffff55;
+  font-size: 16px;
+  transform: rotate(-8deg);
+  margin-top: -6px;
+  text-shadow: 2px 2px 0px #3f3f00;
+}
+
+.mc-panel {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.58);
+  border-top: 3px solid #373737;
+  border-left: 3px solid #373737;
+  border-right: 3px solid #8b8b8b;
+  border-bottom: 3px solid #8b8b8b;
+  padding: 14px 18px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #e0e0e0;
+}
+
+/* Botao cinza chanfrado classico do Minecraft */
+.mc-btn {
+  width: 100%;
+  max-width: 420px;
+  padding: 12px 16px;
+  background: #727272;
+  border-top: 3px solid #aaaaaa;
+  border-left: 3px solid #aaaaaa;
+  border-right: 3px solid #3b3b3b;
+  border-bottom: 3px solid #3b3b3b;
+  outline: 2px solid #000000;
+  color: #ffffff;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 17px;
+  font-weight: 700;
+  text-shadow: 2px 2px 0px #2b2b2b;
+  cursor: pointer;
+}
+
+.mc-btn:hover {
+  background: #7e88bf;
+  color: #ffffa0;
+  border-top-color: #bdc6ff;
+  border-left-color: #bdc6ff;
+}
+
+.mc-btn:active {
+  border-top-color: #3b3b3b;
+  border-left-color: #3b3b3b;
+  border-right-color: #aaaaaa;
+  border-bottom-color: #aaaaaa;
+}
+
+.mc-controls-list {
+  font-size: 13px;
+  color: #cccccc;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 6px 12px;
+}
+
+.mc-death-title {
+  font-size: 48px;
+  color: #ffffff;
+  text-shadow: 3px 3px 0 #3f0000;
+}
+
+.mc-death-sub {
+  font-size: 16px;
+  color: #ffcccc;
+}

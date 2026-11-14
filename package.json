@@ -1,0 +1,17 @@
+{
+  "name": "nasa-space-apps-mine",
+  "version": "1.0.0",
+  "description": "Jogo Voxel em Marte inspirado em Minecraft com Nave Espacial NASA e Céu Astronômico Real",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "three": "^0.181.1"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0"
+  }
+}

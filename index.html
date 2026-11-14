@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MineMars - Modo Survival</title>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <!-- HUD Estilo Minecraft Survival -->
+  <div id="hud" class="hud">
+    <!-- Informacoes simples em texto pixelado no canto superior esquerdo -->
+    <div class="mc-top-info">
+      <div id="sol-time">Sol 1 - 17:15</div>
+      <div id="player-coords">XYZ: 0 / 13 / 19</div>
+      <div id="env-status">Local: Cratera de Marte (Consumo de O2)</div>
+      <div class="mc-help-line">Teclas: [Z] Luneta (Ver a Terra) | [K] Por do Sol | [L] Noite | [E] Comer/Beber</div>
+    </div>
+
+    <!-- Rotulos simples no ceu (sem emojis) -->
+    <div id="sky-labels" class="sky-labels"></div>
+
+    <!-- Mira classica em cruz (+) do Minecraft -->
+    <div class="mc-crosshair"></div>
+
+    <!-- Luneta simples quando aperta Z -->
+    <div id="zoom-overlay" class="zoom-overlay hidden">
+      <div class="zoom-box">
+        <div id="zoom-target">Luneta Apontada para o Ceu</div>
+      </div>
+    </div>
+
+    <!-- Area Inferior: Mensagem de Item + Barras Survival + Hotbar 9 Slots -->
+    <div class="mc-bottom-area">
+      <div id="toast" class="mc-toast"></div>
+      <div id="selected-block-name" class="mc-item-name">Areia Marciana</div>
+
+      <!-- Barras de Status Estilo Minecraft (Oxigenio, Vida, Agua, Comida) -->
+      <div class="mc-status-container">
+        <div class="mc-status-col left">
+          <div class="mc-bar-row">
+            <span class="mc-bar-label">O2</span>
+            <div id="oxygen-bar" class="mc-icon-row"></div>
+          </div>
+          <div class="mc-bar-row">
+            <span class="mc-bar-label">VIDA</span>
+            <div id="health-bar" class="mc-icon-row"></div>
+          </div>
+        </div>
+
+        <div class="mc-status-col right">
+          <div class="mc-bar-row right-align">
+            <div id="water-bar" class="mc-icon-row"></div>
+            <span class="mc-bar-label">AGUA</span>
+          </div>
+          <div class="mc-bar-row right-align">
+            <div id="food-bar" class="mc-icon-row"></div>
+            <span class="mc-bar-label">COMIDA</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hotbar Classica de 9 Slots -->
+      <div id="hotbar" class="mc-hotbar"></div>
+    </div>
+  </div>
+
+  <!-- Menu Estilo Minecraft Classico -->
+  <div id="overlay" class="mc-overlay">
+    <div class="mc-menu">
+      <div class="mc-title-wrap">
+        <h1 class="mc-title">MINEMARS</h1>
+        <div class="mc-splash">Sobrevivencia em Marte!</div>
+      </div>
+
+      <div class="mc-panel">
+        <p>Explore a Nave da NASA dentro da Cratera de Marte.</p>
+        <p>Entre na Nave para recarregar seu Oxigenio (O2).</p>
+        <p>Colete Gelo na cratera para beber Agua e Batatas na nave para Comer.</p>
+        <p>Olhe para o ceu para ver a Terra brilhando (Aperte Z para aproximar).</p>
+      </div>
+
+      <button id="start-btn" class="mc-btn">Voltar ao Jogo / Jogar Mundo</button>
+      <div class="mc-controls-list">
+        WASD: Andar | Espaco: Pular | Clique Esq: Quebrar | Clique Dir: Colocar / Usar Item
+      </div>
+    </div>
+  </div>
+
+  <!-- Tela de Morte Estilo Minecraft ("Voce Morreu!") -->
+  <div id="death-overlay" class="mc-death-overlay hidden">
+    <div class="mc-menu">
+      <h1 class="mc-death-title">Voce Morreu!</h1>
+      <p class="mc-death-sub">Ficou sem Oxigenio, Agua ou Comida em Marte.</p>
+      <button id="respawn-btn" class="mc-btn">Renascer</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
