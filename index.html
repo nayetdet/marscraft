@@ -7,7 +7,13 @@
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <style>
     html, body { margin: 0; width: 100%; height: 100%; background: #140d09; }
-    #loading-overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; overflow: hidden; background: #6c4a33 url('/mars-dirt.svg') repeat; background-size: 64px 64px; color: #fff; font-family: 'Courier New', Courier, monospace; font-weight: 700; text-align: center; image-rendering: pixelated; transition: opacity .35s ease; }
+    #loading-overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; overflow: hidden; background: #6c4a33 url('%BASE_URL%mars-dirt.svg') repeat; background-size: 64px 64px; color: #fff; font-family: 'Courier New', Courier, monospace; font-weight: 700; text-align: center; image-rendering: pixelated; transition: opacity .35s ease; }
+    #overlay {
+      background:
+        radial-gradient(ellipse at 50% 38%, rgba(177, 91, 55, .28), transparent 44%),
+        #6c4a33 url('%BASE_URL%mars-dirt.svg') repeat;
+      background-size: 100% 100%, 64px 64px;
+    }
     #loading-overlay.is-leaving { opacity: 0; pointer-events: none; }
     .loading-content { box-sizing: border-box; width: min(340px, 76vw); min-height: 54px; }
     .loading-caption { height: 18px; margin: 0 0 10px; font-size: 15px; line-height: 18px; white-space: nowrap; text-shadow: 2px 2px 0 #2b1b12; }
@@ -287,7 +293,7 @@
         <div id="menu-main">
           <button id="start-btn" class="mc-btn primary">Play</button>
           <button id="controls-btn" class="mc-btn secondary">Controls</button>
-          <button id="reset-btn" class="mc-btn secondary">Reset</button>
+          <button id="reset-btn" class="mc-btn secondary">Quit</button>
           <div class="menu-row">
             <button id="sources-btn" class="mc-btn secondary">NASA Data</button>
             <button id="demo-btn" class="mc-btn secondary">Demo Controls</button>
@@ -348,6 +354,16 @@
           <button id="controls-back-btn" class="mc-btn secondary">Back</button>
         </section>
       </div>
+    </div>
+  </div>
+
+  <div id="pause-overlay" class="mc-overlay pause-overlay hidden" aria-label="Pause menu">
+    <div class="mc-menu">
+      <div class="mc-title-wrap">
+        <h1 class="mc-title"><span>MINE</span><span>MARS</span></h1>
+        <div class="mc-splash">Paused</div>
+      </div>
+      <div id="pause-menu-card-host"></div>
     </div>
   </div>
 

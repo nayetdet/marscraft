@@ -10,6 +10,20 @@
   box-sizing: border-box;
 }
 
+.pause-overlay {
+  background: radial-gradient(ellipse at 50% 38%, rgba(177, 91, 55, .28), transparent 44%), linear-gradient(rgba(22, 32, 46, .5), rgba(8, 8, 12, .82)), rgba(18, 12, 8, .62);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+#pause-menu-card-host {
+  width: 100%;
+}
+
+.mc-menu-card #reset-btn { display: none; }
+body.pause-menu-open .mc-menu-card #reset-btn { display: block; }
+body.pause-menu-open .crew-picker { display: none; }
+
 .mc-overlay.hidden,
 .victory-overlay.hidden,
 .mc-death-overlay.hidden {
