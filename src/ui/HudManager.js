@@ -238,9 +238,9 @@ export class HudManager {
     if (isZoomed) {
       const dirToEarth = earthPos.clone().sub(camera.position).normalize();
       if (camDir.angleTo(dirToEarth) < 0.14) {
-        this.zoomTargetEl.textContent = 'Observing: Earth and Moon';
+        this.zoomTargetEl.textContent = 'Earth + Moon';
       } else {
-        this.zoomTargetEl.textContent = 'Scope active — find [EARTH + MOON] in the sky';
+        this.zoomTargetEl.textContent = '';
       }
     }
   }
