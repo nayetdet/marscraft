@@ -2,6 +2,7 @@ import {
   ENERGY_CONFIG,
   MAV_CONFIG,
   MISSION_CONFIG,
+  STORM_CONFIG,
   RADIATION_CONFIG,
   SURVIVAL_CONFIG,
 } from '../config/constants.js';
@@ -181,6 +182,22 @@ export class MissionSystem {
     if (this.storm.phase === 'active') {
       this._emit('storm-start', this.storm.storm);
     }
+  }
+
+  // Controle de demo: adianta a proxima tempestade para daqui a `leadHours` horas de jogo.
+  // Usa a mesma CME real da fila; so o relogio muda. Devolve false se ja ha tempestade ativa.
+  triggerStormSoon(leadHours = STORM_CONFIG.DEMO_LEAD_HOURS) {
+    if (this.storm.phase === 'active') return false;
+    const now = this.lastHours;
+    this.startStorms(now); // a historia so solta as tempestades no ato 2; o controle de demo nao espera
+    const next = this.schedule.find((storm) => storm.end > now);
+    if (!next) return false;
+    const arrival = now + leadHours;
+    if (next.arrival <= arrival) return true; // ja chega antes disso
+    next.warningStart = Math.min(next.warningStart, now);
+    next.arrival = arrival;
+    next.end = arrival + STORM_CONFIG.DURATION_HOURS;
+    return true;
   }
 
   _emit(type, storm = null) {

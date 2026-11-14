@@ -13,12 +13,12 @@ const DROP = 16; // alto o bastante para cair no terreno sem prender em bloco
 
 const TELEPORTS = [
   ['Storm shelter', 4.3, EYE_INSIDE, 4.8, -Math.PI / 2],
-  ['Comms terminal', 3.75, EYE_INSIDE, -2.6, 0],
+  ['Comms terminal', 9, EYE_INSIDE, -8.6, 0],
   ['Habitat center', 0.5, EYE_INSIDE, 1, 0],
-  ['Power & heat room', -6.5, EYE_INSIDE, -12, Math.PI / 2],
-  ['Kitchen', 2.5, EYE_INSIDE, -12, -Math.PI / 2],
-  ['Bathroom', -6.5, EYE_INSIDE, -17.5, Math.PI / 2],
-  ['Workshop', 2.5, EYE_INSIDE, -17.5, 0],
+  ['Power & heat room', -12, EYE_INSIDE, -21.5, Math.PI / 2],
+  ['Kitchen', 8, EYE_INSIDE, -21.5, -Math.PI / 2],
+  ['Bathroom', -12, EYE_INSIDE, -35.5, Math.PI / 2],
+  ['Workshop', 8, EYE_INSIDE, -35.5, -Math.PI / 2],
   ['Airlock', 0.5, EYE_INSIDE, 7.5, Math.PI],
   ['Greenhouse', -15, EYE_INSIDE, 2, Math.PI / 2],
   ['Gym & medbay', -8, EYE_INSIDE, 10, Math.PI],

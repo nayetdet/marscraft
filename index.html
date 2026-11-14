@@ -262,7 +262,38 @@
           <button id="start-btn" class="mc-btn primary">Play</button>
           <button id="controls-btn" class="mc-btn secondary">Controls</button>
           <button id="reset-btn" class="mc-btn secondary">Reset</button>
+          <div class="menu-row">
+            <button id="sources-btn" class="mc-btn secondary">NASA Data</button>
+            <button id="demo-btn" class="mc-btn secondary">Demo Controls</button>
+          </div>
         </div>
+        <section id="sources-screen" class="controls-screen info-screen hidden" aria-labelledby="sources-title">
+          <h2 id="sources-title">Where the data comes from</h2>
+          <p class="info-note">Every number that matters in MineMars comes from open NASA data. The data is saved inside the game, it is not live.</p>
+          <div class="info-list">
+            <div class="info-row"><b>Solar storms</b><span>Real CMEs (clouds of particles thrown by the Sun) listed by NASA DONKI. Real data from <span id="sources-donki-date"></span>.</span></div>
+            <div class="info-row"><b>Radiation</b><span>Curiosity rover RAD instrument at Gale Crater, from NASA RadLab (OSDR): 6.93 uGy per hour, measured 16/11 to 10/12/2022.</span></div>
+            <div class="info-row"><b>Mars facts</b><span>Gravity 38% of Earth, a day of 24 h 39 min and 43% of Earth sunlight, from the NASA Mars Fact Sheet.</span></div>
+            <div class="info-row"><b>Weather</b><span>Temperature and air pressure from the NASA InSight lander, sols 675 to 681 (October 2020).</span></div>
+            <div class="info-row"><b>Crew needs</b><span>Oxygen, water and food per person from the NASA Baseline Values and Assumptions Document. Water recycling of 98% like the Space Station.</span></div>
+            <div class="info-row"><b>Making air</b><span>MOXIE on the Perseverance rover made 122 g of oxygen on Mars (NASA, 2023).</span></div>
+            <div class="info-row"><b>Health</b><span>Career radiation limit of 600 mSv (NASA-STD-3001). Bones lose about 1% of density a month in space without exercise (NASA, 2023).</span></div>
+          </div>
+          <p class="info-note">Game speed, battery size and storm length are scaled so a mission fits in a few minutes. Art, textures and sounds are drawn by code, with no NASA logo. Parts of the code were written with AI assistance.</p>
+          <button id="sources-back-btn" class="mc-btn secondary">Back</button>
+        </section>
+        <section id="demo-screen" class="controls-screen info-screen hidden" aria-labelledby="demo-title">
+          <h2 id="demo-title">Demo Controls</h2>
+          <p class="info-note">For judges and for recording the demo. These skip the waiting, they do not change the rules. Storms still come from the real NASA DONKI list.</p>
+          <div class="demo-grid">
+            <button class="mc-btn secondary" data-demo="storm">Start a solar storm</button>
+            <button class="mc-btn secondary" data-demo="battery">Drain the battery to 10%</button>
+            <button class="mc-btn secondary" data-demo="night">Jump to night</button>
+            <button class="mc-btn secondary" data-demo="noon">Jump to noon</button>
+          </div>
+          <p id="demo-feedback" class="info-note demo-feedback" role="status"></p>
+          <button id="demo-back-btn" class="mc-btn secondary">Back</button>
+        </section>
         <section id="controls-screen" class="controls-screen hidden" aria-labelledby="controls-title">
           <h2 id="controls-title">Controls</h2>
           <div class="controls-section">

@@ -15,6 +15,18 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Vite, sem backend, de
 | Céu astronômico | `src/sky/*` | Sol, Terra e Lua vistos de Marte, Fobos e Deimos, ciclo dia/noite em "sols", luneta (tecla Z), avanço de tempo (tecla T) |
 | HUD | `src/ui/HudManager.js`, `index.html` | Barras estilo Minecraft, hotbar de 9 slots, inventário (tecla E, 36 slots), toasts, tela de morte e rótulos no céu. **UI em inglês.** |
 
+## Organização da base (`src/base/`)
+
+A base é dividida em zonas com placa, cor no piso e função: `CMD-1` comando, `LSS-1` suporte de vida, `HAB-1` beliches, `SHL-1` abrigo de tempestade, `MED-1` enfermaria, `GRN-1` estufa, `GYM-1` academia e `AL-1` airlock.
+
+- **Telas vivas** (`baseDisplayText.js` + `baseCanvas.js`): status da base no comando, mapa de energia no suporte de vida, medidor de radiação dentro do abrigo (mostra os litros na parede de água) e painel da estufa. Redesenham só quando o conteúdo muda.
+- **Pôsteres educativos** (`basePosters.js`): 8 pôsteres com um quadro "REAL DATA" e a fonte; três deles formam uma galeria no túnel da estufa. Mirar e apertar [F] mostra o dado.
+- **Menu**: "NASA Data" (fontes e aviso de que o dado é embutido, não ao vivo) e "Demo Controls" (adiantar a próxima tempestade real, noite, meio-dia e bateria a 10 %), pensado para jurados e para gravar o vídeo.
+
+A ala norte (`NORTH_WING` em `habitatLayout.js`) é um corredor central envidraçado que liga quatro módulos separados, cada um com a sua função: energia e aquecimento, cozinha, banheiro e oficina. O campo solar fica a oeste do módulo de energia.
+
+O abrigo de tempestade, o terminal de rádio e o módulo norte são da issue #56 (`nasaModelsBuilder.js`); `baseDecor.js` só acrescenta placa, pôster e medidor a eles.
+
 ## Comparação com o que o desafio pede
 
 | Requisito do desafio | Situação | Gap |
@@ -30,7 +42,7 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Vite, sem backend, de
 | **Atraso de comunicação** | ✅ | Terminal de rádio no habitat (issue #56): o atraso vem da distância Terra–Marte calculada para a data (órbitas do JPL); pedir conselho ao Controle da Missão custa energia e a resposta chega atrasada, montada com a situação do momento do envio. Uma conjunção solar encenada deixa o rádio mudo e a criança decide sozinha. No ato 1 da história, o primeiro relatório ao Controle da Missão já ensina esse atraso (resposta só depois da ida e volta do sinal). |
 | **Toda escolha tem custo (trade-off)** | ❌ | **Este é o gap principal.** Hoje não há nenhuma decisão com custo: a estratégia ótima é ficar dentro da nave. |
 | **Dados reais da NASA** | ❌ | Nenhum dado real. O céu é "inspirado", não alimentado por dados. |
-| **Atribuição de fontes no jogo** | ❌ | Não há tela de créditos ou fontes. |
+| **Atribuição de fontes no jogo** | ✅ | Tela "NASA Data" no menu e fonte em cada pôster e tela da base. |
 | Público de 7 a 12 anos, linguagem simples | 🟡 | O texto é simples, mas o jogo **não ensina** nenhuma restrição real. Vale explicar termos como "sol" e "dose". |
 | Navegador, sem conta | ✅ | — |
 | Rejogabilidade | 🟡 | Mundo fixo e sem eventos aleatórios. |
