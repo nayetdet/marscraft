@@ -36,6 +36,32 @@ describe('airlock', () => {
     expect(colliders).not.toContain(outer.collider);
   });
 
+  it('plays door and decompression events in sequence after both doors close', () => {
+    const airlock = new Airlock(new THREE.Scene(), [], new MissionSystem());
+    const events = [];
+    airlock.onEvent = (type) => events.push(type);
+    const [inner, outer] = airlock.doors;
+
+    airlock.request(inner, away);
+    run(airlock, away, 1);
+    expect(events).toEqual(['door-open']);
+
+    airlock.request(outer, inChamber);
+    expect(events).toEqual(['door-open', 'door-close']);
+    let elapsed = 0;
+    while (!events.includes('depressurize') && elapsed < 2) {
+      airlock.update(0.1, inChamber);
+      elapsed += 0.1;
+    }
+    expect(inner.openness).toBe(0);
+    expect(outer.openness).toBe(0);
+    expect(events).toEqual(['door-open', 'door-close', 'depressurize']);
+
+    run(airlock, inChamber, C.AIRLOCK_CYCLE + 1);
+    expect(outer.openness).toBe(1);
+    expect(events).toEqual(['door-open', 'door-close', 'depressurize', 'door-open']);
+  });
+
   it('refills with air and cleans a dusty suit before opening to the base', () => {
     const mission = new MissionSystem();
     const stations = new StationSystem(mission);
@@ -55,7 +81,7 @@ describe('airlock', () => {
     run(airlock, inChamber, C.SUIT_CLEAN_TIME + 0.5);
     expect(inner.openness).toBe(1);
     expect(stations.dirtySuit).toBe(false);
-    expect(events).toEqual(['suit-cleaned']);
+    expect(events).toEqual(['depressurize', 'door-open', 'door-close', 'suit-cleaned', 'door-open']);
   });
 
   it('lets the dust in when there is no power to clean the suit', () => {
@@ -73,7 +99,7 @@ describe('airlock', () => {
     run(airlock, inChamber, 6);
     expect(airlock.doors[0].openness).toBe(1);
     expect(stations.dirtySuit).toBe(true);
-    expect(events).toEqual(['clean-skipped']);
+    expect(events).toEqual(['clean-skipped', 'door-open']);
   });
 
   it('refuses a cycle with no power', () => {

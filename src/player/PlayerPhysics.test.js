@@ -14,6 +14,39 @@ function createMockWorld(blocks = {}) {
 }
 
 describe('PlayerPhysics', () => {
+  it('reports a landing after a jump but not after an ordinary fall', () => {
+    const floorWorld = {
+      getBlock(_x, y) {
+        return y === 9 ? BLOCK_IDS.REGOLITH : BLOCK_IDS.AIR;
+      },
+    };
+    const player = new PlayerPhysics(floorWorld);
+    player.pos.set(0, 10 + PHYSICS_CONFIG.PLAYER_HEIGHT, 0);
+    player.onGround = true;
+
+    player.update(0.05, { Space: true });
+    expect(player.justLandedFromJump).toBe(false);
+
+    let frames = 0;
+    while (!player.onGround && frames < 100) {
+      player.update(0.05, {});
+      frames += 1;
+    }
+
+    expect(player.onGround).toBe(true);
+    expect(player.justLandedFromJump).toBe(true);
+    player.update(0.05, {});
+    expect(player.justLandedFromJump).toBe(false);
+
+    const fallingPlayer = new PlayerPhysics(floorWorld);
+    fallingPlayer.pos.set(0, 10 + PHYSICS_CONFIG.PLAYER_HEIGHT, 0);
+    fallingPlayer.vel.y = -1;
+    fallingPlayer.update(0.05, {});
+
+    expect(fallingPlayer.onGround).toBe(true);
+    expect(fallingPlayer.justLandedFromJump).toBe(false);
+  });
+
   it('sprints with the sprint flag or Shift, and walks otherwise', () => {
     const player = new PlayerPhysics(createMockWorld());
     player.yaw = 0;

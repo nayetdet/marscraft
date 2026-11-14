@@ -428,7 +428,6 @@ export class GameEngine {
       return;
     }
     this.hud.showToast(message);
-    if (target.type === 'door' && (message.startsWith('Opening') || message.startsWith('Closing'))) this._playDoorSound();
   }
 
   mountGym(mode) {
@@ -467,30 +466,18 @@ export class GameEngine {
 
   // Fim da limpeza do traje no airlock: um fato real na primeira vez, aviso quando falta energia
   _onAirlockEvent(type) {
-    if (type === 'clean-skipped') {
+    if (type === 'door-open') {
+      this.audio.playDoorOpen();
+    } else if (type === 'door-close') {
+      this.audio.playDoorClose();
+    } else if (type === 'depressurize') {
+      this.audio.playDecompression();
+    } else if (type === 'clean-skipped') {
       this.hud.showToast('No power to clean your suit: Mars dust came inside with you!', 4500);
     } else if (type === 'suit-cleaned' && !this._dustFactShown) {
       this._dustFactShown = true;
       this.hud.showToast('Suit clean! Apollo astronauts got "lunar hay fever" from dust that came inside on their suits.', 6000);
     }
-  }
-
-  _playDoorSound() {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-    this._audioContext ??= new AudioContextClass();
-    const audio = this._audioContext;
-    if (audio.state === 'suspended') audio.resume();
-    const oscillator = audio.createOscillator();
-    const gain = audio.createGain();
-    oscillator.type = 'square';
-    oscillator.frequency.setValueAtTime(110, audio.currentTime);
-    oscillator.frequency.linearRampToValueAtTime(65, audio.currentTime + 0.25);
-    gain.gain.setValueAtTime(0.025, audio.currentTime);
-    gain.gain.linearRampToValueAtTime(0, audio.currentTime + 0.25);
-    oscillator.connect(gain).connect(audio.destination);
-    oscillator.start();
-    oscillator.stop(audio.currentTime + 0.25);
   }
 
   // Nivel da agua nas paredes do abrigo de tempestade (issue #56)
@@ -1007,6 +994,7 @@ export class GameEngine {
       site,
       groundY: WORLD_CONFIG.GROUND_LEVEL + 1,
       millionKm: Math.round(this.comms.distanceKm / 1e6),
+      onTouchdown: () => this.audio.fadeOutRocket(),
       onEnd: () => this._endArrival(),
     }));
   }
@@ -1392,6 +1380,7 @@ export class GameEngine {
       }
 
       this.audio.update({
+        dt,
         player: this.player,
         survival: this.survival,
         isGameRunning,

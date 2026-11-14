@@ -21,6 +21,8 @@ export class PlayerPhysics {
     this.height = PHYSICS_CONFIG.PLAYER_HEIGHT;
     this.radius = PHYSICS_CONFIG.PLAYER_RADIUS;
     this.onGround = false;
+    this.justLandedFromJump = false;
+    this._jumpInProgress = false;
     this.isMoving = false;
 
     this._forward = new THREE.Vector3();
@@ -37,6 +39,8 @@ export class PlayerPhysics {
       PHYSICS_CONFIG.SPAWN_POS.z
     );
     this.vel.set(0, 0, 0);
+    this.justLandedFromJump = false;
+    this._jumpInProgress = false;
     this.yaw = PHYSICS_CONFIG.SPAWN_YAW;
     this.pitch = PHYSICS_CONFIG.SPAWN_PITCH;
   }
@@ -120,6 +124,7 @@ export class PlayerPhysics {
   }
 
   update(dt, keys) {
+    this.justLandedFromJump = false;
     const forward = this._forward.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     const right = this._right.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
 
@@ -141,6 +146,7 @@ export class PlayerPhysics {
     if (keys['Space'] && this.onGround) {
       this.vel.y = PHYSICS_CONFIG.JUMP_SPEED;
       this.onGround = false;
+      this._jumpInProgress = true;
     }
 
     const nextPos = this._nextPos.copy(this.pos);
@@ -162,7 +168,11 @@ export class PlayerPhysics {
     nextPos.copy(this.pos);
     nextPos.y += this.vel.y * dt;
     if (this._checkCollision(nextPos)) {
-      if (this.vel.y < 0) this.onGround = true;
+      if (this.vel.y < 0) {
+        this.onGround = true;
+        this.justLandedFromJump = this._jumpInProgress;
+        this._jumpInProgress = false;
+      }
       this.vel.y = 0;
     } else {
       this.pos.y = nextPos.y;
