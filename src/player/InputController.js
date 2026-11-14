@@ -115,6 +115,12 @@ export class InputController {
     const resetBtn = document.getElementById('reset-btn');
     const respawnBtn = document.getElementById('respawn-btn');
 
+    document.addEventListener('keydown', (e) => {
+      const gameHasFocus = this.isLocked || document.pointerLockElement === this.domElement;
+      if (!gameHasFocus || !this._isBrowserShortcut(e)) return;
+      e.preventDefault();
+    }, true);
+
     startBtn.addEventListener('click', () => {
       this.domElement.requestPointerLock();
     });
@@ -151,6 +157,7 @@ export class InputController {
     window.addEventListener('keydown', (e) => {
       if (this.survival.isDead) return;
       if (this.hud.isInventoryOpen && e.code !== 'KeyE') return;
+      if (this.isLocked && this._isBrowserShortcut(e)) e.preventDefault();
       if (this.isLocked && (e.code.startsWith('Control') || e.code.startsWith('Shift') || (e.ctrlKey && e.code === 'KeyW'))) {
         e.preventDefault();
       }
@@ -258,5 +265,17 @@ export class InputController {
     });
 
     window.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  _isBrowserShortcut(e) {
+    // Any modified key chord belongs to the browser/OS, not the game.
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyQ') return true;
+    if (e.ctrlKey || e.metaKey || e.altKey) return true;
+    if (e.shiftKey && ['F10', 'Tab', 'F5', 'F6', 'F11', 'F12'].includes(e.code)) return true;
+
+    // Common browser navigation, focus, and reload keys. Escape is intentionally
+    // left alone so the player can release pointer lock and pause.
+    if (['F1', 'F5', 'F6', 'F11', 'F12', 'Tab', 'Space', 'Backspace'].includes(e.code)) return true;
+    return false;
   }
 }
