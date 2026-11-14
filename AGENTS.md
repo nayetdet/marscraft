@@ -26,7 +26,7 @@ O desafio, em uma frase: um jogo em que **crianças de 7 a 12 anos** administram
 2. **Mecânica > visual.** Um sistema simples que ensina uma restrição real vale mais que polimento gráfico.
 3. **Dados reais, não inventados.** Calibre com [`docs/data/numeros-reais.md`](docs/data/numeros-reais.md). Se precisar de um número que não está lá, busque na fonte da NASA e registre no doc com a fonte.
 4. **Honestidade com o dado:** dado embutido aparece como "dados reais de DD/MM/AAAA"; **só chame de "ao vivo"** o que veio de fetch bem-sucedido.
-5. **Atribuir as fontes dentro do jogo** (tela de Fontes/Créditos com DONKI, RadLab, InSight, OSDR, Mars Trek).
+5. **Atribuir as fontes dentro do jogo** (tela de Fontes/Créditos com DONKI, RadLab, InSight, OSDR, HiRISE, Mars Trek).
 6. **Poucos recursos centrais (2 ou 3)** para não sobrecarregar a criança. Proposta atual: **Energia, O2 e Radiação**.
 7. **Linguagem para 7 a 12 anos:** termos técnicos (sol, dose, CME) sempre com explicação curta no contexto.
 8. **Sem logo da NASA** em texturas ou UI geradas. Asset gerado por IA precisa de marca d'água; código assistido por IA precisa ser declarado nos créditos.
@@ -51,7 +51,7 @@ src/config/
   blockTypes.js            BLOCK_IDS e HOTBAR_BLOCKS (inventário inicial, consumíveis)
 src/world/
   VoxelWorld.js            armazenamento de voxels, chunks, meshing, raycast
-  terrainGenerator.js      cratera marciana procedural
+  terrainGenerator.js      cratera real de Gale (elevação HiRISE em src/data/marsTerrain.json) + áreas niveladas da base
   nasaSpaceshipBuilder.js  base/nave construída em voxels
   nasaModelsBuilder.js     modelos 3D extras (painéis solares, antena, rover, estufa)
   voxelRaycaster.js        DDA para mirar blocos

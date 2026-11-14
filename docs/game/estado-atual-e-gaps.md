@@ -8,7 +8,7 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Vite, sem backend, de
 
 | Sistema | Onde | O que faz hoje |
 |---|---|---|
-| Mundo voxel | `src/world/VoxelWorld.js`, `terrainGenerator.js` | Mundo 112×48×112 com cratera, chunks e meshing. Dá para quebrar e colocar blocos. |
+| Mundo voxel | `src/world/VoxelWorld.js`, `terrainGenerator.js`, `src/data/marsTerrain.js` | Mundo 224×48×224 com chunks e meshing. O relevo é a **elevação real** de uma cratera de ~180 m dentro de Gale (HiRISE, 1 bloco ≈ 1 m); só a área das construções foi nivelada e a cratera de gelo é do jogo. Dá para quebrar e colocar blocos. |
 | Base e nave | `src/world/nasaSpaceshipBuilder.js`, `nasaModelsBuilder.js` | Habitat principal, túnel pressurizado, estufa (domo), painéis solares (só visual), antena, rover e console, com colisão nos objetos |
 | Sobrevivência | `src/player/SurvivalSystem.js`, `SURVIVAL_CONFIG` | 4 barras de 0–20: **O2, Vida, Água, Comida**. O O2 cai fora e recarrega dentro da área pressurizada. Água e comida caem sempre. Zerar qualquer uma tira vida, e vida zerada mata. |
 | Consumíveis | `src/config/blockTypes.js` | Martian Ice (+água) e Mars Potato (+comida, +vida), usados com o botão direito |
@@ -43,7 +43,7 @@ O abrigo de tempestade, o terminal de rádio e o módulo norte são da issue #56
 | **Módulo norte (issue #56, parte B)** | ✅ | Sala de energia e aquecimento (consumo de cada sistema e corte de carga; o aquecedor gasta mais à noite e desligado congela canos e estufa), cozinha e despensa (ração da despensa × refeição fresca com cenoura, água e energia), banheiro (lavar vira água cinza; filtro gasto recupera menos que 98 %) e oficina com impressora 3D (regolito + energia consertam a estação mais gasta). O depósito de carga (B6) foi descartado: ensina pouco pelo esforço. |
 | **Atraso de comunicação** | ✅ | Terminal de rádio no habitat (issue #56): o atraso vem da distância Terra–Marte calculada para a data (órbitas do JPL); pedir conselho ao Controle da Missão custa energia e a resposta chega atrasada, montada com a situação do momento do envio. Uma conjunção solar encenada deixa o rádio mudo e a criança decide sozinha. No ato 1 da história, o primeiro relatório ao Controle da Missão já ensina esse atraso (resposta só depois da ida e volta do sinal). |
 | **Toda escolha tem custo (trade-off)** | ❌ | **Este é o gap principal.** Hoje não há nenhuma decisão com custo: a estratégia ótima é ficar dentro da nave. |
-| **Dados reais da NASA** | ❌ | Nenhum dado real. O céu é "inspirado", não alimentado por dados. |
+| **Dados reais da NASA** | ✅ | Tempestades (CMEs do DONKI), dose de radiação (RadLab, Curiosity) e o relevo do mundo (HiRISE, cratera em Gale: terreno e radiação vêm do mesmo lugar). O céu é "inspirado", não alimentado por dados. |
 | **Atribuição de fontes no jogo** | ✅ | Tela "NASA Data" no menu e fonte em cada pôster e tela da base. |
 | Público de 7 a 12 anos, linguagem simples | 🟡 | O texto é simples, mas o jogo **não ensina** nenhuma restrição real. Vale explicar termos como "sol" e "dose". |
 | Navegador, sem conta | ✅ | — |

@@ -1,3 +1,6 @@
+import { MARS_TERRAIN, formatCoords } from '../data/marsTerrain.js';
+import { formatDateDMY } from '../mission/missionText.js';
+
 // Telas extras do menu: "NASA Data" (fontes dos dados) e "Demo Controls" (atalhos para jurados).
 // O menu principal e as telas trocam de lugar com a classe `hidden`, como a tela de controles.
 export class MenuScreens {
@@ -6,6 +9,8 @@ export class MenuScreens {
     const overlay = document.getElementById('overlay');
     const feedback = document.getElementById('demo-feedback');
     document.getElementById('sources-donki-date').textContent = donkiDate;
+    document.getElementById('sources-terrain-coords').textContent = formatCoords(MARS_TERRAIN.centerLat, MARS_TERRAIN.centerLonE);
+    document.getElementById('sources-terrain-date').textContent = formatDateDMY(MARS_TERRAIN.fetched);
 
     const bind = (name) => {
       const screen = document.getElementById(`${name}-screen`);

@@ -17,6 +17,8 @@ O jogo é um site estático (Vite → GitHub Pages), sem backend. Uma API só po
 | OSDR search `osdr.nasa.gov/osdr/data/search` | não | ❌ só `osdr.nasa.gov` | OK | **Baixar na build e embutir** |
 | Mars/Moon Trek tiles (WMTS) | não | ✅ `*` | OK | Pode carregar direto como textura |
 | Mars Trek search (`TrekServices`) | não | ❌ | OK | Embutir |
+| Mars Trek, tiles de **elevação** | não | ✅ `*` | PNG de 8 bits (degraus de ~20 m); só Gale tem tiles | Não serve para terreno a 1 m. Use o HiRISE DTM. |
+| HiRISE DTM `uahirise.org/PDS/DTM` | não | não testado | OK, aceita `Range` | **Baixar o recorte por script e embutir** (`scripts/fetch-mars-terrain.mjs`) |
 | NASA Image Library `images-api.nasa.gov` | não | ✅ `*` | OK | Fetch direto (fotos reais de Marte/Artemis) |
 
 **Limite da `DEMO_KEY`:** o cabeçalho devolveu `X-Ratelimit-Limit: 10` por hora por IP, e estourou em poucos minutos de teste. **Peça uma chave grátis em <https://api.nasa.gov/>** (1.000 req/h). Em site estático a chave fica visível no bundle; para uma chave gratuita da api.nasa.gov isso é aceitável. Mesmo assim, nunca dependa só do fetch ao vivo, e mantenha sempre um fallback embutido.
@@ -129,15 +131,31 @@ curl "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&times
   - Moon, mosaico LRO WAC: `LRO_WAC_Mosaic_Global_303ppd_v02`
   - `z=0` devolve a imagem global (testado: 200 OK, JPEG).
 - **Busca de locais/bookmarks:** `https://trek.nasa.gov/mars/TrekServices/ws/index/eq/searchItems?bbox=-180,-90,180,90&q=jezero&proj=urn:ogc:def:crs:EPSG::104905&start=0&rows=5` (Solr: `response.docs[]` com `title`, `bbox`, `description`, `mediaURL`, `layers`). Amostra: [`samples/mars-trek-search-jezero.json`](samples/mars-trek-search-jezero.json).
+- **Elevação (testado em 14/11/2026):** os tiles de elevação existem só para Gale (`Gale_DEM_SMG_1m`, PNG até o zoom 14) e são de **8 bits**: a faixa inteira do modelo vira 256 tons, uns 20 m por degrau. Perto do pouso do Curiosity um tile inteiro tem 3 tons, então não serve para terreno na escala de 1 m. Os modelos de Jezero do catálogo não têm tiles (404) e o serviço de elevação bruta (`trek.nasa.gov/mars/arcgis/rest/services/.../ImageServer`) não respondeu. Para elevação real, use o HiRISE DTM (seção 6).
+- **Catálogo:** `searchItems` com `rows=2100` devolve os 2.035 itens (222 produtos, 1.783 nomes oficiais, 12 locais de pouso); o parâmetro `q` não filtrou nos testes, então filtre localmente por `bbox`.
 - **Uso no jogo:** tela de "escolha onde pousar" (Gale, Jezero, polo sul da Lua) com a imagem real; o local escolhido muda os parâmetros (ex.: gelo perto do polo = mais água e mais frio).
 
-## 6. NASA Image and Video Library (extra, não listado no desafio)
+## 6. HiRISE DTM: elevação real de Marte a 1 m
+
+O HiRISE é a câmera da sonda Mars Reconnaissance Orbiter (NASA/JPL-Caltech/University of Arizona). Os modelos digitais de terreno (DTM) dela são a origem dos modelos de elevação que o Mars Trek cataloga.
+
+- Página do produto usado no jogo: <https://www.uahirise.org/dtm/PSP_010573_1755> (Gale, candidato a pouso do MSL).
+- Arquivo: `https://www.uahirise.org/PDS/DTM/PSP/ORB_010500_010599/PSP_010573_1755_PSP_010639_1755/DTEEC_010573_1755_010639_1755_U01.IMG` (471 MB, 7.186 × 16.392 pixels, **1,0118 m por pixel**, elevação em metros como float de 32 bits little-endian).
+- **Download parcial:** o servidor aceita `Range`. O rótulo PDS3 fica nos primeiros bytes; cada linha da imagem ocupa `RECORD_BYTES` bytes e a imagem começa no registro `^IMAGE`. Um recorte de 224 linhas custa 6,4 MB.
+- **Latitude/longitude → pixel** (projeção equirretangular do rótulo): `linha = LINE_PROJECTION_OFFSET − lat × MAP_RESOLUTION` e `coluna = SAMPLE_PROJECTION_OFFSET + (lon − CENTER_LONGITUDE) × MAP_RESOLUTION × cos(CENTER_LATITUDE)`.
+- Pixel sem dado: `MISSING_CONSTANT` (um float muito negativo).
+- **No jogo:** `node scripts/fetch-mars-terrain.mjs` grava `src/data/marsTerrain.json` (recorte de 224 × 224 em 4,4743°S, 137,4032°E); `src/data/marsTerrain.js` dá a altura de cada coluna do mundo.
+- Alternativa não usada: Jezero, `.../PDS/DTM/ESP/ORB_045900_045999/ESP_045994_1985_ESP_046060_1985/DTEEC_045994_1985_046060_1985_U01.IMG` (381 MB, 1,0097 m por pixel), que cobre o pouso do Perseverance (18,4447°N, 77,4509°E).
+- **Não verificado:** o alinhamento entre este DTM e os mosaicos de foto do Mars Trek (`curiosity_hirise_mosaic`). Não sobreponha foto e terreno sem conferir.
+- Crédito: **NASA/JPL-Caltech/University of Arizona**.
+
+## 7. NASA Image and Video Library (extra, não listado no desafio)
 
 - `GET https://images-api.nasa.gov/search?q=artemis%20habitat&media_type=image&page_size=3`, sem chave, CORS `*`.
 - Resposta: `collection.items[].data[0]` (`title`, `description`, `nasa_id`, `center`, `date_created`) e `links[].href` (miniaturas).
 - Substitui o Mars Rover Photos, que está fora do ar. Útil para fotos reais em telas de carregamento ou de fim de partida. **Atenção:** imagens da NASA são de domínio público, mas **o logo da NASA não pode ser usado** como marca do projeto.
 
-## 7. Space Apps GraphQL (para atualizar este contexto)
+## 8. Space Apps GraphQL (para atualizar este contexto)
 
 - `POST https://api.spaceappschallenge.org/graphql` (Apollo; bloqueia GET por CSRF, então mande `Content-Type: application/json`).
 - O texto do desafio também vem embutido no HTML da página, no payload RSC do Next (`self.__next_f.push`). O objeto `ChallengePage` tem `detailsContent` e `resourcesTabContent` (HTML). Foi assim que [`../challenge/`](../challenge/) foi gerado.
