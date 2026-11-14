@@ -1,0 +1,211 @@
+/* Historia em 3 atos: objetivo, card de radio e as animacoes de chegada e de decolagem */
+
+/* Objetivo atual, em destaque na coluna de leituras do canto superior esquerdo */
+.mc-top-info #mission-objective {
+  max-width: min(420px, 44vw);
+  color: #ffff55;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.55);
+  border-left: 3px solid #ffcf3a;
+}
+
+.mc-top-info #mission-objective:empty { display: none; }
+
+/* No toque as leituras do canto sao cortadas em uma linha; o objetivo precisa aparecer inteiro */
+.touch-mode .mc-top-info #mission-objective {
+  overflow: visible;
+  white-space: normal;
+}
+
+/* Card de radio: mensagens do Controle da Missao. Nao pausa o jogo. */
+.story-card {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 13;
+  box-sizing: border-box;
+  width: min(440px, calc(100vw - 32px));
+  padding: 10px 12px 12px;
+  color: #ffffff;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.35;
+  background: #0e161e;
+  border: 3px solid #1b2a36;
+  box-shadow: inset 2px 2px rgba(120, 190, 220, 0.25), 4px 4px rgba(0, 0, 0, 0.6);
+  transform: translateX(-50%);
+}
+
+.story-card.hidden { display: none; }
+.story-card.is-entering { animation: story-card-in 0.28s steps(4, end); }
+
+@keyframes story-card-in {
+  from { opacity: 0; transform: translate(-50%, -14px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.story-card header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: #7fe3ff;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+/* Luz de "sinal de radio" piscando */
+.story-card-signal {
+  width: 9px;
+  height: 9px;
+  background: #5dff8f;
+  animation: story-signal 1s steps(2, end) infinite;
+}
+
+@keyframes story-signal {
+  50% { opacity: 0.25; }
+}
+
+.story-card p { margin: 0; }
+
+.story-card small {
+  display: block;
+  margin-top: 6px;
+  color: #b8c4cc;
+  font-size: 11px;
+}
+
+.story-card small:empty { display: none; }
+
+.story-card-ok {
+  display: block;
+  width: auto;
+  min-width: 96px;
+  min-height: 34px;
+  margin: 10px 0 0 auto;
+  padding: 4px 12px;
+  font-size: 14px;
+  pointer-events: auto;
+}
+
+.story-key { color: #c8c8c8; font-size: 12px; }
+
+/* No toque nao ha tecla Enter: some a dica e o botao vira alvo de 44 px */
+body.touch-device .story-key { display: none; }
+body.touch-device .story-card-ok { min-height: 44px; min-width: 110px; }
+
+/* Telas baixas (celular em paisagem): card mais compacto, colado no topo */
+@media (max-height: 480px) {
+  .story-card {
+    top: calc(4px + env(safe-area-inset-top, 0px));
+    width: min(330px, 40vw);
+    padding: 6px 10px 8px;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+  .story-card header { margin-bottom: 3px; font-size: 11px; }
+  .story-card-ok { margin-top: 6px; }
+  /* O objetivo fica na coluna da esquerda, fora da area do card */
+  .mc-top-info #mission-objective { max-width: 28vw; font-size: 12px; }
+}
+
+/* ---------- Animacoes (cutscenes) ---------- */
+
+body.cutscene-active .hud,
+body.cutscene-active .story-card { visibility: hidden; }
+
+.cutscene-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  font-family: 'Courier New', Courier, monospace;
+  color: #ffffff;
+}
+
+.cutscene-layer.hidden { display: none; }
+
+.cutscene-fade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+}
+
+/* No fim da animacao, o fade some devagar e o resto da camada sai na hora */
+.cutscene-layer.is-ending .cutscene-fade { transition: opacity 0.8s linear; }
+.cutscene-layer.is-ending .cutscene-bar,
+.cutscene-layer.is-ending .cutscene-title,
+.cutscene-layer.is-ending .cutscene-skip { display: none; }
+
+.cutscene-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 11vh;
+  min-height: 44px;
+  background: #000;
+}
+
+.cutscene-bar.top { top: 0; }
+
+.cutscene-bar.bottom {
+  bottom: 0;
+  height: 17vh;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 max(16px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(16px, env(safe-area-inset-left, 0px));
+}
+
+.cutscene-caption {
+  max-width: 760px;
+  margin: 0;
+  font-size: clamp(14px, 2.2vw, 22px);
+  line-height: 1.35;
+  text-align: center;
+  text-shadow: 2px 2px #000;
+}
+
+/* Titulo grande no meio da tela: "SOL 1", contagem regressiva, "LIFTOFF!" */
+.cutscene-title {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  text-shadow: 4px 4px #000;
+}
+
+.cutscene-title.hidden { display: none; }
+/* Titulo na esquerda, para nao cobrir o foguete (contagem regressiva) */
+.cutscene-title.is-side { align-items: flex-start; padding-left: 9vw; text-align: left; }
+.cutscene-title.is-side strong { font-size: clamp(40px, 9vw, 96px); }
+.cutscene-title strong { font-size: clamp(48px, 13vw, 132px); line-height: 1; color: #ffcf3a; }
+.cutscene-title span { font-size: clamp(14px, 2.4vw, 24px); }
+.cutscene-title span:empty { display: none; }
+.cutscene-title.is-popping strong { animation: cutscene-pop 0.3s steps(5, end); }
+
+@keyframes cutscene-pop {
+  from { transform: scale(1.5); opacity: 0.2; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.cutscene-skip {
+  position: absolute;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  right: calc(14px + env(safe-area-inset-right, 0px));
+  width: auto;
+  min-width: 110px;
+  min-height: 44px;
+  padding: 4px 14px;
+  font-size: 15px;
+  pointer-events: auto;
+}
+
+/* Celular em retrato: a tela de "gire o aparelho" fica por cima e a animacao espera */
+body.portrait-required .cutscene-layer { display: none; }

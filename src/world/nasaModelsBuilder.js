@@ -187,9 +187,10 @@ export function buildNasaCustomModels(scene) {
   }
 
   // Keep plants and the driven rover as independent objects; merge static scenery.
-  const merged = mergeByMaterial(group, [...plants, rover], [rover]);
+  // O foguete do MAV tambem fica separado: ele sobe na animacao de decolagem.
+  const merged = mergeByMaterial(group, [...plants, rover, rocket], [rover]);
   scene.add(merged);
-  return { group: merged, colliders, plants, rover, roverWheels };
+  return { group: merged, colliders, plants, rover, roverWheels, rocket };
 }
 
 // Junta as centenas de caixas em uma malha por material (de ~300 draw calls para ~20).

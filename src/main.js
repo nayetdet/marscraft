@@ -1,6 +1,7 @@
 import './ui/styles/base.css';
 import './ui/styles/hud.css';
 import './ui/styles/modal.css';
+import './ui/styles/story.css';
 import { GameEngine } from './core/GameEngine.js';
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -13,6 +14,8 @@ window.addEventListener('DOMContentLoaded', () => {
       try {
         const engine = new GameEngine(container);
         engine.start();
+        // So no `npm run dev`: deixa o motor acessivel no console para testar a historia e as animacoes
+        if (import.meta.env.DEV) window.__minemars = engine;
         requestAnimationFrame(() => {
           loadingOverlay.classList.add('is-leaving');
           setTimeout(() => loadingOverlay.classList.add('hidden'), 350);

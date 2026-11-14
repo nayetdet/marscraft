@@ -305,6 +305,33 @@
     </div>
   </div>
 
+  <!-- Historia: card de radio com as mensagens do Controle da Missao (nao pausa o jogo) -->
+  <aside id="story-card" class="story-card hidden" role="status" aria-live="polite">
+    <header><span class="story-card-signal" aria-hidden="true"></span><strong id="story-card-title"></strong></header>
+    <p id="story-card-text"></p>
+    <small id="story-card-source"></small>
+    <button id="story-card-ok" class="mc-btn story-card-ok" type="button">OK <span class="story-key">[Enter]</span></button>
+  </aside>
+
+  <!-- Fim alternativo: a janela de lancamento fechou antes da decolagem -->
+  <div id="window-overlay" class="mc-overlay victory-overlay hidden">
+    <div class="mc-menu">
+      <h1 id="window-title" class="mc-death-title"></h1>
+      <p id="window-text" class="mc-death-sub victory-sub"></p>
+      <p id="window-source" class="victory-sources"></p>
+      <button id="window-play-again-btn" class="mc-btn primary">Play again</button>
+    </div>
+  </div>
+
+  <!-- Camada das animacoes de chegada e de decolagem -->
+  <div id="cutscene-layer" class="cutscene-layer hidden" aria-live="polite">
+    <div id="cutscene-fade" class="cutscene-fade"></div>
+    <div class="cutscene-bar top"></div>
+    <div class="cutscene-bar bottom"><p id="cutscene-caption" class="cutscene-caption"></p></div>
+    <div id="cutscene-title" class="cutscene-title hidden"><strong id="cutscene-title-main"></strong><span id="cutscene-title-sub"></span></div>
+    <button id="cutscene-skip" class="mc-btn cutscene-skip" type="button">Skip <span class="story-key">[Enter]</span></button>
+  </div>
+
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
