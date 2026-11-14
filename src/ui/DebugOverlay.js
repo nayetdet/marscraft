@@ -1,5 +1,5 @@
-// Painel de diagnostico (F3): GPU usada pelo WebGL, FPS, tempo de frame e custo de render.
-// Atualiza o texto so 2x por segundo para nao pesar no proprio frame.
+// F3 diagnostics: WebGL GPU, FPS, frame time, and render cost.
+// Refreshes twice per second to keep the overlay lightweight.
 const REFRESH_MS = 500;
 
 export class DebugOverlay {
@@ -53,8 +53,8 @@ export class DebugOverlay {
     const fps = (this._frames * 1000) / (now - this._windowStart);
     this.el.textContent =
       `FPS: ${fps.toFixed(0)}\n` +
-      `Frame: ${avgMs.toFixed(1)} ms (pior ${this._maxMs.toFixed(1)} ms)\n` +
-      `Draw calls: ${calls}  Triangulos: ${triangles}\n` +
+      `Frame: ${avgMs.toFixed(1)} ms (worst ${this._maxMs.toFixed(1)} ms)\n` +
+      `Draw calls: ${calls}  Triangles: ${triangles}\n` +
       `Pixel ratio: ${this.renderer.getPixelRatio()}\n` +
       `GPU: ${this.gpuName}`;
 
