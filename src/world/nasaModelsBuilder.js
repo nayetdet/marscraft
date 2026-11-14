@@ -161,8 +161,9 @@ export function buildNasaCustomModels(scene) {
   solidObjects.push(labTable);
 
   // 4. Beliches da Tripulação (Parede Noroeste)
-  for (const bunkZ of [-6.4, -8.9]) {
-    const crewQuarters = createCrewQuartersModel(mats, -4.4, floorTopY, bunkZ);
+  // Tres beliches no dormitorio (EAST_WING), com a cabeceira na parede sul
+  for (const bunkX of [21, 24, 27]) {
+    const crewQuarters = createCrewQuartersModel(mats, bunkX, floorTopY, -2.2);
     group.add(crewQuarters);
     solidObjects.push(crewQuarters);
   }

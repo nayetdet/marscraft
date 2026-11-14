@@ -8,6 +8,9 @@ function noise2D(x, z) {
 
 // Retangulo aplainado para a ala norte (NORTH_WING) e os paineis solares a oeste dela
 const NORTH_PAD = { xMin: -31, xMax: 17, zMin: -42, zMax: -8, blend: 2 };
+// Idem para o dormitorio (EAST_WING) e para o foguete de ascensao, a leste e sudeste do habitat
+const EAST_PAD = { xMin: 13, xMax: 30, zMin: -12, zMax: 14, blend: 2 };
+const FLAT_PADS = [NORTH_PAD, EAST_PAD];
 
 export function generateMartianTerrain(world) {
   const { halfX, halfZ } = world;
@@ -36,13 +39,15 @@ export function generateMartianTerrain(world) {
         const rimProgress = Math.min(1.2, (baseDistance - 40) / 10);
         height += Math.pow(rimProgress, 1.5) * 5.8;
       }
-      // Terreno plano sob a ala norte e o campo solar (fora do disco plano da base)
-      const padDx = Math.max(NORTH_PAD.xMin - x, 0, x - NORTH_PAD.xMax);
-      const padDz = Math.max(NORTH_PAD.zMin - z, 0, z - NORTH_PAD.zMax);
-      const padDistance = Math.hypot(padDx, padDz);
-      if (padDistance < NORTH_PAD.blend) {
-        const blend = padDistance / NORTH_PAD.blend;
-        height = groundY * (1 - blend) + height * blend;
+      // Terreno plano sob as alas norte e leste (fora do disco plano da base)
+      for (const pad of FLAT_PADS) {
+        const padDx = Math.max(pad.xMin - x, 0, x - pad.xMax);
+        const padDz = Math.max(pad.zMin - z, 0, z - pad.zMax);
+        const padDistance = Math.hypot(padDx, padDz);
+        if (padDistance < pad.blend) {
+          const blend = padDistance / pad.blend;
+          height = groundY * (1 - blend) + height * blend;
+        }
       }
       // Terreno plano sob a redoma da estufa, que passa do disco plano da base
       const domeEdge = Math.hypot(x - HABITAT_LAYOUT.DOME_X, z - HABITAT_LAYOUT.DOME_Z) - (HABITAT_LAYOUT.DOME_RADIUS + 2);

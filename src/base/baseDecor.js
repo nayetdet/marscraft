@@ -3,6 +3,7 @@ import { RADIATION_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { mergeByMaterial } from '../world/nasaModelsBuilder.js';
 import { HABITAT_LAYOUT } from '../world/habitatLayout.js';
 import { SIGNS, ZONE_COLORS, buildPosters } from './basePosters.js';
+import { addBaseFurniture } from './baseFurniture.js';
 import {
   ScreenCanvas, hazardTexture, labelTexture, posterTexture, signTexture,
 } from './baseCanvas.js';
@@ -46,6 +47,11 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
     water: lambert(0x38bdf8, { emissive: 0x0ea5e9, emissiveIntensity: 0.25 }),
     glass: lambert(0xbae6fd, { transparent: true, opacity: 0.35 }),
     cyanGlow: glow(0x38bdf8, 0.45),
+    green: lambert(0x22c55e),
+    brown: lambert(0x92644a),
+    yellow: lambert(0xfacc15),
+    pinkGlow: glow(0xe879f9, 0.7),
+    greenGlow: glow(0x4ade80, 0.6),
   };
   const zoneMats = Object.fromEntries(
     Object.entries(ZONE_COLORS).map(([zone, color]) => [zone, glow(new THREE.Color(color).getHex(), 0.35)])
@@ -89,7 +95,7 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   };
   zoneBorder(zoneMats.command, 2.1, 5.9, -10.9, -7.4);
   zoneBorder(zoneMats.lifeSupport, 8.8, 12.9, -4.6, 3.0);
-  zoneBorder(zoneMats.quarters, -5.9, -3.3, -10.4, -4.9);
+  zoneBorder(zoneMats.quarters, -5.95, -4.05, -9.6, -4.2);
   zoneBorder(zoneMats.medical, -3.85, -1.05, 2.25, 5.9);
 
   // Linhas-guia a partir do airlock: branca ate o comando, verde ate a estufa, amarela ate o suporte de vida
@@ -106,7 +112,8 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   // ---------- Placas de modulo (acima das janelas, y = 13..14) ----------
   sign('command', 2.4, 6.6, 13.5, -10.97, '+z');
   sign('lifeSupport', 2.6, 12.97, 13.68, -0.5, '-x');
-  sign('quarters', 2.4, -5.97, 13.6, -7.5, '+x');
+  sign('common', 2.4, -5.97, 13.6, -7.5, '+x');
+  sign('quarters', 2.4, 12.97, 13.5, -7.0, '-x'); // em cima da porta do dormitorio
   sign('greenhouse', 2.4, -5.97, 13.45, 0.5, '+x');
   sign('airlock', 2.4, 0.5, 13.5, 5.97, '-z');
   sign('airlock', 2.4, 0.5, 13.4, 9.03, '+z'); // do lado de fora, sobre a porta externa
@@ -185,6 +192,9 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   box(0.08, 1.0, 1.42, mats.charcoal, gx - 3.0, F + 1.5, gz + 3.0);
   solid(gx - 3.1, gx - 2.9, gz + 2.3, gz + 3.7, 2.0);
 
+  // ---------- Dormitorio (DRM-1) ----------
+  poster('sleep', 18.03, posterY, -3.0, '+x');
+
   // ---------- Academia (GYM-1) ----------
   poster('exercise', -7.5, posterY, 8.03, '+z');
 
@@ -192,6 +202,9 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   box(2.5, 1.02, 0.06, mats.charcoal, 6.6, 12.68, -10.965);
   box(0.06, 1.56, 2.3, mats.charcoal, 12.965, 12.2, -0.5);
   box(1.3, 0.86, 0.06, mats.charcoal, meterX, F + 1.6, meterZ - 0.02);
+
+  // Mobilia extra de cada secao
+  addBaseFurniture({ box, solid, mats, zoneMats, F });
 
   scene.add(mergeByMaterial(group));
 
@@ -209,6 +222,8 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   plane(screens.power.texture, 2.2, 1.467, 12.93, 12.2, -0.5, '-x', dynamic);
   plane(screens.shelter.texture, 1.2, 0.78, meterX, F + 1.6, meterZ - 0.055, '-z', dynamic);
   plane(screens.greenhouse.texture, 1.3, 0.9, gx - 2.955, F + 1.5, gz + 3.0, '+x', dynamic);
+  // Segunda tela do mapa de energia, no modulo de energia (mesma textura, sem custo extra)
+  plane(screens.power.texture, 2.2, 1.467, -10.03, 12.1, -17.5, '-x', dynamic);
 
   const tankGeo = new THREE.BoxGeometry(0.72, 1, 0.72);
   tankGeo.translate(0, 0.5, 0);
