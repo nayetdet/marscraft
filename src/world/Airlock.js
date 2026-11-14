@@ -1,12 +1,22 @@
 import * as THREE from 'three';
-import { MISSION_CONFIG as C, WORLD_CONFIG } from '../config/constants.js';
+import { MISSION_CONFIG as C, STATION_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 
 export class Airlock {
   constructor(scene, colliders, mission) {
     this.mission = mission;
     this.colliders = colliders;
-    this.cycle = 0;
-    this.pending = null;
+    // Ciclo como na vida real (ver docs/data/airlock-e-poeira.md): a porta so abre depois que o
+    // airlock chega a pressao certa. Para sair, o ar e bombeado para fora; para entrar, o airlock
+    // enche de ar e, se o traje estiver sujo, a poeira e limpa (eletrostatica, gasta energia).
+    this.pending = null; // porta que vai abrir no fim do ciclo
+    this.steps = [];
+    this.stepIndex = 0;
+    this.stepTime = 0;
+    this.pressurized = true; // o airlock comeca com ar, do lado da base
+    this.cleanNeeded = false;
+    this.cleanPossible = true;
+    this.stations = null; // StationSystem, ligado pelo GameEngine (traje sujo e limpeza)
+    this.onEvent = null; // (tipo) => void: 'suit-cleaned' | 'clean-skipped'
     this.doors = [this.makeDoor(scene, 6.15, 'inner'), this.makeDoor(scene, 8.85, 'outer')];
     this.vapor = new THREE.Group();
     const vaporMaterial = new THREE.MeshBasicMaterial({ color: 0xbfe2ed, transparent: true, opacity: 0.5, depthWrite: false });
@@ -51,36 +61,100 @@ export class Airlock {
     const other = this.doors.find(d => d !== door);
     if (other.openness > 0 && Math.abs(player.z - other.z) < 0.8 && player.x > -1.4 && player.x < 2.4) return 'Move clear of the other door.';
     if (!this.mission.spend(C.AIRLOCK_COST)) return 'Not enough energy for the airlock.';
-    this.cycle = C.AIRLOCK_CYCLE;
     other.target = 0;
-    if (other.openness === 0) {
-      door.target = 1;
-      return 'Opening airlock door.';
-    }
     this.pending = door;
-    return 'Closing the other airlock door first.';
+    this.stepIndex = 0;
+    this.stepTime = 0;
+    const toInside = door.name === 'inner';
+    const inChamber = player.z > this.doors[0].z && player.z < this.doors[1].z;
+    this.steps = ['close'];
+    if (toInside && !this.pressurized) this.steps.push('pressurize');
+    if (!toInside && this.pressurized) this.steps.push('depressurize');
+    if (toInside && inChamber) this.steps.push('clean');
+    this._startStep();
+    return toInside ? 'Opening airlock: filling it with air first.' : 'Opening airlock: pumping the air out first.';
   }
+
+  // Estado do ciclo para o HUD (null quando parado)
+  status() {
+    if (!this.pending) return null;
+    const step = this.steps[this.stepIndex];
+    const duration = this._stepDuration(step);
+    const stepFill = step === 'close' ? 1 - this.doors.find(d => d !== this.pending).openness : Math.min(1, this.stepTime / Math.max(0.01, duration));
+    return {
+      step,
+      stepIndex: this.stepIndex,
+      stepCount: this.steps.length,
+      fill: (this.stepIndex + stepFill) / this.steps.length,
+      cleanNeeded: this.cleanNeeded,
+      cleanPossible: this.cleanPossible,
+    };
+  }
+
+  _stepDuration(step) {
+    if (step === 'pressurize' || step === 'depressurize') return C.AIRLOCK_CYCLE;
+    if (step === 'clean') {
+      if (!this.cleanNeeded) return 0;
+      return this.cleanPossible ? C.SUIT_CLEAN_TIME : C.SUIT_CLEAN_SKIP_TIME;
+    }
+    return 0;
+  }
+
+  _startStep() {
+    if (this.steps[this.stepIndex] !== 'clean') return;
+    this.cleanNeeded = Boolean(this.stations?.dirtySuit);
+    this.cleanPossible = this.mission.energy >= STATION_CONFIG.DECONTAMINATION_COST;
+  }
+
+  _finishStep(step) {
+    if (step === 'pressurize') this.pressurized = true;
+    if (step === 'depressurize') this.pressurized = false;
+    if (step === 'clean' && this.cleanNeeded) {
+      // cleanSuit() gasta a energia e limpa; devolve outro texto se faltar energia no ultimo instante
+      const cleaned = this.cleanPossible && Boolean(this.stations?.dirtySuit) && this.stations.cleanSuit().startsWith('Electrostatic');
+      this.onEvent?.(cleaned ? 'suit-cleaned' : 'clean-skipped');
+    }
+  }
+
+  _advance(dt) {
+    const step = this.steps[this.stepIndex];
+    if (step === 'close') {
+      const other = this.doors.find(d => d !== this.pending);
+      if (other.openness > 0) return;
+    } else {
+      this.stepTime += dt;
+      if (this.stepTime < this._stepDuration(step)) return;
+    }
+    this._finishStep(step);
+    this.stepIndex += 1;
+    this.stepTime = 0;
+    if (this.stepIndex >= this.steps.length) {
+      this.pending.target = 1;
+      this.pending = null;
+      this.steps = [];
+      return;
+    }
+    this._startStep();
+  }
+
   update(dt, player) {
-    this.vapor.visible = this.cycle > 0;
+    if (this.pending) this._advance(dt);
+    const step = this.pending ? this.steps[this.stepIndex] : null;
+    this.vapor.visible = step === 'pressurize' || step === 'depressurize' || (step === 'clean' && this.cleanNeeded);
     if (this.vapor.visible) {
-      const time = C.AIRLOCK_CYCLE - this.cycle;
+      this.vaporTime = (this.vaporTime ?? 0) + dt;
       for (const particle of this.vapor.children) {
-        const phase = (particle.userData.phase + time * 0.6) % 1;
+        const phase = (particle.userData.phase + this.vaporTime * 0.6) % 1;
         particle.position.set(0.5 + Math.sin(particle.userData.phase * 37) * phase * 1.2, 10.4 + phase * 1.8, 7.45 + Math.cos(particle.userData.phase * 29) * phase * 0.7);
         particle.scale.setScalar(0.5 + phase);
       }
-      this.cycle = Math.max(0, this.cycle - dt);
-    }
-    if (this.pending && this.doors.every(d => d === this.pending || d.openness === 0)) {
-      this.pending.target = 1;
-      this.pending = null;
     }
     for (const d of this.doors) {
       if (d.target === 0 && d.openness > 0 && Math.abs(player.z - d.z) < 0.55 && player.x > -1.4 && player.x < 2.4) continue;
       d.openness = THREE.MathUtils.clamp(d.openness + Math.sign(d.target - d.openness) * C.DOOR_SPEED * dt, 0, 1);
       d.left.position.x = -d.openness * 1.5;
       d.right.position.x = d.openness * 1.5;
-      d.indicator.material.color.setHex(this.cycle ? 0xffb52e : d.openness === 1 ? 0x4eea80 : 0xe34434);
+      d.indicator.material.color.setHex(this.pending ? 0xffb52e : d.openness === 1 ? 0x4eea80 : 0xe34434);
       const shouldBeSolid = d.openness < 0.95;
       if (shouldBeSolid !== d.solid) {
         if (shouldBeSolid) this.colliders.push(d.collider);
