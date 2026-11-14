@@ -44,8 +44,27 @@ export function buildNasaCustomModels(scene) {
       transparent: true,
       opacity: 0.72,
     }),
-    solarBlue: new THREE.MeshLambertMaterial({ color: 0x1d4ed8 }),
   };
+
+  const { texture: solarTex } = makeCanvasTexture((ctx) => {
+    ctx.fillStyle = '#aab7c4';
+    ctx.fillRect(0, 0, 64, 64);
+    ctx.fillStyle = '#263747';
+    ctx.fillRect(3, 3, 58, 58);
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 4; col++) {
+        const x = 5 + col * 14;
+        const y = 5 + row * 14;
+        ctx.fillStyle = (row + col) % 2 === 0 ? '#18304a' : '#203c56';
+        ctx.fillRect(x, y, 12, 12);
+        ctx.fillStyle = '#688093';
+        ctx.fillRect(x + 5, y, 1, 12);
+        ctx.fillStyle = '#38566d';
+        ctx.fillRect(x + 1, y + 1, 10, 1);
+      }
+    }
+  }, 64, 64);
+  mats.solarPanel = new THREE.MeshLambertMaterial({ map: solarTex });
 
   const { texture: screenTex } = makeCanvasTexture((ctx) => {
     ctx.fillStyle = '#0f172a';
@@ -310,7 +329,7 @@ function createMarsRoverModel(mats, x, y, z) {
 
   addBox(r, 2.0, 0.65, 2.8, mats.whiteMetal, 0, 0.95, 0);
   addBox(r, 2.06, 0.28, 2.86, mats.goldFoil, 0, 0.82, 0);
-  addBox(r, 1.7, 0.08, 2.2, mats.solarBlue, 0, 1.3, 0.1);
+  addBox(r, 1.7, 0.08, 2.2, mats.solarPanel, 0, 1.3, 0.1);
 
   addBox(r, 0.18, 1.15, 0.18, mats.whiteMetal, 0.45, 1.8, -1.05);
   addBox(r, 0.62, 0.32, 0.36, mats.whiteMetal, 0.45, 2.42, -1.05);
@@ -331,7 +350,7 @@ function createExteriorSolarAndDish(mats, x, y, z) {
     array.position.set(x + sx, y, z - 10.5);
     addBox(array, 0.25, 1.4, 0.25, mats.lightGray, 0, 0.7, 0);
     addBox(array, 3.4, 0.1, 2.2, mats.whiteMetal, 0, 1.45, 0, 0.38, 0, 0);
-    addBox(array, 3.2, 0.12, 2.0, mats.solarBlue, 0, 1.47, 0, 0.38, 0, 0);
+    addBox(array, 3.2, 0.12, 2.0, mats.solarPanel, 0, 1.47, 0, 0.38, 0, 0);
     solarArrays.push(array);
   }
 
