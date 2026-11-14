@@ -67,6 +67,7 @@ export class GameEngine {
       wheels: roverWheels,
       world: this.world,
       camera: this.camera,
+      colliders,
     });
     this.canInteractWithConsole = false;
 
@@ -76,7 +77,7 @@ export class GameEngine {
     // Maozinha 3D do jogador em primeira pessoa
     this.playerHand = new PlayerHand(this.camera, materials, carrot.texture);
     const firstSlot = this.survival.slots[0];
-    this.playerHand.setHeldBlock(firstSlot.id, firstSlot.count);
+    this.playerHand.setHeldBlock(firstSlot?.id, firstSlot?.count ?? 0);
 
     this.hud = new HudManager(previews, this.survival.slots, {
       onInventorySwap: (fromIndex, toIndex) => {
@@ -135,6 +136,7 @@ export class GameEngine {
       isRoverActive: () => this.roverController.isActive,
       onInteract: () => this.handlePlayerInteract(),
       onRoverAction: () => this.handleRoverAction(),
+      onRoverLook: (dx, dy) => this.roverController.look(dx, dy),
       onToggleRoverCamera: () => {
         this.roverController.toggleCameraMode();
         const modeName =
@@ -532,7 +534,7 @@ export class GameEngine {
       this.hud.setRoverMode(true);
       this.playerHand.handGroup.visible = false;
       this.highlightBox.visible = false;
-      this.hud.showToast('Connected: NASA Mars Rover (RF Link Active)');
+      this.hud.showToast('Rover ready. Head to the ice crater to collect water.');
     }
   }
 

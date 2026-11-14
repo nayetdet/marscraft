@@ -60,6 +60,8 @@ export class HudManager {
     // Elementos de interação e controle do Rover
     this.interactionPromptEl = document.getElementById('interaction-prompt');
     this.roverOverlayEl = document.getElementById('rover-overlay');
+    this.astronautInfoEl = document.getElementById('astronaut-info');
+    this.roverInfoEl = document.getElementById('rover-info');
     this.roverSpeedEl = document.getElementById('rover-speed');
     this.roverHeadingEl = document.getElementById('rover-heading');
     this.roverCoordsEl = document.getElementById('rover-coords');
@@ -68,7 +70,6 @@ export class HudManager {
     this.roverActionBannerEl = document.getElementById('rover-action-banner');
     this.roverActionTextEl = document.getElementById('rover-action-text');
     this.baseWaterStatusEl = document.getElementById('base-water-status');
-    this.roverCamLabelEl = document.getElementById('rover-cam-label');
     this.bottomAreaEl = document.querySelector('.mc-bottom-area');
     this.crosshairEl = document.querySelector('.mc-crosshair');
 
@@ -90,12 +91,12 @@ export class HudManager {
     if (this.roverOverlayEl) {
       this.roverOverlayEl.classList.toggle('hidden', !active);
     }
-    if (this.bottomAreaEl) {
-      this.bottomAreaEl.style.display = active ? 'none' : '';
-    }
+    if (this.bottomAreaEl) this.bottomAreaEl.style.display = '';
     if (this.crosshairEl) {
       this.crosshairEl.style.display = active ? 'none' : '';
     }
+    if (this.astronautInfoEl) this.astronautInfoEl.classList.toggle('hidden', active);
+    if (this.roverInfoEl) this.roverInfoEl.classList.toggle('hidden', !active);
     if (this.interactionPromptEl && active) {
       this.interactionPromptEl.classList.add('hidden');
     }
@@ -302,29 +303,22 @@ export class HudManager {
     }
 
     if (isRoverActive && roverTelemetry) {
-      if (this.roverSpeedEl) this.roverSpeedEl.textContent = `${roverTelemetry.speedKmh} km/h`;
-      if (this.roverHeadingEl) this.roverHeadingEl.textContent = `${roverTelemetry.headingDeg}° ${roverTelemetry.headingCard}`;
-      if (this.roverCoordsEl) this.roverCoordsEl.textContent = `X: ${roverTelemetry.x} Y: ${roverTelemetry.y} Z: ${roverTelemetry.z}`;
-      if (this.roverBatteryEl) this.roverBatteryEl.textContent = `${roverTelemetry.battery}%`;
-      if (this.roverIceEl) this.roverIceEl.textContent = `${roverTelemetry.iceCargo} / ${roverTelemetry.maxIceCargo} kg`;
-
-      if (this.roverCamLabelEl) {
-        this.roverCamLabelEl.textContent =
-          roverTelemetry.cameraMode === 'mastcam'
-            ? 'CAM: MASTCAM (1ST-PERSON)'
-            : 'CAM: TACTICAL 3RD-PERSON';
-      }
+      if (this.roverSpeedEl) this.roverSpeedEl.textContent = `Speed: ${roverTelemetry.speedKmh} km/h`;
+      if (this.roverHeadingEl) this.roverHeadingEl.textContent = `Heading: ${roverTelemetry.headingDeg}° ${roverTelemetry.headingCard}`;
+      if (this.roverCoordsEl) this.roverCoordsEl.textContent = `Rover: X ${roverTelemetry.x} / Y ${roverTelemetry.y} / Z ${roverTelemetry.z}`;
+      if (this.roverBatteryEl) this.roverBatteryEl.textContent = `Battery: ${roverTelemetry.battery}%`;
+      if (this.roverIceEl) this.roverIceEl.textContent = `Ice cargo: ${roverTelemetry.iceCargo} / ${roverTelemetry.maxIceCargo} kg`;
 
       // Banner de acao contextual do Rover (Perfurar ou Descarregar)
       if (this.roverActionBannerEl && this.roverActionTextEl) {
         if (roverTelemetry.canUnloadIce) {
-          this.roverActionTextEl.textContent = 'OFFLOAD ICE TO WATER CONVERTER';
+          this.roverActionTextEl.textContent = 'Unload ice';
           this.roverActionBannerEl.classList.remove('hidden');
         } else if (roverTelemetry.canCollectIce) {
           const isFull = roverTelemetry.iceCargo >= roverTelemetry.maxIceCargo;
           this.roverActionTextEl.textContent = isFull
-            ? 'ICE HOLD FULL - RETURN TO BASE'
-            : 'DRILL & COLLECT WATER ICE';
+            ? 'Ice hold full'
+            : 'Collect ice';
           this.roverActionBannerEl.classList.remove('hidden');
         } else {
           this.roverActionBannerEl.classList.add('hidden');

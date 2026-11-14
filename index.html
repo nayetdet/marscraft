@@ -28,13 +28,11 @@
 
   <!-- HUD Estilo Minecraft Survival -->
   <div id="hud" class="hud">
-    <!-- Informacoes simples em texto pixelado no canto superior esquerdo -->
-    <div class="mc-top-info">
+    <div id="astronaut-info" class="mc-top-info">
       <div id="sol-time">Sol 1 - 17:15</div>
       <div id="player-coords">XYZ: 0 / 13 / 19</div>
       <div id="env-status">Environment: Martian Crater (using oxygen)</div>
       <div id="base-water-status">Base Water: 25L · Greenhouse: 100% (Hydrated)</div>
-      <div class="mc-help-line">[E] Inventory · [Q] Drop item · [Z] Scope · [F] Interact · [W]×2 Sprint · [R] Radiation shield · [C] Crew</div>
     </div>
 
     <!-- Missao: energia, radiacao, tempestade solar e progresso do MAV -->
@@ -45,6 +43,13 @@
       <div id="mission-storm" class="mission-storm">Space weather: calm</div>
       <div id="mission-mav">Rocket home (MAV): 0% ready</div>
       <div id="mission-source" class="mission-source"></div>
+    </div>
+    <div id="rover-info" class="mc-top-info hidden">
+      <div id="rover-speed">Speed: 0.0 km/h</div>
+      <div id="rover-heading">Heading: 360° N</div>
+      <div id="rover-coords">Rover: X 7.5 / Y 8.5 / Z 10.5</div>
+      <div id="rover-ice">Ice cargo: 0 / 50 kg</div>
+      <div id="rover-battery">Battery: 99%</div>
     </div>
 
     <!-- Rotulos simples no ceu (sem emojis) -->
@@ -58,60 +63,21 @@
       <span class="key-badge">[F]</span> Operate Rover Remote Terminal
     </div>
 
-    <!-- Tela de Telemetria e Controle do Rover da NASA -->
+    <!-- Rover telemetry integrated with the game HUD -->
     <div id="rover-overlay" class="rover-overlay hidden">
-      <div class="rover-header">
-        <div class="rover-title">NASA MARS ROVER TELEMETRY · LOCAL HABITAT RF LINK</div>
-        <div class="rover-link-status">LINK: ACTIVE · DELAY: 0.02s · 100%</div>
-      </div>
-      
+      <div id="rover-objective" class="rover-objective">Find water ice</div>
       <!-- Retículo / Viewfinder da Câmera do Rover -->
       <div class="rover-viewfinder">
         <div class="viewfinder-crosshair"></div>
         <div class="viewfinder-corners"></div>
-        <div id="rover-cam-label" class="rover-cam-label">CAM: TACTICAL 3RD-PERSON</div>
       </div>
 
-      <!-- Painel de Telemetria Inferior -->
-      <div class="rover-telemetry-bar">
-        <div class="telemetry-item">
-          <span class="telemetry-label">SPEED</span>
-          <span id="rover-speed" class="telemetry-val">0.0 km/h</span>
-        </div>
-        <div class="telemetry-item">
-          <span class="telemetry-label">HEADING</span>
-          <span id="rover-heading" class="telemetry-val">360° N</span>
-        </div>
-        <div class="telemetry-item">
-          <span class="telemetry-label">ROVER POS</span>
-          <span id="rover-coords" class="telemetry-val">X: 7.5 Y: 8.5 Z: 10.5</span>
-        </div>
-        <div class="telemetry-item highlight-cyan">
-          <span class="telemetry-label">ICE CARGO</span>
-          <span id="rover-ice" class="telemetry-val">0 / 50 kg</span>
-        </div>
-        <div class="telemetry-item">
-          <span class="telemetry-label">BATTERY</span>
-          <span id="rover-battery" class="telemetry-val">99%</span>
-        </div>
-        <div class="telemetry-item">
-          <span class="telemetry-label">SURFACE TEMP</span>
-          <span class="telemetry-val">-62°C</span>
-        </div>
-        <div class="telemetry-item">
-          <span class="telemetry-label">MSL-RAD</span>
-          <span class="telemetry-val">6.9 µGy/h</span>
-        </div>
-      </div>
 
-      <!-- Banner de Acao do Rover (Perfurar Gelo ou Descarregar na Base) -->
+      <!-- Contextual rover action -->
       <div id="rover-action-banner" class="rover-action-banner hidden">
-        <span class="key-badge">[SPACE]</span> <span id="rover-action-text">DRILL WATER ICE SAMPLE</span>
+        <span class="key-badge">SPACE</span> <span id="rover-action-text">Collect ice</span>
       </div>
 
-      <div class="rover-controls-hint">
-        [WASD / Arrows] Drive &nbsp;·&nbsp; [SPACE] Drill / Offload Ice &nbsp;·&nbsp; [V] Toggle Camera &nbsp;·&nbsp; [F] Exit Terminal
-      </div>
     </div>
 
     <!-- Luneta simples quando aperta Z -->
@@ -166,8 +132,38 @@
         <div class="mc-splash">Now with breathable habitats!</div>
       </div>
       <div class="mc-menu-card">
-        <button id="start-btn" class="mc-btn primary">Play</button>
-        <button id="reset-btn" class="mc-btn secondary">Reset</button>
+        <div id="menu-main">
+          <button id="start-btn" class="mc-btn primary">Play</button>
+          <button id="controls-btn" class="mc-btn secondary">Controls</button>
+          <button id="reset-btn" class="mc-btn secondary">Reset</button>
+        </div>
+        <section id="controls-screen" class="controls-screen hidden" aria-labelledby="controls-title">
+          <h2 id="controls-title">Controls</h2>
+          <div class="controls-section">
+            <h3>Astronaut</h3>
+            <div class="control-row"><kbd>W A S D</kbd><span>Move</span></div>
+            <div class="control-row"><kbd>W</kbd><span>Tap twice to sprint</span></div>
+            <div class="control-row"><kbd>Mouse</kbd><span>Look around</span></div>
+            <div class="control-row"><kbd>Space</kbd><span>Jump</span></div>
+            <div class="control-row"><kbd>Shift</kbd><span>Crouch</span></div>
+            <div class="control-row"><kbd>Hold LMB</kbd><span>Break blocks</span></div>
+            <div class="control-row"><kbd>RMB</kbd><span>Place or use item</span></div>
+            <div class="control-row"><kbd>Wheel</kbd><span>Select hotbar item</span></div>
+            <div class="control-row"><kbd>E</kbd><span>Inventory</span></div>
+            <div class="control-row"><kbd>Q</kbd><span>Drop item</span></div>
+            <div class="control-row"><kbd>Z</kbd><span>Scope</span></div>
+            <div class="control-row"><kbd>F</kbd><span>Interact</span></div>
+          </div>
+          <div class="controls-section">
+            <h3>Rover</h3>
+            <div class="control-row"><kbd>W A S D</kbd><span>Drive and steer</span></div>
+            <div class="control-row"><kbd>Mouse</kbd><span>Move camera</span></div>
+            <div class="control-row"><kbd>Space</kbd><span>Drill or offload ice</span></div>
+            <div class="control-row"><kbd>V</kbd><span>Change camera</span></div>
+            <div class="control-row"><kbd>F</kbd><span>Exit rover terminal</span></div>
+          </div>
+          <button id="controls-back-btn" class="mc-btn secondary">Back</button>
+        </section>
       </div>
     </div>
   </div>
