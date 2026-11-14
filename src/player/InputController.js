@@ -12,6 +12,7 @@ export class InputController {
     hud,
     onToggleZoom,
     getTargetedBlock,
+    harvestCrop,
   }) {
     this.domElement = domElement;
     this.player = player;
@@ -22,6 +23,7 @@ export class InputController {
     this.hud = hud;
     this.onToggleZoom = onToggleZoom;
     this.getTargetedBlock = getTargetedBlock;
+    this.harvestCrop = harvestCrop;
 
     this.keys = {};
     this.isLocked = false;
@@ -57,6 +59,7 @@ export class InputController {
 
     document.addEventListener('pointerlockchange', () => {
       this.isLocked = document.pointerLockElement === this.domElement;
+      if (!this.isLocked) this.keys = {};
       if (!this.survival.isDead && !this.hud.isInventoryOpen) {
         overlay.classList.toggle('hidden', this.isLocked);
       }
@@ -74,6 +77,9 @@ export class InputController {
     window.addEventListener('keydown', (e) => {
       if (this.survival.isDead) return;
       if (this.hud.isInventoryOpen && e.code !== 'KeyE') return;
+      if (this.isLocked && (e.code.startsWith('Control') || e.code.startsWith('Shift') || (e.ctrlKey && e.code === 'KeyW'))) {
+        e.preventDefault();
+      }
       this.keys[e.code] = true;
 
       if (e.code.startsWith('Digit')) {
@@ -113,6 +119,8 @@ export class InputController {
       this.keys[e.code] = false;
     });
 
+    window.addEventListener('blur', () => { this.keys = {}; });
+
     window.addEventListener('wheel', (e) => {
       if (!this.isLocked || this.survival.isDead) return;
       const dir = Math.sign(e.deltaY);
@@ -128,6 +136,13 @@ export class InputController {
 
       if (e.button === 0) {
         if (!hit.hit) return;
+        if (hit.type === 'crop') {
+          if (this.survival.addHarvestedCrop() && this.harvestCrop(hit.plant)) {
+            this.hud.renderHotbar(this.survival.slots);
+            this._syncHandWithSlot();
+          }
+          return;
+        }
         const distFromCenter = Math.hypot(hit.x, hit.z);
         // Protege o paredão externo da cratera e a camada base
         if (hit.y > 0 && distFromCenter < WORLD_CONFIG.CRATER_RADIUS - 4) {
@@ -153,7 +168,7 @@ export class InputController {
         }
 
         // Caso contrário, coloca o bloco no mundo
-        if (!hit.hit) return;
+        if (!hit.hit || hit.type === 'crop') return;
         const nx = hit.x + hit.normal.x;
         const ny = hit.y + hit.normal.y;
         const nz = hit.z + hit.normal.z;

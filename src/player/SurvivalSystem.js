@@ -1,4 +1,4 @@
-import { HOTBAR_BLOCKS } from '../config/blockTypes.js';
+import { BLOCK_IDS, HOTBAR_BLOCKS } from '../config/blockTypes.js';
 import { SURVIVAL_CONFIG } from '../config/constants.js';
 
 export class SurvivalSystem {
@@ -101,6 +101,20 @@ export class SurvivalSystem {
         this.isDead = true;
       }
     }
+  }
+
+  addHarvestedCrop() {
+    const slot = this.inventorySlots.find((item) => item?.id === BLOCK_IDS.HYDRO_PLANT && item.count < 64);
+    if (slot) {
+      slot.count++;
+      return true;
+    }
+    const emptyIndex = this.inventorySlots.findIndex((item) => !item);
+    if (emptyIndex < 0) return false;
+    const crop = HOTBAR_BLOCKS.find((item) => item.id === BLOCK_IDS.HYDRO_PLANT);
+    this.inventorySlots[emptyIndex] = { id: crop.id, name: crop.name, count: 1, consumable: crop.consumable };
+    this.slots = this.inventorySlots.slice(0, 9);
+    return true;
   }
 
   addBlockToInventory(blockId) {
