@@ -61,7 +61,7 @@ src/player/
   SurvivalSystem.js        barras O2/vida/água/comida, áreas pressurizadas, inventário (9 slots de hotbar + 27 de mochila)
   PlayerHand.js            mão/bloco em 1ª pessoa
 src/base/                  organizacao visual da base: posteres e placas (basePosters),
-                           telas vivas (baseDisplayText, baseCanvas) e a decoracao 3D que junta tudo (baseDecor)
+                           telas vivas (baseDisplayText, baseCanvas), mobilia de cenario (baseFurniture) e a decoracao 3D que junta tudo (baseDecor)
 src/sky/                   céu marciano: shader de atmosfera, Sol, Terra+Lua, Fobos/Deimos, ciclo de sols
 src/graphics/              texturas procedurais em canvas e materiais dos blocos
 src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades, ordens, avisos), estações

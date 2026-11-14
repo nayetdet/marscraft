@@ -27,7 +27,7 @@ describe('greenhouse', () => {
     engine._interactionDir = new THREE.Vector3();
     engine._interactionOffset = new THREE.Vector3();
     engine._interactionPoint = new THREE.Vector3();
-    const pos = new THREE.Vector3(-15.7, 11.75, 0.3);
+    const pos = new THREE.Vector3(GREENHOUSE_MONITOR_POS.x + 0.8, 11.75, GREENHOUSE_MONITOR_POS.z - 1.55);
     const lookAtMonitor = new THREE.Vector3(
       GREENHOUSE_MONITOR_POS.x - pos.x,
       GREENHOUSE_MONITOR_POS.y - pos.y,

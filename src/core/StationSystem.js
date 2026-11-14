@@ -1,5 +1,6 @@
 import { CROP_ITEM_IDS } from '../config/blockTypes.js';
 import { STATION_CONFIG as C, CROP_CONFIG } from '../config/constants.js';
+import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.js';
 
 const RADIO_SILENT = 'Radio silent: the Sun is between Mars and Earth (solar conjunction). You must decide on your own until it passes.';
 
@@ -23,13 +24,44 @@ export class StationSystem {
     this.mavSent = false;
     this.messageKind = null;
     this.freshFood = C.FRESH_FOOD_DURATION;
-    this.crop = null;
+    // Um cultivo por campo da estufa (GREENHOUSE_PLOTS). `crop` e o do campo selecionado no monitor.
+    this.plots = GREENHOUSE_PLOTS.map(() => ({ crop: null }));
+    this.selectedPlot = 0;
     this.harvestCount = 0;
     this.cropCollection = new Set();
     this.discoveryIndex = -1;
     this.messageTimer = 0;
     this.message = 'No transmission pending.';
     this.wasInside = false;
+  }
+  get crop() {
+    return this.plots[this.selectedPlot].crop;
+  }
+  set crop(value) {
+    this.plots[this.selectedPlot].crop = value;
+  }
+  selectPlot(index) {
+    if (this.plots[index]) this.selectedPlot = index;
+  }
+  // Agua e energia para plantar `type` no campo: a receita vezes o tamanho do campo
+  plotCost(type, plotIndex = this.selectedPlot) {
+    const size = GREENHOUSE_PLOTS[plotIndex].yield;
+    return { water: CROP_CONFIG[type].water * size, energy: CROP_CONFIG[type].energy * size, items: size };
+  }
+  hasGrowingCrops() {
+    return this.plots.some(({ crop }) => crop && crop.progress < CROP_CONFIG[crop.type].seconds);
+  }
+  readyPlotCount() {
+    return this.plots.filter(({ crop }) => crop && crop.progress >= CROP_CONFIG[crop.type].seconds).length;
+  }
+  plantedPlotCount() {
+    return this.plots.filter(({ crop }) => crop).length;
+  }
+  // Todos os campos crescem juntos (quem chama ja checou energia e poeira)
+  growCrops(dt) {
+    for (const { crop } of this.plots) {
+      if (crop) crop.progress = Math.min(CROP_CONFIG[crop.type].seconds, crop.progress + dt);
+    }
   }
   update(dt, inside, survival, outside = !inside) {
     if (outside) this.dirtySuit = true;
@@ -41,7 +73,7 @@ export class StationSystem {
     this.boneDensity = Math.max(0, this.boneDensity - C.FITNESS_DECAY * 1.15 * dt);
     this.muscleStrength = Math.max(0, this.muscleStrength - C.FITNESS_DECAY * dt);
     this.fitness = Math.max(0, this.fitness - C.FITNESS_DECAY * dt);
-    if (this.crop && this.mission.greenhousePowered && !this.contaminated) this.crop.progress = Math.min(CROP_CONFIG[this.crop.type].seconds, this.crop.progress + dt);
+    if (this.mission.greenhousePowered && !this.contaminated) this.growCrops(dt);
     if (inside && (this.contaminated || this.co2 >= 80)) survival.health = Math.max(0, survival.health - C.DUST_DAMAGE * dt);
     if (this.messageTimer > 0) {
       this.messageTimer = Math.max(0, this.messageTimer - dt);
@@ -103,26 +135,35 @@ export class StationSystem {
     this.message = `Question sent. The answer needs about ${Math.round(delaySeconds)} s (game time) to come back.`;
     return this.message;
   }
-  plant(type, survival) {
+  plant(type, survival, plotIndex = this.selectedPlot) {
     if (!Object.hasOwn(CROP_CONFIG, type)) return 'Unknown crop.';
-    if (this.crop) return 'Harvest the current crop first.';
-    const recipe = CROP_CONFIG[type];
-    if (survival.water < recipe.water) return 'Not enough water.';
-    if (!this.mission.spend(recipe.energy)) return 'Not enough power.';
-    survival.water -= recipe.water;
-    this.crop = { type, progress: 0 };
+    const plot = this.plots[plotIndex];
+    if (!plot) return 'Unknown field.';
+    if (plot.crop) return 'Harvest the current crop first.';
+    const cost = this.plotCost(type, plotIndex);
+    if (survival.water < cost.water) return 'Not enough water.';
+    if (!this.mission.spend(cost.energy)) return 'Not enough power.';
+    survival.water -= cost.water;
+    plot.crop = { type, progress: 0 };
     return `Planted ${type}. Growth needs power and a clean greenhouse.`;
   }
-  harvest(survival, spawnDrop) {
-    if (!this.crop || this.crop.progress < CROP_CONFIG[this.crop.type].seconds) return 'The crop is not ready.';
-    const type = this.crop.type;
+  harvest(survival, spawnDrop, plotIndex = this.selectedPlot) {
+    const plot = this.plots[plotIndex];
+    const crop = plot?.crop;
+    if (!crop || crop.progress < CROP_CONFIG[crop.type].seconds) return 'The crop is not ready.';
+    const type = crop.type;
     const id = CROP_ITEM_IDS[type];
-    if (spawnDrop) spawnDrop(id);
-    else if (!survival.addBlockToInventory(id)) return 'Inventory is full. Make room before harvesting.';
+    const items = GREENHOUSE_PLOTS[plotIndex].yield;
+    if (spawnDrop) {
+      for (let i = 0; i < items; i++) spawnDrop(id, i);
+    } else {
+      if (!survival.addBlockToInventory(id)) return 'Inventory is full. Make room before harvesting.';
+      for (let i = 1; i < items; i++) survival.addBlockToInventory(id);
+    }
     this.harvestCount++;
     this.cropCollection.add(type);
     this.discoveryIndex++;
-    this.crop = null;
+    plot.crop = null;
     this.freshFood = C.FRESH_FOOD_DURATION;
 
     return `Harvested ${type}. Pick up your harvest and use it to eat. A real NASA study is now in your field notebook!`;

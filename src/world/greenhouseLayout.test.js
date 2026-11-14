@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { GARDEN_CROP_BED, initialGreenhouseCrop, GREENHOUSE_CENTER, GREENHOUSE_MONITOR_POS, isGreenhouseBed, startsWithGreenhousePlant } from './greenhouseLayout.js';
+import { GARDEN_CROP_BED, initialGreenhouseCrop, GREENHOUSE_CENTER, GREENHOUSE_MONITOR_POS, isGreenhouseBed, startsWithGreenhousePlant, GREENHOUSE_PLOTS, plotIndexAt } from './greenhouseLayout.js';
+import { HABITAT_LAYOUT, domeFloorCell } from './habitatLayout.js';
 
 describe('greenhouse beds', () => {
   it('reserves an empty bed for the crop grown through the garden panel and places the monitor beside it', () => {
@@ -20,9 +21,36 @@ describe('greenhouse beds', () => {
     expect(beds.some(([dx, dz]) => !startsWithGreenhousePlant(dx, dz))).toBe(true);
     expect(isGreenhouseBed(0, 3)).toBe(false);
     expect(isGreenhouseBed(2, 0)).toBe(false);
-    expect(isGreenhouseBed(2, 1)).toBe(true);
-    expect(startsWithGreenhousePlant(2, 1)).toBe(false);
-    expect(isGreenhouseBed(5, 3)).toBe(true);
-    expect(startsWithGreenhousePlant(5, 3)).toBe(false);
+    // The garden plot is a 2 x 2 block of soil beds; the rest of the dome floor is scenery trays.
+    expect(isGreenhouseBed(4, 3)).toBe(true);
+    expect(startsWithGreenhousePlant(4, 3)).toBe(false);
+    expect(isGreenhouseBed(5, 3)).toBe(false);
+    expect(beds).toHaveLength(4);
+  });
+});
+
+describe('greenhouse plots', () => {
+  it('gives every bed and every field tray to exactly one plot, and nothing on the walkways', () => {
+    const counts = GREENHOUSE_PLOTS.map(() => 0);
+    for (let dx = -HABITAT_LAYOUT.DOME_RADIUS; dx <= HABITAT_LAYOUT.DOME_RADIUS; dx++) {
+      for (let dz = -HABITAT_LAYOUT.DOME_RADIUS; dz <= HABITAT_LAYOUT.DOME_RADIUS; dz++) {
+        const index = plotIndexAt(dx, dz);
+        const isPlanted = isGreenhouseBed(dx, dz) || domeFloorCell(dx, dz) === 'field';
+        expect(index >= 0).toBe(isPlanted);
+        if (index >= 0) counts[index]++;
+      }
+    }
+    expect(counts[0]).toBe(4);
+    expect(counts.every((n) => n > 0)).toBe(true);
+    // The cross walkway is never part of a plot
+    expect(plotIndexAt(0, 6)).toBe(-1);
+    expect(plotIndexAt(6, 0)).toBe(-1);
+  });
+
+  it('names the fields by ring and quadrant, clockwise from the north-east', () => {
+    expect(GREENHOUSE_PLOTS.map((plot) => plot.id)).toEqual(['G', 'A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4']);
+    expect(GREENHOUSE_PLOTS[plotIndexAt(5, -5)].id).toBe('A1');
+    expect(GREENHOUSE_PLOTS[plotIndexAt(-8, 8)].id).toBe('B3');
+    expect(GREENHOUSE_PLOTS[plotIndexAt(3, 3)].id).toBe('G');
   });
 });

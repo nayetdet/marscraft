@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { WORLD_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { HABITAT_LAYOUT } from '../world/habitatLayout.js';
 
 export class RoverController {
   constructor({ roverGroup, wheels = [], world, camera, colliders = [] }) {
@@ -201,9 +202,9 @@ export class RoverController {
       return true;
     }
 
-    // Área da Redoma de Estufa (x: -25 .. -11, z: -8 .. 8)
-    const distToDome = Math.hypot(nextX + 18, nextZ);
-    if (distToDome < 8.2) {
+    // Área da Redoma de Estufa (o vidro não conta como parede na checagem de altura)
+    const distToDome = Math.hypot(nextX - (HABITAT_LAYOUT.DOME_X + 0.5), nextZ - (HABITAT_LAYOUT.DOME_Z + 0.5));
+    if (distToDome < HABITAT_LAYOUT.DOME_RADIUS + 1.2) {
       return true;
     }
 

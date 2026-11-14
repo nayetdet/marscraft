@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
+import { HABITAT_LAYOUT } from './habitatLayout.js';
 
 export function buildNasaCustomModels(scene) {
   const group = new THREE.Group();
@@ -161,14 +162,15 @@ export function buildNasaCustomModels(scene) {
   solidObjects.push(labTable);
 
   // 4. Beliches da Tripulação (Parede Noroeste)
-  for (const bunkZ of [-6.4, -8.9]) {
-    const crewQuarters = createCrewQuartersModel(mats, -4.4, floorTopY, bunkZ);
+  // Tres beliches no dormitorio (EAST_WING), com a cabeceira na parede sul
+  for (const bunkX of [21, 24, 27]) {
+    const crewQuarters = createCrewQuartersModel(mats, bunkX, floorTopY, -2.2);
     group.add(crewQuarters);
     solidObjects.push(crewQuarters);
   }
 
-  // 5. Plantações 3D, Lâmpadas de Cultivo e Monitor da Estufa dentro da Redoma (x = -18, z = 0)
-  const { cropsGroup, plants } = createGreenhouseCropsModel(mats, -18, floorTopY, 0);
+  // 5. Plantações 3D, Lâmpadas de Cultivo e Monitor da Estufa dentro da Redoma
+  const { cropsGroup, plants } = createGreenhouseCropsModel(mats, HABITAT_LAYOUT.DOME_X, floorTopY, HABITAT_LAYOUT.DOME_Z);
   group.add(cropsGroup);
   for (const plant of plants) {
     solidObjects.push(plant);
@@ -492,27 +494,43 @@ function createGreenhouseCropsModel(mats, centerX, floorTopY, centerZ) {
   const cropsGroup = new THREE.Group();
   cropsGroup.position.set(centerX, floorTopY, centerZ);
   const plants = [];
+  const R = HABITAT_LAYOUT.DOME_RADIUS;
 
-  for (let dx = -4; dx <= 4; dx++) {
-    for (let dz = -4; dz <= 4; dz++) {
+  const growLight = new THREE.MeshLambertMaterial({ color: 0xf0abfc, emissive: 0xd946ef, emissiveIntensity: 0.7 });
+
+  for (let dx = -R; dx <= R; dx++) {
+    for (let dz = -R; dz <= R; dz++) {
+      const px = dx + 0.5;
+      const pz = dz + 0.5;
+
+      // Jardim: as duas plantas que ja nascem prontas para colher
       const type = initialGreenhouseCrop(dx, dz);
-      if (!type) continue;
-      const plant = type === 'potato' ? createCropPlantModel('potato') : new THREE.Group();
-      plant.position.set(dx + 0.5, 0, dz + 0.5);
-      plant.userData.cropItemId = type === 'potato' ? BLOCK_IDS.POTATO : BLOCK_IDS.HYDRO_PLANT;
-      if (type === 'carrot') {
-        addBox(plant, 0.14, 0.48, 0.14, mats.plantStem, 0, 0.24, 0);
-        addBox(plant, 0.52, 0.22, 0.22, mats.plantLeaf, 0, 0.36, 0);
-        addBox(plant, 0.22, 0.22, 0.52, mats.plantLeaf, 0, 0.42, 0);
-        addBox(plant, 0.18, 0.14, 0.18, mats.potato, 0.16, 0.07, 0.14);
+      if (type) {
+        const plant = type === 'potato' ? createCropPlantModel('potato') : new THREE.Group();
+        plant.position.set(px, 0, pz);
+        plant.userData.cropItemId = type === 'potato' ? BLOCK_IDS.POTATO : BLOCK_IDS.HYDRO_PLANT;
+        if (type === 'carrot') {
+          addBox(plant, 0.14, 0.48, 0.14, mats.plantStem, 0, 0.24, 0);
+          addBox(plant, 0.52, 0.22, 0.22, mats.plantLeaf, 0, 0.36, 0);
+          addBox(plant, 0.22, 0.22, 0.52, mats.plantLeaf, 0, 0.42, 0);
+          addBox(plant, 0.18, 0.14, 0.18, mats.potato, 0.16, 0.07, 0.14);
+        }
+        cropsGroup.add(plant);
+        plants.push(plant);
       }
-      cropsGroup.add(plant);
-      plants.push(plant);
     }
   }
 
-  addBox(cropsGroup, 7.5, 0.12, 0.24, mats.cyanGlow, 0, 3.2, -3.0);
-  addBox(cropsGroup, 7.5, 0.12, 0.24, mats.cyanGlow, 0, 3.2, 3.0);
+  // Luzes de cultivo rosa/roxas sobre o anel de dentro e barras azuis sobre o de fora
+  const c = 0.5; // centro do bloco central da redoma
+  addBox(cropsGroup, 9, 0.12, 0.24, growLight, c, 4.4, c - 5.5);
+  addBox(cropsGroup, 9, 0.12, 0.24, growLight, c, 4.4, c + 5.5);
+  addBox(cropsGroup, 0.24, 0.12, 9, growLight, c - 5.5, 4.4, c);
+  addBox(cropsGroup, 0.24, 0.12, 9, growLight, c + 5.5, 4.4, c);
+  addBox(cropsGroup, 10, 0.12, 0.24, mats.cyanGlow, c, 5.0, c - 10.5);
+  addBox(cropsGroup, 10, 0.12, 0.24, mats.cyanGlow, c, 5.0, c + 10.5);
+  addBox(cropsGroup, 0.24, 0.12, 10, mats.cyanGlow, c - 10.5, 5.0, c);
+  addBox(cropsGroup, 0.24, 0.12, 10, mats.cyanGlow, c + 10.5, 5.0, c);
 
   return { cropsGroup, plants };
 }

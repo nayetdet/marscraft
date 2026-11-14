@@ -3,6 +3,7 @@ import { RADIATION_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { mergeByMaterial } from '../world/nasaModelsBuilder.js';
 import { HABITAT_LAYOUT } from '../world/habitatLayout.js';
 import { SIGNS, ZONE_COLORS, buildPosters } from './basePosters.js';
+import { addBaseFurniture } from './baseFurniture.js';
 import {
   ScreenCanvas, hazardTexture, labelTexture, posterTexture, signTexture,
 } from './baseCanvas.js';
@@ -46,6 +47,11 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
     water: lambert(0x38bdf8, { emissive: 0x0ea5e9, emissiveIntensity: 0.25 }),
     glass: lambert(0xbae6fd, { transparent: true, opacity: 0.35 }),
     cyanGlow: glow(0x38bdf8, 0.45),
+    green: lambert(0x22c55e),
+    brown: lambert(0x92644a),
+    yellow: lambert(0xfacc15),
+    pinkGlow: glow(0xe879f9, 0.7),
+    greenGlow: glow(0x4ade80, 0.6),
   };
   const zoneMats = Object.fromEntries(
     Object.entries(ZONE_COLORS).map(([zone, color]) => [zone, glow(new THREE.Color(color).getHex(), 0.35)])
@@ -89,14 +95,14 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   };
   zoneBorder(zoneMats.command, 2.1, 5.9, -10.9, -7.4);
   zoneBorder(zoneMats.lifeSupport, 8.8, 12.9, -4.6, 3.0);
-  zoneBorder(zoneMats.quarters, -5.9, -3.3, -10.4, -4.9);
+  zoneBorder(zoneMats.quarters, -5.95, -4.05, -9.6, -4.2);
   zoneBorder(zoneMats.medical, -3.85, -1.05, 2.25, 5.9);
 
   // Linhas-guia a partir do airlock: branca ate o comando, verde ate a estufa, amarela ate o suporte de vida
   const guideY = F - 0.003;
   box(0.09, 0.04, 13.6, mats.white, 0.5, guideY, -1.2);
   box(3.5, 0.04, 0.09, mats.white, 2.25, guideY, -8.0);
-  box(12.5, 0.04, 0.09, zoneMats.greenhouse, -5.75, guideY, 0.5);
+  box(14.5, 0.04, 0.09, zoneMats.greenhouse, -6.75, guideY, 0.5);
   box(8.3, 0.04, 0.09, zoneMats.lifeSupport, 4.65, guideY, 0.5);
 
   // Soleira do airlock com faixa de aviso
@@ -106,7 +112,8 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   // ---------- Placas de modulo (acima das janelas, y = 13..14) ----------
   sign('command', 2.4, 6.6, 13.5, -10.97, '+z');
   sign('lifeSupport', 2.6, 12.97, 13.68, -0.5, '-x');
-  sign('quarters', 2.4, -5.97, 13.6, -7.5, '+x');
+  sign('common', 2.4, -5.97, 13.6, -7.5, '+x');
+  sign('quarters', 2.4, 12.97, 13.5, -7.0, '-x'); // em cima da porta do dormitorio
   sign('greenhouse', 2.4, -5.97, 13.45, 0.5, '+x');
   sign('airlock', 2.4, 0.5, 13.5, 5.97, '-z');
   sign('airlock', 2.4, 0.5, 13.4, 9.03, '+z'); // do lado de fora, sobre a porta externa
@@ -120,9 +127,9 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   const posterY = F + 1.22;
 
   // ---------- Tunel da estufa: galeria de posteres nas duas paredes ----------
-  poster('storm', -8.2, posterY, -1.99, '+z');
-  poster('delay', -10.4, posterY, -1.99, '+z');
-  poster('mars', -9.3, posterY, 2.99, '-z');
+  poster('storm', -8.5, posterY, -1.99, '+z');
+  poster('delay', -11.5, posterY, -1.99, '+z');
+  poster('mars', -10.0, posterY, 2.99, '-z');
 
   // ---------- Abrigo de tempestade (SHL-1, issue #56): placa na entrada, poster e medidor ----------
   const L = HABITAT_LAYOUT;
@@ -163,25 +170,30 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   solid(-2.0, -1.14, 5.4, 6.0, 2.0);
   poster('eva', 1.99, F + 1.45, 7.5, '-x', 0.64);
 
-  // ---------- Estufa (GRN-1): tanque de agua, tela e poster ----------
-  // Tanque com nivel que acompanha a agua da base, na ponta norte do corredor
-  box(1.0, 0.2, 1.0, mats.slate, -17.5, F + 0.1, -5.2);
-  box(0.84, 1.5, 0.84, mats.glass, -17.5, F + 0.95, -5.2);
-  box(0.92, 0.1, 0.92, mats.slate, -17.5, F + 1.75, -5.2);
+  // ---------- Estufa (GRN-1): tudo na praca central da redoma ----------
+  const gx = HABITAT_LAYOUT.DOME_X + 0.5; // centro da redoma
+  const gz = HABITAT_LAYOUT.DOME_Z + 0.5;
+  // Tanque no centro, com nivel que acompanha a agua da base
+  box(1.0, 0.2, 1.0, mats.slate, gx, F + 0.1, gz);
+  box(0.84, 1.5, 0.84, mats.glass, gx, F + 0.95, gz);
+  box(0.92, 0.1, 0.92, mats.slate, gx, F + 1.75, gz);
   for (const dx of [-0.4, 0.4]) {
-    for (const dz of [-0.4, 0.4]) box(0.07, 1.5, 0.07, mats.slate, -17.5 + dx, F + 0.95, -5.2 + dz);
+    for (const dz of [-0.4, 0.4]) box(0.07, 1.5, 0.07, mats.slate, gx + dx, F + 0.95, gz + dz);
   }
-  solid(-18.02, -16.98, -5.72, -4.68, 1.8);
-  plane(labelTexture('BASE WATER', 5, '#60a5fa'), 0.9, 0.18, -17.5, F + 0.1, -4.695, '+z');
-  // Poster num cavalete na ponta oeste
-  box(0.08, POSTER_H + 0.14, POSTER_W + 0.14, mats.charcoal, -23.0, posterY, 0.5);
-  for (const dz of [-0.6, 0.6]) box(0.1, 0.35, 0.1, mats.silver, -23.0, F + 0.17, 0.5 + dz);
-  solid(-23.12, -22.88, -0.3, 1.3, 2.2);
-  poster('plants', -22.95, posterY, 0.5, '+x');
-  // Totem da tela na ponta sul
-  box(0.14, 1.0, 0.14, mats.silver, -17.5, F + 0.5, 5.3);
-  box(1.42, 1.0, 0.08, mats.charcoal, -17.5, F + 1.5, 5.3);
-  solid(-18.2, -16.8, 5.2, 5.4, 2.0);
+  solid(gx - 0.52, gx + 0.52, gz - 0.52, gz + 0.52, 1.8);
+  plane(labelTexture('BASE WATER', 5, '#60a5fa'), 0.9, 0.18, gx + 0.505, F + 0.1, gz, '+x');
+  // Poster num cavalete a nordeste da praca, virado para quem chega pelo tunel
+  box(0.08, POSTER_H + 0.14, POSTER_W + 0.14, mats.charcoal, gx + 3.0, posterY, gz - 3.0);
+  for (const dz of [-0.6, 0.6]) box(0.1, 0.35, 0.1, mats.silver, gx + 3.0, F + 0.17, gz - 3.0 + dz);
+  solid(gx + 2.88, gx + 3.12, gz - 3.8, gz - 2.2, 2.2);
+  poster('plants', gx + 3.05, posterY, gz - 3.0, '+x');
+  // Totem da tela de status a sudoeste (o monitor de comida e o jardim ficam a sudeste)
+  box(0.14, 1.0, 0.14, mats.silver, gx - 3.0, F + 0.5, gz + 3.0);
+  box(0.08, 1.0, 1.42, mats.charcoal, gx - 3.0, F + 1.5, gz + 3.0);
+  solid(gx - 3.1, gx - 2.9, gz + 2.3, gz + 3.7, 2.0);
+
+  // ---------- Dormitorio (DRM-1) ----------
+  poster('sleep', 18.03, posterY, -3.0, '+x');
 
   // ---------- Academia (GYM-1) ----------
   poster('exercise', -7.5, posterY, 8.03, '+z');
@@ -190,6 +202,9 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   box(2.5, 1.02, 0.06, mats.charcoal, 6.6, 12.68, -10.965);
   box(0.06, 1.56, 2.3, mats.charcoal, 12.965, 12.2, -0.5);
   box(1.3, 0.86, 0.06, mats.charcoal, meterX, F + 1.6, meterZ - 0.02);
+
+  // Mobilia extra de cada secao
+  addBaseFurniture({ box, solid, mats, zoneMats, F });
 
   scene.add(mergeByMaterial(group));
 
@@ -206,12 +221,14 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   plane(screens.command.texture, 2.4, 0.9, 6.6, 12.68, -10.93, '+z', dynamic);
   plane(screens.power.texture, 2.2, 1.467, 12.93, 12.2, -0.5, '-x', dynamic);
   plane(screens.shelter.texture, 1.2, 0.78, meterX, F + 1.6, meterZ - 0.055, '-z', dynamic);
-  plane(screens.greenhouse.texture, 1.3, 0.9, -17.5, F + 1.5, 5.255, '-z', dynamic);
+  plane(screens.greenhouse.texture, 1.3, 0.9, gx - 2.955, F + 1.5, gz + 3.0, '+x', dynamic);
+  // Segunda tela do mapa de energia, no modulo de energia (mesma textura, sem custo extra)
+  plane(screens.power.texture, 2.2, 1.467, -10.03, 12.1, -17.5, '-x', dynamic);
 
   const tankGeo = new THREE.BoxGeometry(0.72, 1, 0.72);
   tankGeo.translate(0, 0.5, 0);
   const tankLevel = new THREE.Mesh(tankGeo, mats.water);
-  tankLevel.position.set(-17.5, F + 0.22, -5.2);
+  tankLevel.position.set(gx, F + 0.22, gz);
   dynamic.add(tankLevel);
 
   // Agua dentro do purificador na bancada; a base da geometria fica fixa ao variar o nivel.
@@ -236,7 +253,7 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
         + 'More water in the shelter wall stops more radiation, but that water is no longer there to drink or grow food.',
     },
     {
-      x: -17.5, y: F + 1.0, z: -4.8, label: '[F] Check the water tank',
+      x: gx + 0.45, y: F + 1.0, z: gz, label: '[F] Check the water tank',
       text: (s) => `${Math.round(s.water)} L of water in the base tank. Crew, plants and you all share it. Bring ice with the rover to refill it.`,
     },
     {

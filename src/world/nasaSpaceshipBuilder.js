@@ -1,7 +1,7 @@
 import { isGreenhouseBed } from './greenhouseLayout.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { WORLD_CONFIG } from '../config/constants.js';
-import { HABITAT_LAYOUT, NORTH_WING, mainHabCell, northLinkBox } from './habitatLayout.js';
+import { EAST_WING, HABITAT_LAYOUT, NORTH_WING, domeFloorCell, mainHabCell, northLinkBox } from './habitatLayout.js';
 
 function fillBox(world, x1, y1, z1, x2, y2, z2, blockId) {
   for (let x = x1; x <= x2; x++) {
@@ -92,14 +92,23 @@ function buildMainWhiteHabitat(world, groundY) {
   }
 }
 
-// 2. Túnel Pressurizado Branco + Redoma de Estufa Geodésica (Lado Oeste: x = -18, z = 0)
+// 2. Túnel Pressurizado Branco + Redoma de Estufa Geodésica (Lado Oeste). A estufa e a maior
+// estrutura da base: redoma de vidro sobre um anel branco, com nervuras em meridianos e paralelos.
+// Centro e raio vem de HABITAT_LAYOUT (DOME_X, DOME_Z, DOME_RADIUS); o piso, de domeFloorCell.
 function buildGreenhouseDome(world, groundY) {
   const floorY = groundY + 1; // y = 9
-  const domeCenterX = -18;
-  const domeCenterZ = 0;
-  const domeRadius = 7;
+  const H = HABITAT_LAYOUT;
+  const domeCenterX = H.DOME_X;
+  const domeCenterZ = H.DOME_Z;
+  const domeRadius = H.DOME_RADIUS;
+  const FLOOR_BLOCKS = {
+    ring: BLOCK_IDS.NASA_HULL,
+    plaza: BLOCK_IDS.THRUSTER_METAL,
+    walk: BLOCK_IDS.NASA_HULL,
+    // Bandejas de metal: as plantas delas sao so cenario, nao dao comida ao quebrar o piso
+    field: BLOCK_IDS.THRUSTER_METAL,
+  };
 
-  // Redoma Hemisférica de Vidro com Arcos Brancos Estruturais
   for (let dx = -domeRadius; dx <= domeRadius; dx++) {
     for (let dz = -domeRadius; dz <= domeRadius; dz++) {
       const horizDist = Math.hypot(dx, dz);
@@ -107,45 +116,21 @@ function buildGreenhouseDome(world, groundY) {
 
       const x = domeCenterX + dx;
       const z = domeCenterZ + dz;
+      // Canteiros de terra do jardim (greenhouseLayout) por cima da planta do piso
+      world.setBlock(x, floorY, z, isGreenhouseBed(dx, dz) ? BLOCK_IDS.HYDRO_PLANT : FLOOR_BLOCKS[domeFloorCell(dx, dz)], false);
 
-      // Piso da Redoma
-      if (horizDist <= domeRadius - 0.8) {
-        // Canteiros de plantação hidropônica em fileiras com corredor central
-        const isPlanter = isGreenhouseBed(dx, dz);
-
-        world.setBlock(
-          x,
-          floorY,
-          z,
-          isPlanter ? BLOCK_IDS.HYDRO_PLANT : BLOCK_IDS.NASA_HULL,
-          false
-        );
-      } else {
-        // Anel branco de fundação da estufa
-        world.setBlock(x, floorY, z, BLOCK_IDS.NASA_HULL, false);
-        world.setBlock(x, floorY + 1, z, BLOCK_IDS.NASA_HULL, false);
-      }
-
-      // Cúpula esférica de vidro acima do piso
+      // Casca da redoma acima do piso
       for (let dy = 1; dy <= domeRadius; dy++) {
-        const sphereDist = Math.hypot(dx, dy * 1.05, dz);
+        const sphereDist = Math.hypot(dx, dy * H.DOME_Y_SQUASH, dz);
         const y = floorY + dy;
 
-        if (sphereDist >= domeRadius - 0.65 && sphereDist <= domeRadius + 0.45) {
-          // Nervuras brancas geodésicas no meridiano central (dx === 0 ou dz === 0)
-          const isWhiteRib =
-            dy === 1 ||
-            (Math.abs(dx) === 0 && dy < domeRadius) ||
-            (Math.abs(dz) === 0 && dy < domeRadius);
-
-          world.setBlock(
-            x,
-            y,
-            z,
-            isWhiteRib ? BLOCK_IDS.NASA_HULL : BLOCK_IDS.HAB_GLASS,
-            false
-          );
-        } else if (sphereDist < domeRadius - 0.65) {
+        if (sphereDist >= domeRadius - H.DOME_SHELL && sphereDist <= domeRadius + 0.45) {
+          // Anel branco na base, 8 meridianos e 2 paralelos de nervuras; o resto e vidro
+          const isBaseRing = dy <= 2;
+          const isMeridian = dx === 0 || dz === 0 || Math.abs(dx) === Math.abs(dz);
+          const isParallel = dy === 6 || dy === 10;
+          world.setBlock(x, y, z, isBaseRing || isMeridian || isParallel ? BLOCK_IDS.NASA_HULL : BLOCK_IDS.HAB_GLASS, false);
+        } else if (sphereDist < domeRadius - H.DOME_SHELL) {
           world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
         }
       }
@@ -153,10 +138,10 @@ function buildGreenhouseDome(world, groundY) {
   }
 
   // Luminária central no topo da Redoma de Estufa
-  world.setBlock(domeCenterX, floorY + domeRadius, domeCenterZ, BLOCK_IDS.HAB_LIGHT, false);
+  world.setBlock(domeCenterX, floorY + Math.floor(domeRadius / H.DOME_Y_SQUASH), domeCenterZ, BLOCK_IDS.HAB_LIGHT, false);
 
   // Túnel Branco Pressurizado ligando o Habitat Principal (x = -7) à Redoma de Estufa (x = -11)
-  for (let x = -12; x <= -7; x++) {
+  for (let x = H.TUNNEL_X_MIN; x <= H.TUNNEL_X_MAX; x++) {
     for (let z = -3; z <= 3; z++) {
       for (let y = floorY; y <= floorY + 4; y++) {
         if (y === floorY) {
@@ -177,10 +162,10 @@ function buildGreenhouseDome(world, groundY) {
   }
 }
 
-// 3. Foguete / Lander Branco de Ascensão da NASA no Lado Leste (x = 22, z = -3)
+// 3. Foguete / Lander Branco de Ascensão da NASA a sudeste da base (x = 21, z = 9)
 function buildNasaAscentLander(world, groundY) {
-  const cx = 22;
-  const cz = -3;
+  const cx = 21;
+  const cz = 9;
 
   // Plataforma de pouso
   fillBox(world, cx - 4, groundY, cz - 4, cx + 4, groundY, cz + 4, BLOCK_IDS.BASALT);
@@ -391,6 +376,62 @@ function buildNorthModule(world, groundY) {
   }
 }
 
+// 6. Ala Leste: dormitorio da tripulacao (EAST_WING), ligado a parede leste do habitat
+function buildDormModule(world, groundY) {
+  const floorY = groundY + 1; // y = 9
+  const ceilY = groundY + 6; // y = 14
+  const { LINK, ROOM } = EAST_WING;
+
+  // Modulo: casco cheio, ar por dentro
+  for (let x = ROOM.xMin - 1; x <= ROOM.xMax + 1; x++) {
+    for (let z = ROOM.zMin - 1; z <= ROOM.zMax + 1; z++) {
+      const inside = x >= ROOM.xMin && x <= ROOM.xMax && z >= ROOM.zMin && z <= ROOM.zMax;
+      for (let y = floorY; y <= ceilY; y++) {
+        world.setBlock(x, y, z, inside && y > floorY && y < ceilY ? BLOCK_IDS.AIR : BLOCK_IDS.NASA_HULL, false);
+      }
+    }
+  }
+
+  // Corredor curto: tubo entre as duas paredes; nas colunas de parede so abre a porta
+  for (let x = LINK.xMin; x <= LINK.xMax; x++) {
+    const isWallColumn = x === LINK.xMin || x === LINK.xMax;
+    for (let z = LINK.zMin - 1; z <= LINK.zMax + 1; z++) {
+      const isSide = z < LINK.zMin || z > LINK.zMax;
+      if (isSide && isWallColumn) continue; // essa parede ja e do habitat ou do modulo
+      for (let y = floorY; y <= ceilY; y++) {
+        if (isSide) {
+          const isWindow = x === LINK.xMin + 2 && (y === floorY + 2 || y === floorY + 3);
+          world.setBlock(x, y, z, isWindow ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL, false);
+        } else if (y === floorY) {
+          world.setBlock(x, y, z, BLOCK_IDS.THRUSTER_METAL, false);
+        } else if (y <= floorY + NORTH_WING.LINK_HEIGHT) {
+          world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
+        } else if (!isWallColumn) {
+          world.setBlock(x, y, z, y === ceilY - 1 && x === LINK.xMin + 2 ? BLOCK_IDS.HAB_LIGHT : BLOCK_IDS.NASA_HULL, false);
+        }
+      }
+    }
+  }
+
+  // Janelas (leste, norte e sul), luzes no teto e a faixa de metal da porta ate o meio
+  const midX = Math.round((ROOM.xMin + ROOM.xMax) / 2);
+  const midZ = Math.round((ROOM.zMin + ROOM.zMax) / 2);
+  for (let y = floorY + 2; y <= floorY + 3; y++) {
+    for (let z = midZ - 2; z <= midZ + 2; z++) world.setBlock(ROOM.xMax + 1, y, z, BLOCK_IDS.HAB_GLASS, false);
+    for (let x = midX - 3; x <= midX + 3; x++) {
+      world.setBlock(x, y, ROOM.zMin - 1, BLOCK_IDS.HAB_GLASS, false);
+      world.setBlock(x, y, ROOM.zMax + 1, BLOCK_IDS.HAB_GLASS, false);
+    }
+  }
+  for (const [dx, dz] of [[-3, -2], [3, -2], [-3, 2], [3, 2]]) {
+    world.setBlock(midX + dx, ceilY, midZ + dz, BLOCK_IDS.HAB_LIGHT, false);
+  }
+  world.setBlock(midX, ceilY, midZ, BLOCK_IDS.HAB_GLASS, false);
+  for (let x = ROOM.xMin; x <= midX; x++) {
+    for (let z = LINK.zMin; z <= LINK.zMax; z++) world.setBlock(x, floorY, z, BLOCK_IDS.THRUSTER_METAL, false);
+  }
+}
+
 export function buildNasaSpaceshipAndBase(world) {
   const groundY = WORLD_CONFIG.GROUND_LEVEL; // 8
   world.recordBaseWindows = true;
@@ -398,5 +439,6 @@ export function buildNasaSpaceshipAndBase(world) {
   buildGreenhouseDome(world, groundY);
   buildGymModule(world, groundY);
   buildNorthModule(world, groundY);
+  buildDormModule(world, groundY);
   world.recordBaseWindows = false;
 }

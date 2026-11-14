@@ -47,6 +47,7 @@ import { ShieldBubble } from '../graphics/shieldBubble.js';
 import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
 import { buildBaseDecor } from '../base/baseDecor.js';
+import { buildGreenhouseFields } from '../base/greenhouseFields.js';
 import { MenuScreens } from '../ui/MenuScreens.js';
 import { StoryDirector } from '../story/StoryDirector.js';
 import { objectiveView } from '../story/objectiveView.js';
@@ -147,6 +148,9 @@ export class GameEngine {
     });
     this.airlock = new Airlock(this.scene, colliders, this.expedition);
     this.stations = new StationSystem(this.expedition);
+    // Campos da estufa: plantas 3D por campo; um campo de dentro ja comeca com alface crescendo
+    this.greenhouseFields = buildGreenhouseFields(this.scene);
+    this.stations.plots[1].crop = { type: 'lettuce', progress: CROP_CONFIG.lettuce.seconds / 2 };
     this.airlock.stations = this.stations;
     this.airlock.onEvent = (type) => this._onAirlockEvent(type);
     this.stationPanel = new StationPanel(this);
@@ -286,12 +290,7 @@ export class GameEngine {
     this.stations.update(dt, insideCore, this.survival, !inside);
     this._updateShelterWater();
     this.expedition.radiation = Math.min(100, this.mission.totalDoseMsv / RADIATION_CONFIG.CAREER_LIMIT_MSV * 100);
-    const crop = this.stations.crop;
-    this.stationCrop.visible = Boolean(crop);
-    if (crop) {
-      this.stationCrop.scale.y = 0.2 + 0.8 * crop.progress / CROP_CONFIG[crop.type].seconds;
-      for (const [type, model] of Object.entries(this.stationCropModels)) model.visible = type === crop.type;
-    }
+    this.updateCropVisuals();
     this.airlock.update(dt, this.player.pos);
     if (this.survival.health <= 0) this.survival.isDead = true;
     const hasPriorityInteraction = ['crew', 'water_dispenser', 'rover_terminal', 'mav', 'greenhouse', 'info'].includes(this.currentInteraction);
@@ -555,8 +554,8 @@ export class GameEngine {
     this.scene.add(habLight);
 
     // Luz clara dentro da Redoma de Estufa
-    const domeLight = new THREE.PointLight(0xf0fdf4, 1.5, 18);
-    domeLight.position.set(-18, 13.5, 0);
+    const domeLight = new THREE.PointLight(0xf0fdf4, 1.7, 38);
+    domeLight.position.set(HABITAT_LAYOUT.DOME_X + 0.5, 18, HABITAT_LAYOUT.DOME_Z + 0.5);
     this.scene.add(domeLight);
 
     // Luz do Modulo Norte (issue #56)
@@ -568,6 +567,11 @@ export class GameEngine {
     }
 
     // Luz clara dentro do Módulo da Academia (Gym & MedBay)
+    // Luz do dormitorio (ala leste)
+    const dormLight = new THREE.PointLight(0xfef3c7, 1.5, 18);
+    dormLight.position.set(23.5, 13.0, -5.5);
+    this.scene.add(dormLight);
+
     const gymLight = new THREE.PointLight(0xe0f2fe, 1.5, 16);
     gymLight.position.set(-8, 13.0, 10.5);
     this.scene.add(gymLight);
@@ -861,11 +865,22 @@ export class GameEngine {
     }
   }
 
+  // O que esta plantado na estufa: o canteiro do jardim (campo 0) e os campos da redoma.
+  // Tambem chamado pelo monitor de comida, que faz as plantas crescerem com o jogo pausado.
+  updateCropVisuals() {
+    const crop = this.stations.plots[0].crop;
+    this.stationCrop.visible = Boolean(crop);
+    if (crop) {
+      this.stationCrop.scale.y = 0.2 + 0.8 * crop.progress / CROP_CONFIG[crop.type].seconds;
+      for (const [type, model] of Object.entries(this.stationCropModels)) model.visible = type === crop.type;
+    }
+    this.greenhouseFields.update(this.stations.plots);
+  }
+
   // Estado do jogo que as telas e os pontos de informacao da base mostram
   _baseState() {
     const m = this.mission;
     const storm = m.storm;
-    const crop = this.stations.crop;
     return {
       sol: this.sky.solCount,
       timeOfDay: Math.floor(this.sky.timeOfDay * 6) / 6, // relogio de 10 em 10 min: menos redesenhos
@@ -887,7 +902,7 @@ export class GameEngine {
       totalDose: m.totalDoseMsv,
       water: this.survival.baseWater,
       maxWater: this.survival.maxBaseWater,
-      crop: crop ? { type: crop.type, progress: Math.min(1, crop.progress / STATION_CONFIG.CROP_GROWTH_TIME) } : null,
+      fields: { planted: this.stations.plantedPlotCount(), ready: this.stations.readyPlotCount(), total: this.stations.plots.length },
       inShelter: m.insideShelter,
       shelterWaterL: m.shelterWaterL,
       donkiDate: formatDateDMY(donkiCme.fetched),

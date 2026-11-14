@@ -23,15 +23,15 @@ export const HABITAT_LAYOUT = {
   // Cupula de observacao sobre o teto: ar em |x|, |z| <= 2, y = 15..17.
   CUPOLA_HALF: 2,
   CUPOLA_HEIGHT: 3,
-  // Tunel ate a estufa: ar em x = -12..-7, |z| <= 2 (cinco blocos de largura), tres de altura.
-  TUNNEL_X_MIN: -12,
+  // Tunel ate a estufa: ar em x = -14..-7, |z| <= 2 (cinco blocos de largura), tres de altura.
+  TUNNEL_X_MIN: -14,
   TUNNEL_X_MAX: -7,
   TUNNEL_HALF_Z: 2,
   TUNNEL_HEIGHT: 3,
   // Redoma da estufa: hemisferio levemente achatado (dy * 1.05) com casca de 0.65 bloco.
-  DOME_X: -18,
+  DOME_X: -27,
   DOME_Z: 0,
-  DOME_RADIUS: 7,
+  DOME_RADIUS: 14,
   DOME_SHELL: 0.65,
   DOME_Y_SQUASH: 1.05,
   // Corredor pressurizado Sudoeste ate o Modulo da Academia: ar em x = -6..-5, z = 5..7, y = 10..13.
@@ -69,6 +69,14 @@ export const NORTH_WING = {
   LINK_HEIGHT: 3,
 };
 
+// Ala leste: dormitorio da tripulacao, um modulo proprio ligado a parede leste do habitat por um
+// corredor curto. LINK inclui as duas colunas de parede (a do habitat e a do modulo), como em
+// northLinkBox; so tem LINK_HEIGHT blocos de altura.
+export const EAST_WING = {
+  LINK: { xMin: 13, xMax: 17, zMin: -9, zMax: -6 },
+  ROOM: { id: 'dorm', name: 'CREW QUARTERS', xMin: 18, xMax: 28, zMin: -10, zMax: -2 },
+};
+
 // Ar do corredor curto de um modulo: vai da parede do corredor central ate a parede do modulo
 export function northLinkBox(room) {
   const { SPINE } = NORTH_WING;
@@ -78,6 +86,28 @@ export function northLinkBox(room) {
 }
 
 const L = HABITAT_LAYOUT;
+
+// Planta do piso da estufa, em blocos a partir do centro da redoma (dx, dz):
+// 'ring' (fundacao), 'plaza' (praca central), 'walk' (cruz de 5 blocos, anel de caminhada e
+// borda) e 'field' (bandejas de cultivo de cenario, em dois aneis). Os canteiros de terra onde
+// se planta de verdade ficam em greenhouseLayout.js (isGreenhouseBed).
+export const DOME_FLOOR = Object.freeze({
+  PLAZA_R: 4.5, // praca central
+  WALK_HALF: 2, // meia largura da cruz de caminhos (5 blocos)
+  INNER_R: 7.5, // fim do anel de campos de dentro
+  RING_R: 8.8, // fim do anel de caminhada, comeco dos campos de fora
+  FIELD_MARGIN: 1.9, // borda livre entre os campos de fora e a parede
+});
+
+export function domeFloorCell(dx, dz) {
+  const r = Math.hypot(dx, dz);
+  if (r > L.DOME_RADIUS - 0.8) return 'ring';
+  if (r < DOME_FLOOR.PLAZA_R) return 'plaza';
+  if (Math.abs(dx) <= DOME_FLOOR.WALK_HALF || Math.abs(dz) <= DOME_FLOOR.WALK_HALF) return 'walk';
+  if (r < DOME_FLOOR.INNER_R) return 'field';
+  if (r < DOME_FLOOR.RING_R) return 'walk';
+  return r <= L.DOME_RADIUS - DOME_FLOOR.FIELD_MARGIN ? 'field' : 'walk';
+}
 
 // Diz se a coluna (bx, bz) do habitat principal e 'air', 'wall' ou nada (null).
 // Regra dos cantos: a 1 passo do canto fica fora, a 2 passos e parede (octogono alongado).
@@ -166,6 +196,12 @@ function inNorthWing(bx, by, bz) {
   return false;
 }
 
+function inEastWing(bx, by, bz) {
+  const { LINK, ROOM } = EAST_WING;
+  if (inBox(bx, by, bz, ROOM.xMin, ROOM.xMax, ROOM.zMin, ROOM.zMax)) return true;
+  return by <= L.FLOOR_Y + NORTH_WING.LINK_HEIGHT && inBox(bx, by, bz, LINK.xMin, LINK.xMax, LINK.zMin, LINK.zMax);
+}
+
 // Recebe a posicao dos olhos do jogador e diz se ela esta num bloco de ar pressurizado.
 export function isInsidePressurizedVolume(x, y, z) {
   const bx = Math.floor(x);
@@ -179,7 +215,8 @@ export function isInsidePressurizedVolume(x, y, z) {
     inGreenhouseDome(bx, by, bz) ||
     inGymCorridor(bx, by, bz) ||
     inGymModule(bx, by, bz) ||
-    inNorthWing(bx, by, bz)
+    inNorthWing(bx, by, bz) ||
+    inEastWing(bx, by, bz)
   );
 }
 

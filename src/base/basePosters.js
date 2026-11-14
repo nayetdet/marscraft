@@ -16,7 +16,8 @@ export const ZONE_COLORS = {
 export const SIGNS = {
   command: { code: 'CMD-1', name: 'COMMAND', color: ZONE_COLORS.command },
   lifeSupport: { code: 'LSS-1', name: 'LIFE SUPPORT', color: ZONE_COLORS.lifeSupport },
-  quarters: { code: 'HAB-1', name: 'CREW BUNKS', color: ZONE_COLORS.quarters },
+  quarters: { code: 'DRM-1', name: 'CREW QUARTERS', color: ZONE_COLORS.quarters },
+  common: { code: 'HAB-1', name: 'COMMON AREA', color: ZONE_COLORS.quarters },
   greenhouse: { code: 'GRN-1', name: 'GREENHOUSE', color: ZONE_COLORS.greenhouse },
   medical: { code: 'MED-1', name: 'MEDICAL BAY', color: ZONE_COLORS.medical },
   gym: { code: 'GYM-1', name: 'GYM', color: ZONE_COLORS.gym },
@@ -107,6 +108,18 @@ export function buildPosters(donkiDate) {
       ],
       fact: 'In space, bones lose about 1% of their density every month without exercise. Station crews train about 2 hours a day.',
       source: 'NASA, bone and muscle loss (2023)',
+    },
+    sleep: {
+      title: 'MARS TIME',
+      color: ZONE_COLORS.quarters,
+      lines: [
+        'A day on Mars is called a sol.',
+        'A sol is a little longer than a day on Earth.',
+        'So your bedtime slides a bit later every day!',
+        'Good sleep keeps a crew sharp. Tired people make mistakes.',
+      ],
+      fact: 'One sol lasts 24 hours and 39 minutes. That is 39 minutes more than an Earth day.',
+      source: 'NASA Mars Fact Sheet',
     },
     eva: {
       title: 'GOING OUTSIDE',

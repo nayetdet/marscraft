@@ -1,18 +1,22 @@
 // Trilhos fixos por onde os tripulantes andam dentro da base (sem pathfinding no voxel).
 // Coordenadas em blocos; o piso da base fica em y = 10 (nasaModelsBuilder: floorTopY).
 export const RAIL_NODES = {
-  quarters: { x: -3.0, z: -6.4 }, // ao lado dos beliches (-4.4, -6.4)
+  quarters: { x: 22.5, z: -4.6 }, // no dormitorio, ao lado dos beliches
+  dormLink: { x: 17.5, z: -7 }, // corredor do dormitorio
+  dormDoor: { x: 12, z: -7 }, // porta leste do habitat
   hub: { x: 0, z: 1 },
   oxygen: { x: 9.2, z: -3 }, // em frente ao gerador MOXIE (10.6, -3)
   water: { x: 9.4, z: 0 }, // ao lado da bancada de purificacao (10.4, 1.5), longe do bebedouro
   tunnelEast: { x: -6.5, z: 0 },
-  tunnelWest: { x: -12.5, z: 0 },
-  greenhouse: { x: -15, z: 2.5 }, // entre os canteiros da estufa (-18, 0)
+  tunnelWest: { x: -14.5, z: 0 },
+  greenhouse: { x: -21.5, z: -2.4 }, // na beira do caminho, ao lado das bandejas da estufa
   medbay: { x: -2.5, z: 3.5 }, // canto sudoeste do habitat
 };
 
 const EDGES = [
-  ['quarters', 'hub'],
+  ['quarters', 'dormLink'],
+  ['dormLink', 'dormDoor'],
+  ['dormDoor', 'hub'],
   ['hub', 'oxygen'],
   ['hub', 'water'],
   ['hub', 'medbay'],
