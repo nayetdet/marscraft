@@ -156,7 +156,7 @@ export class PlayerPhysics {
     this.isMoving = moveDir.lengthSq() > 0 && this.onGround;
     if (moveDir.lengthSq() > 0) moveDir.normalize();
 
-    const sprinting = keys['ControlLeft'] || keys['ControlRight'];
+    const sprinting = keys['Sprint'];
     const speed = this.isCrouching ? PHYSICS_CONFIG.CROUCH_SPEED
       : sprinting ? PHYSICS_CONFIG.SPRINT_SPEED : PHYSICS_CONFIG.WALK_SPEED;
     this.vel.x = moveDir.x * speed;
