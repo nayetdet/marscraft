@@ -78,7 +78,7 @@ export const WATER_SYSTEM_CONFIG = {
 export const MISSION_CONFIG = {
   MAX_ENERGY: 100, START_ENERGY: 80, SOLAR_RATE: 0.22,
   GREENHOUSE_RATE: 0.025, OXYGEN_ENERGY_RATE: 0.18,
-  AIRLOCK_COST: 1, AIRLOCK_CYCLE: 3, DOOR_SPEED: 5,
+  AIRLOCK_COST: 1, AIRLOCK_CYCLE: 0.8, DOOR_SPEED: 10,
   // Limpeza eletrostatica do traje no airlock (segundos). Sem energia, o aviso fica na tela
   // SUIT_CLEAN_SKIP_TIME e a poeira entra na base. Ver docs/data/airlock-e-poeira.md
   SUIT_CLEAN_TIME: 0.8, SUIT_CLEAN_SKIP_TIME: 0.6,
