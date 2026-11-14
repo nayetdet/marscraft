@@ -110,6 +110,18 @@ export class InputController {
     const startBtn = document.getElementById('start-btn');
     const resetBtn = document.getElementById('reset-btn');
     const respawnBtn = document.getElementById('respawn-btn');
+    this.keyboardLockActive = false;
+
+    const enterGame = () => {
+      try {
+        if (document.fullscreenElement && navigator.keyboard?.lock) {
+          navigator.keyboard.lock(['KeyQ']).then(() => {
+            this.keyboardLockActive = true;
+          }).catch(() => {});
+        }
+      } catch (error) { /* Keyboard Lock is optional. */ }
+      this.domElement.requestPointerLock();
+    };
 
     document.addEventListener('keydown', (e) => {
       const gameHasFocus = this.isLocked || document.pointerLockElement === this.domElement;
@@ -118,7 +130,7 @@ export class InputController {
     }, true);
 
     startBtn.addEventListener('click', () => {
-      this.domElement.requestPointerLock();
+      enterGame();
     });
 
     resetBtn.addEventListener('click', () => window.location.reload());
@@ -128,17 +140,27 @@ export class InputController {
         this.survival.resetStats();
         this.player.resetToShipRamp();
         this.hud.hideDeathScreen();
-        this.domElement.requestPointerLock();
+        enterGame();
       });
     }
 
     document.addEventListener('pointerlockchange', () => {
       this.isLocked = document.pointerLockElement === this.domElement;
+      if (!this.isLocked) {
+        navigator.keyboard?.unlock?.();
+        this.keyboardLockActive = false;
+      }
       if (!this.isLocked) this._cancelBreaking();
       if (!this.isLocked) this.keys = {};
       if (!this.survival.isDead && !this.hud.isInventoryOpen) {
         overlay.classList.toggle('hidden', this.isLocked);
       }
+    });
+
+    window.addEventListener('beforeunload', (e) => {
+      if (!this.isLocked) return;
+      e.preventDefault();
+      e.returnValue = '';
     });
 
     document.addEventListener('mousemove', (e) => {
@@ -171,7 +193,7 @@ export class InputController {
         e.preventDefault();
         if (this.hud.isInventoryOpen) {
           this.hud.closeInventory();
-          this.domElement.requestPointerLock();
+          enterGame();
         } else if (this.isLocked) {
           this.hud.openInventory(this.survival.inventorySlots);
           document.exitPointerLock();
@@ -210,10 +232,14 @@ export class InputController {
 
     window.addEventListener('wheel', (e) => {
       if (!this.isLocked || this.survival.isDead) return;
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        return;
+      }
       const dir = Math.sign(e.deltaY);
       this.hud.selectSlot(this.hud.selectedSlot + dir, this.survival.slots);
       this._syncHandWithSlot();
-    });
+    }, { passive: false });
 
     window.addEventListener('mousedown', (e) => {
       if (!this.isLocked || this.survival.isDead) return;
