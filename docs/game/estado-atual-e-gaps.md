@@ -23,9 +23,10 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Vite, sem backend, de
 | **Suporte de vida** | ✅ | O O2 do habitat só recarrega com energia da bateria (issue #30). |
 | **Blindagem contra radiação** | ✅ | Tempestades solares a partir de CMEs reais do DONKI, dose em mSv (RadLab), abrigo no habitat e blindagem [R] que gasta energia (issue #30). |
 | **Orçamento de energia** | ✅ | Bateria carregada pelo Sol (43 % da Terra, zero à noite); gastam O2, blindagem, fábrica de combustível e rádio (issue #30). |
-| **Condição de vitória** | ✅ | Abastecer o MAV (gelo + energia), sobreviver a 3 tempestades e enviar os dados científicos (issue #30). |
+| **Condição de vitória** | ✅ | Abastecer o MAV (gelo + energia), sobreviver a 3 tempestades e enviar os dados científicos (issue #30). Agora dentro de uma história em 3 atos, com janela de lançamento: se ela fechar, a partida termina sem decolagem. |
+| **História (início, meio e fim)** | ✅ | Animação de pouso → ato 1 (tutorial guiado) → ato 2 (preparar a volta, tempestades) → ato 3 (janela de lançamento) → animação de decolagem. Ver [`../superpowers/specs/2026-11-14-story-arc-design.md`](../superpowers/specs/2026-11-14-story-arc-design.md). |
 | **Produção de comida** | 🟡 | Batatas são um estoque finito; não há cultivo, nem custo de água/energia na estufa. |
-| **Atraso de comunicação** | ❌ | Não existe. |
+| **Atraso de comunicação** | ✅ | No ato 1 da história, a resposta do Controle da Missão leva o atraso real de ida e volta Terra–Marte de 14/11/2026 (22 min, JPL Horizons), contado em minutos de jogo. |
 | **Toda escolha tem custo (trade-off)** | ❌ | **Este é o gap principal.** Hoje não há nenhuma decisão com custo: a estratégia ótima é ficar dentro da nave. |
 | **Dados reais da NASA** | ❌ | Nenhum dado real. O céu é "inspirado", não alimentado por dados. |
 | **Atribuição de fontes no jogo** | ❌ | Não há tela de créditos ou fontes. |

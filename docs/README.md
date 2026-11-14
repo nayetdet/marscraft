@@ -12,6 +12,8 @@ Contexto geral do **MineMars**, nossa resposta ao desafio *Build a Junior Astron
 | [`data/protecao-radiacao.md`](data/protecao-radiacao.md) | Como a NASA protege astronautas da radiação (passiva × escudo magnético ativo) e como o escudo `R` do jogo usa isso |
 | [`data/samples/`](data/samples/) | Amostras JSON reais e reduzidas, coletadas em 2026-11-14 |
 | [`game/estado-atual-e-gaps.md`](game/estado-atual-e-gaps.md) | O que o jogo já faz, o que falta para o desafio e a proposta de trade-off |
+| [`superpowers/specs/2026-11-14-story-arc-design.md`](superpowers/specs/2026-11-14-story-arc-design.md) | História em 3 atos: objetivo central, objetivos de cada ato e atraso de comunicação |
+| [`superpowers/plans/2026-11-14-story-arc.md`](superpowers/plans/2026-11-14-story-arc.md) | Plano de implementação e roteiro, plano a plano, das animações de pouso e de decolagem |
 
 ## Como atualizar
 

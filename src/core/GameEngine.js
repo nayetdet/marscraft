@@ -38,6 +38,7 @@ import { isInsideShieldZone, SHIELD_ZONE } from '../mission/shieldZone.js';
 import { ShieldBubble } from '../graphics/shieldBubble.js';
 import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
+import { COMMS_DELAY } from '../data/commsDelay.js';
 import { StoryDirector } from '../story/StoryDirector.js';
 import { StoryHud } from '../ui/StoryHud.js';
 import { CutsceneHud } from '../ui/CutsceneHud.js';
@@ -603,7 +604,9 @@ export class GameEngine {
     ];
     const sources = `Solar storms: real CMEs from NASA DONKI (real data from ${formatDateDMY(donkiCme.fetched)}). ` +
       'Radiation: Curiosity RAD on the Mars surface (NASA RadLab). Sunlight on Mars: 43% of Earth (NASA Mars Fact Sheet). ' +
-      'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station.';
+      'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station. ' +
+      `Earth-Mars distance and radio delay: NASA JPL Horizons (real data from ${formatDateDMY(COMMS_DELAY.date)}). ` +
+      'Trip time, thin air and launch windows: NASA Mars facts.';
     this.missionHud.showVictory(rows, sources);
     document.exitPointerLock();
   }
