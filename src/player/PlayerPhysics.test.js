@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
 import { PlayerPhysics } from './PlayerPhysics.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { PHYSICS_CONFIG, WORLD_CONFIG } from '../config/constants.js';
@@ -95,5 +96,34 @@ describe('PlayerPhysics', () => {
 
     player.update(0.1, { KeyW: true });
     expect(Math.hypot(player.pos.x, player.pos.z)).toBeLessThan(WORLD_CONFIG.CRATER_RADIUS - 2.4);
+  });
+});
+
+describe('PlayerPhysics.getLookDirection', () => {
+  it('reaproveita o vetor passado e devolve direcao unitaria', () => {
+    const player = new PlayerPhysics(createMockWorld());
+    player.yaw = 0;
+    player.pitch = 0;
+    const target = new THREE.Vector3(9, 9, 9);
+
+    const dir = player.getLookDirection(target);
+
+    expect(dir).toBe(target);
+    expect(dir.x).toBeCloseTo(0, 6);
+    expect(dir.y).toBeCloseTo(0, 6);
+    expect(dir.z).toBeCloseTo(-1, 6);
+  });
+
+  it('segue yaw e pitch e cria um vetor novo quando nenhum e passado', () => {
+    const player = new PlayerPhysics(createMockWorld());
+    player.yaw = Math.PI / 2; // virado para -X
+    player.pitch = Math.PI / 4; // olhando 45 graus para cima
+
+    const dir = player.getLookDirection();
+
+    expect(dir.length()).toBeCloseTo(1, 6);
+    expect(dir.x).toBeCloseTo(-Math.SQRT1_2, 6);
+    expect(dir.y).toBeCloseTo(Math.SQRT1_2, 6);
+    expect(dir.z).toBeCloseTo(0, 6);
   });
 });
