@@ -37,7 +37,7 @@ O abrigo de tempestade, o terminal de rádio e o módulo norte são da issue #56
 |---|---|---|
 | Posto avançado na Lua/Marte | ✅ Marte | — |
 | **Suporte de vida** | ✅ | O O2 do habitat só recarrega com energia da bateria (issue #30). |
-| **Blindagem contra radiação** | ✅ | Tempestades solares a partir de CMEs reais do DONKI, dose em mSv (RadLab), blindagem [R] que gasta energia (issue #30) e abrigo de tempestade com parede de água que troca água por proteção (issue #56). |
+| **Blindagem contra radiação** | ✅ | Tempestades solares a partir de CMEs reais do DONKI, dose em mSv (RadLab), blindagem ligada pelo item Shield Remote (hotbar) que gasta energia (issue #30) e abrigo de tempestade com parede de água que troca água por proteção (issue #56). |
 | **Orçamento de energia** | ✅ | Bateria carregada pelo Sol (43 % da Terra, zero à noite); gastam O2, blindagem, fábrica de combustível e rádio (issue #30). |
 | **Condição de vitória** | ✅ | Abastecer o MAV (gelo + energia), sobreviver a 3 tempestades e enviar os dados científicos (issue #30). Agora dentro de uma história em 3 atos, com janela de lançamento: se ela fechar, a partida termina sem decolagem. |
 | **História (início, meio e fim)** | ✅ | Animação de pouso → ato 1 (tutorial guiado em 3 passos, HUD em ícones) → ato 2 (preparar a volta, tempestades) → ato 3 (janela de lançamento) → animação de decolagem. Ver [`../superpowers/specs/2026-11-14-story-arc-design.md`](../superpowers/specs/2026-11-14-story-arc-design.md). |

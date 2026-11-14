@@ -119,7 +119,7 @@ describe('objectiveView', () => {
     step(story, { insideHabitat: true, atConsole: true });
     step(story, { hours: 16, iceCount: 1 });
     const view = step(story, { hours: 17, stormPhase: 'warning' });
-    expect(view.task).toMatchObject({ icon: 'shield', label: 'GET SAFE', key: 'R' });
+    expect(view.task).toMatchObject({ icon: 'shield', label: 'GET SAFE', key: null });
   });
 
   it('shows the launch window running out in act 3', () => {

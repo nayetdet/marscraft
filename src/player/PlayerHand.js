@@ -26,6 +26,7 @@ export class PlayerHand {
     this._buildArmMesh();
     this._buildHeldBlockMesh();
     this._buildScopeMesh();
+    this._buildShieldRemoteMesh();
 
     this.heldCrops = {};
     for (const [id, type] of Object.entries(CROP_TYPES_BY_ID)) {
@@ -154,6 +155,31 @@ export class PlayerHand {
     this.handGroup.add(scope);
   }
 
+  // Controle do escudo de radiacao: caixinha com antena, tela e botao vermelho
+  _buildShieldRemoteMesh() {
+    const remote = new THREE.Group();
+    const caseMat = new THREE.MeshLambertMaterial({ color: 0xb8c5cc });
+    const screenMat = new THREE.MeshLambertMaterial({ color: 0x38bdf8, emissive: 0x075985, emissiveIntensity: 0.5 });
+    const buttonMat = new THREE.MeshLambertMaterial({ color: 0xef4444, emissive: 0x7f1d1d, emissiveIntensity: 0.4 });
+    const antennaMat = new THREE.MeshLambertMaterial({ color: 0xd4a017 });
+    remote.add(new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.06, 0.26), caseMat));
+    const screen = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.012, 0.08), screenMat);
+    screen.position.set(0, 0.034, -0.06);
+    remote.add(screen);
+    const button = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 0.06), buttonMat);
+    button.position.set(0, 0.038, 0.05);
+    remote.add(button);
+    const antenna = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.14), antennaMat);
+    antenna.position.set(0.05, 0.02, -0.19);
+    remote.add(antenna);
+    remote.position.set(-0.06, 0.12, -0.2);
+    remote.rotation.set(0.5, 0.1, 0.2);
+    remote.traverse((node) => { if (node.isMesh) node.renderOrder = 999; });
+    this.heldShieldRemoteMesh = remote;
+    this.heldShieldRemoteMesh.visible = false;
+    this.handGroup.add(remote);
+  }
+
   // Um clone por tipo de bloco, reaproveitado (antes clonava a cada troca de slot e vazava)
   _getHandMaterial(blockId) {
     if (!this._handMaterials) this._handMaterials = {};
@@ -176,7 +202,8 @@ export class PlayerHand {
     this.heldCarrotMesh.visible = false;
     for (const model of Object.values(this.heldCrops)) model.visible = false;
     this.heldScopeMesh.visible = blockId === BLOCK_IDS.SCOPE && count > 0;
-    if (this.heldScopeMesh.visible) {
+    this.heldShieldRemoteMesh.visible = blockId === BLOCK_IDS.SHIELD_REMOTE && count > 0;
+    if (this.heldScopeMesh.visible || this.heldShieldRemoteMesh.visible) {
       this.heldBlockMesh.visible = false;
       this.armMesh.position.set(0.08, -0.06, 0.08);
       return;

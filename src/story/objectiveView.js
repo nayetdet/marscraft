@@ -15,7 +15,7 @@ const TASKS = {
   'enter-base': { icon: 'door', label: 'ENTER THE BASE' },
   report: { icon: 'radio', label: 'CALL EARTH' },
   'collect-ice': { icon: 'ice', label: 'GET 1 ICE' },
-  'storm-guide': { icon: 'shield', label: 'GET SAFE', key: 'R' },
+  'storm-guide': { icon: 'shield', label: 'GET SAFE', key: null },
   'send-data': { icon: 'radio', label: 'SEND DATA', key: 'G' },
   ignite: { icon: 'rocket', label: 'LAUNCH!' },
   done: { icon: 'rocket', label: 'LIFTOFF!' },

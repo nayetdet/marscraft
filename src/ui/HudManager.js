@@ -133,7 +133,7 @@ export class HudManager {
       slot.dataset.slotIndex = idx;
 
       const hasItems = (slotData?.count ?? 0) > 0;
-      const preview = slotData?.id === BLOCK_IDS.SCOPE ? this._scopePreview() : this.previews[slotData?.id];
+      const preview = this._itemPreview(slotData?.id);
       const swatchStyle = hasItems
         ? `background-image: url('${preview ?? ''}'); opacity: 1;`
         : '';
@@ -161,7 +161,7 @@ export class HudManager {
       slot.addEventListener('click', () => this._selectInventorySlot(index));
       if (slotData) {
         slot.innerHTML = `
-          <div class="mc-slot-icon${slotData.id === BLOCK_IDS.HYDRO_PLANT ? ' carrot' : ''}" style="background-image: url('${slotData.id === BLOCK_IDS.SCOPE ? this._scopePreview() : this.previews[slotData.id] ?? ''}')"></div>
+          <div class="mc-slot-icon${slotData.id === BLOCK_IDS.HYDRO_PLANT ? ' carrot' : ''}" style="background-image: url('${this._itemPreview(slotData.id) ?? ''}')"></div>
           <span class="mc-slot-count">${slotData.count > 0 ? slotData.count : ''}</span>
         `;
       }
@@ -176,6 +176,17 @@ export class HudManager {
     inventorySlots.slice(0, 9).forEach((slotData, index) => {
       this.inventoryHotbarEl.appendChild(renderSlot(slotData, index, true));
     });
+  }
+
+  // Itens de mao (scanner, controle do escudo) nao tem textura de bloco: icone em SVG pixelado
+  _itemPreview(id) {
+    if (id === BLOCK_IDS.SCOPE) return this._scopePreview();
+    if (id === BLOCK_IDS.SHIELD_REMOTE) return this._shieldRemotePreview();
+    return this.previews[id];
+  }
+
+  _shieldRemotePreview() {
+    return `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges"><path fill="#d4a017" d="M20 2h2v8h-2z"/><path fill="#b8c5cc" d="M9 8h14v22H9z"/><path fill="#263746" d="M11 10h10v7H11z"/><path fill="#38bdf8" d="M13 12h6v3h-6z"/><path fill="#ef4444" d="M13 20h6v6h-6z"/></svg>')}`;
   }
 
   _scopePreview() {

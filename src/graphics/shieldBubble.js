@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-// Bolhas visuais do escudo de radiação ativo (tecla R), uma por bobina (ver mission/shieldZone.js).
+// Bolhas visuais do escudo de radiação ativo (item Shield Remote), uma por bobina (ver mission/shieldZone.js).
 // Um campo magnético de verdade é invisível: a bolha só mostra ONDE ele protege. O desenho segue
 // o conceito estudado pela NASA (NIAC, bobinas supercondutoras em volta do habitat): linhas de
 // campo arqueando sobre a base e, durante a tempestade solar, faíscas onde as partículas

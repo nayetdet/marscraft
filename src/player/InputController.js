@@ -144,6 +144,11 @@ export class InputController {
       this._setScope(!this.isScannerOpen, !this.isScannerOpen);
       return;
     }
+    if (slot.id === BLOCK_IDS.SHIELD_REMOTE) {
+      this.playerHand.triggerSwing();
+      this.onToggleShield();
+      return;
+    }
     const hit = this.getTargetedBlock();
 
     if (slot.consumable) {
@@ -467,7 +472,6 @@ export class InputController {
         this._handleJournalKey(e, showPauseMenu);
         return;
       }
-      if (e.code === 'KeyR' && this.isLocked && !e.repeat) this.onToggleShield();
       if (e.code === 'KeyC' && this.isLocked && !e.repeat) this.onToggleCrewPanel();
       if (e.code === 'KeyG' && this.isLocked && !e.repeat) this.onSendData();
       if (this.isLocked && this._isBrowserShortcut(e)) e.preventDefault();
