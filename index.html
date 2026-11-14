@@ -35,6 +35,8 @@
       <div id="base-water-status">Base Water: 25L · Greenhouse: 100% (Hydrated)</div>
     </div>
 
+    <!-- Coluna da direita: caixa da missao em cima e, abaixo, o scanner (toast + ficha) -->
+    <div class="hud-right">
     <!-- Missao: energia, radiacao, tempestade solar e progresso do MAV -->
     <div id="mission-box" class="mission-box">
       <div id="mission-power">Power: 80%</div>
@@ -43,6 +45,12 @@
       <div id="mission-storm" class="mission-storm">Space weather: calm</div>
       <div id="mission-mav">Rocket home (MAV): 0% ready</div>
       <div id="mission-source" class="mission-source"></div>
+    </div>
+    <!-- Ficha do alvo escaneado e aviso de descoberta (nao pausam o jogo) -->
+    <div class="scan-side">
+      <div id="scan-discovery" class="scan-discovery hidden" role="status"></div>
+      <aside id="scan-card" class="scan-card hidden" aria-live="polite"></aside>
+    </div>
     </div>
     <div id="rover-info" class="mc-top-info hidden">
       <div id="rover-speed">Speed: 0.0 km/h</div>
@@ -90,9 +98,6 @@
       </div>
     </div>
 
-    <!-- Ficha do alvo escaneado e aviso de descoberta (nao pausam o jogo) -->
-    <aside id="scan-card" class="scan-card hidden" aria-live="polite"></aside>
-    <div id="scan-discovery" class="scan-discovery hidden" role="status"></div>
 
     <!-- Area Inferior: Mensagem de Item + Barras Survival + Hotbar 9 Slots -->
     <div class="mc-bottom-area">

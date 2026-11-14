@@ -377,6 +377,14 @@ export class HudManager {
       this._updateIconBar(this.energyBar, (mission.battery.charge / mission.battery.capacity) * survival.maxStat);
     }
 
+    // Os nomes no céu só aparecem com a luneta (Z) aberta, como parte do modo telescópio.
+    if (!isScopeOpen) {
+      this._setLabelVisible(this.earthLabel, false);
+      this._setLabelVisible(this.phobosLabel, false);
+      this._setLabelVisible(this.deimosLabel, false);
+      return;
+    }
+
     const earthPos = sky.getEarthWorldPosition(this._earthPos);
     const phobosPos = sky.getPhobosWorldPosition(this._phobosPos);
     const deimosPos = sky.getDeimosWorldPosition(this._deimosPos);
