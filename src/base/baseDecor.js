@@ -214,6 +214,14 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   tankLevel.position.set(-17.5, F + 0.22, -5.2);
   dynamic.add(tankLevel);
 
+  // Agua dentro do purificador na bancada; a base da geometria fica fixa ao variar o nivel.
+  const purifierGeo = new THREE.BoxGeometry(0.38, 1, 0.38);
+  purifierGeo.translate(0, 0.5, 0);
+  const purifierWater = new THREE.Mesh(purifierGeo, mats.water);
+  purifierWater.position.set(10.4, F + 1.075, 1.05);
+  purifierWater.visible = false;
+  dynamic.add(purifierWater);
+
   // ---------- Pontos de informacao: olhar e apertar F ----------
   infoPoints.push(
     {
@@ -251,9 +259,11 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
       screens.greenhouse.draw(greenhouseModel(s));
 
       const level = s.maxWater > 0 ? Math.max(0, Math.min(1, s.water / s.maxWater)) : 0;
-      if (Math.abs(level - this.level) > 0.004) {
+      if (level !== this.level) {
         this.level = level;
         tankLevel.scale.y = Math.max(0.02, level * 1.42);
+        purifierWater.visible = level > 0;
+        purifierWater.scale.y = level * 0.85;
       }
     },
   };

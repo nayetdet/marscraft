@@ -43,6 +43,7 @@ export function buildNasaCustomModels(scene) {
     plantStem: new THREE.MeshLambertMaterial({ color: 0x16a34a }),
     plantLeaf: new THREE.MeshLambertMaterial({ color: 0x4ade80 }),
     potato: new THREE.MeshLambertMaterial({ color: 0xd97706 }),
+    labGlass: new THREE.MeshLambertMaterial({ color: 0x89d8ed, transparent: true, opacity: 0.25, depthWrite: false }),
     waterGlass: new THREE.MeshLambertMaterial({
       color: 0x38bdf8,
       transparent: true,
@@ -453,7 +454,7 @@ function createLabTableModel(mats, x, y, z) {
   addBox(g, 1.2, 0.1, 2.1, mats.lightGray, 0, 0.92, 0);
 
   addBox(g, 0.5, 0.12, 0.5, mats.darkSlate, 0, 1.02, -0.45);
-  addBox(g, 0.42, 0.85, 0.42, mats.waterGlass, 0, 1.5, -0.45);
+  addBox(g, 0.42, 0.85, 0.42, mats.labGlass, 0, 1.5, -0.45);
   addBox(g, 0.5, 0.14, 0.5, mats.whiteMetal, 0, 1.98, -0.45);
 
   addBox(g, 0.32, 0.08, 0.32, mats.charcoal, 0, 1.0, 0.45);
