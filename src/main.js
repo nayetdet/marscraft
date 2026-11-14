@@ -18,7 +18,9 @@ window.addEventListener('DOMContentLoaded', () => {
         if (import.meta.env.DEV) window.__minemars = engine;
         requestAnimationFrame(() => {
           loadingOverlay.classList.add('is-leaving');
-          setTimeout(() => loadingOverlay.classList.add('hidden'), 350);
+          setTimeout(() => {
+            loadingOverlay.classList.add('hidden');
+          }, 350);
         });
       } catch (error) {
         loadingOverlay.classList.add('mc-loading-error');

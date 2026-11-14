@@ -64,6 +64,7 @@ export class InputController {
     this.keys = {};
     this.isLocked = false;
     this.isTouchMode = false;
+    this.hasStarted = false;
     this.supportsTouch = Boolean(window.matchMedia?.('(pointer: coarse)').matches)
       || (navigator.maxTouchPoints ?? 0) > 0;
     if (this.supportsTouch) document.body.classList.add('touch-device');
@@ -109,6 +110,8 @@ export class InputController {
     this.isLocked = true;
     document.body.classList.add('touch-mode');
     document.getElementById('overlay').classList.add('hidden');
+    document.getElementById('pause-overlay').classList.add('hidden');
+    document.body.classList.remove('pause-menu-open');
   }
 
   _toggleInventory() {
@@ -139,6 +142,11 @@ export class InputController {
     if (!slot || slot.count <= 0) return;
     if (slot.id === BLOCK_IDS.SCOPE) {
       this._setScope(!this.isScannerOpen, !this.isScannerOpen);
+      return;
+    }
+    if (slot.id === BLOCK_IDS.SHIELD_REMOTE) {
+      this.playerHand.triggerSwing();
+      this.onToggleShield();
       return;
     }
     const hit = this.getTargetedBlock();
@@ -329,25 +337,36 @@ export class InputController {
 
   _bindEvents() {
     const overlay = document.getElementById('overlay');
+    const pauseOverlay = document.getElementById('pause-overlay');
+    const menuCard = overlay.querySelector('.mc-menu-card');
+    const menuCardHome = menuCard.parentElement;
+    const pauseMenuCardHost = document.getElementById('pause-menu-card-host');
     const startBtn = document.getElementById('start-btn');
     const resetBtn = document.getElementById('reset-btn');
     const controlsBtn = document.getElementById('controls-btn');
     const controlsBackBtn = document.getElementById('controls-back-btn');
     const menuMain = document.getElementById('menu-main');
     const controlsScreen = document.getElementById('controls-screen');
-    const menu = document.querySelector('.mc-menu');
     const respawnBtn = document.getElementById('respawn-btn');
+
+    const showPauseMenu = () => {
+      pauseMenuCardHost.append(menuCard);
+      startBtn.textContent = 'Resume';
+      overlay.classList.add('hidden');
+      pauseOverlay.classList.remove('hidden');
+      document.body.classList.add('pause-menu-open');
+    };
 
     controlsBtn.addEventListener('click', () => {
       menuMain.classList.add('hidden');
       controlsScreen.classList.remove('hidden');
-      menu.classList.add('is-controls');
+      menuMain.closest('.mc-menu').classList.add('is-controls');
     });
 
     controlsBackBtn.addEventListener('click', () => {
       controlsScreen.classList.add('hidden');
       menuMain.classList.remove('hidden');
-      menu.classList.remove('is-controls');
+      menuMain.closest('.mc-menu').classList.remove('is-controls');
     });
 
     window.addEventListener('resize', () => this._updateOrientationMode());
@@ -360,6 +379,7 @@ export class InputController {
     }, true);
 
     startBtn.addEventListener('click', () => {
+      this.hasStarted = true;
       if (this.supportsTouch) this._startTouchMode();
       else requestRawPointerLock(this.domElement);
     });
@@ -380,7 +400,7 @@ export class InputController {
         if (this.isTouchMode) {
           this.keys = {};
           this.isLocked = true;
-          overlay.classList.add('hidden');
+          pauseOverlay.classList.add('hidden');
         } else {
           requestRawPointerLock(this.domElement);
         }
@@ -395,8 +415,21 @@ export class InputController {
         this.keys = {};
         this.player.isMoving = false;
       }
-      if (!this.survival.isDead && !this.hud.isInventoryOpen && !this.isMissionModalOpen() && !this.isStationOpen?.() && !this.isJournalOpen()) {
-        overlay.classList.toggle('hidden', this.isLocked);
+      const canShowMenu = !this.survival.isDead
+        && !this.hud.isInventoryOpen
+        && !this.isMissionModalOpen()
+        && !this.isStationOpen?.()
+        && !this.isJournalOpen();
+      const showStartMenu = canShowMenu && !this.hasStarted;
+      const showPauseMenuNow = canShowMenu && this.hasStarted && !this.isLocked;
+      if (showPauseMenuNow) {
+        showPauseMenu();
+      } else {
+        menuCardHome.append(menuCard);
+        startBtn.textContent = 'Play';
+        overlay.classList.toggle('hidden', !showStartMenu);
+        pauseOverlay.classList.add('hidden');
+        document.body.classList.remove('pause-menu-open');
       }
     });
 
@@ -436,10 +469,9 @@ export class InputController {
       }
       if (this.hud.isInventoryOpen && e.code !== 'KeyE') return;
       if (this.isJournalOpen()) {
-        this._handleJournalKey(e, overlay);
+        this._handleJournalKey(e, showPauseMenu);
         return;
       }
-      if (e.code === 'KeyR' && this.isLocked && !e.repeat) this.onToggleShield();
       if (e.code === 'KeyC' && this.isLocked && !e.repeat) this.onToggleCrewPanel();
       if (e.code === 'KeyG' && this.isLocked && !e.repeat) this.onSendData();
       if (this.isLocked && this._isBrowserShortcut(e)) e.preventDefault();
@@ -627,7 +659,7 @@ export class InputController {
 
   // Com o diário aberto, só J (volta ao jogo) e Esc (fecha e mostra o menu) fazem algo.
   // Esc não conta como gesto do usuário para o pointer lock, por isso volta pelo botão Play.
-  _handleJournalKey(e, overlay) {
+  _handleJournalKey(e, showPauseMenu) {
     if (e.repeat) return;
     if (e.code === 'KeyJ') {
       e.preventDefault();
@@ -635,7 +667,7 @@ export class InputController {
       requestRawPointerLock(this.domElement);
     } else if (e.code === 'Escape') {
       this.onToggleJournal(false);
-      overlay.classList.remove('hidden');
+      showPauseMenu();
     }
   }
 

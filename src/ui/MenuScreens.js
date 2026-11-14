@@ -6,7 +6,6 @@ import { formatDateDMY } from '../mission/missionText.js';
 export class MenuScreens {
   constructor({ donkiDate, onDemo }) {
     const menuMain = document.getElementById('menu-main');
-    const overlay = document.getElementById('overlay');
     const feedback = document.getElementById('demo-feedback');
     document.getElementById('sources-donki-date').textContent = donkiDate;
     document.getElementById('sources-terrain-coords').textContent = formatCoords(MARS_TERRAIN.centerLat, MARS_TERRAIN.centerLonE);
@@ -17,12 +16,12 @@ export class MenuScreens {
       document.getElementById(`${name}-btn`).addEventListener('click', () => {
         menuMain.classList.add('hidden');
         screen.classList.remove('hidden');
-        overlay.classList.add('menu-info-open');
+        menuMain.closest('.mc-menu-card').parentElement.closest('.mc-overlay').classList.add('menu-info-open');
       });
       document.getElementById(`${name}-back-btn`).addEventListener('click', () => {
         screen.classList.add('hidden');
         menuMain.classList.remove('hidden');
-        overlay.classList.remove('menu-info-open');
+        menuMain.closest('.mc-menu-card').parentElement.closest('.mc-overlay').classList.remove('menu-info-open');
       });
       return screen;
     };

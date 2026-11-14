@@ -32,10 +32,11 @@ describe('SurvivalSystem', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('starts with the Scope in slot one and carrots in slot two', () => {
+  it('starts with the Scope, carrots and the Shield Remote in the first three slots', () => {
     const survival = new SurvivalSystem();
     expect(survival.slots[0]?.id).toBe(BLOCK_IDS.SCOPE);
     expect(survival.slots[1]?.id).toBe(BLOCK_IDS.HYDRO_PLANT);
+    expect(survival.slots[2]).toMatchObject({ id: BLOCK_IDS.SHIELD_REMOTE, count: 1, equipment: true });
   });
 
   it('detects player inside Main White Habitat, Pressurized Tunnel, and Greenhouse Dome', () => {
@@ -204,5 +205,14 @@ describe('distinct crop inventory items', () => {
     survival.food = survival.maxStat;
     expect(survival.consumeSlotItem(index)).toContain('already full');
     expect(survival.countItem(id)).toBe(1);
+  });
+});
+
+describe('habitat blocks without their own item', () => {
+  it.each(['THRUSTER_METAL', 'SOLAR_PANEL', 'CONSOLE_SCREEN', 'RED_BEACON'])('%s is collected as a hull block, never as ice', (key) => {
+    const survival = new SurvivalSystem();
+    expect(survival.addBlockToInventory(BLOCK_IDS[key])).toBe(true);
+    expect(survival.countItem(BLOCK_IDS.NASA_HULL)).toBe(1);
+    expect(survival.countItem(BLOCK_IDS.MARS_ICE)).toBe(0);
   });
 });

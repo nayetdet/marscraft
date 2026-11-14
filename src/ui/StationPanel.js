@@ -1,4 +1,6 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
+import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.js';
+import { greenhouseMapSvg, plotMapLabel, plotStatus } from './greenhouseMap.js';
 import { COMMS_CONFIG, CROP_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
 import { formatDateDMY, formatHours } from '../mission/missionText.js';
@@ -154,39 +156,41 @@ export class StationPanel {
       this._lastGhTick = now;
 
       const { expedition: m, stations: s, utility } = this.engine;
-      if (s.crop) {
-        const total = CROP_CONFIG[s.crop.type].seconds;
-        if (s.crop.progress < total) {
-          const lit = utility ? (utility.greenhouseLightsOn && !utility.cold) : true;
-          m.greenhousePowered = lit && m.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
-          if (m.greenhousePowered && !s.contaminated) {
-            s.crop.progress = Math.min(total, s.crop.progress + dt);
-            if (this.engine.stationCrop) {
-              this.engine.stationCrop.visible = true;
-              this.engine.stationCrop.scale.y = 0.2 + 0.8 * s.crop.progress / total;
-              for (const [t, model] of Object.entries(this.engine.stationCropModels ?? {})) {
-                model.visible = t === s.crop.type;
-              }
-            }
-          }
-          const pct = Math.floor(s.crop.progress / total * 100);
-          if (pct >= 100) {
-            this._playGymSound(440, 0.14, 660);
-            this.render();
-          } else {
-            const fillEl = this.greenhouseContainer?.querySelector('#gh-progress-fill');
-            if (fillEl) fillEl.style.width = `${pct}%`;
-            const pctEl = this.greenhouseContainer?.querySelector('#gh-progress-pct');
-            if (pctEl) pctEl.textContent = `${pct}%`;
-            const powerEl = this.greenhouseContainer?.querySelector('#gh-res-power');
-            if (powerEl) powerEl.textContent = `${Math.round(m.energy)}%`;
-          }
+      if (s.hasGrowingCrops()) {
+        const lit = utility ? (utility.greenhouseLightsOn && !utility.cold) : true;
+        m.greenhousePowered = lit && m.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
+        const readyBefore = s.readyPlotCount();
+        if (m.greenhousePowered && !s.contaminated) s.growCrops(dt);
+        this.engine.updateCropVisuals?.();
+        if (s.readyPlotCount() !== readyBefore) {
+          this._playGymSound(440, 0.14, 660);
+          this.render();
+        } else {
+          this._refreshGreenhouseProgress();
         }
       }
 
       this._ghRaf = requestAnimationFrame(tick);
     };
     this._ghRaf = requestAnimationFrame(tick);
+  }
+
+  // Atualiza so os numeros que mudam a cada instante, sem redesenhar o painel (nao atrapalha o clique)
+  _refreshGreenhouseProgress() {
+    const { expedition: m, stations: s } = this.engine;
+    const root = this.greenhouseContainer;
+    if (!root) return;
+    const selected = plotStatus(s.plots[s.selectedPlot]);
+    const fillEl = root.querySelector('#gh-progress-fill');
+    if (fillEl) fillEl.style.width = `${selected.pct}%`;
+    const pctEl = root.querySelector('#gh-progress-pct');
+    if (pctEl) pctEl.textContent = `${selected.pct}%`;
+    const powerEl = root.querySelector('#gh-res-power');
+    if (powerEl) powerEl.textContent = `${Math.round(m.energy)}%`;
+    s.plots.forEach((plot, i) => {
+      const label = root.querySelector(`[data-plot-pct="${i}"]`);
+      if (label) label.textContent = plotMapLabel(plot);
+    });
   }
 
   _stopGreenhouseLoop() {
@@ -563,10 +567,26 @@ export class StationPanel {
     if (action === 'upgrade') return stations.upgrade();
     if (action === 'upgradeTool') return stations.upgradeTool();
     if (action === 'sendMav') return stations.sendMav(this.engine.radioOptions());
-    if (action === 'harvest') return stations.harvest(survival, id => {
-      this.engine.world.spawnCropDrop(this.engine.stationCrop.position, id);
-    });
-    if (action.startsWith('plant:')) return stations.plant(action.slice(6), survival);
+    if (action.startsWith('plot:')) {
+      stations.selectPlot(Number(action.slice(5)));
+      return '';
+    }
+    if (action === 'harvest') {
+      // A colheita cai ao lado do monitor (no canteiro do jardim), um item por vez
+      const message = stations.harvest(survival, (id, i) => {
+        const position = this.engine.stationCrop.position.clone();
+        position.x += (i % 2) * 0.5;
+        position.z += Math.floor(i / 2) * 0.5;
+        this.engine.world.spawnCropDrop(position, id);
+      });
+      this.engine.updateCropVisuals?.();
+      return message;
+    }
+    if (action.startsWith('plant:')) {
+      const message = stations.plant(action.slice(6), survival);
+      this.engine.updateCropVisuals?.();
+      return message;
+    }
     if (action === 'analyze') {
       if (stations.samples < 1) return 'Collect a new regolith sample outside first.';
       const index = survival.inventorySlots.findIndex(item => item?.id === BLOCK_IDS.REGOLITH && item.count > 0);
@@ -704,10 +724,12 @@ export class StationPanel {
     const pct = crop ? Math.floor(crop.progress / recipe.seconds * 100) : 0;
     const isReady = Boolean(crop && pct >= 100);
     const study = plantDiscovery(s.discoveryIndex);
+    const plotDef = GREENHOUSE_PLOTS[s.selectedPlot];
 
     const cardsHtml = Object.entries(CROP_CONFIG).map(([type, r]) => {
-      const byWater = Math.floor(v.water / r.water);
-      const byPower = Math.floor(m.energy / r.energy);
+      const cost = s.plotCost(type);
+      const byWater = Math.floor(v.water / cost.water);
+      const byPower = Math.floor(m.energy / cost.energy);
       const canBuy = Math.max(0, Math.min(byWater, byPower));
       const isThisCrop = crop?.type === type;
       const canPlant = !crop && canBuy > 0;
@@ -739,9 +761,10 @@ export class StationPanel {
         <article class="gh-card ${cardStateClass}" ${cardAction}>
           <img class="gh-crop-art" src="${this.cropIcons[type]}" alt="${type}" />
           <h3>${type.toUpperCase()}</h3>
-          <span class="gh-food-gain">${GH_ICONS.food} +${r.nutrition}</span>
+          <span class="gh-food-gain">${GH_ICONS.food} +${r.nutrition}${cost.items > 1 ? ` x${cost.items}` : ''}</span>
+          <span class="gh-cost">${GH_ICONS.water} ${cost.water} ${GH_ICONS.power} ${cost.energy}</span>
           <div class="gh-can-buy ${canBuy > 0 ? 'ok' : 'zero'}">
-            Can buy: <strong>${canBuy}</strong>
+            ${canBuy > 0 ? 'You can plant it' : 'Not enough water or power'}
           </div>
           ${bottomHtml}
         </article>`;
@@ -759,7 +782,18 @@ export class StationPanel {
         ${s.contaminated ? `<button type="button" class="mc-btn gh-clean-btn" data-action="cleanBase">CLEAN</button>` : ''}
         <details class="gym-learn"><summary aria-label="NASA info" title="NASA info">i</summary><p>${study ? `${study.id}: ${study.explanation}` : `Real NASA OSDR data (${formatDateDMY(plantResearch.retrieved.slice(0, 10))}).`}<br/>${ghLinks}</p></details>
       </div>
-      <div class="gh-cards">${cardsHtml}</div>
+      <div class="gh-body">
+        <div class="gh-map-wrap">
+          ${greenhouseMapSvg(s.plots, s.selectedPlot)}
+          <p class="gh-map-hint">Tap a field on the map, then pick a crop.</p>
+        </div>
+        <div class="gh-side">
+          <div class="gh-plot-title">FIELD ${plotDef.id}: ${plotDef.name.toUpperCase()}<small>${plotDef.yield > 1
+            ? `Big field: costs ${plotDef.yield}x the water and power, gives ${plotDef.yield} meals.`
+            : 'Small bed: 1 meal per harvest.'} ${s.plantedPlotCount()}/${s.plots.length} fields planted.</small></div>
+          <div class="gh-cards">${cardsHtml}</div>
+        </div>
+      </div>
     `;
   }
 

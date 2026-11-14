@@ -4,6 +4,7 @@ import { CROP_CONFIG } from '../config/constants.js';
 import { describe, it, expect } from 'vitest';
 import { MissionSystem } from './MissionSystem.js';
 import { StationSystem } from './StationSystem.js';
+import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.js';
 
 const player = () => ({ health: 20, maxStat: 20 });
 describe('base stations', () => {
@@ -142,4 +143,61 @@ it('keeps a ripe crop when the inventory is full and drops the right item when h
   expect(dropped).toBe(CROP_ITEM_IDS.soy);
   expect(station.crop).toBeNull();
   expect(station.harvestCount).toBe(1);
+});
+
+describe('greenhouse fields', () => {
+  const setup = () => {
+    const mission = new MissionSystem();
+    const station = new StationSystem(mission);
+    const survival = new SurvivalSystem();
+    survival.water = 20;
+    mission.greenhousePowered = true;
+    return { mission, station, survival };
+  };
+
+  it('every field of the plantation can hold its own crop at the same time', () => {
+    const { station, survival } = setup();
+    expect(station.plots).toHaveLength(GREENHOUSE_PLOTS.length);
+    station.selectPlot(0);
+    station.plant('lettuce', survival);
+    station.selectPlot(1);
+    expect(station.crop).toBeNull();
+    expect(station.plant('potato', survival)).toMatch(/Planted/);
+    expect(station.plots[0].crop.type).toBe('lettuce');
+    expect(station.plots[1].crop.type).toBe('potato');
+    expect(station.plantedPlotCount()).toBe(2);
+
+    station.update(CROP_CONFIG.lettuce.seconds, true, player(), false);
+    expect(station.readyPlotCount()).toBe(1);
+    expect(station.hasGrowingCrops()).toBe(true);
+  });
+
+  it('a bigger field costs more water and power and gives more meals', () => {
+    const { mission, station, survival } = setup();
+    const outer = GREENHOUSE_PLOTS.findIndex((plot) => plot.kind === 'outer');
+    const size = GREENHOUSE_PLOTS[outer].yield;
+    expect(size).toBeGreaterThan(1);
+    const energyBefore = mission.energy;
+    station.selectPlot(outer);
+    station.plant('lettuce', survival);
+    expect(survival.water).toBe(20 - CROP_CONFIG.lettuce.water * size);
+    expect(energyBefore - mission.energy).toBeCloseTo(CROP_CONFIG.lettuce.energy * size);
+
+    station.update(CROP_CONFIG.lettuce.seconds, true, player(), false);
+    const dropped = [];
+    station.harvest(survival, (id) => dropped.push(id));
+    expect(dropped).toEqual(Array(size).fill(CROP_ITEM_IDS.lettuce));
+    expect(station.crop).toBeNull();
+  });
+
+  it('refuses a big field when the water is not enough, and takes nothing', () => {
+    const { mission, station, survival } = setup();
+    survival.water = 2;
+    const energyBefore = mission.energy;
+    station.selectPlot(GREENHOUSE_PLOTS.findIndex((plot) => plot.kind === 'outer'));
+    expect(station.plant('soy', survival)).toMatch(/water/);
+    expect(survival.water).toBe(2);
+    expect(mission.energy).toBe(energyBefore);
+    expect(station.crop).toBeNull();
+  });
 });

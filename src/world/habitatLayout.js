@@ -91,14 +91,22 @@ const L = HABITAT_LAYOUT;
 // 'ring' (fundacao), 'plaza' (praca central), 'walk' (cruz de 5 blocos, anel de caminhada e
 // borda) e 'field' (bandejas de cultivo de cenario, em dois aneis). Os canteiros de terra onde
 // se planta de verdade ficam em greenhouseLayout.js (isGreenhouseBed).
+export const DOME_FLOOR = Object.freeze({
+  PLAZA_R: 4.5, // praca central
+  WALK_HALF: 2, // meia largura da cruz de caminhos (5 blocos)
+  INNER_R: 7.5, // fim do anel de campos de dentro
+  RING_R: 8.8, // fim do anel de caminhada, comeco dos campos de fora
+  FIELD_MARGIN: 1.9, // borda livre entre os campos de fora e a parede
+});
+
 export function domeFloorCell(dx, dz) {
   const r = Math.hypot(dx, dz);
   if (r > L.DOME_RADIUS - 0.8) return 'ring';
-  if (r < 4.5) return 'plaza';
-  if (Math.abs(dx) <= 2 || Math.abs(dz) <= 2) return 'walk';
-  if (r < 7.5) return 'field';
-  if (r < 8.8) return 'walk';
-  return r <= L.DOME_RADIUS - 1.9 ? 'field' : 'walk';
+  if (r < DOME_FLOOR.PLAZA_R) return 'plaza';
+  if (Math.abs(dx) <= DOME_FLOOR.WALK_HALF || Math.abs(dz) <= DOME_FLOOR.WALK_HALF) return 'walk';
+  if (r < DOME_FLOOR.INNER_R) return 'field';
+  if (r < DOME_FLOOR.RING_R) return 'walk';
+  return r <= L.DOME_RADIUS - DOME_FLOOR.FIELD_MARGIN ? 'field' : 'walk';
 }
 
 // Diz se a coluna (bx, bz) do habitat principal e 'air', 'wall' ou nada (null).

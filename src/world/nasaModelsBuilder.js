@@ -1,11 +1,11 @@
-import { GREENHOUSE_MONITOR_POS, initialGreenhouseCrop, isGreenhouseBed } from './greenhouseLayout.js';
+import { GREENHOUSE_MONITOR_POS, initialGreenhouseCrop } from './greenhouseLayout.js';
 import { createCropPlantModel } from '../graphics/cropModels.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
-import { HABITAT_LAYOUT, domeFloorCell } from './habitatLayout.js';
+import { HABITAT_LAYOUT } from './habitatLayout.js';
 
 export function buildNasaCustomModels(scene) {
   const group = new THREE.Group();
@@ -496,13 +496,6 @@ function createGreenhouseCropsModel(mats, centerX, floorTopY, centerZ) {
   const plants = [];
   const R = HABITAT_LAYOUT.DOME_RADIUS;
 
-  // Culturas de cenario das bandejas, uma por quadrante (malha estatica, sem colisao)
-  const field = {
-    lettuce: new THREE.MeshLambertMaterial({ color: 0x86efac }),
-    wheat: new THREE.MeshLambertMaterial({ color: 0xd9b44a }),
-    tomato: new THREE.MeshLambertMaterial({ color: 0xdc2626 }),
-    soy: new THREE.MeshLambertMaterial({ color: 0x15803d }),
-  };
   const growLight = new THREE.MeshLambertMaterial({ color: 0xf0abfc, emissive: 0xd946ef, emissiveIntensity: 0.7 });
 
   for (let dx = -R; dx <= R; dx++) {
@@ -524,23 +517,6 @@ function createGreenhouseCropsModel(mats, centerX, floorTopY, centerZ) {
         }
         cropsGroup.add(plant);
         plants.push(plant);
-        continue;
-      }
-      if (isGreenhouseBed(dx, dz) || domeFloorCell(dx, dz) !== 'field') continue;
-
-      if (dx > 0 && dz < 0) {
-        addBox(cropsGroup, 0.62, 0.22, 0.62, field.lettuce, px, 0.11, pz);
-        addBox(cropsGroup, 0.34, 0.16, 0.34, mats.plantLeaf, px, 0.3, pz);
-      } else if (dx < 0 && dz < 0) {
-        addBox(cropsGroup, 0.5, 0.7, 0.12, field.wheat, px, 0.35, pz - 0.18);
-        addBox(cropsGroup, 0.5, 0.82, 0.12, field.wheat, px, 0.41, pz + 0.18);
-      } else if (dx < 0 && dz > 0) {
-        addBox(cropsGroup, 0.5, 0.62, 0.5, field.soy, px, 0.31, pz);
-        addBox(cropsGroup, 0.16, 0.16, 0.16, field.tomato, px + 0.22, 0.42, pz + 0.22);
-        addBox(cropsGroup, 0.16, 0.16, 0.16, field.tomato, px - 0.2, 0.26, pz + 0.26);
-      } else {
-        addBox(cropsGroup, 0.56, 0.4, 0.56, field.soy, px, 0.2, pz);
-        addBox(cropsGroup, 0.3, 0.2, 0.3, mats.plantStem, px, 0.5, pz);
       }
     }
   }

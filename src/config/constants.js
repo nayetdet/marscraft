@@ -60,7 +60,7 @@ export const SURVIVAL_CONFIG = {
   BREACH_OXYGEN_DRAIN_RATE: 1.0, // pontos de O2 do jogador por segundo
   BASE_OXYGEN_LEAK_RATE: 5, // porcentagem por segundo, para qualquer abertura
   BASE_OXYGEN_REFILL_RATE: 2, // porcentagem por segundo após vedar a base
-  WATER_DRAIN_RATE: 0.14,
+  WATER_DRAIN_RATE: 20 / 600, // hidratacao cheia dura 10 minutos
   FOOD_DRAIN_RATE: 0.11,
   STARVE_DAMAGE_RATE: 0.8,
   DANGER_THRESHOLD: 5,
@@ -294,6 +294,10 @@ export const CUTSCENE_CONFIG = {
   // Aceleracao do MAV na decolagem, em blocos/s^2 (escala de jogo)
   LAUNCH_ACCEL: 2.2,
 };
+
+// Tamanho de cada tipo de campo da estufa: multiplica o custo de plantar (agua e energia) e o
+// numero de itens da colheita. Campo maior rende mais, mas bebe mais agua de uma vez.
+export const GREENHOUSE_PLOT_YIELD = Object.freeze({ garden: 1, inner: 2, outer: 3 });
 
 // Design choices, not NASA agronomic measurements. Seconds are accelerated.
 export const CROP_CONFIG = Object.freeze({
