@@ -121,6 +121,7 @@ export class MissionHud {
       maxWater: survival?.maxBaseWater,
       hydration: survival?.greenhouseHydration,
       co2: stations?.co2,
+      baseOxygen: survival?.baseOxygen,
       contaminated: stations?.contaminated,
       brokenWindows: world?.brokenBaseWindows.size ?? 0,
     });

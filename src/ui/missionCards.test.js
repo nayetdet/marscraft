@@ -30,6 +30,7 @@ describe('missionStatus', () => {
     const mission = fakeMission({ battery: { percent: 5 }, storm: { phase: 'active', storm: STORM, hoursLeft: 2 } });
     const damaged = missionStatus(mission, FETCHED, { brokenWindows: 2 });
     expect(damaged.air.tone).toBe('danger');
+    expect(missionStatus(mission, FETCHED, { brokenWindows: 1, baseOxygen: 65 }).air.pct).toBe(65);
     expect(damaged.alerts[0]).toMatchObject({ id: 'breach', tone: 'danger' });
     expect(missionStatus(fakeMission(), FETCHED, { brokenWindows: 0 }).alerts).toEqual([]);
   });

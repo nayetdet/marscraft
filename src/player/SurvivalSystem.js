@@ -12,6 +12,8 @@ export class SurvivalSystem {
   resetStats() {
     this.health = this.maxStat;
     this.oxygen = this.maxStat;
+    this.baseOxygen = 100;
+    this.baseBreached = false;
     this.water = this.maxStat;
     this.food = this.maxStat;
     this.isDead = false;
@@ -61,30 +63,40 @@ export class SurvivalSystem {
   }
 
   // maxOxygenRefill: quanto O2 a bateria da base consegue pagar neste frame (sem energia = 0)
-  update(dt, playerPos, maxOxygenRefill = Infinity) {
+  update(dt, playerPos, maxOxygenRefill = Infinity, baseBreached = false) {
     this.lastOxygenRefilled = 0;
     if (this.isDead) return;
 
     this.insidePressurizedShip = this.isPlayerInsideShip(playerPos);
+    this.baseBreached = baseBreached;
+    if (baseBreached) {
+      this.baseOxygen = Math.max(0, this.baseOxygen - SURVIVAL_CONFIG.BASE_OXYGEN_LEAK_RATE * dt);
+    } else {
+      // Base oxygen recovery consumes the same energy budget as the suit refill.
+      const recovered = Math.min(100 - this.baseOxygen, SURVIVAL_CONFIG.BASE_OXYGEN_REFILL_RATE * dt, maxOxygenRefill * 100 / this.maxStat);
+      this.baseOxygen += recovered;
+      this.lastOxygenRefilled = recovered * this.maxStat / 100;
+    }
     const distanceFromBase = Math.hypot(playerPos.x + 4, playerPos.z);
     const stormRange = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS - SURVIVAL_CONFIG.DUST_STORM_START_RADIUS;
     this.dustStormIntensity = this.insidePressurizedShip
       ? 0
       : Math.max(0, Math.min(1, (distanceFromBase - SURVIVAL_CONFIG.DUST_STORM_START_RADIUS) / stormRange));
 
-    if (this.insidePressurizedShip) {
-      this.lastOxygenRefilled = Math.max(0, Math.min(
+    if (this.insidePressurizedShip && !baseBreached) {
+      const suitRefill = Math.max(0, Math.min(
         this.maxStat - this.oxygen,
         SURVIVAL_CONFIG.OXYGEN_REFILL_RATE * dt,
-        maxOxygenRefill
+        Math.max(0, maxOxygenRefill - this.lastOxygenRefilled)
       ));
-      this.oxygen += this.lastOxygenRefilled;
+      this.lastOxygenRefilled += suitRefill;
+      this.oxygen += suitRefill;
       this.oxygenNeedsPower = this.oxygen < this.maxStat - 0.01 && maxOxygenRefill <= 0;
     } else {
       this.oxygenNeedsPower = false;
       this.oxygen = Math.max(
         0,
-        this.oxygen - SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE * dt
+        this.oxygen - (this.insidePressurizedShip && baseBreached ? SURVIVAL_CONFIG.BREACH_OXYGEN_DRAIN_RATE : SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE) * dt
       );
     }
 
@@ -168,8 +180,10 @@ export class SurvivalSystem {
   }
 
   addBlockToInventory(blockId) {
-    // Special habitat blocks become hull blocks in the inventory.
-    const block = ITEM_DEFINITIONS.find((item) => item.id === blockId) ?? HOTBAR_BLOCKS[5];
+    // Special habitat blocks (metal floor, solar panel, console...) become hull blocks in the inventory.
+    // Looked up by id: a positional index breaks whenever the hotbar list gains an item.
+    const block = ITEM_DEFINITIONS.find((item) => item.id === blockId)
+      ?? ITEM_DEFINITIONS.find((item) => item.id === BLOCK_IDS.NASA_HULL);
     const slot = this.inventorySlots.find((item) => item?.id === block.id && item.count < 64);
     if (slot) { slot.count++; return true; }
     const emptyIndex = this.inventorySlots.findIndex((item) => !item || item.count <= 0);

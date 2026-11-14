@@ -20,6 +20,24 @@
 
 .damage-overlay.hidden { display: none; }
 
+.breach-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(160, 0, 0, calc(var(--breach-strength) * .45)), rgba(160, 0, 0, var(--breach-strength)));
+  transition: background 0.25s linear;
+  animation: breach-pulse 2.4s ease-in-out infinite;
+}
+@keyframes breach-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .breach-overlay { animation: none; }
+}
+.breach-overlay.hidden { display: none; }
+
 #game-container.damage-shake {
   animation: damage-shake .13s steps(2, end) infinite;
 }

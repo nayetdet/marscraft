@@ -85,6 +85,7 @@ export class HudManager {
     this.hudEl = document.getElementById('hud');
     this.gameContainerEl = document.getElementById('game-container');
     this.damageOverlayEl = document.getElementById('damage-overlay');
+    this.breachOverlayEl = document.getElementById('breach-overlay');
     this.dustStormEl = document.getElementById('dust-storm-warning');
     this.dustStormTitleEl = this.dustStormEl?.querySelector('strong');
     this.dustStormDetailEl = this.dustStormEl?.querySelector('span');
@@ -371,6 +372,11 @@ export class HudManager {
       this.damageOverlayEl.style.setProperty('--damage-strength', damageIntensity.toFixed(2));
       this.damageOverlayEl.classList.toggle('critical', damageIntensity >= 0.55);
     }
+    if (this.breachOverlayEl) {
+      const breachVisible = survival.baseBreached && survival.insidePressurizedShip && !isRoverActive;
+      this.breachOverlayEl.classList.toggle('hidden', !breachVisible);
+      this.breachOverlayEl.style.setProperty('--breach-strength', String(0.18 + 0.38 * (1 - survival.baseOxygen / 100)));
+    }
     if (this.gameContainerEl) this.gameContainerEl.classList.toggle('damage-shake', damageIntensity >= 0.55);
 
     if (isRoverActive && roverTelemetry) {
@@ -438,10 +444,13 @@ export class HudManager {
       this.coordsEl.textContent = coordsText;
     }
 
-    const envKey = `${survival.insidePressurizedShip}:${Boolean(survival.oxygenNeedsPower)}`;
+    const envKey = `${survival.insidePressurizedShip}:${Boolean(survival.oxygenNeedsPower)}:${Boolean(survival.baseBreached)}`;
     if (envKey !== this._lastInsideShip) {
       this._lastInsideShip = envKey;
-      if (survival.insidePressurizedShip && survival.oxygenNeedsPower) {
+      if (survival.insidePressurizedShip && survival.baseBreached) {
+        this.envStatusEl.textContent = 'Environment: Habitat breach (oxygen leaking)';
+        this.envStatusEl.style.color = '#ff5555';
+      } else if (survival.insidePressurizedShip && survival.oxygenNeedsPower) {
         this.envStatusEl.textContent = 'Environment: Pressurized Habitat (NO POWER: oxygen is not refilling)';
         this.envStatusEl.style.color = '#ff5555';
       } else if (survival.insidePressurizedShip) {

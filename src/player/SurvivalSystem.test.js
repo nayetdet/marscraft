@@ -4,6 +4,29 @@ import { BLOCK_IDS } from '../config/blockTypes.js';
 import { SurvivalSystem } from './SurvivalSystem.js';
 
 describe('SurvivalSystem', () => {
+  it('leaks base and suit oxygen during a breach, then restores them using power after sealing', () => {
+    const survival = new SurvivalSystem();
+    const inside = { x: 0, y: 11.7, z: 0 };
+    survival.update(4, inside, 100, true);
+    expect(survival.baseOxygen).toBe(80);
+    expect(survival.oxygen).toBe(16);
+    expect(survival.lastOxygenRefilled).toBe(0);
+    survival.update(1, inside, 0, false);
+    expect(survival.baseOxygen).toBe(80);
+    expect(survival.oxygen).toBe(16);
+    survival.update(1, inside, 100, false);
+    expect(survival.baseOxygen).toBe(82);
+    expect(survival.oxygen).toBe(20);
+    expect(survival.lastOxygenRefilled).toBeCloseTo(4.4);
+  });
+
+  it('keeps leaking base oxygen while the astronaut is outside', () => {
+    const survival = new SurvivalSystem();
+    survival.update(2, { x: 35, y: 11, z: 35 }, 100, true);
+    expect(survival.baseOxygen).toBe(90);
+    expect(survival.oxygen).toBeCloseTo(20 - 2 * (20 / 360));
+  });
+
   it('keeps the scanner and greenhouse crops as distinct items', () => {
     const ids = [BLOCK_IDS.SCOPE, ...Object.values(CROP_ITEM_IDS)];
     expect(new Set(ids).size).toBe(ids.length);
@@ -181,5 +204,14 @@ describe('distinct crop inventory items', () => {
     survival.food = survival.maxStat;
     expect(survival.consumeSlotItem(index)).toContain('already full');
     expect(survival.countItem(id)).toBe(1);
+  });
+});
+
+describe('habitat blocks without their own item', () => {
+  it.each(['THRUSTER_METAL', 'SOLAR_PANEL', 'CONSOLE_SCREEN', 'RED_BEACON'])('%s is collected as a hull block, never as ice', (key) => {
+    const survival = new SurvivalSystem();
+    expect(survival.addBlockToInventory(BLOCK_IDS[key])).toBe(true);
+    expect(survival.countItem(BLOCK_IDS.NASA_HULL)).toBe(1);
+    expect(survival.countItem(BLOCK_IDS.MARS_ICE)).toBe(0);
   });
 });
