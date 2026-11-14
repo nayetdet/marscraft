@@ -109,7 +109,8 @@ export class PlayerPhysics {
     const minX = Math.floor(pos.x - this.radius);
     const maxX = Math.floor(pos.x + this.radius);
     const minY = Math.floor(pos.y - this.height);
-    const maxY = Math.floor(pos.y - 0.1);
+    // pos.y is the eye position; include the space above it for head collisions.
+    const maxY = Math.floor(pos.y + 0.1);
     const minZ = Math.floor(pos.z - this.radius);
     const maxZ = Math.floor(pos.z + this.radius);
 
