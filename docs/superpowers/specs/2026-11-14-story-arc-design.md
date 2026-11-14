@@ -26,13 +26,13 @@ Um objetivo aparece por vez em `#mission-objective`. Os textos abaixo são a UI 
 
 | id | Objetivo na UI | Concluído quando |
 |---|---|---|
-| `go-outside` | Suit up and go outside through the airlock | `snapshot.outside === true` |
-| `collect-ice` | Collect 1 block of Martian ice (ice crater to the north-east) | contagem de `MARS_ICE` na mochila > contagem no início do objetivo |
-| `return-base` | Bring it back inside the base | `snapshot.insideHabitat === true` |
-| `report` | Report to Mission Control at the command console | `snapshot.atConsole === true` (chegar ao console envia o relatório sozinho, sem tecla nova) |
+| `enter-base` | Go inside the base through the airlock | `snapshot.insideHabitat === true` (o jogador nasce fora, na rampa) |
+| `report` | Tell Mission Control you landed: go to the command console | `snapshot.atConsole === true` (chegar ao console envia o relatório sozinho, sem tecla nova) |
 | `await-reply` | Waiting for Earth... reply in `mm:ss` | o tempo de ida e volta acabou |
+| `collect-ice` | Go outside and collect 1 block of Martian ice (white crater behind the base, X 22 / Z -22) | contagem de `MARS_ICE` na mochila > contagem no início do objetivo |
+| `return-base` | Bring the ice back inside the base | `snapshot.insideHabitat === true` |
 
-Card de abertura (ao apertar Play): *"Welcome, Commander! You just landed on Mars. Your base runs on solar power: the battery charges in daylight and drains at night. Watch the POWER bar."*
+Card de abertura (logo depois da animação de chegada): *"Welcome, Commander! You just landed on Mars. Your base runs on solar power: the battery charges in daylight and drains at night. Watch the POWER bar."*
 
 **Atraso de comunicação.** Ao chegar no console, o card diz: *"Earth is 198 million km away today. Radio waves take 11 minutes to get there, and 11 more to come back. Nobody on Earth can help you right now: you decide!"*
 
@@ -41,7 +41,9 @@ Card de abertura (ao apertar Play): *"Welcome, Commander! You just landed on Mar
 - No jogo, a espera vale **22 minutos de jogo** (≈ 18 s reais com `GAME_HOURS_PER_SECOND = 0.02`): a escala do tempo de jogo, com a duração real.
 - O número entra em `docs/data/numeros-reais.md` e em `src/data/commsDelay.js` com a data e a fonte, rotulado como "real data from 14/11/2026", nunca "ao vivo".
 
-A resposta abre o ato 2: *"Mission Control: Great work! Your job now: fill the MAV rocket with fuel made from ice, survive 3 solar storms, and send your science home. Then launch!"*
+A resposta de `await-reply` pede o gelo: *"Mission Control: Welcome to Mars, Commander! First job: bring 1 block of ice into the base. On Mars, ice is water, air and rocket fuel."*
+
+Voltar com o gelo abre o ato 2: *"Mission Control: Great work! Your job now: fill the MAV rocket with fuel made from ice, survive 3 solar storms, and send your science home. Then launch!"*
 
 ### Ato 2: Build the way home
 
@@ -86,7 +88,6 @@ director.drainEvents();    // [{ type: 'card', card } | { type: 'start-storms' }
 |---|---|
 | `hours` | `_skyHours()` |
 | `insideHabitat` | `survival.insidePressurizedShip` |
-| `outside` | `!survival.isPlayerInsideShip(player.pos)` (o mesmo critério que o `GameEngine` usa hoje para `stage = 'sample'`) |
 | `iceCount` | `survival.countItem(BLOCK_IDS.MARS_ICE)` |
 | `atConsole` | `currentInteraction === 'rover_terminal'` |
 | `stormPhase`, `stormsSurvived`, `propellantPct`, `dataSent`, `launched` | `mission.storm.phase`, `mission.stormsSurvived`, `mission.propellant`, `mission.dataSent`, `mission.launched` |
@@ -103,6 +104,10 @@ O diretor não toca em outros sistemas. Ele só emite eventos, e quem aplica os 
 ### Card de rádio (UI)
 
 Painel **não modal** no topo e centro (estilo *Mission Control radio*), visível por `CARD_SECONDS` ou até ser fechado com Enter, clique ou toque no botão `OK`. Ele não pausa o jogo e não mexe no pointer lock, para não brigar com o menu. Os cards entram numa fila, um por vez. No mobile, o botão `OK` tem ≥ 44 px, respeita `safe-area-inset-top` e não cobre os controles touch.
+
+## Animações (adicionadas em 2026-11-14, a pedido)
+
+Duas *cutscenes* dentro do motor, puláveis: a **chegada** (pouso da cápsula, 14,8 s, no primeiro Play) e a **decolagem** do MAV (15,5 s, ao apertar IGNITE). O roteiro plano a plano, com tempos, câmeras e legendas, está em [`../plans/2026-11-14-story-arc.md`](../plans/2026-11-14-story-arc.md). O motor de cutscene fica em `src/story/cutscene/` (`timeline.js` puro + `CutscenePlayer`), e a camada de UI em `src/ui/CutsceneHud.js`.
 
 ## Fora do escopo (bônus, se sobrar tempo)
 
