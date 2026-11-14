@@ -27,10 +27,29 @@ export class SurvivalSystem {
   }
 
   isPlayerInsideShip(pos) {
-    const inHullX = Math.abs(pos.x) <= 4.6;
-    const inHullZ = pos.z >= -4.6 && pos.z <= 7.2;
-    const inHullY = pos.y >= 14.2 && pos.y <= 24.8;
-    return inHullX && inHullZ && inHullY;
+    // 1. Interior do Módulo Hab Branco Principal da NASA
+    const inMainHab =
+      Math.abs(pos.x) <= 6.8 &&
+      pos.z >= -5.8 &&
+      pos.z <= 8.2 &&
+      pos.y >= 9.2 &&
+      pos.y <= 18.8;
+
+    // 2. Túnel Pressurizado de Conexão
+    const inTunnel =
+      pos.x >= -12.5 &&
+      pos.x <= -6.5 &&
+      Math.abs(pos.z) <= 2.2 &&
+      pos.y >= 9.2 &&
+      pos.y <= 14.0;
+
+    // 3. Redoma de Estufa para Plantações (x = -18, z = 0, raio 7)
+    const inGreenhouseDome =
+      Math.hypot(pos.x + 18, pos.z) <= 6.8 &&
+      pos.y >= 9.2 &&
+      pos.y <= 16.5;
+
+    return inMainHab || inTunnel || inGreenhouseDome;
   }
 
   update(dt, playerPos) {

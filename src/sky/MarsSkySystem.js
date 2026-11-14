@@ -10,9 +10,9 @@ import {
 export class MarsSkySystem {
   constructor(scene) {
     this.scene = scene;
-    this.timeOfDay = 17.25; // Entardecer marciano inicial
+    this.timeOfDay = 15.2; // Tarde ensolarada e clara em Marte
     this.solCount = 1;
-    this.autoAdvanceSpeed = 0.03;
+    this.autoAdvanceSpeed = 0.02;
 
     this.celestialGroup = new THREE.Group();
     this.scene.add(this.celestialGroup);
@@ -44,39 +44,23 @@ export class MarsSkySystem {
     this.deimosGroup = deimosGroup;
     this.celestialGroup.add(this.phobosGroup, this.deimosGroup);
 
-    this._initAtmosphericDust();
-    this.update(0, new THREE.Vector3(0, 20, 0));
+    this.update(0, new THREE.Vector3(0, 12, 0));
   }
 
   _initLights() {
-    this.ambientLight = new THREE.HemisphereLight(0xffd2a6, 0x7c4a21, 0.8);
+    // Iluminação fosca, clara e uniforme para que nada fique escuro
+    this.baseAmbient = new THREE.AmbientLight(0xfff4e6, 0.72);
+    this.scene.add(this.baseAmbient);
+
+    this.ambientLight = new THREE.HemisphereLight(0xffe4c4, 0xc87d44, 0.85);
     this.scene.add(this.ambientLight);
 
-    this.sunLight = new THREE.DirectionalLight(0xffeed6, 1.35);
-    this.sunLight.position.set(120, 60, -80);
+    this.sunLight = new THREE.DirectionalLight(0xfff7eb, 1.15);
+    this.sunLight.position.set(120, 90, -80);
     this.scene.add(this.sunLight);
 
-    this.scene.fog = new THREE.FogExp2(0xdc8e48, 0.0062);
-  }
-
-  _initAtmosphericDust() {
-    const count = 450;
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 90;
-      pos[i * 3 + 1] = Math.random() * 28;
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 90;
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const mat = new THREE.PointsMaterial({
-      color: 0xf2aa68,
-      size: 0.22,
-      transparent: true,
-      opacity: 0.45,
-    });
-    this.dustParticles = new THREE.Points(geo, mat);
-    this.scene.add(this.dustParticles);
+    // Neblina bem leve e clara para ver todo o horizonte e os planetas
+    this.scene.fog = new THREE.FogExp2(0xf0a25a, 0.0024);
   }
 
   setTimeOfDay(hour) {
@@ -96,67 +80,60 @@ export class MarsSkySystem {
     this.celestialGroup.position.copy(playerPos);
 
     const sunAngle = ((this.timeOfDay - 6) / 24) * Math.PI * 2;
-    const sunDir = new THREE.Vector3(Math.cos(sunAngle), Math.sin(sunAngle), -0.28).normalize();
+    const sunDir = new THREE.Vector3(Math.cos(sunAngle), Math.sin(sunAngle), -0.35).normalize();
 
     this.sunGroup.position.copy(sunDir.clone().multiplyScalar(360));
     this.skyUniforms.uSunDir.value.copy(sunDir);
     this.skyUniforms.uSunElevation.value = sunDir.y;
 
-    const dayStrength = THREE.MathUtils.smoothstep(sunDir.y, -0.15, 0.35);
+    const dayStrength = THREE.MathUtils.smoothstep(sunDir.y, -0.15, 0.3);
     const twilightStrength =
       THREE.MathUtils.smoothstep(sunDir.y, -0.22, 0.05) *
       (1.0 - THREE.MathUtils.smoothstep(sunDir.y, 0.05, 0.35));
 
     this.sunLight.position.copy(playerPos).add(sunDir.clone().multiplyScalar(120));
-    this.sunLight.intensity = 0.18 + dayStrength * 1.3;
+    this.sunLight.intensity = 0.45 + dayStrength * 0.95;
 
-    const dayColor = new THREE.Color(0xffdfc4);
-    const sunsetBlueColor = new THREE.Color(0x9bd1ff);
-    const nightColor = new THREE.Color(0x334155);
+    const dayColor = new THREE.Color(0xfff5e6);
+    const sunsetBlueColor = new THREE.Color(0xbbe0ff);
+    const nightColor = new THREE.Color(0x64748b);
 
     this.sunLight.color
       .copy(nightColor)
       .lerp(dayColor, dayStrength)
-      .lerp(sunsetBlueColor, twilightStrength * 0.65);
+      .lerp(sunsetBlueColor, twilightStrength * 0.55);
 
-    this.ambientLight.intensity = 0.28 + dayStrength * 0.62;
+    this.ambientLight.intensity = 0.55 + dayStrength * 0.55;
+    this.baseAmbient.intensity = 0.5 + dayStrength * 0.35;
 
-    const fogNight = new THREE.Color(0x181008);
-    const fogSunset = new THREE.Color(0xb8682b);
-    const fogDay = new THREE.Color(0xdc8e48);
+    const fogNight = new THREE.Color(0x241914);
+    const fogSunset = new THREE.Color(0xd98245);
+    const fogDay = new THREE.Color(0xf2a65e);
     this.scene.fog.color
       .copy(fogNight)
       .lerp(fogDay, dayStrength)
       .lerp(fogSunset, twilightStrength);
 
-    this.starMaterial.opacity = THREE.MathUtils.clamp(1.0 - dayStrength * 0.78, 0.18, 0.95);
+    this.starMaterial.opacity = THREE.MathUtils.clamp(1.0 - dayStrength * 0.65, 0.28, 0.95);
 
     this.earthMesh.rotation.y += dt * 0.35;
     this.earthSystemGroup.lookAt(playerPos);
 
-    const phobosAngle = this.timeOfDay * 0.65;
+    // Fobos e Deimos em altura fácil de observar no horizonte norte/leste/oeste
+    const phobosAngle = this.timeOfDay * 0.55;
     this.phobosGroup.position.set(
-      Math.cos(phobosAngle) * 280,
-      Math.abs(Math.sin(phobosAngle)) * 195 + 45,
-      Math.sin(phobosAngle) * 240
+      Math.cos(phobosAngle) * 290,
+      Math.abs(Math.sin(phobosAngle)) * 95 + 55,
+      -Math.abs(Math.sin(phobosAngle * 0.8)) * 240 - 60
     );
     this.phobosGroup.rotation.y += dt * 0.2;
 
-    const deimosAngle = this.timeOfDay * 0.18 + 1.9;
+    const deimosAngle = this.timeOfDay * 0.2 + 1.2;
     this.deimosGroup.position.set(
-      Math.cos(deimosAngle) * 320,
-      Math.abs(Math.cos(deimosAngle * 0.7)) * 210 + 70,
-      Math.sin(deimosAngle) * 320
+      Math.sin(deimosAngle) * 310,
+      Math.abs(Math.cos(deimosAngle * 0.7)) * 105 + 65,
+      -Math.abs(Math.cos(deimosAngle)) * 260 - 80
     );
-
-    if (this.dustParticles) {
-      this.dustParticles.position.set(
-        Math.floor(playerPos.x / 40) * 40,
-        0,
-        Math.floor(playerPos.z / 40) * 40
-      );
-      this.dustParticles.rotation.y += dt * 0.03;
-    }
   }
 
   getEarthWorldPosition() {
@@ -188,20 +165,8 @@ export class MarsSkySystem {
     const mins = Math.floor((this.timeOfDay - hours) * 60);
     const hh = String(hours).padStart(2, '0');
     const mm = String(mins).padStart(2, '0');
-    const sol = String(this.solCount).padStart(3, '0');
-
-    let phase = 'DIA MARCIANO (POEIRA DE ÓXIDO DE FERRO)';
-    if (this.timeOfDay >= 16.5 && this.timeOfDay <= 19.2) {
-      phase = 'PÔR DO SOL AZULADO DE MARTE (MIE SCATTERING)';
-    } else if (this.timeOfDay >= 5.0 && this.timeOfDay <= 7.2) {
-      phase = 'AMANHECER AZULADO MARCIANO';
-    } else if (this.timeOfDay > 19.2 || this.timeOfDay < 5.0) {
-      phase = 'NOITE ESTRELADA MARCIANA';
-    }
-
     return {
-      clockText: `SOL ${sol} - ${hh}:${mm} LMST`,
-      phaseText: phase,
+      clockText: `Sol ${this.solCount} - ${hh}:${mm}`,
     };
   }
 }

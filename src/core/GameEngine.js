@@ -3,6 +3,7 @@ import { CAMERA_CONFIG } from '../config/constants.js';
 import { createBlockMaterials } from '../graphics/blockMaterials.js';
 import { MarsSkySystem } from '../sky/MarsSkySystem.js';
 import { VoxelWorld } from '../world/VoxelWorld.js';
+import { buildNasaCustomModels } from '../world/nasaModelsBuilder.js';
 import { PlayerPhysics } from '../player/PlayerPhysics.js';
 import { PlayerHand } from '../player/PlayerHand.js';
 import { SurvivalSystem } from '../player/SurvivalSystem.js';
@@ -23,30 +24,34 @@ export class GameEngine {
     );
     this.scene.add(this.camera);
 
+    // Renderizador fosco, claro e otimizado
     this.renderer = new THREE.WebGLRenderer({
       antialias: false,
       powerPreference: 'high-performance',
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.08;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    this.renderer.toneMapping = THREE.NoToneMapping;
     this.container.appendChild(this.renderer.domElement);
 
     const { materials, previews } = createBlockMaterials();
     this.sky = new MarsSkySystem(this.scene);
     this.world = new VoxelWorld(this.scene, materials);
+
+    // Modelos 3D detalhados estilo Mod de Minecraft (Painel de Controle, O2, Redoma de Plantas, Rover)
+    this.customModels = buildNasaCustomModels(this.scene);
+
     this.player = new PlayerPhysics(this.world);
     this.survival = new SurvivalSystem();
 
-    // Maozinha 3D do jogador em primeira pessoa (estilo Minecraft)
+    // Maozinha 3D do jogador em primeira pessoa
     this.playerHand = new PlayerHand(this.camera, materials);
     const firstSlot = this.survival.slots[0];
     this.playerHand.setHeldBlock(firstSlot.id, firstSlot.count);
 
     this.hud = new HudManager(previews, this.survival.slots);
 
-    this._initShipLights();
+    this._initBaseLights();
     this._initHighlightWireframe();
 
     this.input = new InputController({
@@ -68,14 +73,16 @@ export class GameEngine {
     this.lastTime = performance.now();
   }
 
-  _initShipLights() {
-    const deck1Light = new THREE.PointLight(0xfffbeb, 2.2, 16);
-    deck1Light.position.set(0, 17.5, 0);
-    this.scene.add(deck1Light);
+  _initBaseLights() {
+    // Luz clara dentro do Módulo Hab Branco Principal
+    const habLight = new THREE.PointLight(0xffffff, 1.6, 22);
+    habLight.position.set(0, 13.0, 0);
+    this.scene.add(habLight);
 
-    const deck2Light = new THREE.PointLight(0xe0f2fe, 1.8, 14);
-    deck2Light.position.set(0, 22.5, 0);
-    this.scene.add(deck2Light);
+    // Luz clara dentro da Redoma de Estufa
+    const domeLight = new THREE.PointLight(0xf0fdf4, 1.5, 18);
+    domeLight.position.set(-18, 13.5, 0);
+    this.scene.add(domeLight);
   }
 
   _initHighlightWireframe() {
