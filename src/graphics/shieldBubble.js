@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-// Bolha visual do escudo de radiação ativo (tecla R).
+// Bolhas visuais do escudo de radiação ativo (tecla R), uma por bobina (ver mission/shieldZone.js).
 // Um campo magnético de verdade é invisível: a bolha só mostra ONDE ele protege. O desenho segue
 // o conceito estudado pela NASA (NIAC, bobinas supercondutoras em volta do habitat): linhas de
 // campo arqueando sobre a base e, durante a tempestade solar, faíscas onde as partículas
@@ -27,6 +27,7 @@ const fragmentShader = /* glsl */ `
   uniform float uTime;
   uniform float uStorm;
   uniform float uRadius;
+  uniform vec4 uOthers[OTHER_COUNT];
   varying vec3 vWorld;
   varying vec3 vNormal;
   varying vec3 vLocal;
@@ -36,6 +37,11 @@ const fragmentShader = /* glsl */ `
   }
 
   void main() {
+    // Uniao das bolhas: o pedaco desta casca que fica dentro de outra bolha nao aparece.
+    for (int i = 0; i < OTHER_COUNT; i++) {
+      if (distance(vWorld, uOthers[i].xyz) < uOthers[i].w - 0.05) discard;
+    }
+
     vec3 viewDir = normalize(cameraPosition - vWorld);
     float fresnel = pow(1.0 - abs(dot(normalize(vNormal), viewDir)), 2.2);
 
@@ -67,29 +73,44 @@ const fragmentShader = /* glsl */ `
 `;
 
 export class ShieldBubble {
-  /** zone: {CENTER: {x,y,z}, RADIUS} (mesma de mission/shieldZone.js) */
+  /** zone: {DOMES: [{CENTER: {x,y,z}, RADIUS}]} (mesma de mission/shieldZone.js) */
   constructor(scene, zone) {
-    const geometry = new THREE.SphereGeometry(zone.RADIUS, 64, 24, 0, Math.PI * 2, 0, Math.PI / 2);
-    this.material = new THREE.ShaderMaterial({
-      uniforms: {
-        uColor: { value: new THREE.Color(0x55ffff) },
-        uOpacity: { value: 0 },
-        uTime: { value: 0 },
-        uStorm: { value: 0 },
-        uRadius: { value: zone.RADIUS },
-      },
-      vertexShader,
-      fragmentShader,
-      transparent: true,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      fog: false,
+    const domes = zone.DOMES;
+    // Uniforms compartilhados: todas as bolhas acendem, pulsam e faiscam juntas.
+    const shared = {
+      uColor: { value: new THREE.Color(0x55ffff) },
+      uOpacity: { value: 0 },
+      uTime: { value: 0 },
+      uStorm: { value: 0 },
+    };
+    this.uniforms = shared;
+    this.meshes = domes.map((dome, index) => {
+      const others = domes
+        .filter((_, i) => i !== index)
+        .map((o) => new THREE.Vector4(o.CENTER.x, o.CENTER.y, o.CENTER.z, o.RADIUS));
+      const geometry = new THREE.SphereGeometry(dome.RADIUS, 64, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+      const material = new THREE.ShaderMaterial({
+        defines: { OTHER_COUNT: Math.max(1, others.length) },
+        uniforms: {
+          ...shared,
+          uRadius: { value: dome.RADIUS },
+          // Sem outras bolhas, um vec4 de raio zero nunca descarta nada.
+          uOthers: { value: others.length ? others : [new THREE.Vector4(0, 0, 0, 0)] },
+        },
+        vertexShader,
+        fragmentShader,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        fog: false,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(dome.CENTER.x, dome.CENTER.y, dome.CENTER.z);
+      mesh.renderOrder = 997;
+      mesh.visible = false;
+      scene.add(mesh);
+      return mesh;
     });
-    this.mesh = new THREE.Mesh(geometry, this.material);
-    this.mesh.position.set(zone.CENTER.x, zone.CENTER.y, zone.CENTER.z);
-    this.mesh.renderOrder = 997;
-    this.mesh.visible = false;
-    scene.add(this.mesh);
     this.opacity = 0;
     this.storm = 0;
   }
@@ -99,9 +120,10 @@ export class ShieldBubble {
     const step = FADE_PER_SECOND * dt;
     this.opacity = on ? Math.min(1, this.opacity + step) : Math.max(0, this.opacity - step);
     this.storm = storm ? Math.min(1, this.storm + step) : Math.max(0, this.storm - step);
-    this.mesh.visible = this.opacity > 0.001;
-    if (!this.mesh.visible) return;
-    const u = this.material.uniforms;
+    const visible = this.opacity > 0.001;
+    for (const mesh of this.meshes) mesh.visible = visible;
+    if (!visible) return;
+    const u = this.uniforms;
     u.uOpacity.value = this.opacity;
     u.uStorm.value = this.storm;
     u.uTime.value += dt;
