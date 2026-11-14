@@ -9,10 +9,12 @@ const CEIL_Y = WORLD_CONFIG.GROUND_LEVEL + 6; // teto do habitat principal (y = 
 export const HABITAT_LAYOUT = {
   FLOOR_Y,
   CEIL_Y,
-  // Habitat principal: paredes em |x| = 7, |z| = 6 e nos cantos chanfrados |x| + |z| = 11.
-  MAIN_HALF_X: 7,
-  MAIN_HALF_Z: 6,
-  MAIN_CHAMFER: 11,
+  // Habitat principal: ar em x = -6..12, z = -11..5; paredes um bloco para fora, com os quatro
+  // cantos chanfrados (ver mainHabCell). O airlock, o tunel e a cupula ficam perto de x = 0, z = 0.
+  MAIN_X_MIN: -6,
+  MAIN_X_MAX: 12,
+  MAIN_Z_MIN: -11,
+  MAIN_Z_MAX: 5,
   // Airlock sul: corredor de ar |x| <= 1, z = 6..8, tres blocos de altura.
   AIRLOCK_HALF_X: 1,
   AIRLOCK_Z_MIN: 6,
@@ -21,10 +23,10 @@ export const HABITAT_LAYOUT = {
   // Cupula de observacao sobre o teto: ar em |x|, |z| <= 2, y = 15..17.
   CUPOLA_HALF: 2,
   CUPOLA_HEIGHT: 3,
-  // Tunel ate a estufa: ar em x = -12..-7, |z| <= 1, tres blocos de altura.
+  // Tunel ate a estufa: ar em x = -12..-7, |z| <= 2 (cinco blocos de largura), tres de altura.
   TUNNEL_X_MIN: -12,
   TUNNEL_X_MAX: -7,
-  TUNNEL_HALF_Z: 1,
+  TUNNEL_HALF_Z: 2,
   TUNNEL_HEIGHT: 3,
   // Redoma da estufa: hemisferio levemente achatado (dy * 1.05) com casca de 0.65 bloco.
   DOME_X: -18,
@@ -55,12 +57,13 @@ export const HABITAT_LAYOUT = {
 // Coordenadas de bloco do AR de cada volume (as paredes ficam um bloco para fora).
 // `door` = faixa em z do corredor curto que liga o modulo ao corredor central.
 export const NORTH_WING = {
-  SPINE: { xMin: -3, xMax: -2, zMin: -31, zMax: -6 },
+  // Corredor central com 4 blocos de largura; corredores curtos com 4 de largura e 4 de comprimento
+  SPINE: { xMin: -4, xMax: -1, zMin: -37, zMax: -12 },
   ROOMS: [
-    { id: 'power', name: 'POWER & HEAT', side: 'west', xMin: -15, xMax: -9, zMin: -20, zMax: -12, door: [-17, -16] },
-    { id: 'kitchen', name: 'KITCHEN', side: 'east', xMin: 4, xMax: 10, zMin: -20, zMax: -12, door: [-17, -16] },
-    { id: 'bathroom', name: 'BATHROOM', side: 'west', xMin: -15, xMax: -9, zMin: -34, zMax: -26, door: [-31, -30] },
-    { id: 'workshop', name: 'WORKSHOP', side: 'east', xMin: 4, xMax: 10, zMin: -34, zMax: -26, door: [-31, -30] },
+    { id: 'power', name: 'POWER & HEAT', side: 'west', xMin: -21, xMax: -11, zMin: -25, zMax: -17, door: [-23, -20] },
+    { id: 'kitchen', name: 'KITCHEN', side: 'east', xMin: 6, xMax: 16, zMin: -25, zMax: -17, door: [-23, -20] },
+    { id: 'bathroom', name: 'BATHROOM', side: 'west', xMin: -21, xMax: -11, zMin: -39, zMax: -31, door: [-37, -34] },
+    { id: 'workshop', name: 'WORKSHOP', side: 'east', xMin: 6, xMax: 16, zMin: -39, zMax: -31, door: [-37, -34] },
   ],
   // Altura livre dos corredores curtos (3 blocos): sobra parede em cima para a placa da sala
   LINK_HEIGHT: 3,
@@ -76,11 +79,18 @@ export function northLinkBox(room) {
 
 const L = HABITAT_LAYOUT;
 
+// Diz se a coluna (bx, bz) do habitat principal e 'air', 'wall' ou nada (null).
+// Regra dos cantos: a 1 passo do canto fica fora, a 2 passos e parede (octogono alongado).
+export function mainHabCell(bx, bz) {
+  const cx = Math.min(bx - (L.MAIN_X_MIN - 1), L.MAIN_X_MAX + 1 - bx);
+  const cz = Math.min(bz - (L.MAIN_Z_MIN - 1), L.MAIN_Z_MAX + 1 - bz);
+  if (cx < 0 || cz < 0 || cx + cz < 2) return null;
+  return cx === 0 || cz === 0 || cx + cz === 2 ? 'wall' : 'air';
+}
+
 function inMainHab(bx, by, bz) {
   if (by <= L.FLOOR_Y || by >= L.CEIL_Y) return false;
-  const ax = Math.abs(bx);
-  const az = Math.abs(bz);
-  return ax < L.MAIN_HALF_X && az < L.MAIN_HALF_Z && ax + az < L.MAIN_CHAMFER;
+  return mainHabCell(bx, bz) === 'air';
 }
 
 function inAirlock(bx, by, bz) {

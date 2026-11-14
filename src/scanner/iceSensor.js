@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 
 export const ICE_SENSOR_CONFIG = {
-  // Raio grande o bastante para alcançar a sub-cratera de gelo (22, -22) a partir da base.
-  RADIUS: 40,
+  // Raio grande o bastante para alcançar a sub-cratera de gelo (ICE_CRATER_CENTER) a partir da base.
+  RADIUS: 48,
   DURATION: 60, // segundos
   MAX_BLOCKS: 400,
 };

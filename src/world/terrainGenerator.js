@@ -1,12 +1,12 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { MAV_CONFIG, WATER_SYSTEM_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 
 function noise2D(x, z) {
   return Math.sin(x * 0.045) * Math.cos(z * 0.045) * 2.1 + Math.sin((x + z) * 0.12) * 0.75;
 }
 
 // Retangulo aplainado para a ala norte (NORTH_WING) e os paineis solares a oeste dela
-const NORTH_PAD = { xMin: -27, xMax: 11, zMin: -38, zMax: -8, blend: 3 };
+const NORTH_PAD = { xMin: -31, xMax: 17, zMin: -42, zMax: -8, blend: 2 };
 
 export function generateMartianTerrain(world) {
   const { halfX, halfZ } = world;
@@ -14,7 +14,7 @@ export function generateMartianTerrain(world) {
   for (let x = -halfX; x < halfX; x += 1) {
     for (let z = -halfZ; z < halfZ; z += 1) {
       let height = groundY + noise2D(x, z);
-      const iceDistance = Math.hypot(x - 22, z + 22);
+      const iceDistance = Math.hypot(x - WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER.x, z - WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER.z);
       if (iceDistance < 11) {
         const rim = Math.exp(-Math.pow((iceDistance - 8.5) / 2.2, 2)) * 2.5;
         const bowl = iceDistance < 7.5 ? -Math.cos((iceDistance / 7.5) * (Math.PI / 2)) * 3.5 : 0;

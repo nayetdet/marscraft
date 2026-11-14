@@ -14,7 +14,7 @@ import {
 // posteres educativos e telas vivas. O abrigo de tempestade, o terminal de radio e o modulo
 // norte (energia, cozinha, banheiro, oficina) sao da issue #56 e ficam em nasaModelsBuilder.js;
 // aqui eles so ganham placa, poster e medidor.
-// Geometria do habitat (habitatLayout.js): ar em x = -6..7, z = -5..6; piso em y = 10, teto em y = 14.
+// Geometria do habitat (habitatLayout.js): ar em x = -6..13, z = -11..6; piso em y = 10, teto em y = 14.
 // Tudo estatico vira uma malha por material (mergeByMaterial); so luzes da bateria, nivel do
 // tanque e telas ficam soltos, porque mudam com o estado do jogo.
 
@@ -87,25 +87,26 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
     box(t, 0.04, z2 - z1, mat, x1 + t / 2, y, (z1 + z2) / 2);
     box(t, 0.04, z2 - z1, mat, x2 - t / 2, y, (z1 + z2) / 2);
   };
-  zoneBorder(zoneMats.command, -1.85, 1.85, -4.9, -1.5);
-  zoneBorder(zoneMats.lifeSupport, 3.3, 6.9, -3.1, 3.55);
-  zoneBorder(zoneMats.quarters, -5.9, -3.25, -3.95, -1.0);
+  zoneBorder(zoneMats.command, 2.1, 5.9, -10.9, -7.4);
+  zoneBorder(zoneMats.lifeSupport, 8.8, 12.9, -4.6, 3.0);
+  zoneBorder(zoneMats.quarters, -5.9, -3.3, -10.4, -4.9);
   zoneBorder(zoneMats.medical, -3.85, -1.05, 2.25, 5.9);
 
   // Linhas-guia a partir do airlock: branca ate o comando, verde ate a estufa, amarela ate o suporte de vida
   const guideY = F - 0.003;
-  box(0.09, 0.04, 7.0, mats.white, 0.5, guideY, 2.1);
+  box(0.09, 0.04, 13.6, mats.white, 0.5, guideY, -1.2);
+  box(3.5, 0.04, 0.09, mats.white, 2.25, guideY, -8.0);
   box(12.5, 0.04, 0.09, zoneMats.greenhouse, -5.75, guideY, 0.5);
-  box(2.8, 0.04, 0.09, zoneMats.lifeSupport, 1.9, guideY, 0.5);
+  box(8.3, 0.04, 0.09, zoneMats.lifeSupport, 4.65, guideY, 0.5);
 
   // Soleira do airlock com faixa de aviso
   const sill = plane(hazardTexture(10), 3.0, 0.3, 0.5, F + 0.026, 5.82, '+z');
   sill.rotation.set(-Math.PI / 2, 0, 0);
 
   // ---------- Placas de modulo (acima das janelas, y = 13..14) ----------
-  sign('command', 2.4, 1.65, 13.5, -4.97, '+z');
-  sign('lifeSupport', 2.6, 6.97, 13.68, 0.5, '-x');
-  sign('quarters', 2.4, -5.97, 13.6, -2.5, '+x');
+  sign('command', 2.4, 6.6, 13.5, -10.97, '+z');
+  sign('lifeSupport', 2.6, 12.97, 13.68, -0.5, '-x');
+  sign('quarters', 2.4, -5.97, 13.6, -7.5, '+x');
   sign('greenhouse', 2.4, -5.97, 13.45, 0.5, '+x');
   sign('airlock', 2.4, 0.5, 13.5, 5.97, '-z');
   sign('airlock', 2.4, 0.5, 13.4, 9.03, '+z'); // do lado de fora, sobre a porta externa
@@ -119,9 +120,9 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   const posterY = F + 1.22;
 
   // ---------- Tunel da estufa: galeria de posteres nas duas paredes ----------
-  poster('storm', -8.2, posterY, -0.99, '+z');
-  poster('delay', -10.4, posterY, -0.99, '+z');
-  poster('mars', -9.3, posterY, 1.99, '-z');
+  poster('storm', -8.2, posterY, -1.99, '+z');
+  poster('delay', -10.4, posterY, -1.99, '+z');
+  poster('mars', -9.3, posterY, 2.99, '-z');
 
   // ---------- Abrigo de tempestade (SHL-1, issue #56): placa na entrada, poster e medidor ----------
   const L = HABITAT_LAYOUT;
@@ -133,7 +134,7 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   const meterZ = L.SHELTER_Z_MAX - 0.012;
 
   // ---------- Suporte de vida (LSS-1) ----------
-  poster('air', 6.97, F + 0.77, 0.5, '-x', 0.75);
+  poster('air', 12.97, F + 0.77, -0.5, '-x', 0.75);
 
   // ---------- Enfermaria (MED-1), canto sudoeste do habitat ----------
   box(1.35, 1.0, 0.56, mats.white, -2.82, F + 0.5, 5.68);
@@ -186,8 +187,8 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   poster('exercise', -7.5, posterY, 8.03, '+z');
 
   // Molduras das telas vivas
-  box(2.5, 1.02, 0.06, mats.charcoal, 1.65, 12.68, -4.965);
-  box(0.06, 1.56, 2.3, mats.charcoal, 6.965, 12.2, 0.5);
+  box(2.5, 1.02, 0.06, mats.charcoal, 6.6, 12.68, -10.965);
+  box(0.06, 1.56, 2.3, mats.charcoal, 12.965, 12.2, -0.5);
   box(1.3, 0.86, 0.06, mats.charcoal, meterX, F + 1.6, meterZ - 0.02);
 
   scene.add(mergeByMaterial(group));
@@ -202,8 +203,8 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
     shelter: new ScreenCanvas(384, 250),
     greenhouse: new ScreenCanvas(416, 288),
   };
-  plane(screens.command.texture, 2.4, 0.9, 1.65, 12.68, -4.93, '+z', dynamic);
-  plane(screens.power.texture, 2.2, 1.467, 6.93, 12.2, 0.5, '-x', dynamic);
+  plane(screens.command.texture, 2.4, 0.9, 6.6, 12.68, -10.93, '+z', dynamic);
+  plane(screens.power.texture, 2.2, 1.467, 12.93, 12.2, -0.5, '-x', dynamic);
   plane(screens.shelter.texture, 1.2, 0.78, meterX, F + 1.6, meterZ - 0.055, '-z', dynamic);
   plane(screens.greenhouse.texture, 1.3, 0.9, -17.5, F + 1.5, 5.255, '-z', dynamic);
 
@@ -216,7 +217,7 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   // ---------- Pontos de informacao: olhar e apertar F ----------
   infoPoints.push(
     {
-      x: 6.9, y: 12.2, z: 0.5, label: '[F] Check the power map',
+      x: 12.9, y: 12.2, z: -0.5, label: '[F] Check the power map',
       text: (s) => `Battery at ${Math.round(s.batteryPct)}%. ${s.chargeRate > 0
         ? 'The Sun is charging it right now.'
         : 'It is night, so the solar panels make nothing. Save power!'} Oxygen, the shield and the fuel plant all drink from it.`,

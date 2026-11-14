@@ -1,6 +1,6 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { WORLD_CONFIG } from '../config/constants.js';
-import { NORTH_WING, northLinkBox } from './habitatLayout.js';
+import { HABITAT_LAYOUT, NORTH_WING, mainHabCell, northLinkBox } from './habitatLayout.js';
 
 function fillBox(world, x1, y1, z1, x2, y2, z2, blockId) {
   for (let x = x1; x <= x2; x++) {
@@ -12,53 +12,44 @@ function fillBox(world, x1, y1, z1, x2, y2, z2, blockId) {
   }
 }
 
-// 1. Módulo Hab Principal Branco da NASA (x: -7..7, z: -6..6)
+// 1. Módulo Hab Principal Branco da NASA. Ar em x = -6..12, z = -11..5 (HABITAT_LAYOUT), com os
+// cantos chanfrados; o airlock, o tunel e a cupula continuam em volta de x = 0, z = 0.
 function buildMainWhiteHabitat(world, groundY) {
   const floorY = groundY + 1; // y = 9
   const ceilY = groundY + 6;  // y = 14
+  const H = HABITAT_LAYOUT;
+  const west = H.MAIN_X_MIN - 1;
+  const east = H.MAIN_X_MAX + 1;
+  const north = H.MAIN_Z_MIN - 1;
+  const south = H.MAIN_Z_MAX + 1;
 
-  for (let x = -7; x <= 7; x++) {
-    for (let z = -6; z <= 6; z++) {
-      // Cantos chanfrados para formato octogonal de módulo espacial da NASA
-      if (Math.abs(x) + Math.abs(z) >= 12) continue;
+  for (let x = west; x <= east; x++) {
+    for (let z = north; z <= south; z++) {
+      const cell = mainHabCell(x, z);
+      if (!cell) continue;
 
       for (let y = floorY; y <= ceilY; y++) {
-        const isWall =
-          Math.abs(x) === 7 ||
-          Math.abs(z) === 6 ||
-          Math.abs(x) + Math.abs(z) === 11;
-
         if (y === floorY) {
-          // Piso branco limpo com corredor técnico central
-          const isCenterPath = Math.abs(x) <= 1 || Math.abs(z) <= 1;
-          world.setBlock(
-            x,
-            y,
-            z,
-            isCenterPath ? BLOCK_IDS.THRUSTER_METAL : BLOCK_IDS.NASA_HULL,
-            false
-          );
+          // Piso branco com caminhos de metal: airlock -> hub, tunel -> suporte de vida, hub -> ala norte
+          const isPath = Math.abs(x) <= 1 || Math.abs(z) <= 1 || (x >= -4 && x <= -1 && z < 0);
+          world.setBlock(x, y, z, isPath ? BLOCK_IDS.THRUSTER_METAL : BLOCK_IDS.NASA_HULL, false);
         } else if (y === ceilY) {
-          // Teto branco com claraboias de vidro e luminárias LED
+          // Teto branco com a claraboia da cupula e luminarias LED espalhadas
+          const isLight = (x === -4 || x === 4 || x === 10) && (z === -8 || z === -4 || z === 3);
           if (Math.abs(x) <= 2 && Math.abs(z) <= 2) {
             world.setBlock(x, y, z, BLOCK_IDS.HAB_GLASS, false);
-          } else if ((Math.abs(x) === 4 && z === 0) || (x === 0 && Math.abs(z) === 3)) {
-            world.setBlock(x, y, z, BLOCK_IDS.HAB_LIGHT, false);
           } else {
-            world.setBlock(x, y, z, BLOCK_IDS.NASA_HULL, false);
+            world.setBlock(x, y, z, isLight ? BLOCK_IDS.HAB_LIGHT : BLOCK_IDS.NASA_HULL, false);
           }
-        } else if (isWall) {
+        } else if (cell === 'wall') {
           // Janelas panorâmicas nas paredes (y = 11 e 12)
           const isWindowHeight = y === floorY + 2 || y === floorY + 3;
           const isWindowSpan =
-            (Math.abs(x) >= 3 && Math.abs(x) <= 5 && Math.abs(z) === 6) ||
-            (Math.abs(z) >= 2 && Math.abs(z) <= 4 && Math.abs(x) === 7);
-
-          if (isWindowHeight && isWindowSpan) {
-            world.setBlock(x, y, z, BLOCK_IDS.HAB_GLASS, false);
-          } else {
-            world.setBlock(x, y, z, BLOCK_IDS.NASA_HULL, false);
-          }
+            (z === north && ((x >= 1 && x <= 2) || (x >= 10 && x <= 11))) ||
+            (z === south && ((Math.abs(x) >= 3 && Math.abs(x) <= 5) || (x >= 8 && x <= 10))) ||
+            (x === west && ((z >= -9 && z <= -5) || z === 4)) ||
+            (x === east && ((z >= -9 && z <= -6) || (z >= 2 && z <= 4)));
+          world.setBlock(x, y, z, isWindowHeight && isWindowSpan ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL, false);
         } else {
           world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
         }
@@ -169,16 +160,16 @@ function buildGreenhouseDome(world, groundY) {
 
   // Túnel Branco Pressurizado ligando o Habitat Principal (x = -7) à Redoma de Estufa (x = -11)
   for (let x = -12; x <= -7; x++) {
-    for (let z = -2; z <= 2; z++) {
+    for (let z = -3; z <= 3; z++) {
       for (let y = floorY; y <= floorY + 4; y++) {
         if (y === floorY) {
           world.setBlock(x, y, z, BLOCK_IDS.THRUSTER_METAL, false);
-        } else if (y === floorY + 4 || Math.abs(z) === 2) {
+        } else if (y === floorY + 4 || Math.abs(z) === 3) {
           world.setBlock(
             x,
             y,
             z,
-            y === floorY + 2 && Math.abs(z) === 2 ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL,
+            y === floorY + 2 && Math.abs(z) === 3 ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL,
             false
           );
         } else {
@@ -189,9 +180,9 @@ function buildGreenhouseDome(world, groundY) {
   }
 }
 
-// 3. Foguete / Lander Branco de Ascensão da NASA no Lado Leste (x = 14, z = -3)
+// 3. Foguete / Lander Branco de Ascensão da NASA no Lado Leste (x = 22, z = -3)
 function buildNasaAscentLander(world, groundY) {
-  const cx = 14;
+  const cx = 22;
   const cz = -3;
 
   // Plataforma de pouso
@@ -369,12 +360,12 @@ function buildNorthModule(world, groundY) {
     const midZ = Math.round((room.zMin + room.zMax) / 2);
     for (let y = floorY + 2; y <= floorY + 3; y++) {
       for (let z = midZ - 2; z <= midZ + 2; z++) world.setBlock(outerX, y, z, BLOCK_IDS.HAB_GLASS, false);
-      for (let x = midX - 2; x <= midX + 2; x++) {
+      for (let x = midX - 3; x <= midX + 3; x++) {
         world.setBlock(x, y, room.zMin - 1, BLOCK_IDS.HAB_GLASS, false);
         world.setBlock(x, y, room.zMax + 1, BLOCK_IDS.HAB_GLASS, false);
       }
     }
-    for (const [dx, dz] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) {
+    for (const [dx, dz] of [[-3, -2], [3, -2], [-3, 2], [3, 2]]) {
       world.setBlock(midX + dx, ceilY, midZ + dz, BLOCK_IDS.HAB_LIGHT, false);
     }
     world.setBlock(midX, ceilY, midZ, BLOCK_IDS.HAB_GLASS, false);
@@ -391,7 +382,9 @@ function buildNorthModule(world, groundY) {
       }
     }
     for (let x = SPINE.xMin; x <= SPINE.xMax; x++) {
-      world.setBlock(x, ceilY, z, nearDoor(z) ? BLOCK_IDS.HAB_LIGHT : glassSpan ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL, false);
+      const inner = x > SPINE.xMin && x < SPINE.xMax;
+      const id = nearDoor(z) ? (inner ? BLOCK_IDS.HAB_LIGHT : BLOCK_IDS.NASA_HULL) : glassSpan ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL;
+      world.setBlock(x, ceilY, z, id, false);
     }
   }
   for (let x = SPINE.xMin; x <= SPINE.xMax; x++) {

@@ -1,6 +1,6 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { raycastVoxel } from '../world/voxelRaycaster.js';
-import { HABITAT_LAYOUT as L } from '../world/habitatLayout.js';
+import { HABITAT_LAYOUT as L, mainHabCell } from '../world/habitatLayout.js';
 
 // Resolve o que está na mira da luneta. Função pura (sem Three.js nem DOM) para testar com Vitest.
 // Ordem: objetos 3D (AABBs com scanId) e voxel competem pela distância; sem acerto, testa o céu.
@@ -21,8 +21,8 @@ const TERRAIN_BLOCKS = {
   [BLOCK_IDS.MARS_ICE]: 'water-ice',
 };
 
-// Foguete de ascensão em nasaSpaceshipBuilder.js (centro x = 14, z = -3, plataforma de 9x9).
-const LANDER = { X_MIN: 10, X_MAX: 18, Z_MIN: -7, Z_MAX: 1 };
+// Foguete de ascensão em nasaSpaceshipBuilder.js (centro x = 22, z = -3, plataforma de 9x9).
+const LANDER = { X_MIN: 18, X_MAX: 26, Z_MIN: -7, Z_MAX: 1 };
 
 // Diz a qual módulo da base pertence um bloco estrutural (paredes incluídas), ou null.
 export function baseModuleAt(bx, by, bz) {
@@ -37,7 +37,7 @@ export function baseModuleAt(bx, by, bz) {
   if (bz >= L.AIRLOCK_Z_MIN && bz <= L.AIRLOCK_Z_MAX && ax <= L.AIRLOCK_HALF_X + 1 && by <= L.FLOOR_Y + L.AIRLOCK_HEIGHT + 1) {
     return 'airlock';
   }
-  if (ax <= L.MAIN_HALF_X && az <= L.MAIN_HALF_Z && ax + az <= L.MAIN_CHAMFER && by <= L.CEIL_Y) return 'habitat';
+  if (mainHabCell(bx, bz) && by <= L.CEIL_Y) return 'habitat';
   if (bx >= L.TUNNEL_X_MIN && bx <= L.TUNNEL_X_MAX && az <= L.TUNNEL_HALF_Z + 1 && by <= L.FLOOR_Y + L.TUNNEL_HEIGHT + 1) {
     return 'tunnel';
   }

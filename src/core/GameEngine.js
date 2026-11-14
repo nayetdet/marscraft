@@ -379,17 +379,17 @@ export class GameEngine {
     let best = null, bestDistance = 4;
     const candidates = [
       ...this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' })),
-      { type: 'power', x: 4.6, y: 11.4, z: -1.5, label: 'Press F: life support' },
-      { type: 'console', x: 3.0, y: 11.5, z: -4.8, label: 'Press F: mission computer' },
-      { type: 'science', x: 4.5, y: 11.5, z: -4.8, label: 'Press F: science & radio to Earth' },
+      { type: 'power', x: 10.6, y: 11.4, z: -3, label: 'Press F: life support' },
+      { type: 'console', x: 8.25, y: 11.5, z: -10.8, label: 'Press F: mission computer' },
+      { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth' },
       { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
-      { type: 'powerroom', x: -12.0, y: 11.5, z: -11.5, label: 'Press F: power & heat control' },
-      { type: 'powerroom', x: -11.5, y: 10.8, z: -19.4, label: 'Press F: power & heat control' },
-      { type: 'galley', x: 9.1, y: 11.35, z: -11.2, label: 'Press F: kitchen' },
-      { type: 'galley', x: 10.1, y: 11.3, z: -17.4, label: 'Press F: pantry & kitchen' },
-      { type: 'hygiene', x: -12.5, y: 11.1, z: -33.3, label: 'Press F: bathroom & water recycler' },
-      { type: 'hygiene', x: -13.85, y: 11.6, z: -27.5, label: 'Press F: bathroom & water recycler' },
-      { type: 'workshop', x: 7.5, y: 11.5, z: -33.1, label: 'Press F: 3D printer workshop' },
+      { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
+      { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
+      { type: 'galley', x: 13.1, y: 11.35, z: -16.2, label: 'Press F: kitchen' },
+      { type: 'galley', x: 16.1, y: 11.3, z: -21.0, label: 'Press F: pantry & kitchen' },
+      { type: 'hygiene', x: -16.0, y: 11.1, z: -38.3, label: 'Press F: bathroom & water recycler' },
+      { type: 'hygiene', x: -19.85, y: 11.6, z: -32.5, label: 'Press F: bathroom & water recycler' },
+      { type: 'workshop', x: 11.5, y: 11.5, z: -38.1, label: 'Press F: 3D printer workshop' },
       { type: 'greenhouse', x: -17, y: 11.4, z: 0, label: 'Press F: harvest carrot' },
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
@@ -545,8 +545,8 @@ export class GameEngine {
 
   _initBaseLights() {
     // Luz clara dentro do Módulo Hab Branco Principal
-    const habLight = new THREE.PointLight(0xffffff, 1.6, 22);
-    habLight.position.set(0, 13.0, 0);
+    const habLight = new THREE.PointLight(0xffffff, 1.8, 32);
+    habLight.position.set(3.5, 13.0, -2.5);
     this.scene.add(habLight);
 
     // Luz clara dentro da Redoma de Estufa
@@ -556,9 +556,9 @@ export class GameEngine {
 
     // Luz do Modulo Norte (issue #56)
     // Ala norte: uma luz para cada par de modulos (energia + cozinha, banheiro + oficina)
-    for (const z of [-16, -30]) {
-      const northLight = new THREE.PointLight(0xf8fafc, 1.7, 30);
-      northLight.position.set(-2, 13.0, z);
+    for (const z of [-21, -35]) {
+      const northLight = new THREE.PointLight(0xf8fafc, 1.8, 36);
+      northLight.position.set(-2.5, 13.0, z);
       this.scene.add(northLight);
     }
 
@@ -968,7 +968,7 @@ export class GameEngine {
     const pad = MAV_CONFIG.PAD_POSITION;
     return {
       airlock: { x: 0.5, y: ground + 3.2, z: outerDoor.z + 0.5, label: WAYPOINT_LABELS.airlock },
-      console: { x: 0, y: ground + 3, z: -3.6, label: WAYPOINT_LABELS.console },
+      console: { x: 4, y: ground + 3, z: -9.6, label: WAYPOINT_LABELS.console },
       ice: { x: ice.x + 0.5, y: iceTop + 1.6, z: ice.z + 0.5, label: WAYPOINT_LABELS.ice },
       mav: { x: pad.x, y: ground + 9.2, z: pad.z, label: WAYPOINT_LABELS.mav },
     };
@@ -1218,8 +1218,8 @@ export class GameEngine {
       return;
     }
 
-    // 1. Console de Comando do Rover (x: 0, z: -3.6, y: ~11)
-    const distConsole = Math.hypot(this.player.pos.x - 0, this.player.pos.z - (-3.6));
+    // 1. Console de Comando do Rover (x: 4, z: -9.6, y: ~11)
+    const distConsole = Math.hypot(this.player.pos.x - 4, this.player.pos.z - (-9.6));
     const dyConsole = Math.abs(this.player.pos.y - 11.0);
     if (distConsole < 2.6 && dyConsole < 2.2) {
       this.currentInteraction = 'rover_terminal';

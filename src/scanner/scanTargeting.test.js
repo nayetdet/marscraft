@@ -70,7 +70,7 @@ describe('resolveScanTarget: base modules', () => {
     ['tunnel', { x: -9.5, y: 11.5, z: 5 }],
     ['greenhouse', { x: -17.5, y: 11.5, z: 20 }],
     ['cupola', { x: 0.5, y: 16.5, z: 20 }],
-    ['lander', { x: 14.5, y: 13.5, z: 20 }],
+    ['lander', { x: 22.5, y: 13.5, z: 20 }],
   ])('identifies the %s up close', (id, origin) => {
     expect(scan(world, origin, NORTH)).toBe(id);
   });
@@ -80,7 +80,7 @@ describe('resolveScanTarget: base modules', () => {
   });
 
   it('keeps the ascent vehicle as its own target even from far away', () => {
-    expect(scan(world, { x: 14.5, y: 13.5, z: 45 }, NORTH)).toBe('lander');
+    expect(scan(world, { x: 22.5, y: 13.5, z: 45 }, NORTH)).toBe('lander');
   });
 
   it('ignores structures the player built away from the base', () => {

@@ -83,8 +83,8 @@ describe('RoverController', () => {
     expect(controller.canCollectIce()).toBe(false);
     expect(controller.collectIce().success).toBe(false);
 
-    // Move para a cratera de gelo (x: 22, z: -22)
-    controller.pos.set(22, 9, -22);
+    // Move para a cratera de gelo
+    controller.pos.set(30, 9, -22); // WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER
     expect(controller.canCollectIce()).toBe(true);
 
     const collectResult = controller.collectIce();

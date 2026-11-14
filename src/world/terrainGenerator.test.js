@@ -58,7 +58,7 @@ describe('Martian Terrain & NASA Base Builder', () => {
     const floorY = WORLD_CONFIG.GROUND_LEVEL + 1;
 
     // Parede branca do Habitat Principal
-    expect(world.getBlock(0, floorY + 1, -6)).toBe(BLOCK_IDS.NASA_HULL);
+    expect(world.getBlock(4, floorY + 1, -12)).toBe(BLOCK_IDS.NASA_HULL);
     // Interior do Habitat livre (Ar)
     expect(world.getBlock(0, floorY + 2, 0)).toBe(BLOCK_IDS.AIR);
     // Canteiros de plantação dentro da Redoma de Estufa (x = -16, z = 2) e corredor central (-18, z = 2)
