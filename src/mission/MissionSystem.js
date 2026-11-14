@@ -34,9 +34,13 @@ export function mavProgress({ propellant, stormsSurvived, dataSent }) {
 // Energia, tempestades solares, radiacao e o MAV. Sem DOM nem Three.js, para testar com Vitest.
 // O tempo vem do relogio do ceu em horas de jogo totais: (sol - 1) * 24 + hora do dia.
 export class MissionSystem {
-  constructor({ cmes, startHours }) {
+  // `stormsStarted: false` deixa o clima espacial calmo ate `startStorms()` (a historia so
+  // solta as tempestades no ato 2, para nenhuma CME cair no meio do tutorial).
+  constructor({ cmes, startHours, stormsStarted = true }) {
     this.battery = new Battery();
-    this.schedule = buildStormSchedule(cmes, startHours);
+    this.cmes = cmes;
+    this.stormsStarted = stormsStarted;
+    this.schedule = stormsStarted ? buildStormSchedule(cmes, startHours) : [];
     this.lastHours = startHours;
 
     this.shieldOn = false;
@@ -119,6 +123,15 @@ export class MissionSystem {
     if (this.storm.phase === 'active') this._playedDuringStorm = true;
     this.totalDoseMsv += this.doseRate * h;
     return radiationDamage(this.doseRate, h);
+  }
+
+  // Comeca a fila de tempestades a partir de `hours`. Chamar de novo nao refaz a fila.
+  startStorms(hours) {
+    if (this.stormsStarted) return;
+    this.stormsStarted = true;
+    this.schedule = buildStormSchedule(this.cmes, hours);
+    this.storm = stormStateAt(this.schedule, hours);
+    this._phaseKey = this._keyFor(this.storm);
   }
 
   _runFactory(h) {

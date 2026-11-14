@@ -260,3 +260,23 @@ export const STATION_CONFIG = {
   MAV_TRANSMISSION_COST: 5,
   SUIT_RADIATION_DAMAGE_FACTOR: 0.65,
 };
+
+// Historia em 3 atos (docs/superpowers/specs/2026-11-14-story-arc-design.md)
+export const STORY_CONFIG = {
+  // Horas de jogo que a janela de lancamento fica aberta depois da ultima tempestade (~6,7 min reais)
+  WINDOW_HOURS: 8,
+  // Tempestades sobrevividas que abrem a janela (o mesmo numero que o MAV exige)
+  STORMS_FOR_WINDOW: MAV_CONFIG.STORMS_TO_SURVIVE,
+  // Segundos reais que um card de radio fica na tela
+  CARD_SECONDS: 12,
+};
+
+// Animacoes de chegada e de decolagem (docs/superpowers/plans/2026-11-14-story-arc.md)
+export const CUTSCENE_CONFIG = {
+  // Local de pouso da capsula: chao plano, a ~17 blocos da rampa onde o jogador nasce
+  LANDING_SITE: { x: -13, z: 23 },
+  ARRIVAL_SECONDS: 14.8,
+  LAUNCH_SECONDS: 15.5,
+  // Aceleracao do MAV na decolagem, em blocos/s^2 (escala de jogo)
+  LAUNCH_ACCEL: 2.2,
+};

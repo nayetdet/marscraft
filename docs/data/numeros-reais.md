@@ -51,6 +51,22 @@ A pressão baixíssima explica por que **não dá para respirar nem ficar sem tr
 | Luz solar disponível (irradiância) | ~**43 %** da Terra (~590 W/m²) e cai muito em tempestades de poeira | ~igual à da Terra (~1.361 W/m²), mas some na noite lunar de 14 dias | fact sheets |
 | Atraso de comunicação (só ida) | **~3 a ~22 min**, conforme a posição dos planetas | **~1,3 s** | distância ÷ velocidade da luz |
 
+### Números da história (atos e animações)
+
+Usados nos textos de `src/story/storyChapters.js` e nas legendas de `src/story/cutscene/`. Coletados em 2026-11-14.
+
+A distância e o atraso de rádio que aparecem no jogo **não são constantes**: vêm do `CommsLink` (`src/mission/earthMars.js`, issue #56), que calcula a posição dos planetas para a data real da partida. As duas primeiras linhas abaixo são a conferência desse cálculo contra o JPL Horizons.
+
+| Grandeza | Valor | Uso no jogo | Fonte |
+|---|---|---|---|
+| Distância Terra–Marte em 14/11/2026 | **1,32436 UA = 198,1 milhões de km** | Conferência: `earthMarsGeometry` dá 198,12 milhões de km para a mesma data. Aparece no card do rádio e na legenda do pouso | [NASA JPL Horizons](https://ssd.jpl.nasa.gov/horizons/): alvo `499` (Marte), observador `500@399` (geocentro), quantidade 20, 2026-11-14 00:00 UT |
+| Atraso de rádio nesse dia | **661 s ≈ 11 min** só de ida, **22 min** ida e volta | Conferência: `earthMarsGeometry` dá 11,01 min. A espera pela resposta usa a escala do rádio da base (`COMMS_CONFIG.GAME_SECONDS_PER_LIGHT_MINUTE = 3`): 22 min de ida e volta ≈ 66 s reais | distância ÷ velocidade da luz (299.792,458 km/s) |
+| Duração da viagem Terra–Marte | **~7 meses** (Mars 2020: 30/07/2020 a 18/02/2021, 203 dias) | Legenda da chegada | [NASA Mars 2020](https://science.nasa.gov/mission/mars-2020-perseverance/) |
+| Pressão na superfície | Marte **6,36 mbar** × Terra **1.014 mbar** (~0,6 %) | Legenda "Mars air is 100 times thinner" (a NASA usa "about 100 times thinner") | [Mars Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html) |
+| Período sinódico de Marte | **779,94 dias ≈ 26 meses** | Fim alternativo: a janela de lançamento só reabre em ~26 meses | [Mars Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html) |
+
+A janela de lançamento do jogo (`STORY_CONFIG.WINDOW_HOURS = 8` horas de jogo) é **escala de jogo**, não um número real: o que é real é a existência da janela e o intervalo de ~26 meses.
+
 Essas constantes geram trade-offs prontos:
 - **Lua:** a noite de 14 dias obriga a guardar energia (baterias) ou cortar sistemas. É um dilema forte de energia contra suporte de vida.
 - **Marte:** o painel solar rende menos e a poeira derruba ainda mais. O atraso de até 22 min impede o "controle da missão" de salvar o jogador em tempo real, então ele precisa decidir sozinho.

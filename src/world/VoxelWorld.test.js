@@ -132,16 +132,17 @@ describe('VoxelWorld meshing', () => {
   });
 
   it('colocar bloco na borda de um chunk atualiza tambem o chunk vizinho', () => {
-    // x = -8 e o primeiro bloco de um chunk; x = -9 e o ultimo do chunk anterior
-    const right = chunkOf(world, -8, 0);
-    const left = chunkOf(world, -9, 0);
+    // O mundo vai de -112 a 111 e os chunks tem 16 blocos: x = -16 e o primeiro bloco de um
+    // chunk e x = -17 e o ultimo do chunk anterior
+    const right = chunkOf(world, -16, 0);
+    const left = chunkOf(world, -17, 0);
     expect(right).not.toBe(left);
 
     const rightBefore = faceCount(right.opaqueMesh);
-    world.setBlock(-8, SKY_Y, 0, BLOCK_IDS.BASALT, true);
+    world.setBlock(-16, SKY_Y, 0, BLOCK_IDS.BASALT, true);
     expect(faceCount(right.opaqueMesh) - rightBefore).toBe(6);
 
-    world.setBlock(-9, SKY_Y, 0, BLOCK_IDS.BASALT, true);
+    world.setBlock(-17, SKY_Y, 0, BLOCK_IDS.BASALT, true);
     expect(faceCount(right.opaqueMesh) - rightBefore).toBe(5);
   });
 
@@ -175,16 +176,16 @@ describe('VoxelWorld meshing', () => {
   });
 
   it('breakBlock reconstroi so o chunk do bloco, sem refazer o mundo inteiro', () => {
-    // x = 0 e z = 20 ficam no meio de um chunk (longe das bordas)
-    world.setBlock(0, SKY_Y, 20, BLOCK_IDS.BASALT, true);
-    const target = chunkOf(world, 0, 20);
+    // x = 8 e z = 24 ficam no meio de um chunk (longe das bordas, que caem nos multiplos de 16)
+    world.setBlock(8, SKY_Y, 24, BLOCK_IDS.BASALT, true);
+    const target = chunkOf(world, 8, 24);
     const geometriesBefore = new Map(world.chunks.map((c) => [c, c.opaqueMesh?.geometry]));
 
-    expect(world.breakBlock(0, SKY_Y, 20)).toBe(BLOCK_IDS.BASALT);
+    expect(world.breakBlock(8, SKY_Y, 24)).toBe(BLOCK_IDS.BASALT);
 
     const rebuilt = world.chunks.filter((c) => c.opaqueMesh?.geometry !== geometriesBefore.get(c));
     expect(rebuilt).toEqual([target]);
-    expect(world.getBlock(0, SKY_Y, 20)).toBe(BLOCK_IDS.AIR);
+    expect(world.getBlock(8, SKY_Y, 24)).toBe(BLOCK_IDS.AIR);
     expect(world.drops).toHaveLength(1);
   });
 

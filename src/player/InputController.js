@@ -23,6 +23,7 @@ export class InputController {
     onToggleCrewPanel = () => {},
     onSendData = () => {},
     isMissionModalOpen = () => false,
+    isInputBlocked = () => false,
     onRoverLook = () => {},
     getInteraction,
     isStationOpen,
@@ -34,6 +35,8 @@ export class InputController {
     this.onToggleCrewPanel = onToggleCrewPanel;
     this.onSendData = onSendData;
     this.isMissionModalOpen = isMissionModalOpen;
+    // Animacao (cutscene) rodando: teclado, mouse e toque nao controlam o jogador
+    this.isInputBlocked = isInputBlocked;
     this.domElement = domElement;
     this.player = player;
     this.playerHand = playerHand;
@@ -162,6 +165,7 @@ export class InputController {
 
   _handleTouchAction(action, button, pointerId) {
     if (!this.isTouchMode || !this.isLocked || this.survival.isDead || this.hud.isInventoryOpen || this.isStationOpen?.()) return;
+    if (this.isInputBlocked?.()) return;
 
     if (this.isGymActive?.()) {
       if (action === 'jump' || action === 'mine' || action === 'use') {
@@ -393,7 +397,7 @@ export class InputController {
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (!this.isLocked || this.survival.isDead) return;
+      if (!this.isLocked || this.survival.isDead || this.isInputBlocked()) return;
       if (this.isRoverActive()) {
         this.onRoverLook(e.movementX, e.movementY);
         return;
@@ -406,7 +410,7 @@ export class InputController {
     });
 
     window.addEventListener('keydown', (e) => {
-      if (this.survival.isDead || this.isStationOpen?.()) return;
+      if (this.survival.isDead || this.isStationOpen?.() || this.isInputBlocked()) return;
       // Painel do MAV, da tripulacao ou vitoria abertos: so [F] e [C] (fechar o painel) funcionam
       if (this.isMissionModalOpen()) {
         if (e.code === 'KeyF' && !e.repeat) this.onInteract();
@@ -509,7 +513,7 @@ export class InputController {
     window.addEventListener('blur', () => { this.keys = {}; });
 
     window.addEventListener('wheel', (e) => {
-      if (!this.isLocked || this.survival.isDead) return;
+      if (!this.isLocked || this.survival.isDead || this.isInputBlocked()) return;
       const dir = Math.sign(e.deltaY);
       // Com o scanner aberto, a rodinha controla o zoom (para cima aproxima) em vez da hotbar.
       if (this.isScannerOpen) {
@@ -521,7 +525,7 @@ export class InputController {
     });
 
     window.addEventListener('mousedown', (e) => {
-      if (!this.isLocked || this.survival.isDead || this.isRoverActive()) return;
+      if (!this.isLocked || this.survival.isDead || this.isRoverActive() || this.isInputBlocked()) return;
 
       if (this.isGymActive?.()) {
         if (e.button === 0) this.onGymAction?.();
@@ -560,7 +564,7 @@ export class InputController {
 
     const joystick = document.getElementById('mobile-joystick');
     joystick.addEventListener('pointerdown', (e) => {
-      if (!this.isTouchMode || this.survival.isDead || this.hud.isInventoryOpen) return;
+      if (!this.isTouchMode || this.survival.isDead || this.hud.isInventoryOpen || this.isInputBlocked()) return;
       e.preventDefault();
       this.joystickPointerId = e.pointerId;
       joystick.setPointerCapture(e.pointerId);
@@ -586,7 +590,7 @@ export class InputController {
 
     this.domElement.addEventListener('pointerdown', (e) => {
       if (!this.isTouchMode || e.pointerType === 'mouse' || e.clientX < window.innerWidth * 0.4) return;
-      if (this.survival.isDead || this.hud.isInventoryOpen) return;
+      if (this.survival.isDead || this.hud.isInventoryOpen || this.isInputBlocked()) return;
       e.preventDefault();
       this.lookPointerId = e.pointerId;
       this.lastTouchLookX = e.clientX;

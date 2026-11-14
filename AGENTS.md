@@ -64,7 +64,11 @@ src/sky/                   céu marciano: shader de atmosfera, Sol, Terra+Lua, F
 src/graphics/              texturas procedurais em canvas e materiais dos blocos
 src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades, ordens, avisos), estações
                            (estufa, reciclador de água, gerador de O2, enfermaria), trilhos e avatar voxel
-src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu), CrewPanel + CSS
+src/story/                 história em 3 atos: StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
+                           waypoints (para onde a seta do objetivo aponta) e WaypointBeacon (seta 3D)
+  cutscene/                animações de chegada e de decolagem: timeline (keyframes), CutscenePlayer, efeitos, cápsula
+src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu), CrewPanel, StoryHud
+                           (card de rádio), WaypointHud (seta na tela), CutsceneHud (legendas, pular) + CSS
 docs/                      contexto do desafio, APIs e dados reais
 ```
 
