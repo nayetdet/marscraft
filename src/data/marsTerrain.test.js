@@ -54,13 +54,17 @@ describe('real Mars terrain (HiRISE)', () => {
   });
 
   it('keeps the whole world between -3 m and +14 m, and clamps outside it', () => {
+    let lowest = Infinity;
+    let highest = -Infinity;
     for (let x = -HALF; x < HALF; x += 1) {
       for (let z = -HALF; z < HALF; z += 1) {
         const offset = terrainOffset(x, z);
-        expect(offset).toBeGreaterThan(-3);
-        expect(offset).toBeLessThan(14);
+        lowest = Math.min(lowest, offset);
+        highest = Math.max(highest, offset);
       }
     }
+    expect(lowest).toBeGreaterThan(-3);
+    expect(highest).toBeLessThan(14);
     expect(terrainOffset(HALF + 50, 0)).toBe(terrainOffset(HALF - 1, 0));
   });
 
