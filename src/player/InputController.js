@@ -57,7 +57,7 @@ export class InputController {
 
     document.addEventListener('pointerlockchange', () => {
       this.isLocked = document.pointerLockElement === this.domElement;
-      if (!this.survival.isDead) {
+      if (!this.survival.isDead && !this.hud.isInventoryOpen) {
         overlay.classList.toggle('hidden', this.isLocked);
       }
     });
@@ -73,6 +73,7 @@ export class InputController {
 
     window.addEventListener('keydown', (e) => {
       if (this.survival.isDead) return;
+      if (this.hud.isInventoryOpen && e.code !== 'KeyE') return;
       this.keys[e.code] = true;
 
       if (e.code.startsWith('Digit')) {
@@ -84,13 +85,15 @@ export class InputController {
       }
 
       if (e.code === 'KeyE') {
-        const msg = this.survival.consumeSlotItem(this.hud.selectedSlot);
-        if (msg) {
-          this.playerHand.triggerSwing();
-          this.hud.showToast(msg);
-          this.hud.renderHotbar(this.survival.slots);
-          this._syncHandWithSlot();
+        e.preventDefault();
+        if (this.hud.isInventoryOpen) {
+          this.hud.closeInventory();
+          this.domElement.requestPointerLock();
+        } else if (this.isLocked) {
+          this.hud.openInventory(this.survival.inventorySlots);
+          document.exitPointerLock();
         }
+        return;
       }
 
       if (e.code === 'KeyZ') {
@@ -101,18 +104,9 @@ export class InputController {
 
       if (e.code === 'KeyT') {
         this.sky.advanceTime(1.5);
-        this.hud.showToast('Tempo avancado (+1h30 em Marte)');
+        this.hud.showToast('Time advanced (+1h 30m on Mars)');
       }
 
-      if (e.code === 'KeyK') {
-        this.sky.setTimeOfDay(17.6);
-        this.hud.showToast('Por do Sol Azul de Marte');
-      }
-
-      if (e.code === 'KeyL') {
-        this.sky.setTimeOfDay(22.0);
-        this.hud.showToast('Noite em Marte (Veja a Terra no ceu)');
-      }
     });
 
     window.addEventListener('keyup', (e) => {

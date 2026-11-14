@@ -50,7 +50,15 @@ export class GameEngine {
     const firstSlot = this.survival.slots[0];
     this.playerHand.setHeldBlock(firstSlot.id, firstSlot.count);
 
-    this.hud = new HudManager(previews, this.survival.slots);
+    this.hud = new HudManager(previews, this.survival.slots, {
+      onInventorySwap: (fromIndex, toIndex) => {
+        const inventorySlots = this.survival.swapInventorySlots(fromIndex, toIndex);
+        this.hud.renderHotbar(this.survival.slots);
+        const heldSlot = this.survival.slots[this.hud.selectedSlot];
+        this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
+        return inventorySlots;
+      },
+    });
 
     this._initBaseLights();
     this._initHighlightWireframe();
