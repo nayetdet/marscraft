@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MissionSystem, mavProgress, oxygenPointsToKg } from './MissionSystem.js';
-import { ENERGY_CONFIG, MAV_CONFIG } from '../config/constants.js';
+import { ENERGY_CONFIG, MAV_CONFIG, STORM_CONFIG } from '../config/constants.js';
 
 const cmes = [{ id: 'cme', startTime: '2026-11-05T20:00Z', speedKmS: 900 }];
 
@@ -181,5 +181,26 @@ describe('MissionSystem launch', () => {
 describe('oxygenPointsToKg', () => {
   it('one sol of breathing outside equals 0.84 kg of O2', () => {
     expect(oxygenPointsToKg(0.32 * 1200)).toBeCloseTo(0.84);
+  });
+
+  it('keeps space weather calm until the story starts the storms', () => {
+    const mission = new MissionSystem({ cmes, startHours: 0, stormsStarted: false });
+    mission.update(60, { insideHabitat: false });
+    expect(mission.storm.phase).toBe('calm');
+    expect(mission.stormsSurvived).toBe(0);
+    expect(mission.drainEvents().some((e) => e.type.startsWith('storm'))).toBe(false);
+  });
+
+  it('schedules the first warning from the hour the storms start, only once', () => {
+    const mission = new MissionSystem({ cmes, startHours: 0, stormsStarted: false });
+    mission.update(30);
+    mission.startStorms(30);
+    expect(mission.schedule[0].warningStart).toBe(30 + STORM_CONFIG.FIRST_WARNING_AFTER_HOURS);
+
+    mission.startStorms(50);
+    expect(mission.schedule[0].warningStart).toBe(30 + STORM_CONFIG.FIRST_WARNING_AFTER_HOURS);
+
+    mission.update(30 + STORM_CONFIG.FIRST_WARNING_AFTER_HOURS + 0.01);
+    expect(mission.storm.phase).toBe('warning');
   });
 });

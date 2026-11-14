@@ -17,19 +17,6 @@ describe('mission systems', () => {
     expect(mission.greenhousePowered).toBe(false);
   });
 
-  it('requires an outside sample and a safe return before reporting', () => {
-    const mission = new MissionSystem();
-    mission.console();
-    mission.collectSample(true);
-    expect(mission.stage).toBe('outside');
-    mission.update(1, 12, false, false);
-    mission.collectSample(false);
-    expect(mission.stage).toBe('return');
-    mission.update(1, 12, true, false);
-    mission.console();
-    expect(mission.stage).toBe('complete');
-  });
-
   it('raises exposure outside and increases it during the simulated storm', () => {
     const mission = new MissionSystem();
     mission.update(1, 12, true, false);

@@ -217,8 +217,6 @@ export class GameEngine {
     const insideCore = inside && !(Math.abs(this.player.pos.x - 0.5) < 1.5 && this.player.pos.z >= 6);
     const shelter = insideCore && this.player.pos.x > -3 && this.player.pos.x < -1 && Math.abs(this.player.pos.z - 0.5) < 1.3;
     this.expedition.greenhousePowered = this.expedition.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
-    if (this.expedition.stage === 'outside' && !inside) this.expedition.stage = 'sample';
-    if (this.expedition.stage === 'return' && inside) this.expedition.stage = 'report';
     const storm = this.mission.storm.phase === 'active';
     this.stations.update(dt, insideCore, shelter, this.survival, storm, !inside);
     this.expedition.radiation = Math.min(100, this.mission.totalDoseMsv / RADIATION_CONFIG.CAREER_LIMIT_MSV * 100);
@@ -895,7 +893,6 @@ export class GameEngine {
       if (pickedUpBlocks.length > 0) {
         if (pickedUpBlocks.includes(BLOCK_IDS.REGOLITH) && !this.survival.isPlayerInsideShip(this.player.pos)) {
           this.stations.samples += pickedUpBlocks.filter(id => id === BLOCK_IDS.REGOLITH).length;
-          this.expedition.collectSample(false);
         }
         this.hud.renderHotbar(this.survival.slots);
         const heldSlot = this.survival.slots[this.hud.selectedSlot];
