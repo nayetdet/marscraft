@@ -142,3 +142,38 @@ export const MAV_CONFIG = {
   // os pontos de O2 do jogo em kg no resumo da vitoria
   OXYGEN_KG_PER_DAY: 0.84,
 };
+
+// Tripulacao NPC (issue #47). Taxas por hora de jogo (1 hora de jogo = 50 s reais).
+// Agua : comida por tripulante segue o NASA BVAD (~3 kg : ~1,8 kg por pessoa/dia).
+// O O2 do tripulante e pago em energia, como o O2 do jogador no habitat (reciclagem + MOXIE).
+export const CREW_CONFIG = {
+  MAX_CREW: 3,
+  DEFAULT_CREW: 2,
+  NAMES: ['Ana', 'Leo', 'Maya'],
+  SUIT_COLORS: [0xf97316, 0x22c55e, 0x3b82f6],
+  OXYGEN_ENERGY_PER_HOUR: 1.5, // % de bateria por tripulante
+  WATER_L_PER_HOUR: 0.5,
+  FOOD_PER_HOUR: 0.3, // racoes
+  START_FOOD: 15,
+  MAX_FOOD: 40,
+  EVACUATE_AFTER_HOURS: 12, // horas seguidas sem recurso ate voltar para a Terra
+  ALERT_COOLDOWN_S: 30, // segundos reais entre avisos da mesma estacao
+  WALK_SPEED: 2.2, // blocos por segundo real
+  TALK_RADIUS: 2.6,
+  MAX_STEP_HOURS: 0.05,
+};
+
+export const STATION_CONFIG = {
+  WORK_ENERGY_PER_HOUR: 2, // % de bateria por estacao operada
+  DEGRADE_PER_HOUR: 0.08, // sem operador a estacao estraga devagar
+  REPAIR_PER_HOUR: 0.5,
+  LOW_HEALTH: 0.5,
+  GREENHOUSE_FOOD_PER_HOUR: 1.2,
+  GREENHOUSE_MIN_HYDRATION: 20,
+  // [Ref] O sistema de recuperacao de agua da ISS recupera ~98% da agua (NASA, 2023)
+  WATER_RECOVERY: 0.98,
+  WATER_RECYCLE_L_PER_HOUR: 3,
+  LOW_WATER_L: 5,
+  // Filtros de CO2 saturados: o O2 da base chega a custar o dobro de energia
+  OXYGEN_MAX_COST_MULTIPLIER: 2,
+};
