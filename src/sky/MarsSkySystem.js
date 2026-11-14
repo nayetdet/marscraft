@@ -7,6 +7,15 @@ import {
   createStarfield,
 } from './celestialBodies.js';
 
+// Cores fixas reaproveitadas a cada frame (evita alocar objetos no loop)
+const SUN_DAY_COLOR = new THREE.Color(0xfff5e6);
+const SUN_TWILIGHT_COLOR = new THREE.Color(0xbbe0ff);
+const SUN_NIGHT_COLOR = new THREE.Color(0x64748b);
+const FOG_NIGHT_COLOR = new THREE.Color(0x241914);
+const FOG_SUNSET_COLOR = new THREE.Color(0xd98245);
+const FOG_DAY_COLOR = new THREE.Color(0xf2a65e);
+const _sunDir = new THREE.Vector3();
+
 export class MarsSkySystem {
   constructor(scene) {
     this.scene = scene;
@@ -80,9 +89,9 @@ export class MarsSkySystem {
     this.celestialGroup.position.copy(playerPos);
 
     const sunAngle = ((this.timeOfDay - 6) / 24) * Math.PI * 2;
-    const sunDir = new THREE.Vector3(Math.cos(sunAngle), Math.sin(sunAngle), -0.35).normalize();
+    const sunDir = _sunDir.set(Math.cos(sunAngle), Math.sin(sunAngle), -0.35).normalize();
 
-    this.sunGroup.position.copy(sunDir.clone().multiplyScalar(360));
+    this.sunGroup.position.copy(sunDir).multiplyScalar(360);
     this.skyUniforms.uSunDir.value.copy(sunDir);
     this.skyUniforms.uSunElevation.value = sunDir.y;
 
@@ -91,28 +100,21 @@ export class MarsSkySystem {
       THREE.MathUtils.smoothstep(sunDir.y, -0.22, 0.05) *
       (1.0 - THREE.MathUtils.smoothstep(sunDir.y, 0.05, 0.35));
 
-    this.sunLight.position.copy(playerPos).add(sunDir.clone().multiplyScalar(120));
+    this.sunLight.position.copy(sunDir).multiplyScalar(120).add(playerPos);
     this.sunLight.intensity = 0.45 + dayStrength * 0.95;
 
-    const dayColor = new THREE.Color(0xfff5e6);
-    const sunsetBlueColor = new THREE.Color(0xbbe0ff);
-    const nightColor = new THREE.Color(0x64748b);
-
     this.sunLight.color
-      .copy(nightColor)
-      .lerp(dayColor, dayStrength)
-      .lerp(sunsetBlueColor, twilightStrength * 0.55);
+      .copy(SUN_NIGHT_COLOR)
+      .lerp(SUN_DAY_COLOR, dayStrength)
+      .lerp(SUN_TWILIGHT_COLOR, twilightStrength * 0.55);
 
     this.ambientLight.intensity = 0.55 + dayStrength * 0.55;
     this.baseAmbient.intensity = 0.5 + dayStrength * 0.35;
 
-    const fogNight = new THREE.Color(0x241914);
-    const fogSunset = new THREE.Color(0xd98245);
-    const fogDay = new THREE.Color(0xf2a65e);
     this.scene.fog.color
-      .copy(fogNight)
-      .lerp(fogDay, dayStrength)
-      .lerp(fogSunset, twilightStrength);
+      .copy(FOG_NIGHT_COLOR)
+      .lerp(FOG_DAY_COLOR, dayStrength)
+      .lerp(FOG_SUNSET_COLOR, twilightStrength);
 
     this.starMaterial.opacity = THREE.MathUtils.clamp(1.0 - dayStrength * 0.65, 0.28, 0.95);
 
@@ -136,28 +138,20 @@ export class MarsSkySystem {
     );
   }
 
-  getEarthWorldPosition() {
-    const pos = new THREE.Vector3();
-    this.earthMesh.getWorldPosition(pos);
-    return pos;
+  getEarthWorldPosition(target = new THREE.Vector3()) {
+    return this.earthMesh.getWorldPosition(target);
   }
 
-  getPhobosWorldPosition() {
-    const pos = new THREE.Vector3();
-    this.phobosGroup.getWorldPosition(pos);
-    return pos;
+  getPhobosWorldPosition(target = new THREE.Vector3()) {
+    return this.phobosGroup.getWorldPosition(target);
   }
 
-  getDeimosWorldPosition() {
-    const pos = new THREE.Vector3();
-    this.deimosGroup.getWorldPosition(pos);
-    return pos;
+  getDeimosWorldPosition(target = new THREE.Vector3()) {
+    return this.deimosGroup.getWorldPosition(target);
   }
 
-  getSunWorldPosition() {
-    const pos = new THREE.Vector3();
-    this.sunMesh.getWorldPosition(pos);
-    return pos;
+  getSunWorldPosition(target = new THREE.Vector3()) {
+    return this.sunMesh.getWorldPosition(target);
   }
 
   getFormattedTime() {

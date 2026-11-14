@@ -10,6 +10,7 @@ import { PlayerHand } from '../player/PlayerHand.js';
 import { SurvivalSystem } from '../player/SurvivalSystem.js';
 import { InputController } from '../player/InputController.js';
 import { HudManager } from '../ui/HudManager.js';
+import { DebugOverlay } from '../ui/DebugOverlay.js';
 
 export class GameEngine {
   constructor(container) {
@@ -35,9 +36,9 @@ export class GameEngine {
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.container.appendChild(this.renderer.domElement);
 
-    const { materials, previews } = createBlockMaterials();
+    const { materials, previews, atlas } = createBlockMaterials();
     this.sky = new MarsSkySystem(this.scene);
-    this.world = new VoxelWorld(this.scene, materials);
+    this.world = new VoxelWorld(this.scene, materials, atlas);
 
     // Modelos 3D detalhados estilo Mod de Minecraft + Caixas de Colisão AABB
     const { group: customModels, colliders, plants } = buildNasaCustomModels(this.scene);
@@ -82,6 +83,13 @@ export class GameEngine {
       harvestCrop: (plant) => removeCrop(plant, this.plants, this.customColliders),
     });
 
+    this._lookDir = new THREE.Vector3();
+
+    this.debug = new DebugOverlay(this.renderer);
+
+    // Compila todos os shaders agora, em vez de travar na primeira vez que algo entra na tela
+    this.renderer.compile(this.scene, this.camera);
+
     window.addEventListener('resize', () => this._onResize());
     this.lastTime = performance.now();
   }
@@ -107,7 +115,7 @@ export class GameEngine {
   }
 
   _getTargetedBlock() {
-    const dir = this.player.getLookDirection();
+    const dir = this.player.getLookDirection(this._lookDir);
     const voxelHit = this.world.raycast(this.player.pos, dir, CAMERA_CONFIG.REACH_DISTANCE);
     return targetCrop(this.plants, this.player.pos, dir, CAMERA_CONFIG.REACH_DISTANCE, voxelHit);
   }
@@ -136,7 +144,8 @@ export class GameEngine {
       requestAnimationFrame(loop);
 
       const now = performance.now();
-      const dt = Math.min((now - this.lastTime) / 1000, 0.05);
+      const frameMs = now - this.lastTime;
+      const dt = Math.min(frameMs / 1000, 0.05);
       this.lastTime = now;
 
       if (this.input.isLocked && !this.survival.isDead) {
@@ -182,6 +191,7 @@ export class GameEngine {
       });
 
       this.renderer.render(this.scene, this.camera);
+      this.debug.frame(frameMs);
     };
 
     loop();

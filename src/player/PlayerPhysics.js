@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { PHYSICS_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 
+const _lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+
 export class PlayerPhysics {
   constructor(world, customColliders = []) {
     this.world = world;
@@ -21,6 +23,11 @@ export class PlayerPhysics {
     this.radius = PHYSICS_CONFIG.PLAYER_RADIUS;
     this.onGround = false;
     this.isMoving = false;
+
+    this._forward = new THREE.Vector3();
+    this._right = new THREE.Vector3();
+    this._moveDir = new THREE.Vector3();
+    this._nextPos = new THREE.Vector3();
   }
 
   resetToShipRamp() {
@@ -36,11 +43,9 @@ export class PlayerPhysics {
     this.pitch = PHYSICS_CONFIG.SPAWN_PITCH;
   }
 
-  getLookDirection() {
-    const dir = new THREE.Vector3(0, 0, -1);
-    const euler = new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ');
-    dir.applyEuler(euler);
-    return dir.normalize();
+  getLookDirection(target = new THREE.Vector3()) {
+    _lookEuler.set(this.pitch, this.yaw, 0, 'YXZ');
+    return target.set(0, 0, -1).applyEuler(_lookEuler);
   }
 
   overlapsBlock(bx, by, bz) {
@@ -138,10 +143,10 @@ export class PlayerPhysics {
       }
     }
 
-    const forward = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
-    const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    const forward = this._forward.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+    const right = this._right.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
 
-    const moveDir = new THREE.Vector3();
+    const moveDir = this._moveDir.set(0, 0, 0);
     if (keys['KeyW'] || keys['ArrowUp']) moveDir.add(forward);
     if (keys['KeyS'] || keys['ArrowDown']) moveDir.sub(forward);
     if (keys['KeyD'] || keys['ArrowRight']) moveDir.add(right);
@@ -162,7 +167,7 @@ export class PlayerPhysics {
       this.onGround = false;
     }
 
-    const nextPos = this.pos.clone();
+    const nextPos = this._nextPos.copy(this.pos);
 
     // X axis
     nextPos.x += this.vel.x * dt;
