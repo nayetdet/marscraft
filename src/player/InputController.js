@@ -30,6 +30,7 @@ export class InputController {
     this.breakState = null;
     this.breakSwingTimer = 0;
     this.isBreakButtonHeld = false;
+    this.lastForwardTapAt = 0;
 
     this._bindEvents();
   }
@@ -154,8 +155,10 @@ export class InputController {
       if (this.survival.isDead) return;
       if (this.hud.isInventoryOpen && e.code !== 'KeyE') return;
       if (this.isLocked && this._isBrowserShortcut(e)) e.preventDefault();
-      if (this.isLocked && (e.code.startsWith('Control') || e.code.startsWith('Shift') || (e.ctrlKey && e.code === 'KeyW'))) {
-        e.preventDefault();
+      if (e.code === 'KeyW' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const now = performance.now();
+        this.keys.Sprint = now - this.lastForwardTapAt <= 300;
+        this.lastForwardTapAt = now;
       }
       this.keys[e.code] = true;
 
@@ -204,6 +207,7 @@ export class InputController {
 
     window.addEventListener('keyup', (e) => {
       this.keys[e.code] = false;
+      if (e.code === 'KeyW') this.keys.Sprint = false;
     });
 
     window.addEventListener('blur', () => { this.keys = {}; });
@@ -276,14 +280,14 @@ export class InputController {
   }
 
   _isBrowserShortcut(e) {
-    // Any modified key chord belongs to the browser/OS, not the game.
-    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyQ') return true;
+    // Suppress browser accelerators while the game owns the pointer. Keep the
+    // key event itself flowing so movement, crouch, and debug controls still work.
     if (e.ctrlKey || e.metaKey || e.altKey) return true;
-    if (e.shiftKey && ['F10', 'Tab', 'F5', 'F6', 'F11', 'F12'].includes(e.code)) return true;
+    if (e.shiftKey) return true;
 
-    // Common browser navigation, focus, and reload keys. Escape is intentionally
-    // left alone so the player can release pointer lock and pause.
-    if (['F1', 'F5', 'F6', 'F11', 'F12', 'Tab', 'Space', 'Backspace'].includes(e.code)) return true;
+    // Escape remains available to release pointer lock. F3 remains the game's debug overlay.
+    if (e.code.startsWith('F') && e.code !== 'F3') return true;
+    if (['Tab', 'Space', 'Backspace'].includes(e.code)) return true;
     return false;
   }
 }

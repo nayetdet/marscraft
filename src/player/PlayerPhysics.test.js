@@ -17,11 +17,11 @@ describe('PlayerPhysics', () => {
   it('applies crouch and sprint speeds, with crouch taking precedence', () => {
     const player = new PlayerPhysics(createMockWorld());
     player.yaw = 0;
-    player.update(0, { KeyW: true, ControlRight: true });
+    player.update(0, { KeyW: true, Sprint: true });
     expect(player.vel.z).toBeCloseTo(-PHYSICS_CONFIG.SPRINT_SPEED);
 
     const feetY = player.pos.y - player.height;
-    player.update(0, { KeyW: true, ControlRight: true, ShiftLeft: true });
+    player.update(0, { KeyW: true, Sprint: true, ShiftLeft: true });
     expect(player.vel.z).toBeCloseTo(-PHYSICS_CONFIG.CROUCH_SPEED);
     expect(player.pos.y - player.height).toBeCloseTo(feetY);
     expect(player.isCrouching).toBe(true);
