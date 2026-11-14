@@ -143,18 +143,20 @@ export function buildNasaCustomModels(scene) {
     obj.updateMatrixWorld(true);
     const fullBox = new THREE.Box3().setFromObject(obj);
     if (!fullBox.isEmpty()) {
-      colliders.push({
+      const collider = {
         minX: fullBox.min.x - 0.06,
         maxX: fullBox.max.x + 0.06,
         minY: fullBox.min.y,
         maxY: Math.max(fullBox.max.y, fullBox.min.y + 1.5),
         minZ: fullBox.min.z - 0.06,
         maxZ: fullBox.max.z + 0.06,
-      });
+      };
+      colliders.push(collider);
+      if (plants.includes(obj)) obj.userData.collider = collider;
     }
   }
 
-  return { group, colliders };
+  return { group, colliders, plants };
 }
 
 function addBox(parent, w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) {

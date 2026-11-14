@@ -27,7 +27,7 @@ export function raycastVoxel(world, origin, direction, maxDist = 8.0) {
   while (dist <= maxDist) {
     const block = world.getBlock(x, y, z);
     if (block !== BLOCK_IDS.AIR) {
-      return { hit: true, x, y, z, normal, block };
+      return { hit: true, x, y, z, normal, block, distance: dist };
     }
 
     if (tMaxX < tMaxY) {

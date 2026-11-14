@@ -17,12 +17,15 @@ export class PlayerPhysics {
     this.pitch = PHYSICS_CONFIG.SPAWN_PITCH;
 
     this.height = PHYSICS_CONFIG.PLAYER_HEIGHT;
+    this.isCrouching = false;
     this.radius = PHYSICS_CONFIG.PLAYER_RADIUS;
     this.onGround = false;
     this.isMoving = false;
   }
 
   resetToShipRamp() {
+    this.height = PHYSICS_CONFIG.PLAYER_HEIGHT;
+    this.isCrouching = false;
     this.pos.set(
       PHYSICS_CONFIG.SPAWN_POS.x,
       PHYSICS_CONFIG.SPAWN_POS.y + 0.5,
@@ -118,6 +121,23 @@ export class PlayerPhysics {
   }
 
   update(dt, keys) {
+    const wantsCrouch = keys['ShiftLeft'] || keys['ShiftRight'];
+    if (wantsCrouch && !this.isCrouching) {
+      this.pos.y -= this.height - PHYSICS_CONFIG.CROUCH_HEIGHT;
+      this.height = PHYSICS_CONFIG.CROUCH_HEIGHT;
+      this.isCrouching = true;
+    } else if (!wantsCrouch && this.isCrouching) {
+      const standingPos = this.pos.clone();
+      standingPos.y += PHYSICS_CONFIG.PLAYER_HEIGHT - this.height;
+      this.height = PHYSICS_CONFIG.PLAYER_HEIGHT;
+      if (this._checkCollision(standingPos)) {
+        this.height = PHYSICS_CONFIG.CROUCH_HEIGHT;
+      } else {
+        this.pos.copy(standingPos);
+        this.isCrouching = false;
+      }
+    }
+
     const forward = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
 
@@ -130,7 +150,9 @@ export class PlayerPhysics {
     this.isMoving = moveDir.lengthSq() > 0 && this.onGround;
     if (moveDir.lengthSq() > 0) moveDir.normalize();
 
-    const speed = PHYSICS_CONFIG.WALK_SPEED;
+    const sprinting = keys['ControlLeft'] || keys['ControlRight'];
+    const speed = this.isCrouching ? PHYSICS_CONFIG.CROUCH_SPEED
+      : sprinting ? PHYSICS_CONFIG.SPRINT_SPEED : PHYSICS_CONFIG.WALK_SPEED;
     this.vel.x = moveDir.x * speed;
     this.vel.z = moveDir.z * speed;
 
