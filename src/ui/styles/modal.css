@@ -7,7 +7,6 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  overflow-y: auto;
   box-sizing: border-box;
 }
 
@@ -37,6 +36,10 @@
   gap: 14px;
   text-align: center;
 }
+
+.mc-menu.is-controls .mc-title-wrap { display: none; }
+.mc-menu.is-controls .mc-menu-card { padding-top: 0; }
+.mc-menu.is-controls .crew-picker { display: none; }
 
 .mc-title-wrap {
   position: relative;
@@ -138,10 +141,15 @@
   border-right: 3px solid #8b8b8b;
   border-bottom: 3px solid #8b8b8b;
   text-align: left;
-  max-height: min(70dvh, 560px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
+
+.mc-menu.is-controls .controls-screen { padding: 8px; }
+.mc-menu.is-controls .controls-screen h2 { margin-bottom: 6px; padding-bottom: 4px; }
+.mc-menu.is-controls .controls-section { padding: 4px 6px; }
+.mc-menu.is-controls .controls-section h3 { margin-bottom: 2px; font-size: 12px; }
+.mc-menu.is-controls .control-row { min-height: 18px; font-size: 11px; }
+.mc-menu.is-controls .control-row kbd { font-size: 9px; }
+.mc-menu.is-controls .controls-screen > .mc-btn { min-height: 38px; margin-top: 8px; }
 
 .controls-screen.hidden,
 #menu-main.hidden { display: none; }
@@ -450,6 +458,77 @@
 .gym-controls-row { display:flex; gap:8px; }.gym-step-btn { flex:1; max-width:none; padding:10px; font-size:13px; }.gym-step-btn.next { background:#548b77; border-color:#a5dfc0 #284d40 #284d40 #a5dfc0; }
 .gym-cost { text-align:center; font-size:11px; color:#9ab2b0; }
 @media (max-width:480px) { .gym-stage { gap:10px; padding:8px; } .gym-illustration { width:105px; flex-basis:105px; } .gym-stage-copy h2 { font-size:16px; } .gym-summary { gap:8px; } }
+
+/* HUD in-world da Academia (astronauta 3D na Bicicleta / Esteira) */
+.gym-hud-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 28;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px calc(155px + env(safe-area-inset-bottom));
+  font-family: monospace;
+}
+
+.gym-hud-overlay.hidden {
+  display: none;
+}
+
+.gym-hud-top {
+  width: min(640px, 94vw);
+  background: rgba(14, 31, 38, 0.9);
+  border: 3px solid #38bdf8;
+  box-shadow: 0 4px 0 #09151a, inset 0 0 0 2px #163a47;
+  padding: 10px 14px;
+  color: #e2f1f8;
+}
+
+.gym-hud-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #7dd3fc;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+
+.gym-hud-why-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #e6f4f1;
+}
+
+.gym-hud-bar-track {
+  width: min(400px, 50vw);
+  height: 18px;
+  flex-shrink: 0;
+  border: 2px solid #101010;
+  box-shadow: inset 2px 2px #777, inset -2px -2px #373737, 2px 2px #555;
+  padding: 2px;
+  background: repeating-linear-gradient(90deg, #252b2b 0 14px, #111818 14px 16px);
+  overflow: hidden;
+}
+
+.gym-hud-bar-track.hidden {
+  display: none;
+}
+
+.gym-hud-bar-fill {
+  height: 100%;
+  background: repeating-linear-gradient(90deg, #4ade80 0 14px, #207b46 14px 16px);
+  box-shadow: inset 0 3px #9af2b7, inset 0 -3px #20934e;
+  transition: width 0.08s steps(8, end);
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .gym-hud-top {
+    width: min(400px, 50vw);
+    padding: 5px 8px;
+  }
+}
 
 .rotate-device-overlay {
   display: none;

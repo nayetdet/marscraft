@@ -1,8 +1,15 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { STATION_CONFIG as C } from '../config/constants.js';
+import { COMMS_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U } from '../config/constants.js';
+import { shelterDoseFactor } from '../mission/radiation.js';
+import { formatDateDMY, formatHours } from '../mission/missionText.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
 import { RESEARCH_DATA as DATA } from '../data/missionResearch.js';
 import { GymWorkout } from './gymWorkout.js';
+
+const SHELTER_SOURCES = {
+  prediccs: 'https://posters.unh.edu/private_media/4209/',
+  nasa: 'https://ntrs.nasa.gov/citations/20210009760',
+};
 
 export class StationPanel {
   constructor(engine) {
@@ -451,6 +458,15 @@ export class StationPanel {
     if (action === 'mission') return mission.objective || 'No mission objective yet.';
     if (action === 'filter') return stations.replaceFilter();
     if (action === 'cleanSuit') return stations.cleanSuit();
+    const { utility } = this.engine;
+    if (action.startsWith('toggle:')) return utility.toggle(action.slice(7));
+    if (action === 'eatRation') return utility.eatRation();
+    if (action === 'cookMeal') { const msg = utility.cookMeal(); hud.renderHotbar(survival.slots); return msg; }
+    if (action === 'washUp') return utility.washUp();
+    if (action === 'serviceFilter') return utility.serviceFilter();
+    if (action === 'printPart') { const msg = utility.printPart(this.engine.crew?.stations ?? []); hud.renderHotbar(survival.slots); return msg; }
+    if (action === 'fillWall') return this.engine.mission.fillShelterWall(survival);
+    if (action === 'drainWall') return this.engine.mission.drainShelterWall(survival);
     if (action === 'cleanBase') return stations.cleanBase();
     if (action === 'exercise') return stations.exercise(this.gymMode || 'treadmill');
     if (action === 'exercise:treadmill') {
@@ -462,10 +478,10 @@ export class StationPanel {
       return stations.exercise('bike');
     }
     if (action === 'treat') return stations.treat(survival);
-    if (action === 'send') return stations.send();
+    if (action === 'send') return stations.send(this.engine.radioOptions(true));
     if (action === 'upgrade') return stations.upgrade();
     if (action === 'upgradeTool') return stations.upgradeTool();
-    if (action === 'sendMav') return stations.sendMav();
+    if (action === 'sendMav') return stations.sendMav(this.engine.radioOptions());
     if (action === 'harvest') return stations.harvest(survival);
     if (action.startsWith('plant:')) return stations.plant(action.slice(6), survival);
     if (action === 'analyze') {
@@ -482,8 +498,101 @@ export class StationPanel {
     return '';
   }
 
+  _powerText() {
+    const { utility, mission, crew } = this.engine;
+    const loads = utility.loads({
+      crewSize: crew?.members.length ?? 0,
+      operatingStations: crew?.stations.filter((st) => st.operating).length ?? 0,
+      greenhouseRatePerSecond: MISSION_CONFIG.GREENHOUSE_RATE,
+    });
+    const lines = loads.map(([name, rate, on]) => `  ${name.padEnd(18)} ${!on ? 'OFF' : rate > 0 ? `-${rate.toFixed(1)}%/h` : 'idle'}`);
+    const used = loads.reduce((sum, [, rate, on]) => sum + (on ? rate : 0), 0);
+    return `BATTERY: ${Math.round(mission.battery.percent)}%\n` +
+      `SOLAR PANELS NOW: +${mission.chargeRate.toFixed(1)}%/h ${utility.isNight ? '(night: no sun)' : ''}\n` +
+      `USING ABOUT: -${used.toFixed(1)}%/h (plus your own oxygen)\n\n` +
+      `WHERE THE POWER GOES:\n${lines.join('\n')}\n\n` +
+      `HEATER: ${utility.heaterOn ? 'ON' : 'OFF'}${utility.cold ? '   FREEZING! Pipes and plants stopped.' : ''}\n\n` +
+      'Mars nights get down to about -98 C (NASA InSight). At night the panels make nothing and the heater needs more power. ' +
+      'Turning systems off saves power, but each one stops doing its job.\n' +
+      'Real case: the InSight lander shut down in 2022 when dust covered its solar panels.';
+  }
+
+  _powerButtons() {
+    const { utility, mission } = this.engine;
+    const label = (on, name) => `${name}: ${on ? 'ON' : 'OFF'}`;
+    return [
+      ['toggle:heater', label(utility.heaterOn, 'Heater')],
+      ['toggle:lights', label(utility.greenhouseLightsOn, 'Greenhouse lights')],
+      ['toggle:factory', label(mission.factoryOn, 'Fuel factory')],
+      ['toggle:shield', label(mission.shieldOn, 'Radiation shield')],
+    ];
+  }
+
+  _galleyText(survival) {
+    const { crewStock, stations, utility } = this.engine;
+    return `PANTRY: ${Math.floor(crewStock.food)} / ${crewStock.maxFood} packaged rations (shared with the crew)\n` +
+      `YOUR FOOD: ${Math.round(survival.food)} / ${survival.maxStat}\n` +
+      `CARROTS IN YOUR BAG: ${survival.countItem(BLOCK_IDS.HYDRO_PLANT)}\n` +
+      `FRESH FOOD BONUS: ${stations.freshFood > 0 ? 'ACTIVE (you work faster)' : 'none'}\n` +
+      `BASE WATER TANK: ${Math.round(survival.baseWater)} L${utility.cold ? '   (FROZEN)' : ''}\n\n` +
+      'Rations are ready to eat and cost nothing now, but every ration you eat is one less for your crew. ' +
+      'A fresh meal from the greenhouse costs water and power, but fills you up and gives you energy to work.\n' +
+      'Real case: on the Space Station the galley warms up packaged food. An astronaut eats about 1.8 kg of food a day (NASA).';
+  }
+
+  _hygieneText(survival) {
+    const { crewStock, utility } = this.engine;
+    return `CLEAN WATER TANK: ${Math.round(survival.baseWater)} / ${survival.maxBaseWater} L\n` +
+      `GRAY WATER (used, waiting to clean): ${crewStock.graywater.toFixed(1)} L\n` +
+      `WATER FILTER: ${Math.round(utility.waterFilter)}%\n` +
+      `WATER WE GET BACK: ${Math.round(utility.waterRecovery * 100)}%${utility.cold ? '   (PIPES FROZEN)' : ''}\n\n` +
+      'Drink -> use -> recycle -> drink again. The recycler cleans used water, even sweat and urine, so the crew can drink it again. ' +
+      'A dirty filter gets back less water.\n' +
+      "Real case: the Space Station gets back 98% of its water. Yesterday's coffee becomes tomorrow's coffee!";
+  }
+
+  _workshopText(survival) {
+    const { crew, stations } = this.engine;
+    const parts = (crew?.stations ?? []).map((st) => `  ${st.name.padEnd(18)} ${Math.round(st.health * 100)}%`);
+    return `REGOLITH IN YOUR BAG: ${survival.countItem(BLOCK_IDS.REGOLITH)}\n` +
+      `CO2 FILTER: ${Math.round(stations.filter)}%\n` +
+      `CREW STATIONS:\n${parts.join('\n') || '  (no crew)'}\n\n` +
+      'Spare parts from Earth take months to arrive. The 3D printer melts Mars dirt (regolith) into a new part and fixes the most worn machine right away. ' +
+      'But you must go outside to dig the regolith, under radiation, and printing uses a lot of power.\n' +
+      'Real case: the first 3D print in space was made on the Space Station in 2014.';
+  }
+
+  _radioText(s) {
+    const c = this.engine.comms;
+    const status = c.blackout
+      ? `RADIO: SILENT, solar conjunction (${c.realConjunction ? 'real' : 'simulated'}). ${formatHours(c.blackoutHoursLeft)} left.`
+      : `RADIO: ${s.message}`;
+    const next = c.blackout ? '' : `Next solar conjunction (simulated): in ${formatHours(c.hoursUntilConjunction)}.\n`;
+    return `EARTH IS NOW ${Math.round(c.distanceKm / 1e6)} million km away.\n` +
+      `A radio message needs ${c.lightMinutes.toFixed(1)} min to get there and ${(2 * c.lightMinutes).toFixed(1)} min to come back.\n` +
+      `(Calculated for ${formatDateDMY(c.date.toISOString())} from NASA/JPL planet orbits. In the game, each real minute is ${COMMS_CONFIG.GAME_SECONDS_PER_LIGHT_MINUTE} s.)\n` +
+      `${status}\n${next}\n` +
+      'Asking Mission Control costs power, and the answer only tells you what they saw when you asked. ' +
+      'About every 26 months the Sun gets between Mars and Earth and the radio goes silent for about 2 weeks. Then the crew decides alone.';
+  }
+
+  _shelterText(mission, survival) {
+    const water = Math.round(mission.shelterWaterL);
+    const blocked = Math.round((1 - shelterDoseFactor(mission.shelterWaterL)) * 100);
+    const phase = mission.storm.phase;
+    const storm = phase === 'active' ? 'ACTIVE, stay in here!' : phase === 'warning' ? 'COMING SOON' : 'none right now';
+    return `WATER WALL: ${water} / ${RADIATION_CONFIG.SHELTER_WALL_MAX_L} L\n` +
+      `BLOCKS: ${blocked}% of storm radiation inside this booth\n` +
+      `BASE WATER TANK: ${Math.round(survival.baseWater)} / ${survival.maxBaseWater} L\n` +
+      `SOLAR STORM: ${storm}\n\n` +
+      'Water stops radiation. Water in the wall is water you cannot drink.\n\n' +
+      'A solar storm throws fast particles (protons) at Mars. Water is full of hydrogen, which slows them down. ' +
+      'Astronauts in the Orion capsule build a shelter like this with their water and food bags.\n' +
+      'Real model: a 10 cm layer of water (10 g/cm2) blocks about 83% of a storm dose. Game-scaled.';
+  }
+
   render() {
-    const { expedition: m, stations: s, survival: v } = this.engine;
+    const { expedition: m, stations: s, survival: v, mission } = this.engine;
 
     if (this._isGymStation() && this.gymContainer) {
       this.title.textContent = 'MARS GYM';
@@ -499,21 +608,30 @@ export class StationPanel {
     if (this.gymContainer) this.gymContainer.classList.add('hidden');
 
     const pages = {
-      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nRADIATION: ${Math.round(m.radiation)}%   FILTER: ${Math.round(s.filter)}%\nSCIENCE POINTS: ${s.science}\n\nNASA DONKI historical CME: ${DATA.cme.observed}, ${DATA.cme.speedKmS} km/s.\nNASA RadLab Curiosity MSL-RAD: ${DATA.radiation.start} to ${DATA.radiation.end}; median ${DATA.radiation.median} (raw, unit unconfirmed).\nNASA data retrieved ${DATA.cme.retrieved}; archived, not live. The storm and its effects are simulated and game-scaled.`, [['mission', 'Show mission objective'], ['send', 'Send message to Earth'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
-      airlock: ['AIRLOCK & SUIT', `SUIT DUST: ${s.dirtySuit ? 'CLEANING NEEDED' : 'CLEAN'}\nHABITAT: ${s.contaminated ? 'CONTAMINATED' : 'CLEAN'}\n\nClean your suit before entering the habitat. Use the doors to cycle the airlock.`, [['cleanSuit', 'Clean suit'], ['cleanBase', 'Clean habitat']]],
+      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nRADIATION: ${Math.round(m.radiation)}%   FILTER: ${Math.round(s.filter)}%\nSCIENCE POINTS: ${s.science}\n\nNASA DONKI historical CME: ${DATA.cme.observed}, ${DATA.cme.speedKmS} km/s.\nNASA RadLab Curiosity MSL-RAD: ${DATA.radiation.start} to ${DATA.radiation.end}; median ${DATA.radiation.median} (raw, unit unconfirmed).\nNASA data retrieved ${DATA.cme.retrieved}; archived, not live. The storm and its effects are simulated and game-scaled.`, [['mission', 'Show mission objective'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
+      airlock: ['AIRLOCK & SUIT', `SUIT DUST: ${s.dirtySuit ? 'CLEANING NEEDED' : 'CLEAN'}
+HABITAT: ${s.contaminated ? 'CONTAMINATED' : 'CLEAN'}
+
+Clean your suit before entering the habitat. Use the doors to cycle the airlock.`, [['cleanSuit', 'Clean suit'], ['cleanBase', 'Clean habitat']]],
       power: ['LIFE SUPPORT / ECLSS', `BATTERY: ${Math.round(m.energy)}%\nCO2 FILTER: ${Math.round(s.filter)}%\nCO2: ${Math.round(s.co2)}%\n\nThe oxygen system and greenhouse need power. A worn filter lets CO2 build up.`, [['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
       greenhouse: ['HYDROPONIC GREENHOUSE', `POWER: ${m.greenhousePowered ? 'ON' : 'OFF'}\nHABITAT: ${s.contaminated ? 'CONTAMINATED' : 'CLEAN'}\nCARROTS REGROWING: ${this.engine.growingCrops.length}\nCROP: ${s.crop ? `${s.crop.type.toUpperCase()} ${Math.round(s.crop.progress / C.CROP_GROWTH_TIME * 100)}%` : 'EMPTY'}\nFRESH FOOD: ${s.freshFood > 0 ? 'AVAILABLE' : 'LOW'}\n\nPlanting costs water and power. Growth pauses without power or in a contaminated habitat.`, [['plant:potato', 'Plant potato'], ['plant:lettuce', 'Plant lettuce'], ['plant:soy', 'Plant soy'], ['harvest', 'Harvest fresh food'], ['cleanBase', 'Clean habitat']]],
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\nRADIATION: ${Math.round(m.radiation)}%\n\nIn Mars's 0.38g gravity, astronauts lose bone mineral density and muscle mass. Use the treadmill and bike in the Gym Wing!`, [['treat', 'Use medical station']]],
-      science: ['SCIENCE & COMMUNICATIONS', `SCIENCE POINTS: ${s.science}   SAMPLES: ${s.samples}\n${s.message}\n\nAnalyze one regolith block to earn science. Transmission delay is shortened for play.`, [['analyze', 'Analyze regolith'], ['send', 'Send data to Earth'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
+      science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   SAMPLES: ${s.samples}\n\n${this._radioText(s)}`, [['analyze', 'Analyze regolith'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
       mav: ['MAV DATA TERMINAL', `ANALYZED SAMPLES: ${s.analyzedSamples}/${C.MAV_REQUIRED_SAMPLES}\nPACKAGE: ${s.mavSent ? 'RECEIVED' : s.message}\n\nAnalyze samples at the science station, then send the package from the MAV.`, [['sendMav', 'Send MAV science package']]],
-      suitport: ['SUITPORT', `SUIT DUST: ${s.dirtySuit ? 'CLEANING NEEDED' : 'CLEAN'}\n\nA suitport concept keeps the suit outside the habitat. Use the airlock for this simulated EVA.`, [['cleanSuit', 'Clean suit']]],
-      shelter: ['STORM SHELTER', `RADIATION: ${Math.round(m.radiation)}%\n\nStay in the marked central shelter during a simulated solar storm. The simulation uses archived NASA DONKI and NASA RadLab data, not a live forecast.`, []],
+      powerroom: ['POWER & HEAT ROOM', this._powerText(), this._powerButtons()],
+      galley: ['KITCHEN & PANTRY', this._galleyText(v), [['eatRation', 'Eat a ration (pantry)'], ['cookMeal', `Cook fresh meal (1 carrot, ${U.MEAL_WATER_L} L, ${U.MEAL_POWER}% power)`]]],
+      hygiene: ['BATHROOM & WATER RECYCLER', this._hygieneText(v), [['washUp', `Wash up (${U.WASH_WATER_L} L of water)`], ['serviceFilter', `Clean water filter (${U.FILTER_SERVICE_POWER}% power)`]]],
+      workshop: ['WORKSHOP & 3D PRINTER', this._workshopText(v), [['printPart', `Print spare part (${U.PRINT_REGOLITH} regolith, ${U.PRINT_POWER}% power)`]]],
+      shelter: ['STORM SHELTER', this._shelterText(mission, v), [['fillWall', `Fill wall (+${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`], ['drainWall', `Drain wall (-${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`]]],
     };
     const [title, text, buttons] = pages[this.type];
     this.title.textContent = title;
     this.content.textContent = text;
-    const links = this.type === 'console' || this.type === 'shelter'
-      ? [['NASA DONKI: historical event', DATA.cme.url], ['NASA RadLab: radiation data', DATA.radiation.url]] : [];
+    const links = this.type === 'console'
+      ? [['NASA DONKI: historical event', DATA.cme.url], ['NASA RadLab: radiation data', DATA.radiation.url]]
+      : this.type === 'shelter'
+        ? [['PREDICCS: water shielding (UNH, MSL/RAD data)', SHELTER_SOURCES.prediccs], ['NASA: storm shelters and water walls', SHELTER_SOURCES.nasa]]
+        : [];
     this.sources.replaceChildren(...links.map(([label, url]) => {
       const link = document.createElement('a');
       link.textContent = label;

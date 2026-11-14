@@ -312,10 +312,65 @@ function buildGymModule(world, groundY) {
   }
 }
 
+// 5. Modulo Norte de Servicos (issue #56): energia/aquecimento, cozinha, banheiro e oficina.
+// Paredes em x = -12 e 8, z = -21 e -10; corredor de x = -3..-2 ate a parede norte do habitat.
+// As divisorias das salas sao modelos 3D (nasaModelsBuilder), para o ar continuar livre aqui.
+function buildNorthModule(world, groundY) {
+  const floorY = groundY + 1; // y = 9
+  const ceilY = groundY + 6; // y = 14
+
+  for (let x = -12; x <= 8; x++) {
+    for (let z = -21; z <= -10; z++) {
+      const isWall = x === -12 || x === 8 || z === -21 || z === -10;
+      const isDoor = z === -10 && (x === -3 || x === -2);
+      for (let y = floorY; y <= ceilY; y++) {
+        if (y === floorY) {
+          // Corredor central de metal ate a porta, salas em piso branco
+          const isAisle = (x >= -4 && x <= -1) || (z >= -16 && z <= -15);
+          world.setBlock(x, y, z, isAisle && !isWall ? BLOCK_IDS.THRUSTER_METAL : BLOCK_IDS.NASA_HULL, false);
+        } else if (y === ceilY) {
+          const isLight = (x === -8 || x === 3) && (z === -13 || z === -18);
+          const isSkylight = (x === -3 || x === -2) && z >= -17 && z <= -14;
+          world.setBlock(x, y, z, isLight ? BLOCK_IDS.HAB_LIGHT : isSkylight ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL, false);
+        } else if (isWall && !isDoor) {
+          const isWindowHeight = y === floorY + 2 || y === floorY + 3;
+          const isWindowSpan =
+            (z === -21 && ((x >= -10 && x <= -6) || (x >= 1 && x <= 5))) ||
+            ((x === -12 || x === 8) && z >= -18 && z <= -13);
+          world.setBlock(x, y, z, isWindowHeight && isWindowSpan ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL, false);
+        } else {
+          world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
+        }
+      }
+    }
+  }
+
+  // Corredor ate o habitat (z = -9..-6), atravessando a parede norte do habitat em z = -6
+  for (let z = -9; z <= -6; z++) {
+    for (let x = -4; x <= -1; x++) {
+      const isSideWall = x === -4 || x === -1;
+      for (let y = floorY; y <= ceilY; y++) {
+        if (y === floorY) {
+          world.setBlock(x, y, z, isSideWall ? BLOCK_IDS.NASA_HULL : BLOCK_IDS.THRUSTER_METAL, false);
+        } else if (y === ceilY) {
+          world.setBlock(x, y, z, !isSideWall && z === -8 ? BLOCK_IDS.HAB_LIGHT : BLOCK_IDS.NASA_HULL, false);
+        } else if (isSideWall) {
+          // Na parede do habitat (z = -6) a lateral do corredor ja e a propria parede
+          const isWindow = z === -8 && (y === floorY + 2 || y === floorY + 3);
+          world.setBlock(x, y, z, isWindow ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL, false);
+        } else {
+          world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
+        }
+      }
+    }
+  }
+}
+
 export function buildNasaSpaceshipAndBase(world) {
   const groundY = WORLD_CONFIG.GROUND_LEVEL; // 8
   buildMainWhiteHabitat(world, groundY);
   buildGreenhouseDome(world, groundY);
   buildNasaAscentLander(world, groundY);
   buildGymModule(world, groundY);
+  buildNorthModule(world, groundY);
 }

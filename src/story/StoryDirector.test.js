@@ -20,7 +20,12 @@ function snap(overrides = {}) {
 }
 
 function started() {
-  const director = new StoryDirector({ replyDelayHours: REPLY, windowHours: WINDOW });
+  const director = new StoryDirector({
+    replyDelayHours: REPLY,
+    windowHours: WINDOW,
+    gameHoursPerSecond: 0.02,
+    comms: { millionKm: 198, oneWayMinutes: 11, dateIso: '2026-11-14' },
+  });
   director.start(15);
   director.drainEvents();
   return director;
@@ -70,12 +75,14 @@ describe('StoryDirector', () => {
     director.update(snap({ insideHabitat: true, atConsole: true }));
     expect(director.objectiveId).toBe('await-reply');
     const cards = director.drainEvents().filter((e) => e.type === 'card');
-    expect(cards.at(-1).card.text).toMatch(/million km/);
+    expect(cards.at(-1).card.text).toMatch(/198 million km/);
+    expect(cards.at(-1).card.text).toMatch(/11 minutes to get there/);
+    expect(cards.at(-1).card.source).toMatch(/14\/11\/2026/);
 
-    // Metade do atraso: ainda esperando, com os minutos de jogo que faltam
+    // Metade do atraso: ainda esperando, com os segundos reais que faltam (0,25 h / 0,02 h por s)
     director.update(snap({ insideHabitat: true, hours: 15 + REPLY / 2 }));
     expect(director.objectiveId).toBe('await-reply');
-    expect(director.objectiveText).toMatch(/15 min/);
+    expect(director.objectiveText).toMatch(/13 s$/);
 
     director.update(snap({ insideHabitat: true, hours: 15 + REPLY }));
     expect(director.objectiveId).toBe('collect-ice');

@@ -1,5 +1,4 @@
 import { CUTSCENE_CONFIG } from '../../config/constants.js';
-import { COMMS_DELAY } from '../../data/commsDelay.js';
 import { EASE, sampleKeys } from './timeline.js';
 
 // Animacao de chegada: a capsula entra na atmosfera, freia com o motor e pousa perto da base.
@@ -11,7 +10,8 @@ const FADE_START = 12.5;
 const _lander = [0, 0, 0];
 const _cam = [0, 0, 0];
 
-export function createArrivalCutscene({ camera, lander, flame, dust, site, groundY, onEnd }) {
+// `millionKm`: distancia Terra-Marte de hoje, em milhoes de km (CommsLink)
+export function createArrivalCutscene({ camera, lander, flame, dust, site, groundY, millionKm, onEnd }) {
   const landerKeys = [
     { t: 0, v: [site.x + 40, groundY + 150, site.z - 30] },
     { t: CHASE_END, v: [site.x + 6, groundY + 55, site.z - 5] },
@@ -22,7 +22,6 @@ export function createArrivalCutscene({ camera, lander, flame, dust, site, groun
     { t: TOUCHDOWN, v: [site.x + 5, groundY + 2.2, site.z + 8] },
     { t: FADE_START, v: [site.x + 3.5, groundY + 2.8, site.z + 6.5], ease: EASE.inOut },
   ];
-  const km = Math.round(COMMS_DELAY.distanceMillionKm);
   let touchedDown = false;
 
   return {
@@ -38,7 +37,7 @@ export function createArrivalCutscene({ camera, lander, flame, dust, site, groun
     captions: [
       { from: 0.4, to: 3.9, text: 'After a 7-month trip from Earth, you reach Mars.' },
       { from: 4.2, to: 9.3, text: "Mars air is 100 times thinner than Earth's. Parachutes are not enough: the engines must slow you down." },
-      { from: 9.7, to: 12.6, text: `Touchdown! You are ${km} million km from home.` },
+      { from: 9.7, to: 12.6, text: `Touchdown! You are ${millionKm} million km from home.` },
       { from: 13.3, to: CUTSCENE_CONFIG.ARRIVAL_SECONDS, big: true, text: 'SOL 1', sub: '1 sol = 1 Mars day (24 h 39 min)' },
     ],
 

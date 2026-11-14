@@ -1,7 +1,6 @@
-import { STORY_CONFIG } from '../config/constants.js';
-import { COMMS_DELAY } from '../data/commsDelay.js';
+import { MISSION_CONFIG, STORY_CONFIG } from '../config/constants.js';
 import { formatHours } from '../mission/missionText.js';
-import { CARDS, OBJECTIVES } from './storyChapters.js';
+import { CARDS, OBJECTIVES, commsCard } from './storyChapters.js';
 
 // A historia do jogo em 3 atos: chegada (tutorial), preparar a volta e janela de lancamento.
 // Logica pura, sem DOM nem Three.js: o GameEngine entrega um retrato do jogo a cada frame
@@ -10,12 +9,19 @@ import { CARDS, OBJECTIVES } from './storyChapters.js';
 // snapshot = { hours, insideHabitat, iceCount, atConsole, stormPhase, stormsSurvived,
 //              propellantPct, dataSent, launched }
 export class StoryDirector {
+  // `replyDelayHours`: horas de jogo ate a resposta da Terra chegar (ida e volta do sinal).
+  // `comms`: { millionKm, oneWayMinutes, dateIso } para o texto do card do radio.
+  // Os dois vem do CommsLink, o mesmo radio do terminal da base.
   constructor({
-    replyDelayHours = COMMS_DELAY.roundTripMinutes / 60,
+    replyDelayHours = 1,
+    comms = { millionKm: 0, oneWayMinutes: 0, dateIso: '2026-11-14' },
+    gameHoursPerSecond = MISSION_CONFIG.GAME_HOURS_PER_SECOND,
     windowHours = STORY_CONFIG.WINDOW_HOURS,
     stormsForWindow = STORY_CONFIG.STORMS_FOR_WINDOW,
   } = {}) {
     this.replyDelayHours = replyDelayHours;
+    this.comms = comms;
+    this.gameHoursPerSecond = gameHoursPerSecond;
     this.windowHours = windowHours;
     this.stormsForWindow = stormsForWindow;
 
@@ -67,7 +73,7 @@ export class StoryDirector {
       case 'report':
         if (s.atConsole) {
           this._replyAt = s.hours + this.replyDelayHours;
-          this._card(CARDS.comms);
+          this._card(commsCard(this.comms));
           this._setAwaitText(s.hours);
         }
         break;
@@ -140,11 +146,11 @@ export class StoryDirector {
     this.objectiveText = OBJECTIVES[id];
   }
 
-  // "Waiting for Earth to answer: 15 min" (minutos de jogo que faltam para a resposta chegar)
+  // "Waiting for Earth to answer: 40 s" (segundos reais que faltam para a resposta chegar)
   _setAwaitText(hours) {
-    const minutes = Math.max(1, Math.ceil((this._replyAt - hours) * 60 - 1e-6));
+    const seconds = Math.max(1, Math.ceil((this._replyAt - hours) / this.gameHoursPerSecond - 1e-6));
     this.objectiveId = 'await-reply';
-    this.objectiveText = `${OBJECTIVES['await-reply']}: ${minutes} min`;
+    this.objectiveText = `${OBJECTIVES['await-reply']}: ${seconds} s`;
   }
 
   _setBuildText(s) {

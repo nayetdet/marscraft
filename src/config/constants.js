@@ -125,6 +125,15 @@ export const RADIATION_CONFIG = {
   DAMAGE_PER_EXCESS_MSV: 1.5, // pontos de vida por mSv acima do limite
   // [Ref] limite de carreira de astronautas da NASA: 600 mSv (NASA-STD-3001, 2022)
   CAREER_LIMIT_MSV: 600,
+  // Abrigo de tempestade com parede de agua (issue #56, A1).
+  // [Ref] PREDICCS (Quinn et al., UNH, dados MSL/RAD): reducao media da dose das tempestades
+  // solares de 2012 com agua: 1 g/cm2 -> 42 %, 5 g/cm2 -> 79 %, 10 g/cm2 (abrigo) -> 83 %.
+  // Pares [g/cm2 de agua, fracao da dose que ainda passa].
+  SHELTER_WATER_CURVE: [[0, 1], [1, 0.58], [5, 0.21], [10, 0.17]],
+  // Escala de jogo: a parede cheia (40 L do tanque da base) vale 10 g/cm2, o abrigo do PREDICCS
+  SHELTER_WALL_MAX_L: 40,
+  SHELTER_G_CM2_PER_L: 0.25,
+  SHELTER_FILL_STEP_L: 10,
 };
 
 export const STORM_CONFIG = {
@@ -179,6 +188,50 @@ export const CREW_CONFIG = {
   TALK_RADIUS: 2.6,
   TALK_FACING_DOT: 0.8, // precisa olhar para o tripulante (~37 graus) para conversar
   MAX_STEP_HOURS: 0.05,
+};
+
+// Modulo norte (issue #56, parte B): energia/aquecimento, cozinha, banheiro e oficina.
+// Custos em % de bateria; "por hora" = hora de jogo (50 s reais). Fontes em docs/data/numeros-reais.md.
+export const UTILITY_CONFIG = {
+  // B2 aquecedor: gasta mais a noite, quando faz mais frio la fora e os paineis nao geram.
+  // [Ref] InSight: media ~-62 C, minima -97,7 C (Elysium Planitia). Potencia em escala de jogo.
+  HEATER_DAY_PER_HOUR: 1,
+  HEATER_NIGHT_PER_HOUR: 4,
+  // B3 cozinha: racao da despensa (compartilhada com a tripulacao) x refeicao fresca da estufa
+  RATION_FOOD: 6,
+  MEAL_WATER_L: 1,
+  MEAL_POWER: 2,
+  MEAL_HEAL: 2,
+  // B4 banheiro: lavar gasta agua limpa, que vira agua cinza para o reciclador.
+  // [Ref] ISS recupera ~98 % da agua (STATION_CONFIG.WATER_RECOVERY); filtro gasto recupera menos.
+  WASH_WATER_L: 2,
+  WASH_HEAL: 1,
+  FILTER_WEAR_PER_HOUR: 2, // % do filtro do processador de agua por hora de jogo
+  WORN_FILTER: 25, // abaixo disso a recuperacao cai
+  WORN_RECOVERY: 0.7,
+  FILTER_SERVICE_POWER: 3,
+  // B5 oficina: impressora 3D transforma regolito em peca de reposicao
+  PRINT_REGOLITH: 3,
+  PRINT_POWER: 6,
+  // Consumo exibido no painel de distribuicao (estimado a partir das regras do jogo)
+  GAME_SECONDS_PER_HOUR: 50,
+};
+
+// Radio Terra-Marte (issue #56, A2). Fontes em docs/data/numeros-reais.md.
+export const COMMS_CONFIG = {
+  SPEED_OF_LIGHT_KM_S: 299792.458,
+  AU_KM: 149597870.7,
+  // [Ref] NASA/JPL: os comandos para Marte param quando o Sol fica a menos de ~2 graus de Marte
+  // no ceu da Terra (conjuncao solar, a cada ~26 meses, ~2 semanas)
+  CONJUNCTION_SUN_ANGLE_DEG: 2,
+  // [Ref] 1 sol = 24 h 39 min = 1,0275 dia da Terra (Mars Fact Sheet): avanca a data real do jogo
+  EARTH_DAYS_PER_SOL: 1.0275,
+  // Escala de jogo: cada minuto real de viagem da luz vira 3 s de espera (ida e volta)
+  GAME_SECONDS_PER_LIGHT_MINUTE: 3,
+  // Conjuncao encenada uma vez por partida (a real so volta em 2028): comeca depois de
+  // ~1,5 sol de jogo e dura 6 horas de jogo (5 min reais)
+  GAME_CONJUNCTION_START_HOURS: 36,
+  GAME_CONJUNCTION_HOURS: 6,
 };
 
 export const STATION_CONFIG = {

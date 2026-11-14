@@ -35,6 +35,7 @@ O desafio, em uma frase: um jogo em que **crianças de 7 a 12 anos** administram
 
 - **JavaScript (ES modules) puro + [Three.js](https://threejs.org/) `^0.181` + Vite 6.** Sem framework de UI: o HUD é HTML/CSS em `index.html` e `src/ui/`.
 - `npm install` · `npm run dev` (Vite com `--host`) · `npm run build` (gera `dist/`) · `npm run preview`
+- **Painel de admin (testes manuais):** `F8` no `npm run dev`, ou `?admin` na URL (também no Pages, com botão ADMIN para touch). Força tempestade, mexe em bateria, água e tempo, e teleporta para as salas (`src/ui/AdminPanel.js`).
 - **Testes:** `npm test` (Vitest, `vitest run`). Os testes ficam ao lado do arquivo (`src/**/<nome>.test.js`) e cobrem lógica pura: física, sobrevivência, terreno. Não há linter. Há `shell.nix` (Node 22) para quem usa Nix.
 - **Deploy:** push na `main` dispara `.github/workflows/deploy.yml`, que publica no GitHub Pages. O `vite.config.js` usa `base: '/nasa-space-apps/'`, então caminhos de assets precisam ser relativos ou usar `import.meta.env.BASE_URL`.
 - **Sem backend.** Qualquer API chamada em runtime precisa liberar CORS. Veja a tabela em `docs/data/apis-nasa.md`: DONKI (`api.nasa.gov`), tiles do Trek e NASA Images podem ser chamados do navegador; **RadLab e OSDR não**, então devem ser baixados por script e embutidos como JSON.

@@ -1,11 +1,7 @@
-import { COMMS_DELAY } from '../data/commsDelay.js';
 import { formatDateDMY } from '../mission/missionText.js';
 
 // Textos da historia (UI em ingles, para criancas de 7 a 12 anos, sem emoji).
 // So dados: quem decide quando cada coisa aparece e o StoryDirector.
-
-const km = Math.round(COMMS_DELAY.distanceMillionKm);
-const oneWay = COMMS_DELAY.oneWayMinutes;
 
 export const CARDS = {
   welcome: {
@@ -15,11 +11,6 @@ export const CARDS = {
   inside: {
     title: 'BASE COMPUTER',
     text: 'You are safe inside. The base makes oxygen for you, but every breath uses battery power. Now tell Earth that you landed.',
-  },
-  comms: {
-    title: 'RADIO',
-    text: `Message sent! Earth is ${km} million km away today. Radio waves need ${oneWay} minutes to get there and ${oneWay} more to come back. Nobody on Earth can help you right away: you decide!`,
-    source: `Real distance on ${formatDateDMY(COMMS_DELAY.date)} (${COMMS_DELAY.source})`,
   },
   firstJob: {
     title: 'MISSION CONTROL',
@@ -45,6 +36,16 @@ export const ACT_TITLES = {
   2: 'PART 2 OF 3: GET READY TO GO HOME',
   3: 'PART 3 OF 3: LAUNCH WINDOW',
 };
+
+// Card do primeiro relatorio pelo radio. A distancia e o atraso vem do CommsLink (o mesmo radio
+// do terminal da base): { millionKm, oneWayMinutes, dateIso } calculados para a data real do jogo.
+export function commsCard({ millionKm, oneWayMinutes, dateIso }) {
+  return {
+    title: 'RADIO',
+    text: `Message sent! Earth is ${millionKm} million km away today. Radio waves need ${oneWayMinutes} minutes to get there and ${oneWayMinutes} more to come back. Nobody on Earth can help you right away: you decide!`,
+    source: `Distance calculated for ${formatDateDMY(dateIso)} from NASA/JPL planet orbits`,
+  };
+}
 
 export const OBJECTIVES = {
   'enter-base': 'Go inside the base through the airlock',

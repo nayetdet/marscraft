@@ -54,6 +54,7 @@ export class Greenhouse extends Station {
 
   produce(hours, base) {
     if (base.hydration < STATION_CONFIG.GREENHOUSE_MIN_HYDRATION) return;
+    if (base.frozen || base.greenhouseDark) return; // modulo norte: frio ou luz cortada
     const grown = STATION_CONFIG.GREENHOUSE_FOOD_PER_HOUR * this.health * hours;
     base.food = Math.min(base.maxFood, base.food + grown);
   }
@@ -61,6 +62,8 @@ export class Greenhouse extends Station {
   problems(base) {
     const list = super.problems(base);
     if (base.hydration < STATION_CONFIG.GREENHOUSE_MIN_HYDRATION) list.push('no-water');
+    if (base.frozen) list.push('frozen');
+    else if (base.greenhouseDark) list.push('lights-off');
     return list;
   }
 }
@@ -71,13 +74,15 @@ export class WaterRecycler extends Station {
   }
 
   produce(hours, base) {
+    if (base.frozen) return; // canos congelados (aquecedor desligado a noite)
     const treated = Math.min(base.graywater, STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR * this.health * hours);
     base.graywater -= treated;
-    base.water = Math.min(base.maxWater, base.water + treated * STATION_CONFIG.WATER_RECOVERY);
+    base.water = Math.min(base.maxWater, base.water + treated * (base.waterRecovery ?? STATION_CONFIG.WATER_RECOVERY));
   }
 
   problems(base) {
     const list = super.problems(base);
+    if (base.frozen) list.push('frozen');
     if (base.water < STATION_CONFIG.LOW_WATER_L) list.push('tank-low');
     return list;
   }
@@ -126,6 +131,8 @@ const PROBLEM_TEXT = {
   'tank-low': () => 'Commander, the water tank is almost empty! Bring ice with the rover.',
   'radiation-high': () => 'Commander, your radiation dose is too high! Get inside the base or turn on the shield [R].',
   'health-low': () => 'Commander, you are hurt! Come to the medical bay inside the base.',
+  frozen: (s) => `Commander, it is freezing! The ${s.name} stopped. Turn the heater on in the power room.`,
+  'lights-off': () => 'Commander, the greenhouse lights are off. The plants stopped growing.',
 };
 
 export function problemText(station, problem) {
