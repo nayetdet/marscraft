@@ -265,6 +265,28 @@ export const SCAN_CATALOG = [
     ],
     why: 'Lower gravity makes leaving Mars easier than leaving Earth, but the rocket still needs lots of fuel.',
   },
+  {
+    id: 'mav-panel',
+    category: 'base',
+    title: 'MAV Control Panel',
+    summary: 'This screen tracks the fuel and mission checks needed before the crew can launch.',
+    facts: [
+      { label: 'Fuel', value: 'Made from water ice at the nearby factory', source: SOURCES.marsScience },
+      { label: 'Launch checks', value: 'Fuel, storm safety, and science data must be ready', source: SOURCES.marsFacts },
+    ],
+    why: 'The crew must balance power, ice, and time to prepare a safe trip home.',
+  },
+  {
+    id: 'gym',
+    category: 'base',
+    title: 'Exercise & Medbay',
+    summary: 'Astronauts exercise here to keep their bodies strong, and get health checks in the medbay.',
+    facts: [
+      { label: 'Why exercise', value: 'Daily exercise helps protect muscles and bones in low gravity', source: SOURCES.iss },
+      { label: 'What is here', value: 'Treadmill, exercise bike, and medical station', source: SOURCES.iss },
+    ],
+    why: 'Exercise helps astronauts stay healthy during long missions far from Earth.',
+  },
 
   // ---------- Paisagem ----------
   {

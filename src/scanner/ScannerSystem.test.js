@@ -34,14 +34,13 @@ describe('ScannerSystem', () => {
     expect(scanner.update(0.01, 'moon').progress).toBeLessThan(0.1);
   });
 
-  it('completes only once until the aim leaves the target', () => {
+  it('completes only once and recognizes the target immediately after rediscovery', () => {
     const { scanner } = setup();
     expect(scanner.update(DURATION, 'sun').completed).not.toBeNull();
     expect(scanner.update(DURATION, 'sun')).toMatchObject({ done: true, completed: null });
     scanner.update(0.01, null);
     const again = scanner.update(DURATION, 'sun');
-    expect(again.completed.discovery.isNew).toBe(false);
-    expect(again.known).toBe(true);
+    expect(again).toMatchObject({ done: true, completed: null, known: true, progress: 1 });
   });
 
   it('tells whether the target was already in the journal when the aim arrived', () => {
@@ -49,6 +48,13 @@ describe('ScannerSystem', () => {
     const first = scanner.update(DURATION, 'phobos');
     expect(first.known).toBe(false);
     expect(scanner.update(0.01, 'phobos').known).toBe(false);
+  });
+
+  it('identifies previously discovered targets immediately without starting another scan', () => {
+    const { scanner, journal } = setup();
+    journal.record('phobos');
+    const state = scanner.update(0.01, 'phobos');
+    expect(state).toMatchObject({ targetId: 'phobos', progress: 1, done: true, known: true, completed: null });
   });
 });
 

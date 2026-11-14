@@ -7,8 +7,8 @@ import { BLOCK_IDS } from '../config/blockTypes.js';
 const TARGET_IDS = [
   'sun', 'earth', 'moon', 'phobos', 'deimos',
   'regolith', 'sandstone', 'crater-rock', 'water-ice',
-  'base', 'habitat', 'airlock', 'tunnel', 'greenhouse', 'cupola',
-  'solar-panels', 'antenna', 'ice-depot', 'rover', 'lander',
+  'base', 'habitat', 'airlock', 'tunnel', 'greenhouse', 'cupola', 'gym',
+  'solar-panels', 'antenna', 'ice-depot', 'rover', 'lander', 'mav-panel',
   'crater-rim', 'atmosphere',
 ];
 

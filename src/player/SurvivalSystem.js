@@ -30,11 +30,8 @@ export class SurvivalSystem {
       name: b.name,
       count: b.initialCount,
       consumable: b.consumable,
+      equipment: b.equipment ?? false,
     }) : null);
-    const foodIndex = this.slots.findIndex((slot) => slot?.consumable?.type === 'food');
-    if (foodIndex > 0) {
-      [this.slots[0], this.slots[foodIndex]] = [this.slots[foodIndex], this.slots[0]];
-    }
     // The first nine inventory spaces are the hotbar; the rest are backpack slots.
     this.inventorySlots = [...this.slots, ...Array(27).fill(null)];
   }
@@ -212,7 +209,7 @@ export class SurvivalSystem {
 
   useBlockFromSlot(slotIndex) {
     const slot = this.slots[slotIndex];
-    if (!slot || slot.count <= 0) return false;
+    if (!slot || slot.count <= 0 || slot.equipment) return false;
     slot.count--;
     return true;
   }
