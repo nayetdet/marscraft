@@ -43,9 +43,10 @@ export class MarsSkySystem {
     this.sunMesh = sunMesh;
     this.celestialGroup.add(this.sunGroup);
 
-    const { earthSystemGroup, earthMesh } = createEarthAndMoonSystem();
+    const { earthSystemGroup, earthMesh, moonMesh } = createEarthAndMoonSystem();
     this.earthSystemGroup = earthSystemGroup;
     this.earthMesh = earthMesh;
+    this.moonMesh = moonMesh;
     this.celestialGroup.add(this.earthSystemGroup);
 
     const { phobosGroup, deimosGroup } = createMartianMoons();
@@ -140,6 +141,10 @@ export class MarsSkySystem {
 
   getEarthWorldPosition(target = new THREE.Vector3()) {
     return this.earthMesh.getWorldPosition(target);
+  }
+
+  getMoonWorldPosition(target = new THREE.Vector3()) {
+    return this.moonMesh.getWorldPosition(target);
   }
 
   getPhobosWorldPosition(target = new THREE.Vector3()) {

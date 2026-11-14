@@ -65,7 +65,9 @@ export class MissionHud {
       rate >= 3 ? 'danger' : rate >= 0.5 ? 'warn' : ''
     );
 
-    setText(this.shieldEl, `Radiation shield [R]: ${mission.shieldOn ? 'ON (uses energy)' : 'OFF'}`, mission.shieldOn ? 'ok' : '');
+    if (!mission.shieldOn) setText(this.shieldEl, 'Radiation shield [R]: OFF', '');
+    else if (mission.insideShield) setText(this.shieldEl, 'Radiation shield [R]: ON (uses energy)', 'ok');
+    else setText(this.shieldEl, 'Radiation shield [R]: ON, but you are outside the bubble!', 'warn');
 
     const { phase, storm, hoursUntil, hoursLeft } = mission.storm;
     if (phase === 'warning') {

@@ -25,6 +25,8 @@ export class InputController {
     getInteraction,
     isStationOpen,
     getWorkSpeed,
+    isJournalOpen = () => false,
+    onToggleJournal = () => {},
   }) {
     this.onToggleShield = onToggleShield;
     this.onToggleCrewPanel = onToggleCrewPanel;
@@ -48,9 +50,13 @@ export class InputController {
     this.getInteraction = getInteraction;
     this.isStationOpen = isStationOpen;
     this.getWorkSpeed = getWorkSpeed;
+    this.isJournalOpen = isJournalOpen;
+    this.onToggleJournal = onToggleJournal;
 
     this.keys = {};
     this.isLocked = false;
+    // Z abre o scanner com a visão normal; a rodinha aproxima (zoom) só com ele aberto.
+    this.isScannerOpen = false;
     this.isZoomed = false;
     this.breakState = null;
     this.breakSwingTimer = 0;
@@ -161,6 +167,12 @@ export class InputController {
       requestRawPointerLock(this.domElement);
     });
 
+    // Botão "Done" do diário: o clique é gesto do usuário, então já volta com o mouse travado.
+    document.getElementById('journal-done')?.addEventListener('click', () => {
+      this.onToggleJournal(false);
+      requestRawPointerLock(this.domElement);
+    });
+
     resetBtn.addEventListener('click', () => window.location.reload());
 
     if (respawnBtn) {
@@ -180,7 +192,7 @@ export class InputController {
         this.keys = {};
         this.player.isMoving = false;
       }
-      if (!this.survival.isDead && !this.hud.isInventoryOpen && !this.isMissionModalOpen() && !this.isStationOpen?.()) {
+      if (!this.survival.isDead && !this.hud.isInventoryOpen && !this.isMissionModalOpen() && !this.isStationOpen?.() && !this.isJournalOpen()) {
         overlay.classList.toggle('hidden', this.isLocked);
       }
     });
@@ -203,6 +215,10 @@ export class InputController {
         return;
       }
       if (this.hud.isInventoryOpen && e.code !== 'KeyE') return;
+      if (this.isJournalOpen()) {
+        this._handleJournalKey(e, overlay);
+        return;
+      }
       if (e.code === 'KeyR' && this.isLocked && !e.repeat) this.onToggleShield();
       if (e.code === 'KeyC' && this.isLocked && !e.repeat) this.onToggleCrewPanel();
       if (e.code === 'KeyG' && this.isLocked && !e.repeat) this.onSendData();
@@ -256,6 +272,13 @@ export class InputController {
         return;
       }
 
+      if (e.code === 'KeyJ' && this.isLocked && !e.repeat && !this.isRoverActive()) {
+        e.preventDefault();
+        this.onToggleJournal(true);
+        document.exitPointerLock();
+        return;
+      }
+
       if (e.code === 'KeyQ' && this.isLocked && !e.repeat) {
         const slot = this.survival.slots[this.hud.selectedSlot];
         if (slot && this.survival.useBlockFromSlot(this.hud.selectedSlot)) {
@@ -267,9 +290,7 @@ export class InputController {
       }
 
       if (e.code === 'KeyZ') {
-        this.isZoomed = !this.isZoomed;
-        this.onToggleZoom(this.isZoomed);
-        this.hud.updateZoomState(this.isZoomed);
+        this._setScope(!this.isScannerOpen, false);
       }
 
       if (e.code === 'KeyT') {
@@ -289,6 +310,11 @@ export class InputController {
     window.addEventListener('wheel', (e) => {
       if (!this.isLocked || this.survival.isDead) return;
       const dir = Math.sign(e.deltaY);
+      // Com o scanner aberto, a rodinha controla o zoom (para cima aproxima) em vez da hotbar.
+      if (this.isScannerOpen) {
+        if (dir !== 0) this._setScope(true, dir < 0);
+        return;
+      }
       this.hud.selectSlot(this.hud.selectedSlot + dir, this.survival.slots);
       this._syncHandWithSlot();
     });
@@ -357,6 +383,30 @@ export class InputController {
     });
 
     window.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  _setScope(open, zoomed) {
+    const nextZoom = open && zoomed;
+    const changed = open !== this.isScannerOpen || nextZoom !== this.isZoomed;
+    this.isScannerOpen = open;
+    this.isZoomed = nextZoom;
+    if (!changed) return;
+    this.onToggleZoom(this.isScannerOpen, this.isZoomed);
+    this.hud.updateZoomState(this.isScannerOpen, this.isZoomed);
+  }
+
+  // Com o diário aberto, só J (volta ao jogo) e Esc (fecha e mostra o menu) fazem algo.
+  // Esc não conta como gesto do usuário para o pointer lock, por isso volta pelo botão Play.
+  _handleJournalKey(e, overlay) {
+    if (e.repeat) return;
+    if (e.code === 'KeyJ') {
+      e.preventDefault();
+      this.onToggleJournal(false);
+      requestRawPointerLock(this.domElement);
+    } else if (e.code === 'Escape') {
+      this.onToggleJournal(false);
+      overlay.classList.remove('hidden');
+    }
   }
 
   _isBrowserShortcut(e) {

@@ -25,7 +25,6 @@ export class HudManager {
     this.envStatusEl = document.getElementById('env-status');
     this.skyLabelsEl = document.getElementById('sky-labels');
     this.zoomOverlayEl = document.getElementById('zoom-overlay');
-    this.zoomTargetEl = document.getElementById('zoom-target');
     this.toastEl = document.getElementById('toast');
     this.deathOverlayEl = document.getElementById('death-overlay');
     this.inventoryOverlayEl = document.getElementById('inventory-overlay');
@@ -207,8 +206,9 @@ export class HudManager {
     this.renderHotbar(slots);
   }
 
-  updateZoomState(isZoomed) {
-    this.zoomOverlayEl.classList.toggle('hidden', !isZoomed);
+  updateZoomState(isScannerOpen, isZoomed = false) {
+    this.zoomOverlayEl.classList.toggle('hidden', !isScannerOpen);
+    this.zoomOverlayEl.classList.toggle('is-zoomed', isZoomed);
   }
 
   showToast(msg, durationMs = 2400) {
@@ -296,7 +296,7 @@ export class HudManager {
     }
   }
 
-  update({ player, survival, sky, camera, isZoomed, isRoverActive = false, roverTelemetry = null, mission }) {
+  update({ player, survival, sky, camera, isScopeOpen = false, isRoverActive = false, roverTelemetry = null, mission }) {
     if (survival.isDead) {
       this.showDeathScreen();
       return;
@@ -377,6 +377,14 @@ export class HudManager {
       this._updateIconBar(this.energyBar, (mission.battery.charge / mission.battery.capacity) * survival.maxStat);
     }
 
+    // Os nomes no céu só aparecem com a luneta (Z) aberta, como parte do modo telescópio.
+    if (!isScopeOpen) {
+      this._setLabelVisible(this.earthLabel, false);
+      this._setLabelVisible(this.phobosLabel, false);
+      this._setLabelVisible(this.deimosLabel, false);
+      return;
+    }
+
     const earthPos = sky.getEarthWorldPosition(this._earthPos);
     const phobosPos = sky.getPhobosWorldPosition(this._phobosPos);
     const deimosPos = sky.getDeimosWorldPosition(this._deimosPos);
@@ -385,13 +393,5 @@ export class HudManager {
     this._projectLabel(this.earthLabel, earthPos, camera, camDir);
     this._projectLabel(this.phobosLabel, phobosPos, camera, camDir);
     this._projectLabel(this.deimosLabel, deimosPos, camera, camDir);
-
-    if (isZoomed) {
-      const dirToEarth = this._scratch.copy(earthPos).sub(camera.position).normalize();
-      const zoomText = camDir.angleTo(dirToEarth) < 0.14 ? 'Earth + Moon' : '';
-      if (this.zoomTargetEl.textContent !== zoomText) {
-        this.zoomTargetEl.textContent = zoomText;
-      }
-    }
   }
 }

@@ -29,11 +29,37 @@ import { MissionSystem as ExpeditionSystem } from './MissionSystem.js';
 import { Airlock } from '../world/Airlock.js';
 import { StationSystem } from './StationSystem.js';
 import { StationPanel } from '../ui/StationPanel.js';
+import { getCategoryLabel } from '../data/scanCatalog.js';
+import { ScanJournal } from '../scanner/scanJournal.js';
+import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js';
+import { resolveScanTarget, collectScanBlocks } from '../scanner/scanTargeting.js';
+import { ScanHighlight } from '../scanner/scanHighlight.js';
+import { isInsideShieldZone, SHIELD_ZONE } from '../mission/shieldZone.js';
+import { ShieldBubble } from '../graphics/shieldBubble.js';
+import { IceSensorEffect } from '../scanner/iceSensor.js';
+import { ScannerHud } from '../ui/ScannerHud.js';
+
+// Raio angular (rad) em que a mira da luneta "pega" cada astro. A Lua fica a ~0,047 rad da
+// Terra, então os dois raios precisam ser menores que isso para não se sobreporem.
+const SKY_SCAN_RADII = { sun: 0.05, earth: 0.035, moon: 0.02, phobos: 0.04, deimos: 0.03 };
+// Raio (em unidades da cena) da esfera verde do efeito de scan em volta de cada astro.
+const SKY_HIGHLIGHT_RADII = { sun: 10, earth: 8.5, moon: 3, phobos: 7, deimos: 3.5 };
+// Alvos de terreno pintam a mancha em volta do bloco mirado, então a chave inclui o bloco.
+const TERRAIN_PATCH_IDS = new Set(['regolith', 'sandstone', 'crater-rock', 'water-ice', 'crater-rim']);
+
+function getLocalStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 export class GameEngine {
   constructor(container) {
     this.container = container;
     this.scene = new THREE.Scene();
+    this.isScannerOpen = false;
     this.isZoomed = false;
 
     this.camera = new THREE.PerspectiveCamera(
@@ -111,8 +137,10 @@ export class GameEngine {
 
     this._initBaseLights();
     this._initHighlightWireframe();
+    this._initScanner();
 
     // Missao: energia, tempestades solares (CMEs reais do DONKI) e o MAV
+    this.shieldBubble = new ShieldBubble(this.scene, SHIELD_ZONE);
     this.missionHud = new MissionHud({
       donkiFetched: donkiCme.fetched,
       onLoadIce: (count) => this._loadIceIntoMav(count),
@@ -144,7 +172,8 @@ export class GameEngine {
       world: this.world,
       sky: this.sky,
       hud: this.hud,
-      onToggleZoom: (zoomed) => {
+      onToggleZoom: (scannerOpen, zoomed) => {
+        this.isScannerOpen = scannerOpen;
         this.isZoomed = zoomed;
         if (!this.roverController.isActive) {
           this.playerHand.handGroup.visible = !zoomed;
@@ -152,6 +181,11 @@ export class GameEngine {
       },
       getTargetedBlock: () => this._getTargetedBlock(),
       harvestCrop: (plant) => this._harvestCrop(plant),
+      isJournalOpen: () => this.scannerHud.isJournalOpen,
+      onToggleJournal: (open) => {
+        if (open) this.scannerHud.openJournal(this.scanJournal);
+        else this.scannerHud.closeJournal();
+      },
       isRoverActive: () => this.roverController.isActive,
       onInteract: () => this.handlePlayerInteract(),
       onStationInteract: () => this._interact(),
@@ -357,6 +391,112 @@ export class GameEngine {
     this.scene.add(this.highlightBox);
   }
 
+  _initScanner() {
+    this.scanJournal = new ScanJournal({ storage: getLocalStorage() });
+    this.scanner = new ScannerSystem(this.scanJournal);
+    this.scannerHud = new ScannerHud();
+    this.iceSensor = new IceSensorEffect(this.scene);
+    this.scanHighlight = new ScanHighlight(this.scene);
+    this._scanDir = new THREE.Vector3();
+    this._skyPos = new THREE.Vector3();
+    this._skyBodies = Object.entries(SKY_SCAN_RADII).map(([id, radius]) => ({ id, radius, dir: new THREE.Vector3() }));
+    this._skyGetters = {
+      sun: (t) => this.sky.getSunWorldPosition(t),
+      earth: (t) => this.sky.getEarthWorldPosition(t),
+      moon: (t) => this.sky.getMoonWorldPosition(t),
+      phobos: (t) => this.sky.getPhobosWorldPosition(t),
+      deimos: (t) => this.sky.getDeimosWorldPosition(t),
+    };
+    this._roverScanBox = { scanId: 'rover', minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: 0, maxZ: 0 };
+  }
+
+  // Scanner aberto (com ou sem zoom): resolve o alvo na mira, avança o scan e aplica a descoberta quando completa.
+  _updateScanner(dt) {
+    if (!this.isScannerOpen) {
+      if (this.scanner.targetId) this.scanner.reset();
+      this.scanHighlight.clear();
+      return;
+    }
+
+    const origin = this.camera.position;
+    const dir = this.player.getLookDirection(this._scanDir);
+    for (const body of this._skyBodies) {
+      this._skyGetters[body.id](this._skyPos);
+      body.dir.copy(this._skyPos).sub(origin).normalize();
+    }
+
+    const rp = this.roverController.pos;
+    const box = this._roverScanBox;
+    box.minX = rp.x - 1.6; box.maxX = rp.x + 1.6;
+    box.minY = rp.y; box.maxY = rp.y + 2.7;
+    box.minZ = rp.z - 1.6; box.maxZ = rp.z + 1.6;
+
+    const target = resolveScanTarget({
+      world: this.world,
+      origin,
+      dir,
+      objects: [...this.customColliders, box],
+      skyBodies: this._skyBodies,
+      maxDist: this.scanJournal.scanRange(),
+    });
+    const state = this.scanner.update(dt, target?.id ?? null);
+    this._updateScanHighlight(target, state, dt);
+    this.scannerHud.update(state);
+    if (state.completed) this._onScanCompleted(state.completed);
+  }
+
+  // Pinta o alvo inteiro de verde (efeito LiDAR). A forma só é recalculada quando o alvo muda.
+  _updateScanHighlight(target, state, dt) {
+    if (!target) {
+      this.scanHighlight.clear();
+      return;
+    }
+    const h = target.hit;
+    const key = TERRAIN_PATCH_IDS.has(target.id) && h ? `${target.id}@${h.x},${h.y},${h.z}` : target.id;
+    if (key !== this.scanHighlight.key) this.scanHighlight.setTarget(key, this._scanHighlightShape(target));
+    this.scanHighlight.update(dt, state);
+  }
+
+  _scanHighlightShape(target) {
+    const { id } = target;
+    if (SKY_HIGHLIGHT_RADII[id]) {
+      return { sphere: { radius: SKY_HIGHLIGHT_RADII[id], getPosition: (t) => this._skyGetters[id](t) } };
+    }
+    const boxes = collectScanBlocks(this.world, target).map((b) => ({
+      minX: b.x, maxX: b.x + 1, minY: b.y, maxY: b.y + 1, minZ: b.z, maxZ: b.z + 1,
+    }));
+    for (const c of this.customColliders) {
+      if (c.scanId === id) boxes.push(c);
+    }
+    if (id === 'rover') boxes.push({ ...this._roverScanBox });
+    return boxes.length ? { boxes } : null;
+  }
+
+  _onScanCompleted({ entry, discovery }) {
+    this.scannerHud.showCard(entry, discovery);
+    if (!discovery.isNew) return;
+
+    const reward = applyDiscoveryReward(entry, this.survival);
+    const lines = [...reward.messages];
+    if (reward.iceSensor && this.iceSensor.activate(this.world, this.player.pos) === 0) {
+      lines[lines.length - 1] = 'Ice sensor online: no exposed ice in range';
+    }
+    if (discovery.completedCategory) {
+      lines.push(
+        `${getCategoryLabel(discovery.completedCategory)} complete! Scope upgraded: ` +
+          `${this.scanJournal.scanDuration().toFixed(1)}s scan, ${this.scanJournal.scanRange()} block range`
+      );
+    }
+    if (discovery.completedAll) lines.push('Every target scanned: you are a Junior Astronaut!');
+    this.scannerHud.showDiscovery(`New Discovery! (${discovery.count}/${discovery.total})`, entry.title, lines);
+
+    if (reward.inventoryChanged) {
+      this.hud.renderHotbar(this.survival.slots);
+      const heldSlot = this.survival.slots[this.hud.selectedSlot];
+      this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
+    }
+  }
+
   _getTargetedBlock() {
     const dir = this.player.getLookDirection(this._lookDir);
     const voxelHit = this.world.raycast(this.player.pos, dir, CAMERA_CONFIG.REACH_DISTANCE);
@@ -428,7 +568,7 @@ export class GameEngine {
       return;
     }
     this.hud.showToast(this.mission.shieldOn
-      ? 'Radiation shield ON: it blocks solar particles but uses energy.'
+      ? 'Radiation shield ON: a magnetic field around the base deflects solar particles. Stay inside the bubble! Uses energy.'
       : 'Radiation shield OFF.');
   }
 
@@ -467,6 +607,7 @@ export class GameEngine {
     const active = playing && !this.survival.isDead && !this.missionHud.isVictoryShown;
     const damage = this.mission.update(this._skyHours(), {
       insideHabitat: this.survival.insidePressurizedShip,
+      insideShield: isInsideShieldZone(this.player.pos),
       active,
     });
     if (active) this.survival.takeDamage(damage * (this.stations.upgraded && !this.survival.insidePressurizedShip ? STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR : 1));
@@ -729,11 +870,12 @@ export class GameEngine {
       const isGameRunning = this.input.isLocked && !this.survival.isDead && !this.missionHud.isVictoryShown;
       if (isGameRunning) {
         if (this.roverController.isActive) {
+          if (this.scanHighlight.mesh) this.scanHighlight.clear();
           this.roverController.update(dt, this.input.keys);
           this.sky.update(dt, this.roverController.pos);
           this._updateSurvival(dt);
           this.highlightBox.visible = false;
-          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isZoomed: false, isRoverActive: true, roverTelemetry: this.roverController.getTelemetry(), mission: this.mission });
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: false, isRoverActive: true, roverTelemetry: this.roverController.getTelemetry(), mission: this.mission });
         } else {
           this.player.update(dt, this.input.keys);
           this._updateSurvival(dt);
@@ -759,7 +901,8 @@ export class GameEngine {
             this.highlightBox.visible = false;
           }
 
-          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isZoomed: this.isZoomed, isRoverActive: false, mission: this.mission });
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: this.isScannerOpen, isRoverActive: false, mission: this.mission });
+          this._updateScanner(dt);
         }
       } else {
         if (this.roverController.isActive) this.roverController.update(dt, {});
@@ -779,6 +922,8 @@ export class GameEngine {
         this.hud.showToast(pickedUpBlocks.every((id) => id === BLOCK_IDS.HYDRO_PLANT) ? 'Picked up a Mars carrot' : `Picked up ${pickedUpBlocks.length} item${pickedUpBlocks.length > 1 ? 's' : ''}`);
       }
 
+      this.iceSensor.update(dt);
+      this.shieldBubble.update(dt, { on: this.mission.shieldOn, storm: this.mission.storm.phase === 'active' });
       if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
       this._updateMission(dt);
       this._updateCrew(dt);
