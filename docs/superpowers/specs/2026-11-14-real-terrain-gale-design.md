@@ -26,7 +26,7 @@ Alternativas descartadas: oferecer a escolha entre Gale e Jezero (dobra o teste 
 | Página | <https://www.uahirise.org/dtm/PSP_010573_1755> |
 | Resolução | 1,0118 m por pixel |
 | Recorte | 224 × 224 pixels, centro em 4,4743°S, 137,4032°E (Aeolis Palus, uns 7 km ao norte do pouso do Curiosity) |
-| Relevo do recorte | de -1,4 m a +11,2 m em relação ao nível da base |
+| Relevo do recorte | 12,7 m no total: de -1,1 m a +11,6 m em relação ao nível da base |
 
 O arquivo tem 471 MB, mas o servidor aceita `Range`: o script baixa só as 224 linhas do recorte (6,4 MB).
 
