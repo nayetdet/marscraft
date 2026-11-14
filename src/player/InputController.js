@@ -47,15 +47,184 @@ export class InputController {
 
     this.keys = {};
     this.isLocked = false;
-    // Z abre o scanner com a visão normal; a rodinha aproxima (zoom) só com ele aberto.
+    this.isTouchMode = false;
+    this.supportsTouch = Boolean(window.matchMedia?.('(pointer: coarse)').matches)
+      || (navigator.maxTouchPoints ?? 0) > 0;
+    if (this.supportsTouch) document.body.classList.add('touch-device');
+    this.isPortraitRequired = this.supportsTouch
+      && Boolean(window.matchMedia?.('(orientation: portrait)').matches);
+    document.body.classList.toggle('portrait-required', this.isPortraitRequired);
     this.isScannerOpen = false;
     this.isZoomed = false;
     this.breakState = null;
     this.breakSwingTimer = 0;
     this.isBreakButtonHeld = false;
     this.lastForwardTapAt = 0;
+    this.joystickPointerId = null;
+    this.lookPointerId = null;
+    this.touchHeldActions = new Map();
 
     this._bindEvents();
+  }
+
+  _updateOrientationMode() {
+    const isPortrait = this.supportsTouch
+      && Boolean(window.matchMedia?.('(orientation: portrait)').matches);
+    if (isPortrait === this.isPortraitRequired) return;
+
+    this.isPortraitRequired = isPortrait;
+    document.body.classList.toggle('portrait-required', isPortrait);
+    if (!isPortrait) return;
+
+    this.keys = {};
+    this.isBreakButtonHeld = false;
+    this._cancelBreaking();
+    this.touchHeldActions.clear();
+    this.joystickPointerId = null;
+    this.lookPointerId = null;
+    document.querySelectorAll('[data-touch-action].is-active').forEach((button) => {
+      button.classList.remove('is-active');
+    });
+    this._setJoystick(0, 0);
+  }
+
+  _startTouchMode() {
+    this.isTouchMode = true;
+    this.isLocked = true;
+    document.body.classList.add('touch-mode');
+    document.getElementById('overlay').classList.add('hidden');
+  }
+
+  _toggleInventory() {
+    if (this.hud.isInventoryOpen) {
+      this.hud.closeInventory();
+      if (!this.isTouchMode) requestRawPointerLock(this.domElement);
+      return;
+    }
+
+    if (this.isLocked) {
+      this.keys = {};
+      this.isBreakButtonHeld = false;
+      this._cancelBreaking();
+      this.touchHeldActions.clear();
+      this.joystickPointerId = null;
+      this.lookPointerId = null;
+      document.querySelectorAll('[data-touch-action].is-active').forEach((button) => {
+        button.classList.remove('is-active');
+      });
+      this._setJoystick(0, 0);
+      this.hud.openInventory(this.survival.inventorySlots);
+      if (!this.isTouchMode) document.exitPointerLock();
+    }
+  }
+
+  _useSelectedItem() {
+    const hit = this.getTargetedBlock();
+    const slot = this.survival.slots[this.hud.selectedSlot];
+    if (!slot || slot.count <= 0) return;
+
+    if (slot.consumable) {
+      const previousCount = slot.count;
+      const msg = this.survival.consumeSlotItem(this.hud.selectedSlot);
+      if (slot.count < previousCount && slot.consumable.type === 'food') this.playerHand.triggerEat();
+      if (msg) {
+        this.hud.showToast(msg);
+        this.hud.renderHotbar(this.survival.slots);
+        this._syncHandWithSlot();
+        return;
+      }
+    }
+
+    this.playerHand.triggerSwing();
+    if (!hit.hit || hit.type === 'crop') return;
+    const nx = hit.x + hit.normal.x;
+    const ny = hit.y + hit.normal.y;
+    const nz = hit.z + hit.normal.z;
+
+    if (!this.player.overlapsBlock(nx, ny, nz) && this.survival.useBlockFromSlot(this.hud.selectedSlot)) {
+      this.world.setBlock(nx, ny, nz, slot.id, true);
+      this.hud.renderHotbar(this.survival.slots);
+      this._syncHandWithSlot();
+    }
+  }
+
+  _handleTouchAction(action, button, pointerId) {
+    if (!this.isTouchMode || !this.isLocked || this.survival.isDead || this.hud.isInventoryOpen) return;
+
+    if (action === 'jump' || action === 'mine') {
+      this.touchHeldActions.set(pointerId, action);
+      button.setPointerCapture?.(pointerId);
+      button.classList.add('is-active');
+    }
+
+    if (action === 'jump') {
+      if (!this.isRoverActive()) this.keys.Space = true;
+    } else if (action === 'mine') {
+      if (this.isRoverActive()) this.onRoverAction();
+      else {
+        this.isBreakButtonHeld = true;
+        this._startBreaking();
+      }
+    } else if (action === 'use') {
+      if (this.isRoverActive()) this.onRoverAction();
+      else this._useSelectedItem();
+    } else if (action === 'interact') {
+      this.onInteract();
+    } else if (action === 'sprint') {
+      if (!this.isRoverActive()) {
+        this.keys.Sprint = !this.keys.Sprint;
+        button.classList.toggle('is-active', this.keys.Sprint);
+      }
+    } else if (action === 'zoom' && !this.isRoverActive()) {
+      const open = !this.isScannerOpen || !this.isZoomed;
+      this._setScope(open, open);
+      button.classList.toggle('is-active', open);
+    } else if (action === 'inventory') {
+      this._toggleInventory();
+    }
+  }
+
+  _releaseTouchPointer(pointerId) {
+    const action = this.touchHeldActions.get(pointerId);
+    if (action) {
+      this.touchHeldActions.delete(pointerId);
+      if (action === 'jump') this.keys.Space = false;
+      if (action === 'mine') {
+        this.isBreakButtonHeld = false;
+        this._cancelBreaking();
+      }
+      document.querySelector(`[data-touch-action="${action}"]`)?.classList.remove('is-active');
+    }
+
+    if (this.joystickPointerId === pointerId) {
+      this.joystickPointerId = null;
+      this._setJoystick(0, 0);
+    }
+
+    if (this.lookPointerId === pointerId) this.lookPointerId = null;
+  }
+
+  _setJoystick(x, y) {
+    const deadZone = 0.2;
+    this.keys.KeyW = y < -deadZone;
+    this.keys.KeyS = y > deadZone;
+    this.keys.KeyA = x < -deadZone;
+    this.keys.KeyD = x > deadZone;
+
+    const thumb = document.getElementById('joystick-thumb');
+    if (thumb) thumb.style.transform = `translate(${x * 38}px, ${y * 38}px)`;
+  }
+
+  _moveJoystick(event) {
+    if (event.pointerId !== this.joystickPointerId || this.survival.isDead || this.hud.isInventoryOpen) return;
+    const rect = document.getElementById('mobile-joystick').getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + 56;
+    const dx = event.clientX - centerX;
+    const dy = event.clientY - centerY;
+    const distance = Math.hypot(dx, dy);
+    const scale = distance > 38 ? 38 / distance : 1;
+    this._setJoystick(dx * scale / 38, dy * scale / 38);
   }
 
   _syncHandWithSlot() {
@@ -149,6 +318,9 @@ export class InputController {
       menuMain.classList.remove('hidden');
     });
 
+    window.addEventListener('resize', () => this._updateOrientationMode());
+    window.addEventListener('orientationchange', () => this._updateOrientationMode());
+
     document.addEventListener('keydown', (e) => {
       const gameHasFocus = this.isLocked || document.pointerLockElement === this.domElement;
       if (!gameHasFocus || !this._isBrowserShortcut(e)) return;
@@ -156,7 +328,8 @@ export class InputController {
     }, true);
 
     startBtn.addEventListener('click', () => {
-      requestRawPointerLock(this.domElement);
+      if (this.supportsTouch) this._startTouchMode();
+      else requestRawPointerLock(this.domElement);
     });
 
     // Botão "Done" do diário: o clique é gesto do usuário, então já volta com o mouse travado.
@@ -172,12 +345,18 @@ export class InputController {
         this.survival.resetStats();
         this.player.resetToShipRamp();
         this.hud.hideDeathScreen();
-        requestRawPointerLock(this.domElement);
+        if (this.isTouchMode) {
+          this.keys = {};
+          this.isLocked = true;
+          overlay.classList.add('hidden');
+        } else {
+          requestRawPointerLock(this.domElement);
+        }
       });
     }
 
     document.addEventListener('pointerlockchange', () => {
-      this.isLocked = document.pointerLockElement === this.domElement;
+      this.isLocked = this.isTouchMode || document.pointerLockElement === this.domElement;
       if (!this.isLocked) {
         // Sem pointer lock o jogador para: sem teclas presas e sem animacao de caminhada.
         this._cancelBreaking();
@@ -244,13 +423,7 @@ export class InputController {
 
       if (e.code === 'KeyE') {
         e.preventDefault();
-        if (this.hud.isInventoryOpen) {
-          this.hud.closeInventory();
-          requestRawPointerLock(this.domElement);
-        } else if (this.isLocked) {
-          this.hud.openInventory(this.survival.inventorySlots);
-          document.exitPointerLock();
-        }
+        this._toggleInventory();
         return;
       }
 
@@ -310,40 +483,7 @@ export class InputController {
         return;
       }
 
-      const hit = this.getTargetedBlock();
-
-      if (e.button === 2) {
-        const slot = this.survival.slots[this.hud.selectedSlot];
-        if (!slot || slot.count <= 0) return;
-
-        // Se for consumível (Gelo de Agua ou Batata de Marte), consome para recuperar Água/Comida
-        if (slot.consumable) {
-          const previousCount = slot.count;
-          const msg = this.survival.consumeSlotItem(this.hud.selectedSlot);
-          if (slot.count < previousCount && slot.consumable.type === 'food') this.playerHand.triggerEat();
-          if (msg) {
-            this.hud.showToast(msg);
-            this.hud.renderHotbar(this.survival.slots);
-            this._syncHandWithSlot();
-            return;
-          }
-        }
-
-        this.playerHand.triggerSwing();
-        // Caso contrário, coloca o bloco no mundo
-        if (!hit.hit || hit.type === 'crop') return;
-        const nx = hit.x + hit.normal.x;
-        const ny = hit.y + hit.normal.y;
-        const nz = hit.z + hit.normal.z;
-
-        if (!this.player.overlapsBlock(nx, ny, nz)) {
-          if (this.survival.useBlockFromSlot(this.hud.selectedSlot)) {
-            this.world.setBlock(nx, ny, nz, slot.id, true);
-            this.hud.renderHotbar(this.survival.slots);
-            this._syncHandWithSlot();
-          }
-        }
-      }
+      if (e.button === 2) this._useSelectedItem();
     });
 
     window.addEventListener('mouseup', (e) => {
@@ -356,9 +496,60 @@ export class InputController {
     window.addEventListener('blur', () => {
       this.isBreakButtonHeld = false;
       this._cancelBreaking();
+      this.keys = {};
     });
 
     window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    const joystick = document.getElementById('mobile-joystick');
+    joystick.addEventListener('pointerdown', (e) => {
+      if (!this.isTouchMode || this.survival.isDead || this.hud.isInventoryOpen) return;
+      e.preventDefault();
+      this.joystickPointerId = e.pointerId;
+      joystick.setPointerCapture(e.pointerId);
+      this._moveJoystick(e);
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (e.pointerId === this.joystickPointerId) this._moveJoystick(e);
+      if (e.pointerId !== this.lookPointerId || this.survival.isDead || this.hud.isInventoryOpen) return;
+      const dx = e.clientX - this.lastTouchLookX;
+      const dy = e.clientY - this.lastTouchLookY;
+      this.lastTouchLookX = e.clientX;
+      this.lastTouchLookY = e.clientY;
+      const boundedDx = Math.max(-100, Math.min(100, dx));
+      const boundedDy = Math.max(-100, Math.min(100, dy));
+      if (this.isRoverActive()) this.onRoverLook(boundedDx, boundedDy);
+      else applyMouseLook(this.player, boundedDx, boundedDy, this.isZoomed);
+    });
+
+    window.addEventListener('pointerup', (e) => this._releaseTouchPointer(e.pointerId));
+    window.addEventListener('pointercancel', (e) => this._releaseTouchPointer(e.pointerId));
+
+    this.domElement.addEventListener('pointerdown', (e) => {
+      if (!this.isTouchMode || e.pointerType === 'mouse' || e.clientX < window.innerWidth * 0.4) return;
+      if (this.survival.isDead || this.hud.isInventoryOpen) return;
+      e.preventDefault();
+      this.lookPointerId = e.pointerId;
+      this.lastTouchLookX = e.clientX;
+      this.lastTouchLookY = e.clientY;
+      this.domElement.setPointerCapture(e.pointerId);
+    });
+
+    document.querySelectorAll('[data-touch-action]').forEach((button) => {
+      button.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        this._handleTouchAction(button.dataset.touchAction, button, e.pointerId);
+      });
+    });
+
+    document.getElementById('hotbar').addEventListener('click', (e) => {
+      if (!this.isTouchMode) return;
+      const slot = e.target.closest('.mc-slot');
+      if (!slot) return;
+      this.hud.selectSlot(Number(slot.dataset.slotIndex), this.survival.slots);
+      this._syncHandWithSlot();
+    });
   }
 
   _setScope(open, zoomed) {
