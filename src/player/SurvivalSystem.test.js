@@ -55,8 +55,9 @@ describe('SurvivalSystem', () => {
 describe('harvested carrots', () => {
   it('stacks carrots in the backpack and refuses pickup when inventory is full', () => {
     const survival = new SurvivalSystem();
-    const carrot = survival.slots[0];
-    survival.inventorySlots[0] = null;
+    const carrotIndex = survival.slots.findIndex((slot) => slot?.id === BLOCK_IDS.HYDRO_PLANT);
+    const carrot = survival.slots[carrotIndex];
+    survival.inventorySlots[carrotIndex] = null;
     survival.inventorySlots[9] = carrot;
     survival.slots = survival.inventorySlots.slice(0, 9);
     expect(survival.addHarvestedCrop()).toBe(true);
@@ -67,40 +68,44 @@ describe('harvested carrots', () => {
 
   it('consumes a carrot only when food or health needs replenishing', () => {
     const survival = new SurvivalSystem();
-    expect(survival.consumeSlotItem(0)).toContain('already full');
-    expect(survival.slots[0].count).toBe(3);
+    const carrotIndex = survival.slots.findIndex((slot) => slot?.id === BLOCK_IDS.HYDRO_PLANT);
+    expect(survival.consumeSlotItem(carrotIndex)).toContain('already full');
+    expect(survival.slots[carrotIndex].count).toBe(3);
     survival.food = 10;
-    expect(survival.consumeSlotItem(0)).toContain('carrot');
+    expect(survival.consumeSlotItem(carrotIndex)).toContain('carrot');
     expect(survival.food).toBe(16);
-    expect(survival.slots[0].count).toBe(2);
+    expect(survival.slots[carrotIndex].count).toBe(2);
   });
 
   it('does not heal when oxygen is empty, but still fills food', () => {
     const survival = new SurvivalSystem();
+    const carrotIndex = survival.slots.findIndex((slot) => slot?.id === BLOCK_IDS.HYDRO_PLANT);
     survival.oxygen = 0;
     survival.health = 10;
     survival.food = 10;
-    expect(survival.consumeSlotItem(0)).toContain('No oxygen');
+    expect(survival.consumeSlotItem(carrotIndex)).toContain('No oxygen');
     expect(survival.health).toBe(10);
     expect(survival.food).toBe(16);
-    expect(survival.slots[0].count).toBe(2);
+    expect(survival.slots[carrotIndex].count).toBe(2);
   });
 
   it('refuses to eat just for healing when oxygen is empty and food is full', () => {
     const survival = new SurvivalSystem();
+    const carrotIndex = survival.slots.findIndex((slot) => slot?.id === BLOCK_IDS.HYDRO_PLANT);
     survival.oxygen = 0;
     survival.health = 10;
-    expect(survival.consumeSlotItem(0)).toContain('already full');
+    expect(survival.consumeSlotItem(carrotIndex)).toContain('already full');
     expect(survival.health).toBe(10);
-    expect(survival.slots[0].count).toBe(3);
+    expect(survival.slots[carrotIndex].count).toBe(3);
   });
 
   it('heals with normal oxygen even when food is full', () => {
     const survival = new SurvivalSystem();
+    const carrotIndex = survival.slots.findIndex((slot) => slot?.id === BLOCK_IDS.HYDRO_PLANT);
     survival.health = 10;
-    expect(survival.consumeSlotItem(0)).toBe('You ate a Mars carrot (+Food)');
+    expect(survival.consumeSlotItem(carrotIndex)).toBe('You ate a Mars carrot (+Food)');
     expect(survival.health).toBe(12);
-    expect(survival.slots[0].count).toBe(2);
+    expect(survival.slots[carrotIndex].count).toBe(2);
   });
 });
 

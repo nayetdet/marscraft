@@ -96,6 +96,7 @@ export class StationPanel {
     this.lastHitText = this.gymMode === 'bike' ? 'Alternate left and right.' : 'Step in the green zone.';
     this.render();
     this.element.classList.remove('hidden');
+    if (this.engine.input?.isTouchMode) this.engine.input.keys = {};
     if (this._isGymStation()) this._startGymLoop();
     if (document.pointerLockElement) document.exitPointerLock();
   }
@@ -104,7 +105,7 @@ export class StationPanel {
     this.isOpen = false;
     this._stopGymLoop();
     this.element.classList.add('hidden');
-    requestRawPointerLock(this.engine.renderer.domElement);
+    if (!this.engine.input?.isTouchMode) requestRawPointerLock(this.engine.renderer.domElement);
   }
 
   _startGymLoop() {
