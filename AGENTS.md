@@ -55,6 +55,8 @@ src/world/
   nasaSpaceshipBuilder.js  base/nave construída em voxels
   nasaModelsBuilder.js     modelos 3D extras (painéis solares, antena, rover, estufa)
   voxelRaycaster.js        DDA para mirar blocos
+  voxelShading.js          cor por vértice dos blocos: tinta do chão natural e sombra de canto (oclusão)
+  surfaceRocks.js          pedras decorativas espalhadas fora das áreas construídas (sem colisão)
 src/player/
   PlayerPhysics.js         movimento, gravidade, colisão AABB × voxels
   InputController.js       teclado/mouse/pointer lock e controles touch em paisagem (joystick, câmera por arrasto, ações, hotbar e atalhos de missão/tripulação)

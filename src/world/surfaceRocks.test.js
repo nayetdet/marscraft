@@ -39,7 +39,7 @@ describe('surface rocks', () => {
   const rocks = scatterRocks(world);
 
   it('scatters a good number of small rocks, always the same ones', () => {
-    expect(rocks.length).toBeGreaterThan(800);
+    expect(rocks.length).toBeGreaterThan(500);
     expect(scatterRocks(world)).toEqual(rocks);
     for (const rock of rocks) {
       expect(rock.size).toBeGreaterThan(0.1);

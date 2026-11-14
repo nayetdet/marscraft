@@ -52,7 +52,7 @@ As cores são escolha de arte, não dado. O formato do terreno continua sendo o 
 
 - Céu de dia: horizonte bege-claro empoeirado e zênite caramelo mais escuro, no lugar do laranja saturado. A auréola azulada em volta do Sol fica.
 - Névoa de dia na cor do horizonte.
-- Menos luz ambiente e mais Sol, para as faces de cima e de lado dos blocos se diferenciarem.
+- De dia, um pouco menos de luz ambiente e mais Sol, para as faces de cima e de lado dos blocos se diferenciarem. A noite fica com os mesmos valores de antes, para não perder visibilidade.
 - Disco do horizonte (`horizonGround`) na cor nova do chão.
 - Conferir que o interior continua claro.
 
@@ -62,12 +62,13 @@ Para cada face visível, cada vértice consulta 3 vizinhos na camada à frente d
 
 ## Etapa 4: casco e vidro
 
-- Casco: branco levemente quente, com emenda só em duas bordas (a grade fica mais leve) e sem rebites nos quatro cantos.
+- Casco: branco levemente frio (compensa a luz alaranjada, que deixava o branco quente com cara de bege), com emenda só em duas bordas (a grade fica mais leve) e sem rebites.
 - Vidro: tom mais azul e moldura cinza-azulada.
 
 ## Etapa 5: pedras
 
-- `InstancedMesh` com ~900 pedras de 0,15 a 0,45 m, posição e forma por semente fixa, sobre o topo do terreno.
+- `InstancedMesh` com ~1.000 pedras de 0,14 a 0,42 m (icosaedro de 20 triângulos), posição e forma por semente fixa, sobre o topo do terreno e só até 10 m além da parede de poeira (`DUST_STORM_FATAL_RADIUS`), onde o jogador não chega.
+- Custo medido com renderização por software (pior caso), 1280 × 720: de ~101 ms para ~104 ms por quadro ao nível do chão. Uma primeira versão com 2.670 pedras custava +15 % e foi cortada.
 - Nada de pedra nas áreas niveladas nem na cratera de gelo: `isBuildZone(x, z)` exportada de `terrainGenerator.js`.
 - Sem colisão. Limitação aceita: se o bloco de baixo for minerado, a pedra fica no ar.
 - É decoração inventada: não entra na tela "NASA Data".
