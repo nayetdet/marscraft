@@ -896,6 +896,7 @@ export class GameEngine {
 
   _playArrival() {
     this._arrivalPlayed = true;
+    this.audio.playRocket();
     const site = CUTSCENE_CONFIG.LANDING_SITE;
     this.playerHand.handGroup.visible = false;
     this.highlightBox.visible = false;
@@ -916,6 +917,7 @@ export class GameEngine {
 
   // Fim (ou pulo) da chegada: a capsula fica no chao como objeto solido e a historia comeca
   _endArrival() {
+    this.audio.stopRocket();
     const site = CUTSCENE_CONFIG.LANDING_SITE;
     const groundY = WORLD_CONFIG.GROUND_LEVEL + 1;
     this.lander.position.set(site.x, groundY, site.z);

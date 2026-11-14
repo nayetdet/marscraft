@@ -9,6 +9,7 @@ export class AudioManager {
     };
     this.dying = this._createAudio(`${AUDIO_BASE_URL}morrendo.wav`, true);
     this.rover = this._createAudio(`${AUDIO_BASE_URL}barulho%20do%20carro.wav?v=2`, true);
+    this.rocket = this._createAudio(`${AUDIO_BASE_URL}foguete.wav`);
     this.rover.volume = LOOP_VOLUME / 2;
     this._activeFootsteps = null;
     this._wasRoverActive = false;
@@ -31,6 +32,16 @@ export class AudioManager {
         console.warn(`Unable to play game audio "${audio.src}":`, error);
       });
     }
+  }
+
+  playRocket() {
+    this.rocket.currentTime = 0;
+    this._play(this.rocket);
+  }
+
+  stopRocket() {
+    this.rocket.pause();
+    this.rocket.currentTime = 0;
   }
 
   _stopFootsteps() {
