@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CAMERA_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.js';
 import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
 import { createBaseStock } from '../crew/baseStock.js';
@@ -60,6 +60,7 @@ export class GameEngine {
     this.container = container;
     this.scene = new THREE.Scene();
     this.isScannerOpen = false;
+    this.scene.fog = new THREE.FogExp2(0x9a4d2e, 0.0015);
     this.isZoomed = false;
 
     this.camera = new THREE.PerspectiveCamera(
@@ -692,6 +693,14 @@ export class GameEngine {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
+  _updateStormFog(position) {
+    const distance = Math.hypot(position.x + 4, position.z);
+    const fogStart = SURVIVAL_CONFIG.DUST_STORM_START_RADIUS;
+    const fogRange = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS - fogStart;
+    const strength = Math.max(0, Math.min(1, (distance - fogStart) / fogRange));
+    this.scene.fog.density = 0.0015 + strength * 0.14;
+  }
+
   handleRoverAction() {
     if (!this.roverController.isActive) return;
 
@@ -901,6 +910,7 @@ export class GameEngine {
       this._updateCrew(dt);
       if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
 
+      this._updateStormFog(this.roverController.isActive ? this.roverController.pos : this.player.pos);
       this.renderer.render(this.scene, this.camera);
       this.debug.frame(frameMs);
     };

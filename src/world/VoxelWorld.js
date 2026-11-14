@@ -68,6 +68,16 @@ export class VoxelWorld {
     this.data = new Uint8Array(this.sizeX * this.sizeY * this.sizeZ);
     this.worldGroup = new THREE.Group();
     this.scene.add(this.worldGroup);
+    // Visual-only distant ground prevents the finite terrain from revealing void
+    // beyond the crater rim. It has no collision and sits below the playable map.
+    this.horizonGround = new THREE.Mesh(
+      new THREE.CircleGeometry(1100, 96),
+      new THREE.MeshLambertMaterial({ color: 0x8d4b31, side: THREE.DoubleSide })
+    );
+    this.horizonGround.rotation.x = -Math.PI / 2;
+    this.horizonGround.position.y = -3;
+    this.horizonGround.frustumCulled = false;
+    this.scene.add(this.horizonGround);
     this.dropGroup = new THREE.Group();
     this.scene.add(this.dropGroup);
     this.drops = [];
@@ -114,13 +124,9 @@ export class VoxelWorld {
     return idx === -1 ? BLOCK_IDS.AIR : this.data[idx];
   }
 
-  // Igual a getBlock, mas trata o lado de fora do mundo (bordas e fundo) como solido,
-  // para nao gerar faces que ninguem consegue ver. Acima do teto continua sendo ar.
   _getBlockForMeshing(ix, iy, iz) {
     if (iy >= this.sizeY) return BLOCK_IDS.AIR;
-    if (ix < 0 || ix >= this.sizeX || iy < 0 || iz < 0 || iz >= this.sizeZ) {
-      return BLOCK_IDS.BASALT;
-    }
+    if (ix < 0 || ix >= this.sizeX || iy < 0 || iz < 0 || iz >= this.sizeZ) return BLOCK_IDS.BASALT;
     return this.data[iy * this.sizeX * this.sizeZ + iz * this.sizeX + ix];
   }
 

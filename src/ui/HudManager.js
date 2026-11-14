@@ -72,6 +72,12 @@ export class HudManager {
     this.baseWaterStatusEl = document.getElementById('base-water-status');
     this.bottomAreaEl = document.querySelector('.mc-bottom-area');
     this.crosshairEl = document.querySelector('.mc-crosshair');
+    this.hudEl = document.getElementById('hud');
+    this.gameContainerEl = document.getElementById('game-container');
+    this.damageOverlayEl = document.getElementById('damage-overlay');
+    this.dustStormEl = document.getElementById('dust-storm-warning');
+    this.dustStormTitleEl = this.dustStormEl?.querySelector('strong');
+    this.dustStormDetailEl = this.dustStormEl?.querySelector('span');
 
     this.renderHotbar(initialSlots);
     this._initSkyLabels();
@@ -313,6 +319,28 @@ export class HudManager {
       this.showDeathScreen();
       return;
     }
+
+    const stormIntensity = survival.dustStormIntensity ?? 0;
+    if (this.dustStormEl) {
+      this.dustStormEl.classList.toggle('hidden', stormIntensity <= 0);
+      this.dustStormEl.classList.toggle('strong', stormIntensity >= 0.45);
+      this.dustStormEl.classList.toggle('critical', stormIntensity >= 0.75);
+      this.dustStormEl.style.setProperty('--storm-strength', stormIntensity.toFixed(2));
+      if (this.dustStormTitleEl) {
+        this.dustStormTitleEl.textContent = stormIntensity >= 0.65 ? 'Return now' : 'Return to base';
+      }
+      if (this.dustStormDetailEl) {
+        this.dustStormDetailEl.textContent = stormIntensity >= 0.65 ? 'Storm exposure is fatal' : 'Dust storm ahead';
+      }
+    }
+
+    const damageIntensity = Math.max(0, Math.min(1, (survival.maxStat * 0.7 - survival.health) / (survival.maxStat * 0.7)));
+    if (this.damageOverlayEl) {
+      this.damageOverlayEl.classList.toggle('hidden', damageIntensity <= 0);
+      this.damageOverlayEl.style.setProperty('--damage-strength', damageIntensity.toFixed(2));
+      this.damageOverlayEl.classList.toggle('critical', damageIntensity >= 0.55);
+    }
+    if (this.gameContainerEl) this.gameContainerEl.classList.toggle('damage-shake', damageIntensity >= 0.55);
 
     if (isRoverActive && roverTelemetry) {
       if (this.roverSpeedEl) this.roverSpeedEl.textContent = `Speed: ${roverTelemetry.speedKmh} km/h`;

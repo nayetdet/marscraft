@@ -39,14 +39,17 @@ describe('RoverController', () => {
     expect(controller.isActive).toBe(false);
   });
 
-  it('respeita os limites da cratera impedindo saida', () => {
+  it('is blocked by the solid outer rim terrain', () => {
     const roverGroup = new THREE.Group();
-    const controller = new RoverController({ roverGroup, wheels: [] });
+    const world = {
+      sizeY: 48,
+      getBlock(x, y, z) {
+        return Math.hypot(x, z) > 50 && y === 24 ? 1 : 0;
+      },
+    };
+    const controller = new RoverController({ roverGroup, wheels: [], world });
 
-    // Perto do centro da cratera (x: 10, z: 10, dist ~14.1 < 47)
     expect(controller.isPositionBlocked(10, 10, 9)).toBe(false);
-
-    // Fora do limite da cratera (x: 50, z: 50, dist ~70 > 46.8)
     expect(controller.isPositionBlocked(50, 50, 9)).toBe(true);
   });
 

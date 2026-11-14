@@ -38,21 +38,21 @@ function createArrayWorld() {
 }
 
 describe('Martian Terrain & NASA Base Builder', () => {
-  it('generates flat central landing zone and low crater ridge that does not block the sky', () => {
+  it('generates a flat central landing zone and an open surrounding terrain', () => {
     const world = createArrayWorld();
-    generateMartianTerrain(world);
+    generateMartianTerrain(world, 0x4d415253);
 
     // Zona central da base nivelada em GROUND_LEVEL
     expect(world.getBlock(0, WORLD_CONFIG.GROUND_LEVEL, 0)).not.toBe(BLOCK_IDS.AIR);
     expect(world.getBlock(0, WORLD_CONFIG.GROUND_LEVEL + 1, 0)).toBe(BLOCK_IDS.AIR);
 
-    // Borda da cratera suave (abaixo de y = 18 para não bloquear a visão dos planetas)
+    // Terreno aberto até os limites do mundo.
     expect(world.getBlock(0, 20, -48)).toBe(BLOCK_IDS.AIR);
   });
 
   it('builds White NASA Habitat, Greenhouse Dome planters, and Ascent Lander', () => {
     const world = createArrayWorld();
-    generateMartianTerrain(world);
+    generateMartianTerrain(world, 0x4d415253);
     buildNasaSpaceshipAndBase(world);
 
     const floorY = WORLD_CONFIG.GROUND_LEVEL + 1;
