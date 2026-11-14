@@ -172,28 +172,6 @@
 .zoom-overlay.is-scanning .scan-status { color: #55ffff; }
 .zoom-overlay.is-locked .scan-status { color: #55ff55; }
 
-/* Linha de varredura branca que desce em degraus (sem brilho, visual pixelado) */
-.scan-sweep {
-  position: fixed;
-  left: 36px;
-  right: 36px;
-  top: 36px;
-  height: 4px;
-  opacity: 0;
-  background: rgba(255, 255, 255, 0.55);
-  border-top: 2px solid rgba(255, 255, 255, 0.85);
-}
-
-.zoom-overlay.is-scanning .scan-sweep {
-  opacity: 1;
-  animation: scan-sweep 1.2s steps(16) infinite;
-}
-
-@keyframes scan-sweep {
-  from { transform: translateY(0); }
-  to { transform: translateY(calc(100vh - 76px)); }
-}
-
 @keyframes scan-caret {
   50% { opacity: 0; }
 }
@@ -360,7 +338,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .zoom-overlay.is-scanning .scan-sweep,
   .zoom-overlay.is-scanning .scan-name::after,
   .scan-card.is-entering,
   .scan-card.is-leaving,

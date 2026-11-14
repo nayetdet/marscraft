@@ -28,13 +28,18 @@ import { RoverController } from '../rover/RoverController.js';
 import { getCategoryLabel } from '../data/scanCatalog.js';
 import { ScanJournal } from '../scanner/scanJournal.js';
 import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js';
-import { resolveScanTarget } from '../scanner/scanTargeting.js';
+import { resolveScanTarget, collectScanBlocks } from '../scanner/scanTargeting.js';
+import { ScanHighlight } from '../scanner/scanHighlight.js';
 import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
 
 // Raio angular (rad) em que a mira da luneta "pega" cada astro. A Lua fica a ~0,047 rad da
 // Terra, então os dois raios precisam ser menores que isso para não se sobreporem.
 const SKY_SCAN_RADII = { sun: 0.05, earth: 0.035, moon: 0.02, phobos: 0.04, deimos: 0.03 };
+// Raio (em unidades da cena) da esfera verde do efeito de scan em volta de cada astro.
+const SKY_HIGHLIGHT_RADII = { sun: 10, earth: 8.5, moon: 3, phobos: 7, deimos: 3.5 };
+// Alvos de terreno pintam a mancha em volta do bloco mirado, então a chave inclui o bloco.
+const TERRAIN_PATCH_IDS = new Set(['regolith', 'sandstone', 'crater-rock', 'water-ice', 'crater-rim']);
 
 function getLocalStorage() {
   try {
@@ -206,6 +211,7 @@ export class GameEngine {
     this.scanner = new ScannerSystem(this.scanJournal);
     this.scannerHud = new ScannerHud();
     this.iceSensor = new IceSensorEffect(this.scene);
+    this.scanHighlight = new ScanHighlight(this.scene);
     this._scanDir = new THREE.Vector3();
     this._skyPos = new THREE.Vector3();
     this._skyBodies = Object.entries(SKY_SCAN_RADII).map(([id, radius]) => ({ id, radius, dir: new THREE.Vector3() }));
@@ -223,6 +229,7 @@ export class GameEngine {
   _updateScanner(dt) {
     if (!this.isScannerOpen) {
       if (this.scanner.targetId) this.scanner.reset();
+      this.scanHighlight.clear();
       return;
     }
 
@@ -248,8 +255,36 @@ export class GameEngine {
       maxDist: this.scanJournal.scanRange(),
     });
     const state = this.scanner.update(dt, target?.id ?? null);
+    this._updateScanHighlight(target, state, dt);
     this.scannerHud.update(state);
     if (state.completed) this._onScanCompleted(state.completed);
+  }
+
+  // Pinta o alvo inteiro de verde (efeito LiDAR). A forma só é recalculada quando o alvo muda.
+  _updateScanHighlight(target, state, dt) {
+    if (!target) {
+      this.scanHighlight.clear();
+      return;
+    }
+    const h = target.hit;
+    const key = TERRAIN_PATCH_IDS.has(target.id) && h ? `${target.id}@${h.x},${h.y},${h.z}` : target.id;
+    if (key !== this.scanHighlight.key) this.scanHighlight.setTarget(key, this._scanHighlightShape(target));
+    this.scanHighlight.update(dt, state);
+  }
+
+  _scanHighlightShape(target) {
+    const { id } = target;
+    if (SKY_HIGHLIGHT_RADII[id]) {
+      return { sphere: { radius: SKY_HIGHLIGHT_RADII[id], getPosition: (t) => this._skyGetters[id](t) } };
+    }
+    const boxes = collectScanBlocks(this.world, target).map((b) => ({
+      minX: b.x, maxX: b.x + 1, minY: b.y, maxY: b.y + 1, minZ: b.z, maxZ: b.z + 1,
+    }));
+    for (const c of this.customColliders) {
+      if (c.scanId === id) boxes.push(c);
+    }
+    if (id === 'rover') boxes.push({ ...this._roverScanBox });
+    return boxes.length ? { boxes } : null;
   }
 
   _onScanCompleted({ entry, discovery }) {
@@ -644,6 +679,7 @@ export class GameEngine {
       const isGameRunning = this.input.isLocked && !this.survival.isDead && !this.missionHud.isVictoryShown;
       if (isGameRunning) {
         if (this.roverController.isActive) {
+          if (this.scanHighlight.mesh) this.scanHighlight.clear();
           this.roverController.update(dt, this.input.keys);
           this.sky.update(dt, this.roverController.pos);
           this._updateSurvival(dt);

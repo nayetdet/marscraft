@@ -48,6 +48,19 @@ export function baseModuleAt(bx, by, bz) {
 // Módulos que formam a base habitada (o foguete fica de fora da visão geral "base").
 const OUTPOST_MODULES = new Set(['habitat', 'airlock', 'tunnel', 'greenhouse', 'cupola']);
 
+// Classifica um bloco sem levar a distância em conta (a visão geral "base" é decidida fora).
+function classifyBlockAt(block, x, y, z) {
+  const terrainId = TERRAIN_BLOCKS[block];
+  const module = baseModuleAt(x, y, z);
+  if (terrainId) {
+    if (module === 'lander' && y >= L.FLOOR_Y - 1) return 'lander';
+    if (terrainId !== 'water-ice' && Math.hypot(x, z) > SCAN_TARGETING_CONFIG.CRATER_RIM_RADIUS) return 'crater-rim';
+    return terrainId;
+  }
+  if (block === BLOCK_IDS.HYDRO_PLANT) return 'greenhouse';
+  return module;
+}
+
 function classifyBlock(hit) {
   const terrainId = TERRAIN_BLOCKS[hit.block];
   const module = baseModuleAt(hit.x, hit.y, hit.z);
@@ -136,21 +149,73 @@ export function resolveScanTarget({ world, origin, dir, objects = [], skyBodies 
 
   if (objectHit && (!voxelHit.hit || objectHit.distance <= voxelHit.distance)) {
     const { obj, distance } = objectHit;
-    if (obj.scanId) return { id: obj.scanId, distance };
+    if (obj.scanId) return { id: obj.scanId, distance, hit: null };
     const p = {
       x: origin.x + dir.x * distance,
       y: origin.y + dir.y * distance,
       z: origin.z + dir.z * distance,
     };
     const module = baseModuleAt(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z));
-    return module ? { id: module, distance } : null;
+    return module ? { id: module, distance, hit: null } : null;
   }
 
   if (voxelHit.hit) {
     const id = classifyBlock(voxelHit);
-    return id ? { id, distance: voxelHit.distance } : null;
+    return id ? { id, distance: voxelHit.distance, hit: { x: voxelHit.x, y: voxelHit.y, z: voxelHit.z } } : null;
   }
 
   const skyId = resolveSky(dir, skyBodies);
-  return skyId ? { id: skyId, distance: Infinity } : null;
+  return skyId ? { id: skyId, distance: Infinity, hit: null } : null;
+}
+
+// Região que contém a base inteira (habitat, túnel, estufa, cúpula e foguete), em blocos.
+const BASE_REGION = { X_MIN: -27, X_MAX: 19, Y_MIN: 8, Y_MAX: 22, Z_MIN: -10, Z_MAX: 10 };
+const PATCH_RADIUS = 3; // terreno: mancha em volta do bloco mirado
+const NEIGHBORS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+
+function isExposed(world, x, y, z) {
+  return NEIGHBORS.some(([dx, dy, dz]) => world.getBlock(x + dx, y + dy, z + dz) === BLOCK_IDS.AIR);
+}
+
+/**
+ * Blocos visíveis (com face para o ar) que formam o alvo, para o efeito de scan pintar o
+ * objeto inteiro. Módulos da base e o foguete: todos os blocos daquele módulo. Terreno e borda
+ * da cratera: a mancha do mesmo tipo em volta do bloco mirado. Alvos sem bloco: lista vazia.
+ */
+export function collectScanBlocks(world, target, maxBlocks = 4000) {
+  if (!target) return [];
+  const blocks = [];
+  const add = (x, y, z) => {
+    if (blocks.length < maxBlocks) blocks.push({ x, y, z });
+  };
+
+  const wantsModule = target.id === 'base' || ['habitat', 'airlock', 'tunnel', 'greenhouse', 'cupola', 'lander'].includes(target.id);
+  if (wantsModule) {
+    const R = BASE_REGION;
+    for (let x = R.X_MIN; x <= R.X_MAX; x++) {
+      for (let y = R.Y_MIN; y <= R.Y_MAX; y++) {
+        for (let z = R.Z_MIN; z <= R.Z_MAX; z++) {
+          const block = world.getBlock(x, y, z);
+          if (block === BLOCK_IDS.AIR) continue;
+          const id = classifyBlockAt(block, x, y, z);
+          const matches = target.id === 'base' ? OUTPOST_MODULES.has(id) : id === target.id;
+          if (matches && isExposed(world, x, y, z)) add(x, y, z);
+        }
+      }
+    }
+    return blocks;
+  }
+
+  if (!target.hit) return blocks;
+  const { x: hx, y: hy, z: hz } = target.hit;
+  for (let x = hx - PATCH_RADIUS; x <= hx + PATCH_RADIUS; x++) {
+    for (let y = hy - PATCH_RADIUS; y <= hy + PATCH_RADIUS; y++) {
+      for (let z = hz - PATCH_RADIUS; z <= hz + PATCH_RADIUS; z++) {
+        const block = world.getBlock(x, y, z);
+        if (block === BLOCK_IDS.AIR || classifyBlockAt(block, x, y, z) !== target.id) continue;
+        if (isExposed(world, x, y, z)) add(x, y, z);
+      }
+    }
+  }
+  return blocks;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveScanTarget, rayBoxDistance, baseModuleAt } from './scanTargeting.js';
+import { resolveScanTarget, rayBoxDistance, baseModuleAt, collectScanBlocks } from './scanTargeting.js';
 import { buildNasaSpaceshipAndBase } from '../world/nasaSpaceshipBuilder.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 
@@ -170,5 +170,43 @@ describe('rayBoxDistance', () => {
   it('misses boxes off to the side or out of range', () => {
     expect(rayBoxDistance({ x: 3, y: 0, z: 0 }, NORTH, box, 100)).toBeNull();
     expect(rayBoxDistance({ x: 0, y: 0, z: 0 }, NORTH, box, 3)).toBeNull();
+  });
+});
+
+describe('collectScanBlocks', () => {
+  it('collects every visible block of the scanned module and nothing else', () => {
+    const world = baseWorld();
+    const blocks = collectScanBlocks(world, { id: 'habitat', hit: null });
+    expect(blocks.length).toBeGreaterThan(50);
+    expect(blocks.every((b) => baseModuleAt(b.x, b.y, b.z) === 'habitat')).toBe(true);
+  });
+
+  it('collects all outpost modules for the whole base but leaves the rocket out', () => {
+    const world = baseWorld();
+    const blocks = collectScanBlocks(world, { id: 'base', hit: null });
+    const modules = new Set(blocks.map((b) => baseModuleAt(b.x, b.y, b.z)));
+    expect(modules.has('habitat')).toBe(true);
+    expect(modules.has('greenhouse')).toBe(true);
+    expect(modules.has('lander')).toBe(false);
+  });
+
+  it('collects the exposed patch of the same terrain around the aimed block', () => {
+    const world = createMapWorld();
+    for (let x = -5; x <= 5; x++) {
+      for (let z = -5; z <= 5; z++) {
+        world.setBlock(x, 8, z, BLOCK_IDS.REGOLITH);
+        world.setBlock(x, 7, z, BLOCK_IDS.REGOLITH); // enterrado entre regolito e basalto: não aparece
+        world.setBlock(x, 6, z, BLOCK_IDS.BASALT);
+      }
+    }
+    world.setBlock(1, 8, 0, BLOCK_IDS.BASALT);
+    const blocks = collectScanBlocks(world, { id: 'regolith', hit: { x: 0, y: 8, z: 0 } });
+    expect(blocks).toHaveLength(7 * 7 - 1);
+    expect(blocks.every((b) => b.y === 8 && Math.abs(b.x) <= 3 && Math.abs(b.z) <= 3)).toBe(true);
+  });
+
+  it('returns nothing for targets without blocks', () => {
+    expect(collectScanBlocks(createMapWorld(), { id: 'earth', hit: null })).toEqual([]);
+    expect(collectScanBlocks(createMapWorld(), null)).toEqual([]);
   });
 });
