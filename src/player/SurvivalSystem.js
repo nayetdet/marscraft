@@ -54,6 +54,15 @@ export class SurvivalSystem {
     return isInsidePressurizedVolume(pos.x, pos.y, pos.z);
   }
 
+  get isInDanger() {
+    return (
+      this.health <= SURVIVAL_CONFIG.DANGER_THRESHOLD ||
+      this.oxygen <= SURVIVAL_CONFIG.DANGER_THRESHOLD ||
+      this.water <= SURVIVAL_CONFIG.DANGER_THRESHOLD ||
+      this.food <= SURVIVAL_CONFIG.DANGER_THRESHOLD
+    );
+  }
+
   // maxOxygenRefill: quanto O2 a bateria da base consegue pagar neste frame (sem energia = 0)
   update(dt, playerPos, maxOxygenRefill = Infinity) {
     this.lastOxygenRefilled = 0;
