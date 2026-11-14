@@ -61,10 +61,10 @@ export class MarsSkySystem {
   _initLights() {
     // Luz ambiente moderada e Sol mais forte: as faces de cima e de lado dos blocos ficam
     // diferentes, e o relevo aparece. A sombra de canto vem da cor por vertice (VoxelWorld).
-    this.baseAmbient = new THREE.AmbientLight(0xfff4e6, 0.58);
+    this.baseAmbient = new THREE.AmbientLight(0xfff4e6, 0.7);
     this.scene.add(this.baseAmbient);
 
-    this.ambientLight = new THREE.HemisphereLight(0xffe4c4, 0xc87d44, 0.85);
+    this.ambientLight = new THREE.HemisphereLight(0xffe4c4, 0xd6a27c, 0.85);
     this.scene.add(this.ambientLight);
 
     this.sunLight = new THREE.DirectionalLight(0xfff7eb, 1.15);
@@ -105,15 +105,15 @@ export class MarsSkySystem {
 
     this.sunLight.position.copy(sunDir).multiplyScalar(120).add(playerPos);
     // A noite fica igual a antes; so o dia ganha mais Sol e menos luz ambiente
-    this.sunLight.intensity = 0.45 + dayStrength * 1.3;
+    this.sunLight.intensity = 0.45 + dayStrength * 1.15;
 
     this.sunLight.color
       .copy(SUN_NIGHT_COLOR)
       .lerp(SUN_DAY_COLOR, dayStrength)
       .lerp(SUN_TWILIGHT_COLOR, twilightStrength * 0.55);
 
-    this.ambientLight.intensity = 0.55 + dayStrength * 0.4;
-    this.baseAmbient.intensity = 0.5 + dayStrength * 0.08;
+    this.ambientLight.intensity = 0.55 + dayStrength * 0.45;
+    this.baseAmbient.intensity = 0.5 + dayStrength * 0.2;
 
     this.scene.fog.color
       .copy(FOG_NIGHT_COLOR)

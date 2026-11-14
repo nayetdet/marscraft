@@ -84,14 +84,14 @@ export function createBlockMaterials() {
     ctx.fillRect(5, 12, 5, 1);
   });
 
-  // 5. Casco Branco da Base NASA: painel branco levemente quente. A emenda fica so em duas
+  // 5. Casco Branco da Base NASA: painel branco levemente frio (compensa a luz alaranjada de Marte). A emenda fica so em duas
   // bordas (embaixo e a direita), entao a parede vira uma grade fina em vez de azulejo.
   register(BLOCK_IDS.NASA_HULL, (ctx) => {
-    ctx.fillStyle = '#f7f7f5';
+    ctx.fillStyle = '#f5f8fc';
     ctx.fillRect(0, 0, 16, 16);
-    ctx.fillStyle = '#fdfdfc';
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, 15, 1);
-    ctx.fillStyle = '#d7d8d6';
+    ctx.fillStyle = '#d2dae4';
     ctx.fillRect(0, 15, 16, 1);
     ctx.fillRect(15, 0, 1, 16);
   });
