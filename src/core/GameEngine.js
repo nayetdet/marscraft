@@ -383,13 +383,13 @@ export class GameEngine {
       { type: 'console', x: 3.0, y: 11.5, z: -4.8, label: 'Press F: mission computer' },
       { type: 'science', x: 4.5, y: 11.5, z: -4.8, label: 'Press F: science & radio to Earth' },
       { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
-      { type: 'powerroom', x: -7.2, y: 11.5, z: -10.5, label: 'Press F: power & heat control' },
-      { type: 'powerroom', x: -5.2, y: 10.8, z: -13.0, label: 'Press F: power & heat control' },
-      { type: 'galley', x: 5.6, y: 11.35, z: -10.2, label: 'Press F: kitchen' },
-      { type: 'galley', x: 7.1, y: 11.3, z: -12.4, label: 'Press F: pantry & kitchen' },
-      { type: 'hygiene', x: -7.5, y: 11.1, z: -19.3, label: 'Press F: bathroom & water recycler' },
-      { type: 'hygiene', x: -9.85, y: 11.6, z: -18.2, label: 'Press F: bathroom & water recycler' },
-      { type: 'workshop', x: 3.0, y: 11.5, z: -19.1, label: 'Press F: 3D printer workshop' },
+      { type: 'powerroom', x: -12.0, y: 11.5, z: -11.5, label: 'Press F: power & heat control' },
+      { type: 'powerroom', x: -11.5, y: 10.8, z: -19.4, label: 'Press F: power & heat control' },
+      { type: 'galley', x: 9.1, y: 11.35, z: -11.2, label: 'Press F: kitchen' },
+      { type: 'galley', x: 10.1, y: 11.3, z: -17.4, label: 'Press F: pantry & kitchen' },
+      { type: 'hygiene', x: -12.5, y: 11.1, z: -33.3, label: 'Press F: bathroom & water recycler' },
+      { type: 'hygiene', x: -13.85, y: 11.6, z: -27.5, label: 'Press F: bathroom & water recycler' },
+      { type: 'workshop', x: 7.5, y: 11.5, z: -33.1, label: 'Press F: 3D printer workshop' },
       { type: 'greenhouse', x: -17, y: 11.4, z: 0, label: 'Press F: harvest carrot' },
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
@@ -555,9 +555,12 @@ export class GameEngine {
     this.scene.add(domeLight);
 
     // Luz do Modulo Norte (issue #56)
-    const northLight = new THREE.PointLight(0xf8fafc, 1.6, 24);
-    northLight.position.set(-2, 13.0, -15);
-    this.scene.add(northLight);
+    // Ala norte: uma luz para cada par de modulos (energia + cozinha, banheiro + oficina)
+    for (const z of [-16, -30]) {
+      const northLight = new THREE.PointLight(0xf8fafc, 1.7, 30);
+      northLight.position.set(-2, 13.0, z);
+      this.scene.add(northLight);
+    }
 
     // Luz clara dentro do Módulo da Academia (Gym & MedBay)
     const gymLight = new THREE.PointLight(0xe0f2fe, 1.5, 16);

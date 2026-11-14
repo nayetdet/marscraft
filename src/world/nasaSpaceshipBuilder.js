@@ -1,5 +1,6 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { WORLD_CONFIG } from '../config/constants.js';
+import { NORTH_WING, northLinkBox } from './habitatLayout.js';
 
 function fillBox(world, x1, y1, z1, x2, y2, z2, blockId) {
   for (let x = x1; x <= x2; x++) {
@@ -312,56 +313,90 @@ function buildGymModule(world, groundY) {
   }
 }
 
-// 5. Modulo Norte de Servicos (issue #56): energia/aquecimento, cozinha, banheiro e oficina.
-// Paredes em x = -12 e 8, z = -21 e -10; corredor de x = -3..-2 ate a parede norte do habitat.
-// As divisorias das salas sao modelos 3D (nasaModelsBuilder), para o ar continuar livre aqui.
+// 5. Ala Norte (issue #56, ampliada): corredor central envidracado e quatro modulos separados
+// (energia, cozinha, banheiro, oficina), cada um ligado por um corredor curto. A geometria vem
+// de NORTH_WING (habitatLayout.js), a mesma que marca o ar pressurizado.
 function buildNorthModule(world, groundY) {
   const floorY = groundY + 1; // y = 9
   const ceilY = groundY + 6; // y = 14
+  const { SPINE, ROOMS, LINK_HEIGHT } = NORTH_WING;
+  const isWindowY = (y) => y === floorY + 2 || y === floorY + 3;
 
-  for (let x = -12; x <= 8; x++) {
-    for (let z = -21; z <= -10; z++) {
-      const isWall = x === -12 || x === 8 || z === -21 || z === -10;
-      const isDoor = z === -10 && (x === -3 || x === -2);
-      for (let y = floorY; y <= ceilY; y++) {
-        if (y === floorY) {
-          // Corredor central de metal ate a porta, salas em piso branco
-          const isAisle = (x >= -4 && x <= -1) || (z >= -16 && z <= -15);
-          world.setBlock(x, y, z, isAisle && !isWall ? BLOCK_IDS.THRUSTER_METAL : BLOCK_IDS.NASA_HULL, false);
-        } else if (y === ceilY) {
-          const isLight = (x === -8 || x === 3) && (z === -13 || z === -18);
-          const isSkylight = (x === -3 || x === -2) && z >= -17 && z <= -14;
-          world.setBlock(x, y, z, isLight ? BLOCK_IDS.HAB_LIGHT : isSkylight ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL, false);
-        } else if (isWall && !isDoor) {
-          const isWindowHeight = y === floorY + 2 || y === floorY + 3;
-          const isWindowSpan =
-            (z === -21 && ((x >= -10 && x <= -6) || (x >= 1 && x <= 5))) ||
-            ((x === -12 || x === 8) && z >= -18 && z <= -13);
-          world.setBlock(x, y, z, isWindowHeight && isWindowSpan ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL, false);
-        } else {
-          world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
+  // Casco: caixa cheia um bloco maior que o ar, depois escavada por dentro
+  const shell = (box, floorId) => {
+    for (let x = box.xMin - 1; x <= box.xMax + 1; x++) {
+      for (let z = box.zMin - 1; z <= box.zMax + 1; z++) {
+        const inside = x >= box.xMin && x <= box.xMax && z >= box.zMin && z <= box.zMax;
+        for (let y = floorY; y <= ceilY; y++) {
+          world.setBlock(x, y, z, y === floorY && inside ? floorId : BLOCK_IDS.NASA_HULL, false);
         }
       }
     }
+  };
+  const carve = (box, height) => {
+    for (let x = box.xMin; x <= box.xMax; x++) {
+      for (let z = box.zMin; z <= box.zMax; z++) {
+        for (let y = floorY + 1; y <= floorY + height; y++) world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
+      }
+    }
+  };
+  const fullHeight = ceilY - floorY - 1;
+
+  for (const room of ROOMS) shell(room, BLOCK_IDS.NASA_HULL);
+  for (const room of ROOMS) shell(northLinkBox(room), BLOCK_IDS.THRUSTER_METAL);
+  // O corredor central nao refaz a parede norte do habitat (z = -6): so abre a porta nela
+  shell({ ...SPINE, zMax: SPINE.zMax - 1 }, BLOCK_IDS.THRUSTER_METAL);
+  for (let x = SPINE.xMin; x <= SPINE.xMax; x++) world.setBlock(x, floorY, SPINE.zMax, BLOCK_IDS.THRUSTER_METAL, false);
+
+  for (const room of ROOMS) {
+    carve(room, fullHeight);
+    const link = northLinkBox(room);
+    // O ar do corredor curto atravessa as duas paredes (a do corredor central e a do modulo)
+    carve({ ...link, xMin: link.xMin - 1, xMax: link.xMax + 1 }, LINK_HEIGHT);
+    // Faixa de metal da porta ate o meio do modulo
+    const midX = Math.round((room.xMin + room.xMax) / 2);
+    for (let x = Math.min(midX, link.xMin); x <= Math.max(midX, link.xMax); x++) {
+      if (x < room.xMin || x > room.xMax) continue;
+      for (let z = room.door[0]; z <= room.door[1]; z++) world.setBlock(x, floorY, z, BLOCK_IDS.THRUSTER_METAL, false);
+    }
+  }
+  carve(SPINE, fullHeight);
+
+  // Janelas e luzes dos modulos
+  for (const room of ROOMS) {
+    const outerX = room.side === 'west' ? room.xMin - 1 : room.xMax + 1;
+    const midX = Math.round((room.xMin + room.xMax) / 2);
+    const midZ = Math.round((room.zMin + room.zMax) / 2);
+    for (let y = floorY + 2; y <= floorY + 3; y++) {
+      for (let z = midZ - 2; z <= midZ + 2; z++) world.setBlock(outerX, y, z, BLOCK_IDS.HAB_GLASS, false);
+      for (let x = midX - 2; x <= midX + 2; x++) {
+        world.setBlock(x, y, room.zMin - 1, BLOCK_IDS.HAB_GLASS, false);
+        world.setBlock(x, y, room.zMax + 1, BLOCK_IDS.HAB_GLASS, false);
+      }
+    }
+    for (const [dx, dz] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) {
+      world.setBlock(midX + dx, ceilY, midZ + dz, BLOCK_IDS.HAB_LIGHT, false);
+    }
+    world.setBlock(midX, ceilY, midZ, BLOCK_IDS.HAB_GLASS, false);
   }
 
-  // Corredor ate o habitat (z = -9..-6), atravessando a parede norte do habitat em z = -6
-  for (let z = -9; z <= -6; z++) {
-    for (let x = -4; x <= -1; x++) {
-      const isSideWall = x === -4 || x === -1;
-      for (let y = floorY; y <= ceilY; y++) {
-        if (y === floorY) {
-          world.setBlock(x, y, z, isSideWall ? BLOCK_IDS.NASA_HULL : BLOCK_IDS.THRUSTER_METAL, false);
-        } else if (y === ceilY) {
-          world.setBlock(x, y, z, !isSideWall && z === -8 ? BLOCK_IDS.HAB_LIGHT : BLOCK_IDS.NASA_HULL, false);
-        } else if (isSideWall) {
-          // Na parede do habitat (z = -6) a lateral do corredor ja e a propria parede
-          const isWindow = z === -8 && (y === floorY + 2 || y === floorY + 3);
-          world.setBlock(x, y, z, isWindow ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL, false);
-        } else {
-          world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
-        }
+  // Corredor central: janelas dos dois lados (fora dos trechos com porta), luz e claraboia no teto
+  const nearDoor = (z) => ROOMS.some((room) => z >= room.door[0] - 1 && z <= room.door[1] + 1);
+  for (let z = SPINE.zMin; z <= SPINE.zMax - 2; z++) {
+    const glassSpan = ((-z) % 4) < 2;
+    if (glassSpan && !nearDoor(z)) {
+      for (let y = floorY + 2; y <= floorY + 3; y++) {
+        world.setBlock(SPINE.xMin - 1, y, z, BLOCK_IDS.HAB_GLASS, false);
+        world.setBlock(SPINE.xMax + 1, y, z, BLOCK_IDS.HAB_GLASS, false);
       }
+    }
+    for (let x = SPINE.xMin; x <= SPINE.xMax; x++) {
+      world.setBlock(x, ceilY, z, nearDoor(z) ? BLOCK_IDS.HAB_LIGHT : glassSpan ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL, false);
+    }
+  }
+  for (let x = SPINE.xMin; x <= SPINE.xMax; x++) {
+    for (let y = floorY + 2; y <= floorY + 3; y++) {
+      if (isWindowY(y)) world.setBlock(x, y, SPINE.zMin - 1, BLOCK_IDS.HAB_GLASS, false);
     }
   }
 }

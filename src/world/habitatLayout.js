@@ -48,19 +48,31 @@ export const HABITAT_LAYOUT = {
   SHELTER_X_MAX: 5.75,
   SHELTER_Z_MIN: 3.85,
   SHELTER_Z_MAX: 5.8,
-  // Corredor norte (issue #56): sai da parede norte do habitat entre os beliches e o console.
-  // Ar em x = -3..-2, z = -10..-6 (atravessa as paredes z = -6 do habitat e z = -10 do modulo).
-  NORTH_CORRIDOR_X_MIN: -3,
-  NORTH_CORRIDOR_X_MAX: -2,
-  NORTH_CORRIDOR_Z_MIN: -10,
-  NORTH_CORRIDOR_Z_MAX: -6,
-  // Modulo norte (energia, cozinha, banheiro, oficina): paredes em x = -12 e 8, z = -21 e -10;
-  // ar em x = -11..7, z = -20..-11.
-  NORTH_X_MIN: -11,
-  NORTH_X_MAX: 7,
-  NORTH_Z_MIN: -20,
-  NORTH_Z_MAX: -11,
 };
+
+// Ala norte (issue #56, ampliada): um corredor central com janelas sai da parede norte do
+// habitat e liga quatro modulos separados, cada um com a sua funcao. Entre eles fica Marte.
+// Coordenadas de bloco do AR de cada volume (as paredes ficam um bloco para fora).
+// `door` = faixa em z do corredor curto que liga o modulo ao corredor central.
+export const NORTH_WING = {
+  SPINE: { xMin: -3, xMax: -2, zMin: -31, zMax: -6 },
+  ROOMS: [
+    { id: 'power', name: 'POWER & HEAT', side: 'west', xMin: -15, xMax: -9, zMin: -20, zMax: -12, door: [-17, -16] },
+    { id: 'kitchen', name: 'KITCHEN', side: 'east', xMin: 4, xMax: 10, zMin: -20, zMax: -12, door: [-17, -16] },
+    { id: 'bathroom', name: 'BATHROOM', side: 'west', xMin: -15, xMax: -9, zMin: -34, zMax: -26, door: [-31, -30] },
+    { id: 'workshop', name: 'WORKSHOP', side: 'east', xMin: 4, xMax: 10, zMin: -34, zMax: -26, door: [-31, -30] },
+  ],
+  // Altura livre dos corredores curtos (3 blocos): sobra parede em cima para a placa da sala
+  LINK_HEIGHT: 3,
+};
+
+// Ar do corredor curto de um modulo: vai da parede do corredor central ate a parede do modulo
+export function northLinkBox(room) {
+  const { SPINE } = NORTH_WING;
+  return room.side === 'west'
+    ? { xMin: room.xMax + 1, xMax: SPINE.xMin - 1, zMin: room.door[0], zMax: room.door[1] }
+    : { xMin: SPINE.xMax + 1, xMax: room.xMin - 1, zMin: room.door[0], zMax: room.door[1] };
+}
 
 const L = HABITAT_LAYOUT;
 
@@ -133,12 +145,15 @@ function inBox(bx, by, bz, xMin, xMax, zMin, zMax) {
   return bx >= xMin && bx <= xMax && bz >= zMin && bz <= zMax && by > L.FLOOR_Y && by < L.CEIL_Y;
 }
 
-function inNorthCorridor(bx, by, bz) {
-  return inBox(bx, by, bz, L.NORTH_CORRIDOR_X_MIN, L.NORTH_CORRIDOR_X_MAX, L.NORTH_CORRIDOR_Z_MIN, L.NORTH_CORRIDOR_Z_MAX);
-}
-
-function inNorthModule(bx, by, bz) {
-  return inBox(bx, by, bz, L.NORTH_X_MIN, L.NORTH_X_MAX, L.NORTH_Z_MIN, L.NORTH_Z_MAX);
+function inNorthWing(bx, by, bz) {
+  const { SPINE, ROOMS, LINK_HEIGHT } = NORTH_WING;
+  if (inBox(bx, by, bz, SPINE.xMin, SPINE.xMax, SPINE.zMin, SPINE.zMax)) return true;
+  for (const room of ROOMS) {
+    if (inBox(bx, by, bz, room.xMin, room.xMax, room.zMin, room.zMax)) return true;
+    const link = northLinkBox(room);
+    if (by <= L.FLOOR_Y + LINK_HEIGHT && inBox(bx, by, bz, link.xMin, link.xMax, link.zMin, link.zMax)) return true;
+  }
+  return false;
 }
 
 // Recebe a posicao dos olhos do jogador e diz se ela esta num bloco de ar pressurizado.
@@ -154,8 +169,7 @@ export function isInsidePressurizedVolume(x, y, z) {
     inGreenhouseDome(bx, by, bz) ||
     inGymCorridor(bx, by, bz) ||
     inGymModule(bx, by, bz) ||
-    inNorthCorridor(bx, by, bz) ||
-    inNorthModule(bx, by, bz)
+    inNorthWing(bx, by, bz)
   );
 }
 

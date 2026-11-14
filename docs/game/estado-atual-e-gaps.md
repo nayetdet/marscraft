@@ -23,6 +23,8 @@ A base é dividida em zonas com placa, cor no piso e função: `CMD-1` comando, 
 - **Pôsteres educativos** (`basePosters.js`): 8 pôsteres com um quadro "REAL DATA" e a fonte; três deles formam uma galeria no túnel da estufa. Mirar e apertar [F] mostra o dado.
 - **Menu**: "NASA Data" (fontes e aviso de que o dado é embutido, não ao vivo) e "Demo Controls" (adiantar a próxima tempestade real, noite, meio-dia e bateria a 10 %), pensado para jurados e para gravar o vídeo.
 
+A ala norte (`NORTH_WING` em `habitatLayout.js`) é um corredor central envidraçado que liga quatro módulos separados, cada um com a sua função: energia e aquecimento, cozinha, banheiro e oficina. O campo solar fica a oeste do módulo de energia.
+
 O abrigo de tempestade, o terminal de rádio e o módulo norte são da issue #56 (`nasaModelsBuilder.js`); `baseDecor.js` só acrescenta placa, pôster e medidor a eles.
 
 ## Comparação com o que o desafio pede

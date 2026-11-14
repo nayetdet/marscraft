@@ -5,6 +5,9 @@ function noise2D(x, z) {
   return Math.sin(x * 0.045) * Math.cos(z * 0.045) * 2.1 + Math.sin((x + z) * 0.12) * 0.75;
 }
 
+// Retangulo aplainado para a ala norte (NORTH_WING) e os paineis solares a oeste dela
+const NORTH_PAD = { xMin: -27, xMax: 11, zMin: -38, zMax: -8, blend: 3 };
+
 export function generateMartianTerrain(world) {
   const { halfX, halfZ } = world;
   const groundY = WORLD_CONFIG.GROUND_LEVEL;
@@ -31,6 +34,14 @@ export function generateMartianTerrain(world) {
       if (baseDistance > 40) {
         const rimProgress = Math.min(1.2, (baseDistance - 40) / 10);
         height += Math.pow(rimProgress, 1.5) * 5.8;
+      }
+      // Terreno plano sob a ala norte e o campo solar (fora do disco plano da base)
+      const padDx = Math.max(NORTH_PAD.xMin - x, 0, x - NORTH_PAD.xMax);
+      const padDz = Math.max(NORTH_PAD.zMin - z, 0, z - NORTH_PAD.zMax);
+      const padDistance = Math.hypot(padDx, padDz);
+      if (padDistance < NORTH_PAD.blend) {
+        const blend = padDistance / NORTH_PAD.blend;
+        height = groundY * (1 - blend) + height * blend;
       }
       const surfaceY = Math.min(world.sizeY - 2, Math.max(2, Math.floor(height)));
       for (let y = 0; y <= surfaceY; y += 1) {
