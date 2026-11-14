@@ -77,6 +77,6 @@ docs/                      contexto do desafio, APIs e dados reais
 
 - **Idioma:** código, identificadores e **textos da UI em inglês** (a submissão é em inglês). Docs e parte dos comentários estão em pt-BR. Textos da UI sem emoji (estilo pixel atual).
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`).
-- **Fluxo de PR:** skills do projeto em `.claude/skills/`: `/start-issue` (pegar uma issue) e `/send-pr` (rebase, checagens e PR vinculado a uma issue). Repo `nayetdet/nasa-space-apps`, branch base `main`. Nunca faça push direto na `main`.
+- **Fluxo de PR:** skills do projeto em `.claude/skills/`: `/setup-issue` (sessão só para criar issues, com checagem de duplicata e do código), `/start-issue` (pegar uma issue) e `/send-pr` (rebase, checagens e PR vinculado a uma issue). Repo `nayetdet/nasa-space-apps`, branch base `main`. Nunca faça push direto na `main`.
 - **Performance:** o loop roda a cada frame. Reaproveite `THREE.Vector3`/`Color` (veja os `_sunDir` e as cores constantes em `MarsSkySystem.js`) e evite alocar dentro do `update`.
 - **Créditos e referências:** todo asset, código ou dado externo usado precisa entrar na lista de *References* da submissão. Mantenha-a atualizada nos docs ou no README.

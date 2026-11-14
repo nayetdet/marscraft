@@ -4,6 +4,7 @@ import { createBlockMaterials } from '../graphics/blockMaterials.js';
 import { MarsSkySystem } from '../sky/MarsSkySystem.js';
 import { VoxelWorld } from '../world/VoxelWorld.js';
 import { buildNasaCustomModels } from '../world/nasaModelsBuilder.js';
+import { targetCrop, removeCrop } from '../world/cropInteraction.js';
 import { PlayerPhysics } from '../player/PlayerPhysics.js';
 import { PlayerHand } from '../player/PlayerHand.js';
 import { SurvivalSystem } from '../player/SurvivalSystem.js';
@@ -39,8 +40,10 @@ export class GameEngine {
     this.world = new VoxelWorld(this.scene, materials);
 
     // Modelos 3D detalhados estilo Mod de Minecraft + Caixas de Colisão AABB
-    const { group: customModels, colliders } = buildNasaCustomModels(this.scene);
+    const { group: customModels, colliders, plants } = buildNasaCustomModels(this.scene);
     this.customModels = customModels;
+    this.plants = plants;
+    this.customColliders = colliders;
 
     this.player = new PlayerPhysics(this.world, colliders);
     this.survival = new SurvivalSystem();
@@ -76,6 +79,7 @@ export class GameEngine {
         this.playerHand.handGroup.visible = !zoomed;
       },
       getTargetedBlock: () => this._getTargetedBlock(),
+      harvestCrop: (plant) => removeCrop(plant, this.plants, this.customColliders),
     });
 
     window.addEventListener('resize', () => this._onResize());
@@ -104,7 +108,8 @@ export class GameEngine {
 
   _getTargetedBlock() {
     const dir = this.player.getLookDirection();
-    return this.world.raycast(this.player.pos, dir, CAMERA_CONFIG.REACH_DISTANCE);
+    const voxelHit = this.world.raycast(this.player.pos, dir, CAMERA_CONFIG.REACH_DISTANCE);
+    return targetCrop(this.plants, this.player.pos, dir, CAMERA_CONFIG.REACH_DISTANCE, voxelHit);
   }
 
   _updateCamera() {
@@ -156,7 +161,14 @@ export class GameEngine {
       const hit = this._getTargetedBlock();
       if (hit.hit) {
         this.highlightBox.visible = true;
-        this.highlightBox.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+        if (hit.type === 'crop') {
+          const bounds = new THREE.Box3().setFromObject(hit.plant);
+          bounds.getCenter(this.highlightBox.position);
+          bounds.getSize(this.highlightBox.scale);
+        } else {
+          this.highlightBox.scale.set(1, 1, 1);
+          this.highlightBox.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+        }
       } else {
         this.highlightBox.visible = false;
       }

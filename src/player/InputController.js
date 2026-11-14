@@ -11,6 +11,7 @@ export class InputController {
     hud,
     onToggleZoom,
     getTargetedBlock,
+    harvestCrop,
   }) {
     this.domElement = domElement;
     this.player = player;
@@ -21,6 +22,7 @@ export class InputController {
     this.hud = hud;
     this.onToggleZoom = onToggleZoom;
     this.getTargetedBlock = getTargetedBlock;
+    this.harvestCrop = harvestCrop;
 
     this.keys = {};
     this.isLocked = false;
@@ -122,6 +124,7 @@ export class InputController {
     document.addEventListener('pointerlockchange', () => {
       this.isLocked = document.pointerLockElement === this.domElement;
       if (!this.isLocked) this._cancelBreaking();
+      if (!this.isLocked) this.keys = {};
       if (!this.survival.isDead && !this.hud.isInventoryOpen) {
         overlay.classList.toggle('hidden', this.isLocked);
       }
@@ -139,6 +142,9 @@ export class InputController {
     window.addEventListener('keydown', (e) => {
       if (this.survival.isDead) return;
       if (this.hud.isInventoryOpen && e.code !== 'KeyE') return;
+      if (this.isLocked && (e.code.startsWith('Control') || e.code.startsWith('Shift') || (e.ctrlKey && e.code === 'KeyW'))) {
+        e.preventDefault();
+      }
       this.keys[e.code] = true;
 
       if (e.code.startsWith('Digit')) {
@@ -178,6 +184,8 @@ export class InputController {
       this.keys[e.code] = false;
     });
 
+    window.addEventListener('blur', () => { this.keys = {}; });
+
     window.addEventListener('wheel', (e) => {
       if (!this.isLocked || this.survival.isDead) return;
       const dir = Math.sign(e.deltaY);
@@ -213,7 +221,7 @@ export class InputController {
         }
 
         // Caso contrário, coloca o bloco no mundo
-        if (!hit.hit) return;
+        if (!hit.hit || hit.type === 'crop') return;
         const nx = hit.x + hit.normal.x;
         const ny = hit.y + hit.normal.y;
         const nz = hit.z + hit.normal.z;
