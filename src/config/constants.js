@@ -81,6 +81,9 @@ export const MISSION_CONFIG = {
   MAX_ENERGY: 100, START_ENERGY: 80, SOLAR_RATE: 0.22,
   GREENHOUSE_RATE: 0.025, OXYGEN_ENERGY_RATE: 0.18,
   AIRLOCK_COST: 1, AIRLOCK_CYCLE: 3, DOOR_SPEED: 5,
+  // Limpeza eletrostatica do traje no airlock (segundos). Sem energia, o aviso fica na tela
+  // SUIT_CLEAN_SKIP_TIME e a poeira entra na base. Ver docs/data/airlock-e-poeira.md
+  SUIT_CLEAN_TIME: 2.5, SUIT_CLEAN_SKIP_TIME: 1.5,
   CROP_GROWTH_TIME: 90, STORM_INTERVAL: 240, STORM_DURATION: 35, STORM_WARNING: 20,
   RADIATION_RATE: 0.04, STORM_RADIATION_RATE: 0.25,
 
