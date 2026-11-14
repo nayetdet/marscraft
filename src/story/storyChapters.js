@@ -1,63 +1,100 @@
+import { STORY_CONFIG } from '../config/constants.js';
 import { formatDateDMY } from '../mission/missionText.js';
 
 // Textos da historia (UI em ingles, para criancas de 7 a 12 anos, sem emoji).
 // So dados: quem decide quando cada coisa aparece e o StoryDirector.
+//
+// Um card e mais desenho do que texto: { title, lines?, choices?, link?, source? }
+//   lines:   [{ icon, text }]  frases curtas, cada uma com um icone (pixelIcons.js)
+//   choices: [{ icon, name, key?, good, bad }]  duas opcoes lado a lado, com o ganho e o custo
+//   link:    { minutes, millionKm }  desenho do sinal de radio indo de Marte ate a Terra
 
 export const CARDS = {
   welcome: {
-    title: 'SUIT COMPUTER',
-    text: 'Welcome to Mars, Commander! Your suit has only a little oxygen, so go inside the base. The base runs on solar power: the battery charges by day and drains at night.',
+    title: 'WELCOME TO MARS',
+    lines: [
+      { icon: 'air', text: 'Your suit air is low' },
+      { icon: 'door', text: 'Go inside the base' },
+    ],
   },
   inside: {
-    title: 'BASE COMPUTER',
-    text: 'You are safe inside. The base makes oxygen for you, but every breath uses battery power. Now tell Earth that you landed.',
-  },
-  firstJob: {
-    title: 'MISSION CONTROL',
-    text: 'We hear you, Commander! First job: go outside and bring 1 block of ice into the base. On Mars, ice is water, air and rocket fuel.',
+    title: 'SAFE INSIDE',
+    lines: [
+      { icon: 'air', text: 'The base makes your air' },
+      { icon: 'bolt', text: 'Making air uses battery' },
+      { icon: 'radio', text: 'Now call Earth' },
+    ],
   },
   act2: {
-    title: 'MISSION CONTROL',
-    text: 'Great work! Now get ready to come home: fill the MAV rocket with fuel made from ice, survive 3 solar storms and send your science to Earth. Every job uses the same battery, so choose well!',
+    title: 'GET READY TO GO HOME',
+    lines: [
+      { icon: 'rocket', text: 'Fill the rocket with ice fuel' },
+      { icon: 'storm', text: `Survive ${STORY_CONFIG.STORMS_FOR_WINDOW} solar storms` },
+      { icon: 'radio', text: 'Send your science to Earth' },
+      { icon: 'bolt', text: 'One battery for it all: choose!' },
+    ],
   },
   stormGuide: {
-    title: 'SOLAR STORM WARNING',
-    text: 'A solar storm is coming! Two ways to stay safe: hide inside the base (the storm shelter with its water wall is the safest spot, but you stop working outside), or turn on the shield [R] (you keep working, but it eats your battery).',
+    title: 'SOLAR STORM COMING',
+    choices: [
+      { icon: 'home', name: 'HIDE', good: 'Safest spot', bad: 'No work outside' },
+      { icon: 'shield', name: 'SHIELD', key: 'R', good: 'Keep working', bad: 'Eats battery' },
+    ],
   },
   window: {
-    title: 'MISSION CONTROL',
-    text: 'The launch window is open! Earth and Mars are lined up for the trip home. Fill the tank, send your science data and launch before the window closes.',
+    title: 'LAUNCH WINDOW OPEN',
+    lines: [
+      { icon: 'rocket', text: 'Fill the tank' },
+      { icon: 'radio', text: 'Send your data' },
+      { icon: 'clock', text: 'Launch before time runs out' },
+    ],
   },
 };
 
-// Titulo de cada ato, mostrado em cima do objetivo
+// Nome curto de cada ato, ao lado das 3 bolinhas de progresso
 export const ACT_TITLES = {
-  1: 'PART 1 OF 3: ARRIVAL',
-  2: 'PART 2 OF 3: GET READY TO GO HOME',
-  3: 'PART 3 OF 3: LAUNCH WINDOW',
+  1: 'ARRIVAL',
+  2: 'GET READY',
+  3: 'LAUNCH WINDOW',
 };
 
 // Card do primeiro relatorio pelo radio. A distancia e o atraso vem do CommsLink (o mesmo radio
 // do terminal da base): { millionKm, oneWayMinutes, dateIso } calculados para a data real do jogo.
 export function commsCard({ millionKm, oneWayMinutes, dateIso }) {
   return {
-    title: 'RADIO',
-    text: `Message sent! Earth is ${millionKm} million km away today. Radio waves need ${oneWayMinutes} minutes to get there and ${oneWayMinutes} more to come back. Nobody on Earth can help you right away: you decide!`,
+    title: 'MESSAGE SENT',
+    link: { minutes: oneWayMinutes, millionKm },
+    lines: [
+      { icon: 'clock', text: 'Earth cannot help fast: you decide' },
+      { icon: 'ice', text: 'Do not wait: go get 1 ice' },
+    ],
     source: `Distance calculated for ${formatDateDMY(dateIso)} from NASA/JPL planet orbits`,
   };
 }
 
+// A resposta da Terra chega depois, com o jogador ja no trabalho seguinte: e assim que o atraso
+// aparece no jogo, sem ninguem ficar parado esperando.
+export function replyCard({ oneWayMinutes }) {
+  return {
+    title: 'EARTH ANSWERED',
+    lines: [
+      { icon: 'radio', text: 'We hear you, Commander!' },
+      { icon: 'clock', text: `Real radio trip: ${oneWayMinutes * 2} min there and back` },
+    ],
+  };
+}
+
+// Frase curta de cada objetivo (terminal da base). O painel do objetivo mostra a versao em
+// icones: src/story/objectiveView.js.
 export const OBJECTIVES = {
-  'enter-base': 'Go inside the base through the airlock',
-  report: 'Tell Mission Control you landed: go to the command console',
-  'await-reply': 'Waiting for Earth to answer',
-  'collect-ice': 'Go outside and collect 1 block of Martian ice (white crater behind the base, X 22 / Z -22)',
-  'return-base': 'Bring the ice back inside the base',
-  act2: 'Fill the MAV with fuel made from ice and survive 3 solar storms',
-  'storm-guide': 'Get safe: go inside the base or turn on the shield [R]',
-  fuel: 'Fill the MAV fuel tank with ice',
-  'send-data': 'Send your science data to Earth: press [G] at the command console',
-  ignite: 'Go to the MAV rocket and press IGNITE',
+  'enter-base': 'Go inside the base',
+  report: 'Call Earth at the command console',
+  'collect-ice': 'Get 1 block of ice from the ice crater',
+  act2: 'Get the rocket ready to go home',
+  'storm-guide': 'Get safe: hide inside or turn on the shield [R]',
+  fuel: 'Fill the rocket with ice',
+  'send-data': 'Send your science data to Earth [G]',
+  ignite: 'Go to the rocket and press IGNITE',
   done: 'Liftoff! You are going home',
   failed: 'The launch window closed',
 };

@@ -18,24 +18,111 @@
 
 .story-objective.hidden { display: none; }
 
+.story-objective svg { display: block; width: 100%; height: 100%; }
+.story-objective .hidden { display: none; }
+
+/* Ato: 3 bolinhas (feito, agora, falta) e o nome curto */
 .story-objective header {
-  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
   color: #ffcf3a;
   font-size: 11px;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   text-shadow: 1px 1px 0 #000;
 }
 
-.story-objective p {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.3;
+.story-acts { display: flex; gap: 4px; }
+.story-acts i { width: 9px; height: 9px; background: #3a2a3a; box-shadow: inset 0 0 0 1px #6b5a2a; }
+.story-acts i.done { background: #5dff8f; box-shadow: none; }
+.story-acts i.now { background: #ffcf3a; box-shadow: none; }
+
+/* O que fazer agora: icone grande e 2 ou 3 palavras */
+.story-task { display: flex; align-items: center; gap: 9px; }
+
+.story-task-icon {
+  flex: none;
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  padding: 5px;
+  color: #1a031a;
+  background: #ffcf3a;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+  animation: story-task-pulse 1.2s steps(2, end) infinite;
+}
+
+@keyframes story-task-pulse {
+  50% { background: #fff0a8; }
+}
+
+.story-task strong {
+  font-size: 17px;
+  line-height: 1.1;
+  letter-spacing: 0.5px;
   text-shadow: 2px 2px 0 #000;
 }
 
+.story-task-key { margin-left: auto; font-size: 14px; color: #ffcf3a; }
+.story-task-key:empty { display: none; }
+
+/* Ato 1: os 3 passos do tutorial ligados por uma linha */
+.story-steps { display: flex; align-items: center; margin-top: 8px; }
+
+.story-step {
+  flex: none;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  color: #8a7f8a;
+  background: #2a1a2a;
+  box-shadow: inset 0 0 0 1px #5a4a5a;
+}
+
+.story-step.now { color: #1a031a; background: #ffcf3a; box-shadow: none; }
+.story-step.done { color: #06280f; background: #5dff8f; box-shadow: none; }
+.story-steps > i { flex: 1; height: 3px; background: #5a4a5a; }
+.story-step.done + i { background: #5dff8f; }
+
+/* Atos 2 e 3: o que falta para o foguete, lado a lado */
+.story-goals { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.story-goal { display: flex; align-items: center; gap: 5px; color: #ffffff; font-size: 12px; }
+#story-goal-fuel { flex: 1; }
+.story-goal-icon { flex: none; width: 16px; height: 16px; }
+.story-goal b { min-width: 34px; text-align: right; text-shadow: 1px 1px 0 #000; }
+.story-goal.done { color: #5dff8f; }
+
+.story-bar { flex: 1; height: 8px; background: #2a1a2a; box-shadow: inset 0 0 0 1px #5a4a5a; }
+.story-bar i { display: block; width: 0; height: 100%; background: #ffcf3a; }
+.story-goal.done .story-bar i { background: #5dff8f; }
+
+.story-pips { display: flex; gap: 3px; }
+.story-pips i { width: 9px; height: 9px; background: #2a1a2a; box-shadow: inset 0 0 0 1px #5a4a5a; }
+.story-pips i.on { background: #5dff8f; box-shadow: none; }
+
+.story-tick {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  padding: 2px;
+  color: transparent;
+  background: #2a1a2a;
+  box-shadow: inset 0 0 0 1px #5a4a5a;
+}
+
+.story-goal.done .story-tick { color: #06280f; background: #5dff8f; box-shadow: none; }
+
+/* Relogio da janela de lancamento fechando (amarelo, depois vermelho) */
+.story-timer { display: flex; align-items: center; gap: 6px; margin-top: 7px; font-size: 12px; }
+.story-timer b { min-width: 52px; text-align: right; white-space: nowrap; text-shadow: 1px 1px 0 #000; }
+.story-timer.warn { color: #ffcf3a; }
+.story-timer.danger { color: #ff6b5a; }
+.story-timer.danger .story-bar i { background: #ff6b5a; }
+
 /* No modo rover as leituras do rover usam o mesmo canto: elas descem para baixo do painel */
-.hud:has(.story-objective:not(.hidden)) #rover-info { margin-top: 112px; }
+.hud:has(.story-objective:not(.hidden)) #rover-info { margin-top: 132px; }
 
 /* Seta do objetivo na tela. O elemento fica no ponto exato (transform vem do WaypointHud). */
 .waypoint {
@@ -96,6 +183,46 @@
 .waypoint.is-edge .waypoint-bob { top: -17px; animation: none; }
 .waypoint.is-edge .waypoint-tag { bottom: auto; top: 26px; }
 
+/* Card do radio recolhido: faixa fina no lugar do card, com o sinal viajando entre Marte e a Terra */
+.story-signal {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 13;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(440px, calc(100vw - 32px));
+  padding: 6px 10px;
+  color: #7fe3ff;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  background: #0e161e;
+  border: 3px solid #1b2a36;
+  box-shadow: inset 2px 2px rgba(120, 190, 220, 0.25), 4px 4px rgba(0, 0, 0, 0.6);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.story-signal.hidden { display: none; }
+.story-signal .story-planet i { width: 14px; height: 14px; box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.3); }
+
+.story-signal-track {
+  position: relative;
+  flex: 1;
+  min-width: 60px;
+  height: 10px;
+  margin-right: 10px;
+  background: repeating-linear-gradient(90deg, #5a7384 0 6px, transparent 6px 12px) 0 50% / 100% 3px no-repeat;
+}
+
+/* O ponto anda ate a Terra (verde) e volta com a resposta (amarelo) */
+.story-signal-track i { position: absolute; top: 0; left: 0; width: 10px; height: 10px; background: #5dff8f; }
+.story-signal.returning .story-signal-track i { background: #ffcf3a; }
+.story-signal.returning { color: #ffcf3a; }
+.story-signal b { white-space: nowrap; letter-spacing: 0.5px; }
+
 /* Card de radio: mensagens do Controle da Missao. Nao pausa o jogo. */
 .story-card {
   position: fixed;
@@ -145,7 +272,77 @@
   50% { opacity: 0.25; }
 }
 
-.story-card p { margin: 0; }
+.story-card svg { display: block; width: 100%; height: 100%; }
+
+/* Corpo do card: uma frase curta por linha, cada uma com o seu icone */
+.story-card-body { display: grid; gap: 6px; }
+.story-line { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 700; }
+
+.story-line-icon {
+  flex: none;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  padding: 4px;
+  color: #7fe3ff;
+  background: #16232e;
+  box-shadow: inset 0 0 0 1px #2c4354;
+}
+
+/* Sinal de radio: Marte, o ponto viajando e a Terra */
+.story-link { display: flex; align-items: center; gap: 8px; margin: 2px 0 4px; }
+.story-planet { display: grid; justify-items: center; gap: 3px; font-size: 10px; letter-spacing: 1px; }
+.story-planet i { width: 22px; height: 22px; border-radius: 50%; box-shadow: inset -4px -4px 0 rgba(0, 0, 0, 0.3); }
+.story-planet.mars i { background: #d0603a; }
+.story-planet.earth i { background: #3f8fe0; }
+
+.story-link-track {
+  position: relative;
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  padding-top: 15px;
+  background: repeating-linear-gradient(90deg, #5a7384 0 6px, transparent 6px 12px) 0 8px / 100% 3px no-repeat;
+}
+
+.story-link-track i {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  background: #5dff8f;
+  animation: story-link-go 2.4s linear infinite;
+}
+
+@keyframes story-link-go {
+  to { left: calc(100% - 10px); }
+}
+
+.story-link-track b { color: #ffcf3a; font-size: 16px; }
+.story-link-track small { margin: 0; color: #b8c4cc; font-size: 11px; }
+
+/* Duas saidas lado a lado, cada uma com o que da e o que custa */
+.story-choices { display: flex; align-items: stretch; gap: 6px; }
+
+.story-choice {
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 3px;
+  padding: 8px 6px;
+  font-size: 13px;
+  text-align: center;
+  background: #16232e;
+  box-shadow: inset 0 0 0 2px #2c4354;
+}
+
+.story-choice-icon { width: 32px; height: 32px; color: #7fe3ff; }
+.story-choice strong { font-size: 15px; letter-spacing: 1px; }
+.story-choice .good { color: #5dff8f; }
+.story-choice .bad { color: #ff8a7a; }
+.story-choice-or { align-self: center; color: #b8c4cc; font-size: 12px; }
 
 .story-card small {
   display: block;
@@ -184,15 +381,36 @@ body.touch-device .story-card-ok { min-height: 44px; min-width: 110px; }
   }
   .story-card header { margin-bottom: 3px; font-size: 11px; }
   .story-card-ok { margin-top: 6px; }
+  .story-signal {
+    top: calc(4px + env(safe-area-inset-top, 0px));
+    width: min(330px, 40vw);
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+  .story-signal-track { min-width: 30px; margin-right: 6px; }
+  .story-card-body { gap: 4px; }
+  .story-line { gap: 7px; font-size: 12px; }
+  .story-line-icon { width: 20px; height: 20px; padding: 3px; }
+  .story-planet i { width: 16px; height: 16px; }
+  .story-link-track b { font-size: 13px; }
+  .story-choice { padding: 5px 4px; font-size: 11px; }
+  .story-choice-icon { width: 22px; height: 22px; }
+  .story-choice strong { font-size: 12px; }
   .story-objective { width: 232px; padding: 6px 8px; }
-  .story-objective header { font-size: 10px; }
-  .story-objective p { font-size: 12px; }
+  .story-objective header { margin-bottom: 4px; font-size: 10px; }
+  .story-task-icon { width: 28px; height: 28px; padding: 4px; }
+  .story-task strong { font-size: 14px; }
+  .story-steps, .story-goals { margin-top: 6px; }
+  .story-step { width: 20px; height: 20px; padding: 3px; }
+  .story-timer { margin-top: 5px; }
+  .hud:has(.story-objective:not(.hidden)) #rover-info { margin-top: 110px; }
 }
 
 /* ---------- Animacoes (cutscenes) ---------- */
 
 body.cutscene-active .hud,
-body.cutscene-active .story-card { visibility: hidden; }
+body.cutscene-active .story-card,
+body.cutscene-active .story-signal { visibility: hidden; }
 
 .cutscene-layer {
   position: fixed;

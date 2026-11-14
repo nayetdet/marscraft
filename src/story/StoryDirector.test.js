@@ -31,15 +31,15 @@ function started() {
   return director;
 }
 
-// Leva o diretor ate o comeco do ato 2 e devolve a hora em que isso aconteceu
+const cards = (director) => director.drainEvents().filter((e) => e.type === 'card').map((e) => e.card);
+
+// Leva o diretor ate o comeco do ato 2 (com a resposta da Terra ja entregue)
 function reachAct2(director) {
   director.update(snap({ insideHabitat: true }));
   director.update(snap({ insideHabitat: true, atConsole: true }));
-  director.update(snap({ insideHabitat: true, hours: 15 + REPLY }));
+  director.update(snap({ hours: 15 + REPLY }));
   director.update(snap({ hours: 16, iceCount: 1 }));
-  director.update(snap({ hours: 16.2, iceCount: 1, insideHabitat: true }));
   director.drainEvents();
-  return 16.2;
 }
 
 describe('StoryDirector', () => {
@@ -60,10 +60,10 @@ describe('StoryDirector', () => {
     const events = director.drainEvents();
     expect(events).toHaveLength(1);
     expect(events[0].type).toBe('card');
-    expect(events[0].card.text).toMatch(/Welcome to Mars/);
+    expect(events[0].card.title).toMatch(/WELCOME TO MARS/);
   });
 
-  it('walks through act 1: enter, report, wait for the delayed reply', () => {
+  it('walks the 3 tutorial steps without making the player wait for Earth', () => {
     const director = started();
 
     director.update(snap());
@@ -72,20 +72,47 @@ describe('StoryDirector', () => {
     director.update(snap({ insideHabitat: true }));
     expect(director.objectiveId).toBe('report');
 
+    // Avisou a Terra: o proximo passo ja vale, e a resposta fica a caminho
     director.update(snap({ insideHabitat: true, atConsole: true }));
-    expect(director.objectiveId).toBe('await-reply');
-    const cards = director.drainEvents().filter((e) => e.type === 'card');
-    expect(cards.at(-1).card.text).toMatch(/198 million km/);
-    expect(cards.at(-1).card.text).toMatch(/11 minutes to get there/);
-    expect(cards.at(-1).card.source).toMatch(/14\/11\/2026/);
-
-    // Metade do atraso: ainda esperando, com os segundos reais que faltam (0,25 h / 0,02 h por s)
-    director.update(snap({ insideHabitat: true, hours: 15 + REPLY / 2 }));
-    expect(director.objectiveId).toBe('await-reply');
-    expect(director.objectiveText).toMatch(/13 s$/);
-
-    director.update(snap({ insideHabitat: true, hours: 15 + REPLY }));
     expect(director.objectiveId).toBe('collect-ice');
+    expect(director.replySecondsLeft).toBe(25); // 0,5 h / 0,02 h por s
+    const sent = cards(director).at(-1);
+    expect(sent.link).toEqual({ minutes: 11, millionKm: 198 });
+    expect(sent.source).toMatch(/14\/11\/2026/);
+
+    director.update(snap({ hours: 15 + REPLY / 2 }));
+    expect(director.replySecondsLeft).toBe(13);
+    expect(cards(director)).toHaveLength(0);
+  });
+
+  it('delivers the answer from Earth after the radio delay, whatever the player is doing', () => {
+    const director = started();
+    director.update(snap({ insideHabitat: true }));
+    director.update(snap({ insideHabitat: true, atConsole: true }));
+    director.drainEvents();
+
+    director.update(snap({ hours: 15 + REPLY }));
+    expect(director.replySecondsLeft).toBeNull();
+    const reply = cards(director);
+    expect(reply).toHaveLength(1);
+    expect(reply[0].title).toMatch(/EARTH ANSWERED/);
+    expect(reply[0].lines.some((line) => /22 min/.test(line.text))).toBe(true);
+
+    // A resposta chega uma vez so
+    director.update(snap({ hours: 16 }));
+    expect(cards(director)).toHaveLength(0);
+  });
+
+  it('still delivers the answer when the ice is collected before it arrives', () => {
+    const director = started();
+    director.update(snap({ insideHabitat: true }));
+    director.update(snap({ insideHabitat: true, atConsole: true }));
+    director.update(snap({ hours: 15.1, iceCount: 1 }));
+    expect(director.act).toBe(2);
+    director.drainEvents();
+
+    director.update(snap({ hours: 15 + REPLY, iceCount: 1 }));
+    expect(cards(director).map((card) => card.title)).toEqual(['EARTH ANSWERED']);
   });
 
   it('only counts ice collected after the objective started', () => {
@@ -93,7 +120,6 @@ describe('StoryDirector', () => {
     const base = { insideHabitat: true, iceCount: 3 };
     director.update(snap(base));
     director.update(snap({ ...base, atConsole: true }));
-    director.update(snap({ ...base, hours: 15 + REPLY }));
     expect(director.objectiveId).toBe('collect-ice');
 
     // As 3 que ja estavam na mochila nao contam
@@ -103,43 +129,41 @@ describe('StoryDirector', () => {
     // Gastou uma e pegou outra: a contagem voltou a 3, mas houve coleta
     director.update(snap({ iceCount: 2, hours: 16.1 }));
     director.update(snap({ iceCount: 3, hours: 16.2 }));
-    expect(director.objectiveId).toBe('return-base');
+    expect(director.act).toBe(2);
   });
 
-  it('opens act 2 when the ice comes home and starts the storms once', () => {
+  it('opens act 2 as soon as the ice is collected and starts the storms once', () => {
     const director = started();
     director.update(snap({ insideHabitat: true }));
     director.update(snap({ insideHabitat: true, atConsole: true }));
-    director.update(snap({ insideHabitat: true, hours: 15 + REPLY }));
-    director.update(snap({ hours: 16, iceCount: 1 }));
+    director.update(snap({ hours: 15 + REPLY }));
     director.drainEvents();
 
-    director.update(snap({ hours: 16.2, iceCount: 1, insideHabitat: true }));
+    // Ainda la fora, com o gelo na mao: nao precisa voltar para a base
+    director.update(snap({ hours: 16, iceCount: 1 }));
     expect(director.act).toBe(2);
+    expect(director.objectiveId).toBe('act2');
     const events = director.drainEvents();
     expect(events.filter((e) => e.type === 'start-storms')).toHaveLength(1);
-    expect(events.some((e) => e.type === 'card' && /come home/.test(e.card.text))).toBe(true);
+    expect(events.some((e) => e.type === 'card' && /GO HOME/.test(e.card.title))).toBe(true);
 
-    director.update(snap({ hours: 16.3, insideHabitat: true }));
+    director.update(snap({ hours: 16.3, iceCount: 1 }));
     expect(director.drainEvents().filter((e) => e.type === 'start-storms')).toHaveLength(0);
   });
 
-  it('shows the act 2 checklist in the objective', () => {
-    const director = started();
-    reachAct2(director);
-    director.update(snap({ hours: 17, propellantPct: 40.6, stormsSurvived: 1 }));
-    expect(director.objectiveId).toBe('act2');
-    expect(director.objectiveText).toMatch(/Fuel 40%/);
-    expect(director.objectiveText).toMatch(/Storms 1\/3/);
-  });
-
-  it('guides only the first solar storm', () => {
+  it('guides only the first solar storm, with both choices and their costs', () => {
     const director = started();
     reachAct2(director);
 
     director.update(snap({ hours: 17, stormPhase: 'warning' }));
     expect(director.objectiveId).toBe('storm-guide');
-    expect(director.drainEvents().filter((e) => e.type === 'card')).toHaveLength(1);
+    const guide = cards(director);
+    expect(guide).toHaveLength(1);
+    expect(guide[0].choices.map((choice) => choice.name)).toEqual(['HIDE', 'SHIELD']);
+    for (const choice of guide[0].choices) {
+      expect(choice.good).toBeTruthy();
+      expect(choice.bad).toBeTruthy();
+    }
 
     director.update(snap({ hours: 18, stormPhase: 'active' }));
     expect(director.objectiveId).toBe('storm-guide');
@@ -163,12 +187,11 @@ describe('StoryDirector', () => {
     expect(director.act).toBe(3);
     expect(director.windowHoursLeft).toBeCloseTo(WINDOW);
     expect(director.objectiveId).toBe('fuel');
-    expect(director.drainEvents().some((e) => e.type === 'card' && /launch window is open/.test(e.card.text))).toBe(true);
+    expect(director.drainEvents().some((e) => e.type === 'card' && /LAUNCH WINDOW OPEN/.test(e.card.title))).toBe(true);
 
     director.update(snap({ hours: 42, stormsSurvived: 3, propellantPct: 100 }));
     expect(director.objectiveId).toBe('send-data');
     expect(director.windowHoursLeft).toBeCloseTo(WINDOW - 2);
-    expect(director.objectiveText).toMatch(/Window closes in 6h 00m/);
 
     director.update(snap({ hours: 43, stormsSurvived: 3, propellantPct: 100, dataSent: true }));
     expect(director.objectiveId).toBe('ignite');
