@@ -119,6 +119,76 @@ ICONS.up = [
 ];
 ICONS.down = [...ICONS.up].reverse();
 
+// Icones da historia (painel do objetivo e cards)
+ICONS.door = [
+  '.XXXXXX.',
+  '.X....X.',
+  '.X....X.',
+  '.X....X.',
+  '.X..X.X.',
+  '.X....X.',
+  '.X....X.',
+  '.XXXXXX.',
+];
+
+// Mensagem pelo radio (balao de fala)
+ICONS.radio = [
+  '.XXXXXX.',
+  'XXXXXXXX',
+  'X.XX.XX.',
+  'XXXXXXXX',
+  '.XXXXXX.',
+  '..XX....',
+  '.XX.....',
+  '........',
+];
+
+// Bloco de gelo (cubo)
+ICONS.ice = [
+  '..XXXXXX',
+  '.X....XX',
+  'XXXXXX.X',
+  'X....X.X',
+  'X.X..X.X',
+  'X....XX.',
+  'XXXXXX..',
+  '........',
+];
+
+ICONS.clock = [
+  '..XXXX..',
+  '.X....X.',
+  'X..X...X',
+  'X..X...X',
+  'X..XXX.X',
+  'X......X',
+  '.X....X.',
+  '..XXXX..',
+];
+
+// Abrigo: a base
+ICONS.home = [
+  '...XX...',
+  '..XXXX..',
+  '.XXXXXX.',
+  'XXXXXXXX',
+  '.XXXXXX.',
+  '.XX..XX.',
+  '.XX..XX.',
+  '.XX..XX.',
+];
+
+ICONS.check = [
+  '........',
+  '.......X',
+  '......XX',
+  'X....XX.',
+  'XX..XX..',
+  '.XXXX...',
+  '..XX....',
+  '........',
+];
+
 const cache = new Map();
 
 export function pixelIconSvg(name) {

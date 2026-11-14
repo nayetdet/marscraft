@@ -109,6 +109,18 @@ Painel **não modal** no topo e centro (estilo *Mission Control radio*), visíve
 
 Duas *cutscenes* dentro do motor, puláveis: a **chegada** (pouso da cápsula, 14,8 s, no primeiro Play) e a **decolagem** do MAV (15,5 s, ao apertar IGNITE). O roteiro plano a plano, com tempos, câmeras e legendas, está em [`../plans/2026-11-14-story-arc.md`](../plans/2026-11-14-story-arc.md). O motor de cutscene fica em `src/story/cutscene/` (`timeline.js` puro + `CutscenePlayer`), e a camada de UI em `src/ui/CutsceneHud.js`.
 
+## Tutorial curto e HUD visual (revisão de 2026-11-14, a pedido)
+
+O ato 1 era longo e repetitivo (5 objetivos, ~66 s parado esperando a Terra e quatro passagens pelo airlock) e o HUD era só texto. O que mudou, e que vale por cima das seções acima:
+
+- **Ato 1 em 3 passos:** `enter-base → report → collect-ice`. Saíram `await-reply` e `return-base`.
+- **Atraso de rádio sem espera parada:** ao chegar no console, o passo seguinte (`collect-ice`) já vale. A resposta da Terra chega sozinha depois do tempo de ida e volta (`StoryDirector.replySecondsLeft`, card `EARTH ANSWERED`), com o jogador já trabalhando. O atraso continua sendo ensinado, agora como "ninguém espera a Terra: você decide".
+- **Ato 2 começa ao pegar o gelo**, ainda lá fora: o gelo vai direto para o foguete, sem voltar pelo airlock antes.
+- **Painel do objetivo em ícones** (`src/story/objectiveView.js`, puro e testado, pintado pelo `StoryHud.updateObjective`): 3 bolinhas dos atos, um ícone grande com 2 ou 3 palavras (`ENTER THE BASE`, `GET ICE`, `LOAD THE ROCKET`...), os 3 passos do tutorial no ato 1, e nos atos 2 e 3 os três medidores do foguete (barra de combustível, bolinhas das tempestades, marca dos dados enviados). Um relógio em barra mostra a janela de lançamento fechando.
+- **Card do rádio recolhido** (`#story-signal`): fechado o card `MESSAGE SENT` (Enter, OK ou tempo), fica no mesmo lugar uma faixa fina com o sinal andando de Marte até a Terra e voltando com a resposta, e os segundos que faltam, até o card `EARTH ANSWERED` chegar.
+- **Próximo trabalho dinâmico nos atos 2 e 3** (`nextRocketJob`): buscar gelo → carregar o foguete → enviar os dados → esperar a fábrica / as tempestades. A seta segue o mesmo trabalho (`objectiveTarget`), inclusive até o console quando falta enviar os dados.
+- **Cards desenhados** (`storyChapters.js`): no lugar do parágrafo, até 4 linhas curtas com ícone (≤ 8 palavras, checado em teste); o card do rádio desenha o sinal indo de Marte à Terra com os minutos reais; o card da 1ª tempestade mostra as duas saídas lado a lado com ganho (verde) e custo (vermelho), o trade-off do desafio.
+
 ## Painel do objetivo e setas (adicionados em 2026-11-14, a pedido)
 
 O HUD novo da `main` (#59) escondeu o canto superior esquerdo, então o objetivo ganhou um painel próprio ali (`#story-objective`): o título do ato (`PART 1 OF 3: ARRIVAL`) e o texto do objetivo.
@@ -120,12 +132,12 @@ Cada objetivo aponta para um lugar, e duas setas mostram o caminho:
 
 | Objetivo | Lugar |
 |---|---|
-| `enter-base`, `return-base`, `storm-guide` | Airlock |
+| `enter-base`, `storm-guide` | Airlock |
 | `report`, `send-data` | Console de comando |
 | `collect-ice` | Cratera de gelo |
-| `act2`, `fuel` | Cratera de gelo se a mochila está sem gelo; foguete se há gelo para entregar; nenhum se o tanque não precisa de mais gelo |
+| `act2`, `fuel` | Cratera de gelo se a mochila está sem gelo; foguete se há gelo para entregar; console se o tanque não precisa de mais gelo e os dados não foram enviados; nenhum depois disso |
 | `ignite` | Foguete (MAV) |
-| `await-reply`, `done`, `failed` | Nenhum |
+| `done`, `failed` | Nenhum |
 
 **Rota pelo airlock.** A base só tem uma entrada. Se o lugar fica lá fora e o jogador está dentro (ou o contrário), a seta aponta primeiro para o airlock. Dirigindo o rover, a câmera está lá fora, então a rota não passa pelo airlock. A regra é pura e testada em `src/story/waypoints.js` (`objectiveTarget` e `routeWaypoint`).
 

@@ -45,7 +45,7 @@ import { ShieldBubble } from '../graphics/shieldBubble.js';
 import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
 import { StoryDirector } from '../story/StoryDirector.js';
-import { ACT_TITLES } from '../story/storyChapters.js';
+import { objectiveView } from '../story/objectiveView.js';
 import { WAYPOINT_LABELS, objectiveTarget, routeWaypoint } from '../story/waypoints.js';
 import { WaypointBeacon } from '../story/WaypointBeacon.js';
 import { WaypointHud } from '../ui/WaypointHud.js';
@@ -850,11 +850,7 @@ export class GameEngine {
       },
     });
     this.storyHud = new StoryHud();
-    this.objectivePanelEl = document.getElementById('story-objective');
-    this.objectiveActEl = document.getElementById('story-objective-act');
-    this.objectiveTextEl = document.getElementById('story-objective-text');
     this._objectiveText = '';
-    this._objectiveAct = 0;
     // Retrato do jogo que o diretor le a cada frame (objeto reaproveitado)
     this._storySnapshot = {
       hours: 0, insideHabitat: false, iceCount: 0, iceNeeded: 0, atConsole: false,
@@ -965,14 +961,9 @@ export class GameEngine {
     const text = this.story.objectiveText;
     if (text !== this._objectiveText) {
       this._objectiveText = text;
-      this.expedition.objective = text;
-      this.objectiveTextEl.textContent = text;
-      this.objectivePanelEl.classList.toggle('hidden', !text);
+      this.expedition.objective = text; // frase curta para o terminal da base
     }
-    if (this.story.act !== this._objectiveAct) {
-      this._objectiveAct = this.story.act;
-      this.objectiveActEl.textContent = ACT_TITLES[this.story.act] ?? '';
-    }
+    this.storyHud.updateObjective(objectiveView(this.story, s));
 
     // Seta do objetivo. Dirigindo o rover a camera esta la fora, entao a rota nao passa pelo airlock.
     const inside = s.insideHabitat && !this.roverController.isActive;
