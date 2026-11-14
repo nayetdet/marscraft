@@ -49,6 +49,9 @@ export const SURVIVAL_CONFIG = {
   MAX_STAT: 20,
   OXYGEN_DRAIN_RATE: 0.32,
   OXYGEN_REFILL_RATE: 4.5,
+  BREACH_OXYGEN_DRAIN_RATE: 1.0, // pontos de O2 do jogador por segundo
+  BASE_OXYGEN_LEAK_RATE: 5, // porcentagem por segundo, para qualquer abertura
+  BASE_OXYGEN_REFILL_RATE: 2, // porcentagem por segundo após vedar a base
   WATER_DRAIN_RATE: 0.14,
   FOOD_DRAIN_RATE: 0.11,
   STARVE_DAMAGE_RATE: 0.8,

@@ -748,7 +748,7 @@ export class GameEngine {
 
   // Sobrevivencia com o O2 do habitat pago pela bateria
   _updateSurvival(dt) {
-    this.survival.update(dt, this.player.pos, this.mission.oxygenRefillBudget());
+    this.survival.update(dt, this.player.pos, this.mission.oxygenRefillBudget(), this.world.brokenBaseWindows.size > 0);
     this.mission.chargeOxygen(this.survival.lastOxygenRefilled);
   }
 
