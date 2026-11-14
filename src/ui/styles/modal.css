@@ -38,6 +38,9 @@
   text-align: center;
 }
 
+.mc-menu.is-controls .mc-title-wrap { display: none; }
+.mc-menu.is-controls .mc-menu-card { padding-top: 0; }
+
 .mc-title-wrap {
   position: relative;
   margin-bottom: 12px;
