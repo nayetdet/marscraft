@@ -38,10 +38,11 @@ export class GameEngine {
     this.sky = new MarsSkySystem(this.scene);
     this.world = new VoxelWorld(this.scene, materials);
 
-    // Modelos 3D detalhados estilo Mod de Minecraft (Painel de Controle, O2, Redoma de Plantas, Rover)
-    this.customModels = buildNasaCustomModels(this.scene);
+    // Modelos 3D detalhados estilo Mod de Minecraft + Caixas de Colisão AABB
+    const { group: customModels, colliders } = buildNasaCustomModels(this.scene);
+    this.customModels = customModels;
 
-    this.player = new PlayerPhysics(this.world);
+    this.player = new PlayerPhysics(this.world, colliders);
     this.survival = new SurvivalSystem();
 
     // Maozinha 3D do jogador em primeira pessoa

@@ -3,8 +3,9 @@ import { BLOCK_IDS } from '../config/blockTypes.js';
 import { PHYSICS_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 
 export class PlayerPhysics {
-  constructor(world) {
+  constructor(world, customColliders = []) {
     this.world = world;
+    this.customColliders = customColliders;
 
     this.pos = new THREE.Vector3(
       PHYSICS_CONFIG.SPAWN_POS.x,
@@ -40,20 +41,60 @@ export class PlayerPhysics {
   }
 
   overlapsBlock(bx, by, bz) {
-    return (
+    const hitsPlayer =
       bx + 1 > this.pos.x - this.radius &&
       bx < this.pos.x + this.radius &&
       by + 1 > this.pos.y - this.height &&
       by < this.pos.y + 0.15 &&
       bz + 1 > this.pos.z - this.radius &&
-      bz < this.pos.z + this.radius
-    );
+      bz < this.pos.z + this.radius;
+
+    if (hitsPlayer) return true;
+
+    for (const box of this.customColliders) {
+      const overlapsObj =
+        bx + 1 > box.minX &&
+        bx < box.maxX &&
+        by + 1 > box.minY &&
+        by < box.maxY &&
+        bz + 1 > box.minZ &&
+        bz < box.maxZ;
+      if (overlapsObj) return true;
+    }
+
+    return false;
+  }
+
+  _hitsCustomCollider(pos) {
+    const pMinX = pos.x - this.radius;
+    const pMaxX = pos.x + this.radius;
+    const pMinY = pos.y - this.height + 0.05;
+    const pMaxY = pos.y + 0.1;
+    const pMinZ = pos.z - this.radius;
+    const pMaxZ = pos.z + this.radius;
+
+    for (const box of this.customColliders) {
+      if (
+        pMaxX > box.minX &&
+        pMinX < box.maxX &&
+        pMaxY > box.minY &&
+        pMinY < box.maxY &&
+        pMaxZ > box.minZ &&
+        pMinZ < box.maxZ
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   _checkCollision(pos) {
-    // Limite circular da Cratera: impede o jogador de sair da borda da cratera
     const distFromCenter = Math.hypot(pos.x, pos.z);
     if (distFromCenter >= WORLD_CONFIG.CRATER_RADIUS - 2.5) {
+      return true;
+    }
+
+    if (this._hitsCustomCollider(pos)) {
       return true;
     }
 
@@ -101,28 +142,32 @@ export class PlayerPhysics {
 
     const nextPos = this.pos.clone();
 
-    // Eixo X com subida automática de degrau
+    // Eixo X: bloqueia sólido nos objetos 3D; só faz auto-step em degraus de blocos do terreno/rampa
     nextPos.x += this.vel.x * dt;
     if (this._checkCollision(nextPos)) {
-      const stepPos = nextPos.clone();
-      stepPos.y += 1.05;
-      if (this.onGround && !this._checkCollision(stepPos)) {
-        this.pos.x = stepPos.x;
-        this.pos.y = stepPos.y;
+      if (this.onGround && !this._hitsCustomCollider(nextPos)) {
+        const stepPos = nextPos.clone();
+        stepPos.y += 1.05;
+        if (!this._checkCollision(stepPos)) {
+          this.pos.x = stepPos.x;
+          this.pos.y = stepPos.y;
+        }
       }
     } else {
       this.pos.x = nextPos.x;
     }
 
-    // Eixo Z com subida automática de degrau
+    // Eixo Z: bloqueia sólido nos objetos 3D; só faz auto-step em degraus de blocos do terreno/rampa
     nextPos.copy(this.pos);
     nextPos.z += this.vel.z * dt;
     if (this._checkCollision(nextPos)) {
-      const stepPos = nextPos.clone();
-      stepPos.y += 1.05;
-      if (this.onGround && !this._checkCollision(stepPos)) {
-        this.pos.z = stepPos.z;
-        this.pos.y = stepPos.y;
+      if (this.onGround && !this._hitsCustomCollider(nextPos)) {
+        const stepPos = nextPos.clone();
+        stepPos.y += 1.05;
+        if (!this._checkCollision(stepPos)) {
+          this.pos.z = stepPos.z;
+          this.pos.y = stepPos.y;
+        }
       }
     } else {
       this.pos.z = nextPos.z;
