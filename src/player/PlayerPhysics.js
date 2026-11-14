@@ -142,34 +142,16 @@ export class PlayerPhysics {
 
     const nextPos = this.pos.clone();
 
-    // Eixo X: bloqueia sólido nos objetos 3D; só faz auto-step em degraus de blocos do terreno/rampa
+    // X axis
     nextPos.x += this.vel.x * dt;
-    if (this._checkCollision(nextPos)) {
-      if (this.onGround && !this._hitsCustomCollider(nextPos)) {
-        const stepPos = nextPos.clone();
-        stepPos.y += 1.05;
-        if (!this._checkCollision(stepPos)) {
-          this.pos.x = stepPos.x;
-          this.pos.y = stepPos.y;
-        }
-      }
-    } else {
+    if (!this._checkCollision(nextPos)) {
       this.pos.x = nextPos.x;
     }
 
-    // Eixo Z: bloqueia sólido nos objetos 3D; só faz auto-step em degraus de blocos do terreno/rampa
+    // Z axis
     nextPos.copy(this.pos);
     nextPos.z += this.vel.z * dt;
-    if (this._checkCollision(nextPos)) {
-      if (this.onGround && !this._hitsCustomCollider(nextPos)) {
-        const stepPos = nextPos.clone();
-        stepPos.y += 1.05;
-        if (!this._checkCollision(stepPos)) {
-          this.pos.z = stepPos.z;
-          this.pos.y = stepPos.y;
-        }
-      }
-    } else {
+    if (!this._checkCollision(nextPos)) {
       this.pos.z = nextPos.z;
     }
 
