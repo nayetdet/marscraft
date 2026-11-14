@@ -396,9 +396,6 @@ export function buildNasaSpaceshipAndBase(world) {
   world.recordBaseWindows = true;
   buildMainWhiteHabitat(world, groundY);
   buildGreenhouseDome(world, groundY);
-  world.recordBaseWindows = false;
-  buildNasaAscentLander(world, groundY);
-  world.recordBaseWindows = true;
   buildGymModule(world, groundY);
   buildNorthModule(world, groundY);
   world.recordBaseWindows = false;

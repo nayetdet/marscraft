@@ -132,8 +132,9 @@ export class HudManager {
       slot.dataset.slotIndex = idx;
 
       const hasItems = (slotData?.count ?? 0) > 0;
+      const preview = slotData?.id === BLOCK_IDS.SCOPE ? this._scopePreview() : this.previews[slotData?.id];
       const swatchStyle = hasItems
-        ? `background-image: url('${this.previews[slotData.id]}'); opacity: 1;`
+        ? `background-image: url('${preview ?? ''}'); opacity: 1;`
         : '';
 
       slot.innerHTML = `
@@ -159,7 +160,7 @@ export class HudManager {
       slot.addEventListener('click', () => this._selectInventorySlot(index));
       if (slotData) {
         slot.innerHTML = `
-          <div class="mc-slot-icon${slotData.id === BLOCK_IDS.HYDRO_PLANT ? ' carrot' : ''}" style="background-image: url('${this.previews[slotData.id]}')"></div>
+          <div class="mc-slot-icon${slotData.id === BLOCK_IDS.HYDRO_PLANT ? ' carrot' : ''}" style="background-image: url('${slotData.id === BLOCK_IDS.SCOPE ? this._scopePreview() : this.previews[slotData.id] ?? ''}')"></div>
           <span class="mc-slot-count">${slotData.count > 0 ? slotData.count : ''}</span>
         `;
       }
@@ -174,6 +175,10 @@ export class HudManager {
     inventorySlots.slice(0, 9).forEach((slotData, index) => {
       this.inventoryHotbarEl.appendChild(renderSlot(slotData, index, true));
     });
+  }
+
+  _scopePreview() {
+    return `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges"><path fill="#263746" d="M7 11h18v10H7z"/><path fill="#b8c5cc" d="M4 9h4v14H4zm20 1h4v12h-4zM12 7h8v3h-8z"/><path fill="#38bdf8" d="M3 12h2v8H3z"/><path fill="#647985" d="M13 21h6v5h-6z"/></svg>')}`;
   }
 
   openInventory(inventorySlots) {

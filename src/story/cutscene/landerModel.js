@@ -79,6 +79,8 @@ export function createLander() {
 // Caixa de colisao da capsula pousada em (x, groundY, z), no formato dos colisores do jogo
 export function landerCollider(x, groundY, z) {
   return {
+    // The opening arrival capsule shares the Ascent Vehicle scan entry with the MAV.
+    scanId: 'lander',
     minX: x - LANDER_SIZE.halfWidth,
     maxX: x + LANDER_SIZE.halfWidth,
     minY: groundY,

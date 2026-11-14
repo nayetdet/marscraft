@@ -18,9 +18,23 @@ export const BLOCK_IDS = {
   POTATO: 14,
   LETTUCE: 15,
   SOY: 16,
+  SCOPE: 17,
 };
 
 export const HOTBAR_BLOCKS = [
+  {
+    id: BLOCK_IDS.SCOPE,
+    name: 'Scope Scanner',
+    initialCount: 1,
+    consumable: null,
+    equipment: true,
+  },
+  {
+    id: BLOCK_IDS.HYDRO_PLANT,
+    name: 'Mars Carrot (Right-click to eat)',
+    initialCount: 3,
+    consumable: { type: 'food', amount: 6, heal: 2 },
+  },
   {
     id: BLOCK_IDS.REGOLITH,
     name: 'Martian Regolith',
@@ -44,12 +58,6 @@ export const HOTBAR_BLOCKS = [
     name: 'Martian Water Ice',
     initialCount: 0,
     consumable: null,
-  },
-  {
-    id: BLOCK_IDS.HYDRO_PLANT,
-    name: 'Mars Carrot (Right-click to eat)',
-    initialCount: 3,
-    consumable: { type: 'food', amount: 6, heal: 2 },
   },
   {
     id: BLOCK_IDS.NASA_HULL,

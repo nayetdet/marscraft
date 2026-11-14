@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { InputController } from './InputController.js';
+import { BLOCK_IDS } from '../config/blockTypes.js';
 
-describe('mobile scope control', () => {
-  it('opens the scanner zoomed and closes it on the next tap', () => {
+describe('scope equipment', () => {
+  it('does not open from the removed touch scope shortcut', () => {
     const input = Object.create(InputController.prototype);
     input.isTouchMode = true;
     input.isLocked = true;
@@ -12,18 +13,27 @@ describe('mobile scope control', () => {
     input.survival = { isDead: false };
     input.hud = { isInventoryOpen: false, updateZoomState: vi.fn() };
     input.onToggleZoom = vi.fn();
-    const button = { classList: { toggle: vi.fn() } };
 
-    input._handleTouchAction('zoom', button, 1);
-    expect(input.onToggleZoom).toHaveBeenLastCalledWith(true, true);
-    expect(input.hud.updateZoomState).toHaveBeenLastCalledWith(true, true);
+    input._handleTouchAction('zoom', { classList: { toggle: vi.fn() } }, 1);
+    expect(input.onToggleZoom).not.toHaveBeenCalled();
+    expect(input.isScannerOpen).toBe(false);
+  });
+
+  it('toggles scanning only while using the selected Scope', () => {
+    const input = Object.create(InputController.prototype);
+    input.isScannerOpen = false;
+    input.isZoomed = false;
+    input.hud = { selectedSlot: 1, showToast: vi.fn(), renderHotbar: vi.fn() };
+    input.survival = { slots: [null, { id: BLOCK_IDS.SCOPE, count: 1 }] };
+    input.getTargetedBlock = vi.fn();
+    input.onToggleZoom = vi.fn();
+    input.hud.updateZoomState = vi.fn();
+
+    input._useSelectedItem();
     expect(input.isScannerOpen).toBe(true);
     expect(input.isZoomed).toBe(true);
-
-    input._handleTouchAction('zoom', button, 1);
-    expect(input.onToggleZoom).toHaveBeenLastCalledWith(false, false);
-    expect(input.hud.updateZoomState).toHaveBeenLastCalledWith(false, false);
+    expect(input.getTargetedBlock).not.toHaveBeenCalled();
+    input._useSelectedItem();
     expect(input.isScannerOpen).toBe(false);
-    expect(input.isZoomed).toBe(false);
   });
 });

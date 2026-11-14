@@ -656,7 +656,7 @@ export class GameEngine {
       minX: b.x, maxX: b.x + 1, minY: b.y, maxY: b.y + 1, minZ: b.z, maxZ: b.z + 1,
     }));
     for (const c of this.customColliders) {
-      if (c.scanId === id) boxes.push(c);
+      if (c.scanId === id || (id === 'base' && !c.scanId)) boxes.push(c);
     }
     if (id === 'rover') boxes.push({ ...this._roverScanBox });
     return boxes.length ? { boxes } : null;
