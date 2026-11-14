@@ -1,5 +1,6 @@
 import { BLOCK_IDS, HOTBAR_BLOCKS } from '../config/blockTypes.js';
 import { SURVIVAL_CONFIG } from '../config/constants.js';
+import { isInsidePressurizedVolume } from '../world/habitatLayout.js';
 
 export class SurvivalSystem {
   constructor() {
@@ -39,29 +40,8 @@ export class SurvivalSystem {
   }
 
   isPlayerInsideShip(pos) {
-    // 1. Interior do Módulo Hab Branco Principal da NASA
-    const inMainHab =
-      Math.abs(pos.x) <= 6.8 &&
-      pos.z >= -5.8 &&
-      pos.z <= 8.2 &&
-      pos.y >= 9.2 &&
-      pos.y <= 18.8;
-
-    // 2. Túnel Pressurizado de Conexão
-    const inTunnel =
-      pos.x >= -12.5 &&
-      pos.x <= -6.5 &&
-      Math.abs(pos.z) <= 2.2 &&
-      pos.y >= 9.2 &&
-      pos.y <= 14.0;
-
-    // 3. Redoma de Estufa para Plantações (x = -18, z = 0, raio 7)
-    const inGreenhouseDome =
-      Math.hypot(pos.x + 18, pos.z) <= 6.8 &&
-      pos.y >= 9.2 &&
-      pos.y <= 16.5;
-
-    return inMainHab || inTunnel || inGreenhouseDome;
+    // Habitat, airlock, cupula, tunel e estufa, ajustados ao interior real da base.
+    return isInsidePressurizedVolume(pos.x, pos.y, pos.z);
   }
 
   update(dt, playerPos) {
