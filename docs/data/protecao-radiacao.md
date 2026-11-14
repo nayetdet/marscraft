@@ -34,7 +34,7 @@ Em 2017, Jim Green (então diretor de Ciência Planetária da NASA) apresentou n
 ## Como o jogo usa isso (e o que simplifica)
 
 - **Tecla `R` = escudo magnético ativo** (seção 2): gasta energia da bateria enquanto está ligado, como as bobinas reais, que precisam de muita energia.
-- **Só protege dentro da bolha** em volta da base (`src/mission/shieldZone.js`, raio 23 blocos). Fora dela, a dose não muda e o HUD avisa "outside the bubble!". Um campo de bobinas só desvia partículas na região perto delas.
+- **Só protege dentro das bolhas** em volta da base (`src/mission/shieldZone.js`): uma por grupo de módulos (habitat, estufa, ala norte com os painéis, dormitório e plataforma do foguete). A cratera de gelo fica de fora. Fora dela, a dose não muda e o HUD avisa "outside the bubble!". Um campo de bobinas só desvia partículas na região perto delas.
 - **A bolha é uma visualização:** o campo real é invisível. As linhas mostram o campo arqueando sobre a base e, durante a tempestade solar, as faíscas mostram partículas sendo desviadas (`src/graphics/shieldBubble.js`).
 - **Simplificações (escala de jogo):**
   - O jogo reduz a dose em 80% (`RADIATION_CONFIG.SHIELD_FACTOR = 0.2`). Os estudos reais não dão um número único, e o ativo sozinho ainda não supera o passivo.
