@@ -35,6 +35,7 @@ import { StationPanel } from '../ui/StationPanel.js';
 import { AdminPanel } from '../ui/AdminPanel.js';
 import { UtilityModule } from './UtilityModule.js';
 import { CommsLink } from '../mission/commsLink.js';
+import { AudioManager } from '../audio/AudioManager.js';
 import { getCategoryLabel } from '../data/scanCatalog.js';
 import { ScanJournal } from '../scanner/scanJournal.js';
 import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js';
@@ -45,8 +46,10 @@ import { HABITAT_LAYOUT, isInsideShelter } from '../world/habitatLayout.js';
 import { ShieldBubble } from '../graphics/shieldBubble.js';
 import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
+import { buildBaseDecor } from '../base/baseDecor.js';
+import { MenuScreens } from '../ui/MenuScreens.js';
 import { StoryDirector } from '../story/StoryDirector.js';
-import { ACT_TITLES } from '../story/storyChapters.js';
+import { objectiveView } from '../story/objectiveView.js';
 import { WAYPOINT_LABELS, objectiveTarget, routeWaypoint } from '../story/waypoints.js';
 import { WaypointBeacon } from '../story/WaypointBeacon.js';
 import { WaypointHud } from '../ui/WaypointHud.js';
@@ -116,6 +119,11 @@ export class GameEngine {
     this.plants = plants;
     this.customColliders = colliders;
 
+    // Zonas, placas, posteres e telas vivas da base (as caixas de colisao entram em `colliders`)
+    this.baseDecor = buildBaseDecor(this.scene, colliders, { donkiDate: formatDateDMY(donkiCme.fetched) });
+    for (const point of this.baseDecor.infoPoints) point.type = 'info';
+    this._displayTimer = 1;
+
     this.roverController = new RoverController({
       roverGroup: rover,
       wheels: roverWheels,
@@ -149,6 +157,7 @@ export class GameEngine {
     this._interactionPoint = new THREE.Vector3();
     this._lastStorm = false;
     this._lastStormWarning = false;
+    this.audio = new AudioManager();
 
     // Maozinha 3D do jogador em primeira pessoa
     this.playerHand = new PlayerHand(this.camera, materials, carrot.texture);
@@ -211,6 +220,10 @@ export class GameEngine {
       onChange: (size) => this._buildCrew(size),
     });
     this.talkTarget = null;
+    this.menuScreens = new MenuScreens({
+      donkiDate: formatDateDMY(donkiCme.fetched),
+      onDemo: (action) => this._runDemo(action),
+    });
 
     this.input = new InputController({
       domElement: this.renderer.domElement,
@@ -281,7 +294,7 @@ export class GameEngine {
     }
     this.airlock.update(dt, this.player.pos);
     if (this.survival.health <= 0) this.survival.isDead = true;
-    const hasPriorityInteraction = ['crew', 'water_dispenser', 'rover_terminal', 'mav', 'greenhouse'].includes(this.currentInteraction);
+    const hasPriorityInteraction = ['crew', 'water_dispenser', 'rover_terminal', 'mav', 'greenhouse', 'info'].includes(this.currentInteraction);
     document.getElementById('interaction-hint').textContent = (hasPriorityInteraction || this.gymController.isActive) ? '' : (this._getInteraction()?.label ?? '');
     document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
@@ -366,17 +379,17 @@ export class GameEngine {
     let best = null, bestDistance = 4;
     const candidates = [
       ...this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' })),
-      { type: 'power', x: 4.6, y: 11.4, z: -1.5, label: 'Press F: life support' },
-      { type: 'console', x: 3.0, y: 11.5, z: -4.8, label: 'Press F: mission computer' },
-      { type: 'science', x: 4.5, y: 11.5, z: -4.8, label: 'Press F: science & radio to Earth' },
+      { type: 'power', x: 10.6, y: 11.4, z: -3, label: 'Press F: life support' },
+      { type: 'console', x: 8.25, y: 11.5, z: -10.8, label: 'Press F: mission computer' },
+      { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth' },
       { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
-      { type: 'powerroom', x: -7.2, y: 11.5, z: -10.5, label: 'Press F: power & heat control' },
-      { type: 'powerroom', x: -5.2, y: 10.8, z: -13.0, label: 'Press F: power & heat control' },
-      { type: 'galley', x: 5.6, y: 11.35, z: -10.2, label: 'Press F: kitchen' },
-      { type: 'galley', x: 7.1, y: 11.3, z: -12.4, label: 'Press F: pantry & kitchen' },
-      { type: 'hygiene', x: -7.5, y: 11.1, z: -19.3, label: 'Press F: bathroom & water recycler' },
-      { type: 'hygiene', x: -9.85, y: 11.6, z: -18.2, label: 'Press F: bathroom & water recycler' },
-      { type: 'workshop', x: 3.0, y: 11.5, z: -19.1, label: 'Press F: 3D printer workshop' },
+      { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
+      { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
+      { type: 'galley', x: 13.1, y: 11.35, z: -16.2, label: 'Press F: kitchen' },
+      { type: 'galley', x: 16.1, y: 11.3, z: -21.0, label: 'Press F: pantry & kitchen' },
+      { type: 'hygiene', x: -16.0, y: 11.1, z: -38.3, label: 'Press F: bathroom & water recycler' },
+      { type: 'hygiene', x: -19.85, y: 11.6, z: -32.5, label: 'Press F: bathroom & water recycler' },
+      { type: 'workshop', x: 11.5, y: 11.5, z: -38.1, label: 'Press F: 3D printer workshop' },
       { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
@@ -391,6 +404,14 @@ export class GameEngine {
         best = candidate; bestDistance = distance;
       }
     }
+    // Posteres e equipamentos explicativos: cone de mira mais fechado, para nao roubar o [F] das estacoes
+    for (const point of this.baseDecor.infoPoints) {
+      this._interactionOffset.set(point.x, point.y, point.z).sub(this.player.pos);
+      const distance = this._interactionOffset.length();
+      if (distance < Math.min(bestDistance, 3.6) && distance > 0 && this._interactionOffset.dot(dir) / distance > 0.93) {
+        best = point; bestDistance = distance;
+      }
+    }
     return best;
   }
 
@@ -398,6 +419,7 @@ export class GameEngine {
     const target = this._getInteraction();
     if (!target) return;
     let message;
+    if (target.type === 'info') { this.hud.showToast(target.text(this._baseState()), 8000); return; }
     if (target.type === 'door') message = this.airlock.request(target.door, this.player.pos);
     else if (target.type === 'treadmill' || target.type === 'bike') {
       this.mountGym(target.type);
@@ -524,16 +546,12 @@ export class GameEngine {
       frame.position.set(x, 11.4, z); screen.position.set(x, 11.4, z + 0.04);
       this.scene.add(frame, screen);
     }
-    // Glowing archway indicator above the Southwest Gym Wing corridor entrance
-    const gymSign = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.22, 0.14), new THREE.MeshLambertMaterial({ color: 0x38bdf8, emissive: 0x0ea5e9, emissiveIntensity: 0.45 }));
-    gymSign.position.set(-5.0, 13.2, 4.9);
-    this.scene.add(gymSign);
   }
 
   _initBaseLights() {
     // Luz clara dentro do Módulo Hab Branco Principal
-    const habLight = new THREE.PointLight(0xffffff, 1.6, 22);
-    habLight.position.set(0, 13.0, 0);
+    const habLight = new THREE.PointLight(0xffffff, 1.8, 32);
+    habLight.position.set(3.5, 13.0, -2.5);
     this.scene.add(habLight);
 
     // Luz clara dentro da Redoma de Estufa
@@ -542,9 +560,12 @@ export class GameEngine {
     this.scene.add(domeLight);
 
     // Luz do Modulo Norte (issue #56)
-    const northLight = new THREE.PointLight(0xf8fafc, 1.6, 24);
-    northLight.position.set(-2, 13.0, -15);
-    this.scene.add(northLight);
+    // Ala norte: uma luz para cada par de modulos (energia + cozinha, banheiro + oficina)
+    for (const z of [-21, -35]) {
+      const northLight = new THREE.PointLight(0xf8fafc, 1.8, 36);
+      northLight.position.set(-2.5, 13.0, z);
+      this.scene.add(northLight);
+    }
 
     // Luz clara dentro do Módulo da Academia (Gym & MedBay)
     const gymLight = new THREE.PointLight(0xe0f2fe, 1.5, 16);
@@ -840,6 +861,67 @@ export class GameEngine {
     }
   }
 
+  // Estado do jogo que as telas e os pontos de informacao da base mostram
+  _baseState() {
+    const m = this.mission;
+    const storm = m.storm;
+    const crop = this.stations.crop;
+    return {
+      sol: this.sky.solCount,
+      timeOfDay: Math.floor(this.sky.timeOfDay * 6) / 6, // relogio de 10 em 10 min: menos redesenhos
+      batteryPct: m.battery.percent,
+      chargeRate: m.chargeRate,
+      shieldOn: m.shieldOn,
+      factoryOn: m.factoryOn,
+      factoryBusy: m.factoryOn && m.iceStock > 0 && m.propellant < 100,
+      greenhousePowered: this.expedition.greenhousePowered,
+      dusty: this.stations.contaminated,
+      storm: {
+        phase: storm.phase,
+        hoursUntil: storm.hoursUntil,
+        hoursLeft: storm.hoursLeft ?? 0,
+        speedKmS: storm.storm?.cme.speedKmS ?? 0,
+        date: storm.storm ? formatDateDMY(storm.storm.cme.startTime) : '',
+      },
+      doseRate: m.doseRate,
+      totalDose: m.totalDoseMsv,
+      water: this.survival.baseWater,
+      maxWater: this.survival.maxBaseWater,
+      crop: crop ? { type: crop.type, progress: Math.min(1, crop.progress / STATION_CONFIG.CROP_GROWTH_TIME) } : null,
+      inShelter: m.insideShelter,
+      shelterWaterL: m.shelterWaterL,
+      donkiDate: formatDateDMY(donkiCme.fetched),
+    };
+  }
+
+  _updateBaseDisplays(dt) {
+    this._displayTimer += dt;
+    if (this._displayTimer < 0.5) return;
+    this._displayTimer = 0;
+    this.baseDecor.displays.update(this._baseState());
+  }
+
+  // Controles de demo do menu (para jurados e para gravar o video): mexem so no relogio e na bateria
+  _runDemo(action) {
+    if (action === 'storm') {
+      return this.mission.triggerStormSoon()
+        ? 'Storm warning sent. Press Back, then Play: the solar storm hits in about 10 seconds.'
+        : 'A solar storm is already hitting the base.';
+    }
+    if (action === 'night' || action === 'noon') {
+      const target = action === 'night' ? 21 : 12;
+      this.sky.advanceTime((target - this.sky.timeOfDay + 24) % 24);
+      return action === 'night'
+        ? 'It is now night on Mars: the solar panels make no power.'
+        : 'It is now noon on Mars: the solar panels are charging the battery.';
+    }
+    if (action === 'battery') {
+      this.mission.battery.charge = Math.min(this.mission.battery.charge, this.mission.battery.capacity * 0.1);
+      return 'Battery drained to 10%. Watch what the base has to give up.';
+    }
+    return '';
+  }
+
   // ---------- Historia em 3 atos e animacoes (src/story) ----------
 
   _initStory() {
@@ -853,11 +935,7 @@ export class GameEngine {
       },
     });
     this.storyHud = new StoryHud();
-    this.objectivePanelEl = document.getElementById('story-objective');
-    this.objectiveActEl = document.getElementById('story-objective-act');
-    this.objectiveTextEl = document.getElementById('story-objective-text');
     this._objectiveText = '';
-    this._objectiveAct = 0;
     // Retrato do jogo que o diretor le a cada frame (objeto reaproveitado)
     this._storySnapshot = {
       hours: 0, insideHabitat: false, iceCount: 0, iceNeeded: 0, atConsole: false,
@@ -891,7 +969,7 @@ export class GameEngine {
     const pad = MAV_CONFIG.PAD_POSITION;
     return {
       airlock: { x: 0.5, y: ground + 3.2, z: outerDoor.z + 0.5, label: WAYPOINT_LABELS.airlock },
-      console: { x: 0, y: ground + 3, z: -3.6, label: WAYPOINT_LABELS.console },
+      console: { x: 4, y: ground + 3, z: -9.6, label: WAYPOINT_LABELS.console },
       ice: { x: ice.x + 0.5, y: iceTop + 1.6, z: ice.z + 0.5, label: WAYPOINT_LABELS.ice },
       mav: { x: pad.x, y: ground + 9.2, z: pad.z, label: WAYPOINT_LABELS.mav },
     };
@@ -899,6 +977,7 @@ export class GameEngine {
 
   _playArrival() {
     this._arrivalPlayed = true;
+    this.audio.playRocket();
     const site = CUTSCENE_CONFIG.LANDING_SITE;
     this.playerHand.handGroup.visible = false;
     this.highlightBox.visible = false;
@@ -919,6 +998,7 @@ export class GameEngine {
 
   // Fim (ou pulo) da chegada: a capsula fica no chao como objeto solido e a historia comeca
   _endArrival() {
+    this.audio.stopRocket();
     const site = CUTSCENE_CONFIG.LANDING_SITE;
     const groundY = WORLD_CONFIG.GROUND_LEVEL + 1;
     this.lander.position.set(site.x, groundY, site.z);
@@ -966,14 +1046,9 @@ export class GameEngine {
     const text = this.story.objectiveText;
     if (text !== this._objectiveText) {
       this._objectiveText = text;
-      this.expedition.objective = text;
-      this.objectiveTextEl.textContent = text;
-      this.objectivePanelEl.classList.toggle('hidden', !text);
+      this.expedition.objective = text; // frase curta para o terminal da base
     }
-    if (this.story.act !== this._objectiveAct) {
-      this._objectiveAct = this.story.act;
-      this.objectiveActEl.textContent = ACT_TITLES[this.story.act] ?? '';
-    }
+    this.storyHud.updateObjective(objectiveView(this.story, s));
 
     // Seta do objetivo. Dirigindo o rover a camera esta la fora, entao a rota nao passa pelo airlock.
     const inside = s.insideHabitat && !this.roverController.isActive;
@@ -1131,8 +1206,16 @@ export class GameEngine {
       return;
     }
 
-    // 1. Console de Comando do Rover (x: 0, z: -3.6, y: ~11)
-    const distConsole = Math.hypot(this.player.pos.x - 0, this.player.pos.z - (-3.6));
+    // Poster ou equipamento explicativo na mira: ler vem antes das acoes por proximidade
+    const aimed = this._getInteraction();
+    if (aimed?.type === 'info') {
+      this.currentInteraction = 'info';
+      this.hud.setInteractionPrompt(true, aimed.label);
+      return;
+    }
+
+    // 1. Console de Comando do Rover (x: 4, z: -9.6, y: ~11)
+    const distConsole = Math.hypot(this.player.pos.x - 4, this.player.pos.z - (-9.6));
     const dyConsole = Math.abs(this.player.pos.y - 11.0);
     if (distConsole < 2.6 && dyConsole < 2.2) {
       this.currentInteraction = 'rover_terminal';
@@ -1293,6 +1376,15 @@ export class GameEngine {
         this.sky.update(dt, this.player.pos);
       }
 
+      this.audio.update({
+        player: this.player,
+        survival: this.survival,
+        isGameRunning,
+        isRoverActive: this.roverController.isActive,
+        roverSpeed: this.roverController.speed,
+        sprinting: Boolean(this.input.keys['Sprint']),
+      });
+
       const pickedUpBlocks = this.world.updateDrops(dt, this.player.pos, (id) => id === BLOCK_IDS.HYDRO_PLANT ? this.survival.addHarvestedCrop() : this.survival.addBlockToInventory(id));
       if (pickedUpBlocks.length > 0) {
         if (pickedUpBlocks.includes(BLOCK_IDS.REGOLITH) && !this.survival.isPlayerInsideShip(this.player.pos)) {
@@ -1309,6 +1401,7 @@ export class GameEngine {
       if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
       this._updateMission(dt);
       this._updateCrew(dt);
+      this._updateBaseDisplays(dt);
       if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
       if (isGameRunning) this._updateStory(dt);
 

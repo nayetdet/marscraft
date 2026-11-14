@@ -31,6 +31,18 @@ describe('SurvivalSystem', () => {
     expect(survival.oxygen).toBeGreaterThan(afterOutside);
   });
 
+  it('reports danger when health, oxygen, water, or food is critically low', () => {
+    const survival = new SurvivalSystem();
+    expect(survival.isInDanger).toBe(false);
+
+    for (const stat of ['health', 'oxygen', 'water', 'food']) {
+      survival[stat] = 5;
+      expect(survival.isInDanger).toBe(true);
+      survival[stat] = survival.maxStat;
+      expect(survival.isInDanger).toBe(false);
+    }
+  });
+
   it('manages base water reserves, greenhouse hydration, and drinking from habitat dispenser', () => {
     const survival = new SurvivalSystem();
     expect(survival.baseWater).toBeGreaterThan(0);

@@ -1,8 +1,9 @@
 import { MISSION_CONFIG, STORY_CONFIG } from '../config/constants.js';
-import { formatHours } from '../mission/missionText.js';
-import { CARDS, OBJECTIVES, commsCard } from './storyChapters.js';
+import { CARDS, OBJECTIVES, commsCard, replyCard } from './storyChapters.js';
 
 // A historia do jogo em 3 atos: chegada (tutorial), preparar a volta e janela de lancamento.
+// O tutorial tem 3 passos, um por ideia: entrar na base (ar), avisar a Terra (radio com atraso)
+// e buscar gelo. A resposta da Terra chega sozinha, com o jogador ja no passo seguinte.
 // Logica pura, sem DOM nem Three.js: o GameEngine entrega um retrato do jogo a cada frame
 // (`update(snapshot)`) e aplica os eventos que saem em `drainEvents()`.
 //
@@ -10,7 +11,7 @@ import { CARDS, OBJECTIVES, commsCard } from './storyChapters.js';
 //              propellantPct, dataSent, launched }
 export class StoryDirector {
   // `replyDelayHours`: horas de jogo ate a resposta da Terra chegar (ida e volta do sinal).
-  // `comms`: { millionKm, oneWayMinutes, dateIso } para o texto do card do radio.
+  // `comms`: { millionKm, oneWayMinutes, dateIso } para o card do radio.
   // Os dois vem do CommsLink, o mesmo radio do terminal da base.
   constructor({
     replyDelayHours = 1,
@@ -29,8 +30,10 @@ export class StoryDirector {
     this.objectiveId = null;
     this.objectiveText = '';
     this.windowHoursLeft = null; // so existe no ato 3
+    // Segundos reais ate a resposta da Terra chegar; null quando nao ha mensagem a caminho
+    this.replySecondsLeft = null;
 
-    this._replyAt = 0;
+    this._replyAt = null;
     this._iceBaseline = 0;
     this._guideShown = false;
     this._guiding = false;
@@ -53,10 +56,12 @@ export class StoryDirector {
       // Guarda quanto da janela sobrou na hora da decolagem (vai para a tela de vitoria)
       if (this.act === 3) this.windowHoursLeft = Math.max(0, this._windowClosesAt - s.hours);
       this._finished = true;
+      this.replySecondsLeft = null;
       this._setObjective('done');
       return;
     }
 
+    this._updateReply(s);
     if (this.act === 1) this._updateArrival(s);
     else if (this.act === 2) this._updateBuild(s);
     else this._updateWindow(s);
@@ -73,35 +78,39 @@ export class StoryDirector {
       case 'report':
         if (s.atConsole) {
           this._replyAt = s.hours + this.replyDelayHours;
-          this._card(commsCard(this.comms));
-          this._setAwaitText(s.hours);
-        }
-        break;
-      case 'await-reply':
-        if (s.hours >= this._replyAt) {
+          this._updateReply(s);
           this._iceBaseline = s.iceCount;
           this._setObjective('collect-ice');
-          this._card(CARDS.firstJob);
-        } else {
-          this._setAwaitText(s.hours);
+          this._card(commsCard(this.comms));
         }
         break;
       case 'collect-ice':
         // Gelo gasto baixa a base de comparacao: o que vale e pegar gelo novo depois do pedido
         if (s.iceCount < this._iceBaseline) this._iceBaseline = s.iceCount;
-        if (s.iceCount > this._iceBaseline) this._setObjective('return-base');
-        break;
-      case 'return-base':
-        if (s.insideHabitat) {
+        if (s.iceCount > this._iceBaseline) {
+          // O gelo vai direto para o foguete, que fica la fora: nada de voltar pelo airlock antes
           this.act = 2;
           this._events.push({ type: 'start-storms' });
           this._card(CARDS.act2);
-          this._setBuildText(s);
+          this._setObjective('act2');
         }
         break;
       default:
         break;
     }
+  }
+
+  // A mensagem viaja enquanto o jogo segue; quando a ida e volta do sinal acaba, a Terra responde
+  _updateReply(s) {
+    if (this._replyAt === null) return;
+    const left = this._replyAt - s.hours;
+    if (left <= 0) {
+      this._replyAt = null;
+      this.replySecondsLeft = null;
+      this._card(replyCard(this.comms));
+      return;
+    }
+    this.replySecondsLeft = Math.max(1, Math.ceil(left / this.gameHoursPerSecond - 1e-6));
   }
 
   _updateBuild(s) {
@@ -121,8 +130,7 @@ export class StoryDirector {
     }
     if (this._guiding && s.stormPhase === 'calm') this._guiding = false;
 
-    if (this._guiding) this._setObjective('storm-guide');
-    else this._setBuildText(s);
+    this._setObjective(this._guiding ? 'storm-guide' : 'act2');
   }
 
   _updateWindow(s) {
@@ -135,28 +143,12 @@ export class StoryDirector {
       return;
     }
     this.windowHoursLeft = left;
-
-    const id = s.propellantPct < 100 ? 'fuel' : !s.dataSent ? 'send-data' : 'ignite';
-    this.objectiveId = id;
-    this.objectiveText = `${OBJECTIVES[id]} · Window closes in ${formatHours(left)}`;
+    this._setObjective(s.propellantPct < 100 ? 'fuel' : !s.dataSent ? 'send-data' : 'ignite');
   }
 
   _setObjective(id) {
     this.objectiveId = id;
     this.objectiveText = OBJECTIVES[id];
-  }
-
-  // "Waiting for Earth to answer: 40 s" (segundos reais que faltam para a resposta chegar)
-  _setAwaitText(hours) {
-    const seconds = Math.max(1, Math.ceil((this._replyAt - hours) / this.gameHoursPerSecond - 1e-6));
-    this.objectiveId = 'await-reply';
-    this.objectiveText = `${OBJECTIVES['await-reply']}: ${seconds} s`;
-  }
-
-  _setBuildText(s) {
-    const storms = Math.min(s.stormsSurvived, this.stormsForWindow);
-    this.objectiveId = 'act2';
-    this.objectiveText = `${OBJECTIVES.act2} · Fuel ${Math.floor(s.propellantPct)}% · Storms ${storms}/${this.stormsForWindow}`;
   }
 
   _card(card) {

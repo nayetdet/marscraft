@@ -204,3 +204,42 @@ describe('oxygenPointsToKg', () => {
     expect(mission.storm.phase).toBe('warning');
   });
 });
+
+describe('MissionSystem demo storm control', () => {
+  it('brings the next real CME forward: warning now, storm after the short lead', () => {
+    const mission = createMission(12);
+    expect(mission.storm.phase).toBe('calm');
+    expect(mission.triggerStormSoon(0.2)).toBe(true);
+
+    mission.update(12.05);
+    expect(mission.storm.phase).toBe('warning');
+    expect(mission.drainEvents().map((e) => e.type)).toContain('storm-warning');
+
+    mission.update(12.3);
+    expect(mission.storm.phase).toBe('active');
+    expect(mission.storm.storm.cme.id).toBe('cme');
+  });
+
+  it('refuses while a storm is already active and never delays a storm', () => {
+    const mission = createMission(12);
+    mission.triggerStormSoon(0.2);
+    mission.update(12.3);
+    expect(mission.triggerStormSoon(0.2)).toBe(false);
+
+    const other = createMission(12);
+    other.triggerStormSoon(0.2);
+    const arrival = other.schedule[0].arrival;
+    other.triggerStormSoon(5);
+    expect(other.schedule[0].arrival).toBe(arrival);
+  });
+
+  it('the demo storm works with the shelter water wall', () => {
+    const mission = createMission(12);
+    mission.triggerStormSoon(0.2);
+    mission.shelterWaterL = 40;
+    mission.update(12.3, { insideHabitat: true });
+    const habitat = mission.doseRate;
+    mission.update(12.4, { insideHabitat: true, insideShelter: true });
+    expect(mission.doseRate).toBeLessThan(habitat);
+  });
+});

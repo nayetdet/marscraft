@@ -52,6 +52,7 @@ export const SURVIVAL_CONFIG = {
   WATER_DRAIN_RATE: 0.14,
   FOOD_DRAIN_RATE: 0.11,
   STARVE_DAMAGE_RATE: 0.8,
+  DANGER_THRESHOLD: 5,
   // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
   HEAL_MIN_OXYGEN: 5,
   DUST_STORM_START_RADIUS: 52,
@@ -67,9 +68,9 @@ export const WATER_SYSTEM_CONFIG = {
   LITERS_PER_KG_ICE: 1.0, // 1 kg de gelo = 1 L de água purificada
   GREENHOUSE_WATER_CONSUMPTION: 0.04, // L/s de irrigação na estufa
   DRINK_AMOUNT_FROM_DISPENSER: 2.0, // L consumidos por gole no purificador da base
-  ICE_CRATER_CENTER: { x: 22, z: -22 },
+  ICE_CRATER_CENTER: { x: 30, z: -22 },
   ICE_DEPOT_POS: { x: 5.5, y: 9.0, z: 9.5 },
-  WATER_DISPENSER_POS: { x: 4.4, y: 10.0, z: 2.4 },
+  WATER_DISPENSER_POS: { x: 10.4, y: 10.0, z: 1.5 },
 };
 
 // Missao: energia, tempestades solares e o MAV (issue #30).
@@ -78,7 +79,7 @@ export const WATER_SYSTEM_CONFIG = {
 export const MISSION_CONFIG = {
   MAX_ENERGY: 100, START_ENERGY: 80, SOLAR_RATE: 0.22,
   GREENHOUSE_RATE: 0.025, OXYGEN_ENERGY_RATE: 0.18,
-  AIRLOCK_COST: 1, AIRLOCK_CYCLE: 3, DOOR_SPEED: 5,
+  AIRLOCK_COST: 1, AIRLOCK_CYCLE: 0.8, DOOR_SPEED: 10,
   // Limpeza eletrostatica do traje no airlock (segundos). Sem energia, o aviso fica na tela
   // SUIT_CLEAN_SKIP_TIME e a poeira entra na base. Ver docs/data/airlock-e-poeira.md
   SUIT_CLEAN_TIME: 0.8, SUIT_CLEAN_SKIP_TIME: 0.6,
@@ -146,6 +147,8 @@ export const STORM_CONFIG = {
   FIRST_WARNING_AFTER_HOURS: 1,
   GAP_BETWEEN_STORMS_HOURS: 2,
   DURATION_HOURS: 3,
+  // Controle de demo (menu "Demo controls"): aviso curto antes da tempestade chegar (~10 s reais)
+  DEMO_LEAD_HOURS: 0.2,
 };
 
 export const MAV_CONFIG = {

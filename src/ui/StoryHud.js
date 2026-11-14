@@ -1,21 +1,96 @@
 import { STORY_CONFIG } from '../config/constants.js';
 import { WINDOW_CLOSED } from '../story/storyChapters.js';
+import { pixelIconSvg } from './pixelIcons.js';
 
 // Tempo minimo de um card na tela quando ja existe outro na fila
 const MIN_CARD_SECONDS = 5;
 
-// UI da historia: o card de radio (mensagens do Controle da Missao, nao pausa o jogo)
-// e a tela final de quando a janela de lancamento fecha.
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function iconEl(name, className) {
+  const node = el('span', className);
+  node.innerHTML = pixelIconSvg(name);
+  return node;
+}
+
+// So escreve no DOM quando o valor muda (o painel do objetivo e atualizado a cada frame)
+function setText(node, text) {
+  if (node._text !== text) {
+    node._text = text;
+    node.textContent = text;
+  }
+}
+
+function setClass(node, className) {
+  if (node._cls !== className) {
+    node._cls = className;
+    node.className = className;
+  }
+}
+
+function setIcon(node, name) {
+  if (node._icon !== name) {
+    node._icon = name;
+    node.innerHTML = pixelIconSvg(name);
+  }
+}
+
+function setWidth(node, fraction) {
+  const width = `${Math.round(Math.max(0, Math.min(1, fraction)) * 100)}%`;
+  if (node._width !== width) {
+    node._width = width;
+    node.style.width = width;
+  }
+}
+
+// UI da historia: o painel do objetivo (icones, passos e medidores), o card de radio
+// (mensagens do Controle da Missao, nao pausa o jogo) e a tela de janela de lancamento fechada.
 export class StoryHud {
-  constructor({ cardSeconds = STORY_CONFIG.CARD_SECONDS } = {}) {
+  constructor({ cardSeconds = STORY_CONFIG.CARD_SECONDS, stormsNeeded = STORY_CONFIG.STORMS_FOR_WINDOW } = {}) {
     const $ = (id) => document.getElementById(id);
     this.cardSeconds = cardSeconds;
 
     this.cardEl = $('story-card');
     this.titleEl = $('story-card-title');
-    this.textEl = $('story-card-text');
+    this.bodyEl = $('story-card-body');
     this.sourceEl = $('story-card-source');
     this.windowOverlayEl = $('window-overlay');
+
+    this.panelEl = $('story-objective');
+    this.actEls = [...$('story-acts').children];
+    this.actNameEl = $('story-objective-act');
+    this.taskIconEl = $('story-task-icon');
+    this.taskLabelEl = $('story-objective-text');
+    this.taskKeyEl = $('story-task-key');
+    this.stepsEl = $('story-steps');
+    this.stepEls = [...this.stepsEl.querySelectorAll('.story-step')];
+    this.goalsEl = $('story-goals');
+    this.fuelFillEl = $('story-goal-fuel').querySelector('.story-bar i');
+    this.fuelValueEl = $('story-goal-fuel').querySelector('b');
+    this.fuelGoalEl = $('story-goal-fuel');
+    this.stormsGoalEl = $('story-goal-storms');
+    this.dataGoalEl = $('story-goal-data');
+    this.timerEl = $('story-timer');
+    this.timerIconEl = $('story-timer-icon');
+    this.timerFillEl = this.timerEl.querySelector('.story-bar i');
+    this.timerLabelEl = $('story-timer-label');
+
+    this.signalEl = $('story-signal');
+    this.signalDotEl = $('story-signal-dot');
+    this.signalLabelEl = $('story-signal-label');
+    this._signal = false;
+
+    for (const node of this.goalsEl.querySelectorAll('[data-icon]')) node.innerHTML = pixelIconSvg(node.dataset.icon);
+    $('story-goal-data').querySelector('.story-tick').innerHTML = pixelIconSvg('check');
+    // Uma bolinha por tempestade que a missao pede
+    const pips = this.stormsGoalEl.querySelector('.story-pips');
+    this.pipEls = Array.from({ length: stormsNeeded }, () => pips.appendChild(el('i')));
+    this._panelShown = false;
 
     this.queue = [];
     this.current = null;
@@ -29,7 +104,65 @@ export class StoryHud {
     $('window-play-again-btn').addEventListener('click', () => window.location.reload());
   }
 
-  // card: { title, text, source? }. Os cards entram numa fila, um por vez.
+  // view: resultado de objectiveView() (src/story/objectiveView.js) ou null para esconder o painel
+  updateObjective(view) {
+    const shown = Boolean(view);
+    if (shown !== this._panelShown) {
+      this._panelShown = shown;
+      this.panelEl.classList.toggle('hidden', !shown);
+    }
+    this._updateSignal(view?.signal ?? null);
+    if (!view) return;
+
+    this.actEls.forEach((node, i) => setClass(node, i + 1 < view.act ? 'done' : i + 1 === view.act ? 'now' : ''));
+    setText(this.actNameEl, view.actName);
+    setIcon(this.taskIconEl, view.task.icon);
+    setText(this.taskLabelEl, view.task.label);
+    setText(this.taskKeyEl, view.task.key ? `[${view.task.key}]` : '');
+
+    setClass(this.stepsEl, view.steps ? 'story-steps' : 'story-steps hidden');
+    if (view.steps) {
+      view.steps.forEach((step, i) => {
+        const node = this.stepEls[i];
+        setIcon(node, step.state === 'done' ? 'check' : step.icon);
+        setClass(node, `story-step ${step.state}`);
+      });
+    }
+
+    setClass(this.goalsEl, view.goals ? 'story-goals' : 'story-goals hidden');
+    if (view.goals) {
+      const { fuelPct, storms, stormsNeeded, dataSent } = view.goals;
+      setWidth(this.fuelFillEl, fuelPct / 100);
+      setText(this.fuelValueEl, `${fuelPct}%`);
+      setClass(this.fuelGoalEl, fuelPct >= 100 ? 'story-goal done' : 'story-goal');
+      this.pipEls.forEach((node, i) => setClass(node, i < storms ? 'on' : ''));
+      setClass(this.stormsGoalEl, storms >= stormsNeeded ? 'story-goal done' : 'story-goal');
+      setClass(this.dataGoalEl, dataSent ? 'story-goal done' : 'story-goal');
+    }
+
+    setClass(this.timerEl, view.timer ? `story-timer ${view.timer.tone}` : 'story-timer hidden');
+    if (view.timer) {
+      setIcon(this.timerIconEl, view.timer.icon);
+      setWidth(this.timerFillEl, view.timer.fill);
+      setText(this.timerLabelEl, view.timer.label);
+    }
+  }
+
+  // Card do radio recolhido: fechado o card (Enter, OK ou tempo), sobra uma faixa fina no mesmo
+  // lugar com o sinal indo ate a Terra e a resposta voltando, ate ela chegar.
+  _updateSignal(signal) {
+    this._signal = Boolean(signal);
+    setClass(this.signalEl, signal && !this.current ? `story-signal${signal.returning ? ' returning' : ''}` : 'story-signal hidden');
+    if (!signal) return;
+    const left = `${Math.round(signal.position * 100)}%`;
+    if (this.signalDotEl._left !== left) {
+      this.signalDotEl._left = left;
+      this.signalDotEl.style.left = left;
+    }
+    setText(this.signalLabelEl, `${signal.label}: ${signal.seconds} s`);
+  }
+
+  // card: { title, lines?, choices?, link?, source? } (storyChapters.js). Um card por vez, em fila.
   showCard(card) {
     this.queue.push(card);
     if (!this.current) {
@@ -56,6 +189,13 @@ export class StoryHud {
     this.queue.length = 0;
     this.current = null;
     this.cardEl.classList.add('hidden');
+    this._showSignalStrip();
+  }
+
+  // Sem card aberto, a faixa do sinal aparece na hora (sem esperar o proximo frame)
+  _showSignalStrip() {
+    if (this._signal) this.signalEl.classList.remove('hidden');
+    this.signalEl._cls = undefined;
   }
 
   showWindowClosed() {
@@ -71,16 +211,58 @@ export class StoryHud {
     this.current = this.queue.shift() ?? null;
     if (!this.current) {
       this.cardEl.classList.add('hidden');
+      this._showSignalStrip();
       return;
     }
+    this.signalEl.classList.add('hidden');
+    this.signalEl._cls = undefined;
     this.timer = this.cardSeconds;
     this.titleEl.textContent = this.current.title;
-    this.textEl.textContent = this.current.text;
+    this._renderBody(this.current);
     this.sourceEl.textContent = this.current.source ?? '';
     this.cardEl.classList.remove('hidden');
     // Reinicia a animacao de entrada quando um card troca pelo seguinte
     this.cardEl.classList.remove('is-entering');
     void this.cardEl.offsetWidth;
     this.cardEl.classList.add('is-entering');
+  }
+
+  // Monta o desenho do card. So roda quando o card troca, nunca a cada frame.
+  _renderBody(card) {
+    const body = this.bodyEl;
+    body.replaceChildren();
+
+    if (card.link) {
+      // Sinal de radio saindo de Marte e chegando na Terra, com o tempo real de viagem
+      const link = el('div', 'story-link');
+      const mars = el('span', 'story-planet mars');
+      mars.append(el('i'), el('b', '', 'MARS'));
+      const track = el('span', 'story-link-track');
+      track.append(el('i'), el('b', '', `${card.link.minutes} min`), el('small', '', `${card.link.millionKm} million km`));
+      const earth = el('span', 'story-planet earth');
+      earth.append(el('i'), el('b', '', 'EARTH'));
+      link.append(mars, track, earth);
+      body.append(link);
+    }
+
+    if (card.choices) {
+      // Duas saidas lado a lado: o que cada uma da (verde) e o que cada uma custa (vermelho)
+      const row = el('div', 'story-choices');
+      card.choices.forEach((choice, i) => {
+        if (i > 0) row.append(el('span', 'story-choice-or', 'OR'));
+        const tile = el('div', 'story-choice');
+        const name = el('strong', '', choice.name);
+        if (choice.key) name.append(' ', el('span', 'story-key', `[${choice.key}]`));
+        tile.append(iconEl(choice.icon, 'story-choice-icon'), name, el('span', 'good', `+ ${choice.good}`), el('span', 'bad', `- ${choice.bad}`));
+        row.append(tile);
+      });
+      body.append(row);
+    }
+
+    for (const line of card.lines ?? []) {
+      const row = el('div', 'story-line');
+      row.append(iconEl(line.icon, 'story-line-icon'), el('span', '', line.text));
+      body.append(row);
+    }
   }
 }

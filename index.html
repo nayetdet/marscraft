@@ -31,6 +31,7 @@
     <h2 id="rotate-device-title">Rotate your device</h2>
     <p>MineMars is best played in landscape.</p>
   </div>
+  <div id="danger-vignette" class="danger-vignette hidden" aria-hidden="true"></div>
 
   <!-- HUD Estilo Minecraft Survival -->
   <div id="hud" class="hud">
@@ -51,9 +52,42 @@
     </div>
 
     <!-- Historia: objetivo atual (canto superior esquerdo) e seta que aponta para onde ir -->
-    <section id="story-objective" class="story-objective hidden" aria-live="polite">
-      <header id="story-objective-act"></header>
-      <p id="story-objective-text"></p>
+    <section id="story-objective" class="story-objective hidden">
+      <header>
+        <span id="story-acts" class="story-acts" aria-hidden="true"><i></i><i></i><i></i></span>
+        <b id="story-objective-act"></b>
+      </header>
+      <div class="story-task">
+        <span id="story-task-icon" class="story-task-icon"></span>
+        <strong id="story-objective-text" aria-live="polite"></strong>
+        <span id="story-task-key" class="story-key story-task-key"></span>
+      </div>
+      <!-- Ato 1: os 3 passos do tutorial -->
+      <div id="story-steps" class="story-steps" aria-hidden="true">
+        <span class="story-step"></span><i></i><span class="story-step"></span><i></i><span class="story-step"></span>
+      </div>
+      <!-- Atos 2 e 3: o que falta para o foguete (combustivel, tempestades, dados enviados) -->
+      <div id="story-goals" class="story-goals">
+        <div id="story-goal-fuel" class="story-goal" title="Rocket fuel">
+          <span class="story-goal-icon" data-icon="rocket"></span>
+          <span class="story-bar"><i></i></span>
+          <b></b>
+        </div>
+        <div id="story-goal-storms" class="story-goal" title="Solar storms survived">
+          <span class="story-goal-icon" data-icon="storm"></span>
+          <span class="story-pips"></span>
+        </div>
+        <div id="story-goal-data" class="story-goal" title="Science data sent to Earth">
+          <span class="story-goal-icon" data-icon="radio"></span>
+          <span class="story-tick"></span>
+        </div>
+      </div>
+      <!-- Relogio da janela de lancamento fechando (ato 3) -->
+      <div id="story-timer" class="story-timer">
+        <span id="story-timer-icon" class="story-goal-icon"></span>
+        <span class="story-bar"><i></i></span>
+        <b id="story-timer-label"></b>
+      </div>
     </section>
     <div id="waypoint" class="waypoint hidden" aria-hidden="true">
       <span class="waypoint-bob"><span id="waypoint-arrow" class="waypoint-arrow"></span></span>
@@ -254,7 +288,38 @@
           <button id="start-btn" class="mc-btn primary">Play</button>
           <button id="controls-btn" class="mc-btn secondary">Controls</button>
           <button id="reset-btn" class="mc-btn secondary">Reset</button>
+          <div class="menu-row">
+            <button id="sources-btn" class="mc-btn secondary">NASA Data</button>
+            <button id="demo-btn" class="mc-btn secondary">Demo Controls</button>
+          </div>
         </div>
+        <section id="sources-screen" class="controls-screen info-screen hidden" aria-labelledby="sources-title">
+          <h2 id="sources-title">Where the data comes from</h2>
+          <p class="info-note">Every number that matters in MineMars comes from open NASA data. The data is saved inside the game, it is not live.</p>
+          <div class="info-list">
+            <div class="info-row"><b>Solar storms</b><span>Real CMEs (clouds of particles thrown by the Sun) listed by NASA DONKI. Real data from <span id="sources-donki-date"></span>.</span></div>
+            <div class="info-row"><b>Radiation</b><span>Curiosity rover RAD instrument at Gale Crater, from NASA RadLab (OSDR): 6.93 uGy per hour, measured 16/11 to 10/12/2022.</span></div>
+            <div class="info-row"><b>Mars facts</b><span>Gravity 38% of Earth, a day of 24 h 39 min and 43% of Earth sunlight, from the NASA Mars Fact Sheet.</span></div>
+            <div class="info-row"><b>Weather</b><span>Temperature and air pressure from the NASA InSight lander, sols 675 to 681 (October 2020).</span></div>
+            <div class="info-row"><b>Crew needs</b><span>Oxygen, water and food per person from the NASA Baseline Values and Assumptions Document. Water recycling of 98% like the Space Station.</span></div>
+            <div class="info-row"><b>Making air</b><span>MOXIE on the Perseverance rover made 122 g of oxygen on Mars (NASA, 2023).</span></div>
+            <div class="info-row"><b>Health</b><span>Career radiation limit of 600 mSv (NASA-STD-3001). Bones lose about 1% of density a month in space without exercise (NASA, 2023).</span></div>
+          </div>
+          <p class="info-note">Game speed, battery size and storm length are scaled so a mission fits in a few minutes. Art, textures and sounds are drawn by code, with no NASA logo. Parts of the code were written with AI assistance.</p>
+          <button id="sources-back-btn" class="mc-btn secondary">Back</button>
+        </section>
+        <section id="demo-screen" class="controls-screen info-screen hidden" aria-labelledby="demo-title">
+          <h2 id="demo-title">Demo Controls</h2>
+          <p class="info-note">For judges and for recording the demo. These skip the waiting, they do not change the rules. Storms still come from the real NASA DONKI list.</p>
+          <div class="demo-grid">
+            <button class="mc-btn secondary" data-demo="storm">Start a solar storm</button>
+            <button class="mc-btn secondary" data-demo="battery">Drain the battery to 10%</button>
+            <button class="mc-btn secondary" data-demo="night">Jump to night</button>
+            <button class="mc-btn secondary" data-demo="noon">Jump to noon</button>
+          </div>
+          <p id="demo-feedback" class="info-note demo-feedback" role="status"></p>
+          <button id="demo-back-btn" class="mc-btn secondary">Back</button>
+        </section>
         <section id="controls-screen" class="controls-screen hidden" aria-labelledby="controls-title">
           <h2 id="controls-title">Controls</h2>
           <div class="controls-section">
@@ -380,9 +445,16 @@
   </div>
 
   <!-- Historia: card de radio com as mensagens do Controle da Missao (nao pausa o jogo) -->
+  <!-- Card do radio recolhido: a mensagem viajando ate a Terra e a resposta voltando -->
+  <div id="story-signal" class="story-signal hidden" aria-hidden="true">
+    <span class="story-planet mars"><i></i></span>
+    <span class="story-signal-track"><i id="story-signal-dot"></i></span>
+    <span class="story-planet earth"><i></i></span>
+    <b id="story-signal-label"></b>
+  </div>
   <aside id="story-card" class="story-card hidden" role="status" aria-live="polite">
     <header><span class="story-card-signal" aria-hidden="true"></span><strong id="story-card-title"></strong></header>
-    <p id="story-card-text"></p>
+    <div id="story-card-body" class="story-card-body"></div>
     <small id="story-card-source"></small>
     <button id="story-card-ok" class="mc-btn story-card-ok" type="button">OK <span class="story-key">[Enter]</span></button>
   </aside>

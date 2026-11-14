@@ -15,6 +15,18 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Vite, sem backend, de
 | Céu astronômico | `src/sky/*` | Sol, Terra e Lua vistos de Marte, Fobos e Deimos, ciclo dia/noite em "sols", luneta (tecla Z), avanço de tempo (tecla T) |
 | HUD | `src/ui/HudManager.js`, `index.html` | Barras estilo Minecraft, hotbar de 9 slots, inventário (tecla E, 36 slots), toasts, tela de morte e rótulos no céu. **UI em inglês.** |
 
+## Organização da base (`src/base/`)
+
+A base é dividida em zonas com placa, cor no piso e função: `CMD-1` comando, `LSS-1` suporte de vida, `HAB-1` beliches, `SHL-1` abrigo de tempestade, `MED-1` enfermaria, `GRN-1` estufa, `GYM-1` academia e `AL-1` airlock.
+
+- **Telas vivas** (`baseDisplayText.js` + `baseCanvas.js`): status da base no comando, mapa de energia no suporte de vida, medidor de radiação dentro do abrigo (mostra os litros na parede de água) e painel da estufa. Redesenham só quando o conteúdo muda.
+- **Pôsteres educativos** (`basePosters.js`): 8 pôsteres com um quadro "REAL DATA" e a fonte; três deles formam uma galeria no túnel da estufa. Mirar e apertar [F] mostra o dado.
+- **Menu**: "NASA Data" (fontes e aviso de que o dado é embutido, não ao vivo) e "Demo Controls" (adiantar a próxima tempestade real, noite, meio-dia e bateria a 10 %), pensado para jurados e para gravar o vídeo.
+
+A ala norte (`NORTH_WING` em `habitatLayout.js`) é um corredor central envidraçado que liga quatro módulos separados, cada um com a sua função: energia e aquecimento, cozinha, banheiro e oficina. O campo solar fica a oeste do módulo de energia.
+
+O abrigo de tempestade, o terminal de rádio e o módulo norte são da issue #56 (`nasaModelsBuilder.js`); `baseDecor.js` só acrescenta placa, pôster e medidor a eles.
+
 ## Comparação com o que o desafio pede
 
 | Requisito do desafio | Situação | Gap |
@@ -24,13 +36,13 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Vite, sem backend, de
 | **Blindagem contra radiação** | ✅ | Tempestades solares a partir de CMEs reais do DONKI, dose em mSv (RadLab), blindagem [R] que gasta energia (issue #30) e abrigo de tempestade com parede de água que troca água por proteção (issue #56). |
 | **Orçamento de energia** | ✅ | Bateria carregada pelo Sol (43 % da Terra, zero à noite); gastam O2, blindagem, fábrica de combustível e rádio (issue #30). |
 | **Condição de vitória** | ✅ | Abastecer o MAV (gelo + energia), sobreviver a 3 tempestades e enviar os dados científicos (issue #30). Agora dentro de uma história em 3 atos, com janela de lançamento: se ela fechar, a partida termina sem decolagem. |
-| **História (início, meio e fim)** | ✅ | Animação de pouso → ato 1 (tutorial guiado) → ato 2 (preparar a volta, tempestades) → ato 3 (janela de lançamento) → animação de decolagem. Ver [`../superpowers/specs/2026-11-14-story-arc-design.md`](../superpowers/specs/2026-11-14-story-arc-design.md). |
+| **História (início, meio e fim)** | ✅ | Animação de pouso → ato 1 (tutorial guiado em 3 passos, HUD em ícones) → ato 2 (preparar a volta, tempestades) → ato 3 (janela de lançamento) → animação de decolagem. Ver [`../superpowers/specs/2026-11-14-story-arc-design.md`](../superpowers/specs/2026-11-14-story-arc-design.md). |
 | **Produção de comida** | 🟡 | Batatas são um estoque finito; não há cultivo, nem custo de água/energia na estufa. |
 | **Módulo norte (issue #56, parte B)** | ✅ | Sala de energia e aquecimento (consumo de cada sistema e corte de carga; o aquecedor gasta mais à noite e desligado congela canos e estufa), cozinha e despensa (ração da despensa × refeição fresca com cenoura, água e energia), banheiro (lavar vira água cinza; filtro gasto recupera menos que 98 %) e oficina com impressora 3D (regolito + energia consertam a estação mais gasta). O depósito de carga (B6) foi descartado: ensina pouco pelo esforço. |
 | **Atraso de comunicação** | ✅ | Terminal de rádio no habitat (issue #56): o atraso vem da distância Terra–Marte calculada para a data (órbitas do JPL); pedir conselho ao Controle da Missão custa energia e a resposta chega atrasada, montada com a situação do momento do envio. Uma conjunção solar encenada deixa o rádio mudo e a criança decide sozinha. No ato 1 da história, o primeiro relatório ao Controle da Missão já ensina esse atraso (resposta só depois da ida e volta do sinal). |
 | **Toda escolha tem custo (trade-off)** | ❌ | **Este é o gap principal.** Hoje não há nenhuma decisão com custo: a estratégia ótima é ficar dentro da nave. |
 | **Dados reais da NASA** | ❌ | Nenhum dado real. O céu é "inspirado", não alimentado por dados. |
-| **Atribuição de fontes no jogo** | ❌ | Não há tela de créditos ou fontes. |
+| **Atribuição de fontes no jogo** | ✅ | Tela "NASA Data" no menu e fonte em cada pôster e tela da base. |
 | Público de 7 a 12 anos, linguagem simples | 🟡 | O texto é simples, mas o jogo **não ensina** nenhuma restrição real. Vale explicar termos como "sol" e "dose". |
 | Navegador, sem conta | ✅ | — |
 | Rejogabilidade | 🟡 | Mundo fixo e sem eventos aleatórios. |

@@ -23,6 +23,7 @@ describe('greenhouse', () => {
   it('targets the greenhouse food monitor only when looking at it instead of anywhere in the dome', () => {
     const engine = Object.create(GameEngine.prototype);
     engine.airlock = { doors: [] };
+    engine.baseDecor = { infoPoints: [] };
     engine._interactionDir = new THREE.Vector3();
     engine._interactionOffset = new THREE.Vector3();
     engine._interactionPoint = new THREE.Vector3();

@@ -5,9 +5,7 @@ describe('objectiveTarget', () => {
   it('points each act 1 objective at its place', () => {
     expect(objectiveTarget('enter-base')).toBe('airlock');
     expect(objectiveTarget('report')).toBe('console');
-    expect(objectiveTarget('await-reply')).toBeNull();
     expect(objectiveTarget('collect-ice')).toBe('ice');
-    expect(objectiveTarget('return-base')).toBe('airlock');
   });
 
   it('sends the player for ice, then to the rocket, while the tank needs ice', () => {
@@ -17,8 +15,14 @@ describe('objectiveTarget', () => {
     expect(objectiveTarget('fuel', { iceCount: 1, iceNeeded: 1 })).toBe('mav');
   });
 
-  it('has no place to point at when the tank needs no more ice', () => {
-    expect(objectiveTarget('act2', { iceCount: 3, iceNeeded: 0 })).toBeNull();
+  it('points at the console once the tank needs no more ice and the data is not sent', () => {
+    expect(objectiveTarget('act2', { iceCount: 3, iceNeeded: 0 })).toBe('console');
+    expect(objectiveTarget('fuel', { iceNeeded: 0, propellantPct: 80 })).toBe('console');
+  });
+
+  it('has no place to point at while the factory works or only storms are left', () => {
+    expect(objectiveTarget('act2', { iceNeeded: 0, dataSent: true, propellantPct: 80 })).toBeNull();
+    expect(objectiveTarget('act2', { iceNeeded: 0, dataSent: true, propellantPct: 100 })).toBeNull();
   });
 
   it('covers the storm and the last jobs', () => {

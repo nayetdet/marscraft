@@ -96,6 +96,12 @@ Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG
 | Conjunção solar (`COMMS_CONFIG.CONJUNCTION_SUN_ANGLE_DEG`) | os comandos para Marte param quando o Sol fica a **menos de ~2°** de Marte no céu da Terra, por **~2 semanas**, a cada **~26 meses** | [Ref] NASA/JPL: [What's Mars Solar Conjunction, and Why Does It Matter?](https://www.nasa.gov/solar-system/whats-mars-solar-conjunction-and-why-does-it-matter/). A próxima real é só em 2028, então o jogo encena uma por partida (6 h de jogo) e a chama de "simulated" |
 | Água na parede cheia | **40 L = 10 g/cm²** (escala de jogo: 0,25 g/cm² por litro) | Uma parede real de 10 cm em volta de uma cabine pede centenas de litros; o jogo encolhe para caber no tanque de 100 L da base |
 
+| Pôster "How we make air" | MOXIE (rover Perseverance) produziu **122 g** de O2 em 16 rodadas, pico de **12 g/h** | [Ref] [NASA, 06/09/2023](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/) |
+| Pôster "Why we exercise" | ossos perdem **~1 %** de densidade por mês no espaço sem exercício; tripulações da ISS treinam **~2 h por dia** | [Ref] [NASA, 01/12/2023](https://www.nasa.gov/missions/station/iss-research/counteracting-bone-and-muscle-loss-in-microgravity/) |
+| Pôsteres "Mars vs Earth" e "Going outside" | gravidade 38 %, sol de 24 h 39 min, luz 43 %, pressão 0,7 %, −62 °C (média) e −97,7 °C (mínima) | tabelas acima (Mars Fact Sheet e InSight) |
+
+Os textos dos pôsteres ficam em `src/base/basePosters.js`; a tela "NASA Data" do menu (`index.html`) lista as mesmas fontes.
+
 Escala de jogo (não é dado real): capacidade da bateria, custos de energia em %, duração da tempestade (3 h de jogo), dano por mSv e o limite de 3 mSv/h a partir do qual a radiação machuca.
 
 Simplificação a explicar: a "blindagem ligada" (tecla R) é um escudo ativo que gasta energia e só protege dentro da bolha em volta da base. Escudos magnéticos ativos ainda são pesquisa; nas bases reais, o abrigo de tempestade usa massa (água, regolito). Detalhes e fontes em [`protecao-radiacao.md`](protecao-radiacao.md).
