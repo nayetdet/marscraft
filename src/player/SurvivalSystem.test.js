@@ -3,6 +3,12 @@ import { BLOCK_IDS } from '../config/blockTypes.js';
 import { SurvivalSystem } from './SurvivalSystem.js';
 
 describe('SurvivalSystem', () => {
+  it('starts with the Scope in slot one and carrots in slot two', () => {
+    const survival = new SurvivalSystem();
+    expect(survival.slots[0]?.id).toBe(BLOCK_IDS.SCOPE);
+    expect(survival.slots[1]?.id).toBe(BLOCK_IDS.HYDRO_PLANT);
+  });
+
   it('detects player inside Main White Habitat, Pressurized Tunnel, and Greenhouse Dome', () => {
     const survival = new SurvivalSystem();
 

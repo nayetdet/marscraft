@@ -70,17 +70,12 @@ describe('resolveScanTarget: base modules', () => {
     ['tunnel', { x: -9.5, y: 11.5, z: 5 }],
     ['greenhouse', { x: -17.5, y: 11.5, z: 20 }],
     ['cupola', { x: 0.5, y: 16.5, z: 20 }],
-    ['lander', { x: 22.5, y: 13.5, z: 20 }],
   ])('identifies the %s up close', (id, origin) => {
     expect(scan(world, origin, NORTH)).toBe(id);
   });
 
   it('shows the whole outpost when looking at the base from far away', () => {
     expect(scan(world, { x: 5.5, y: 11.5, z: 45 }, NORTH)).toBe('base');
-  });
-
-  it('keeps the ascent vehicle as its own target even from far away', () => {
-    expect(scan(world, { x: 22.5, y: 13.5, z: 45 }, NORTH)).toBe('lander');
   });
 
   it('ignores structures the player built away from the base', () => {
@@ -95,6 +90,9 @@ describe('resolveScanTarget: base modules', () => {
     expect(baseModuleAt(-10, 13, 2)).toBe('tunnel');
     expect(baseModuleAt(3, 17, 3)).toBe('cupola');
     expect(baseModuleAt(-18, 15, 0)).toBe('greenhouse');
+    expect(baseModuleAt(-22, 11, -21)).toBe('habitat');
+    expect(baseModuleAt(17, 11, -20)).toBe('habitat');
+    expect(baseModuleAt(-3, 11, -38)).toBe('habitat');
     expect(baseModuleAt(30, 10, 30)).toBeNull();
   });
 });
@@ -118,6 +116,18 @@ describe('resolveScanTarget: 3D objects', () => {
     const world = createMapWorld();
     const furniture = { minX: 3, maxX: 5, minY: 10, maxY: 11.5, minZ: -2, maxZ: -1 };
     expect(scan(world, { x: 4, y: 11, z: 4 }, NORTH, { objects: [furniture] })).toBe('habitat');
+  });
+
+  it('falls through an untagged prop outside the base to the voxel target behind it', () => {
+    const world = createMapWorld();
+    world.setBlock(0, 10, -10, BLOCK_IDS.REGOLITH);
+    const prop = { minX: -1, maxX: 1, minY: 9, maxY: 12, minZ: 0, maxZ: 1 };
+    expect(scan(world, { x: 0, y: 10.5, z: 10 }, NORTH, { objects: [prop] })).toBe('habitat');
+  });
+
+  it('keeps the MAV rocket and its control factory scannable as the ascent vehicle', () => {
+    const rocket = { ...box('lander', 0) };
+    expect(scan(createMapWorld(), { x: 0, y: 10.5, z: 10 }, NORTH, { objects: [rocket] })).toBe('lander');
   });
 
   it('ignores a box that contains the camera', () => {
@@ -188,7 +198,32 @@ describe('collectScanBlocks', () => {
     const modules = new Set(blocks.map((b) => baseModuleAt(b.x, b.y, b.z)));
     expect(modules.has('habitat')).toBe(true);
     expect(modules.has('greenhouse')).toBe(true);
+    expect(modules.has('tunnel')).toBe(true);
+    expect(modules.has('gym')).toBe(true);
+    expect(blocks.some((b) => b.x <= -12 && b.z >= 7 && b.z <= 13)).toBe(true);
+    expect(blocks.some((b) => b.z <= -20)).toBe(true);
+    expect(blocks.some((b) => b.z <= -40)).toBe(true);
     expect(modules.has('lander')).toBe(false);
+  });
+
+  it('collects the exercise and medbay wing as its own scan target', () => {
+    const world = baseWorld();
+    const blocks = collectScanBlocks(world, { id: 'gym', hit: null });
+    const collected = new Set(blocks.map(({ x, y, z }) => `${x},${y},${z}`));
+    let visibleGymBlocks = 0;
+    for (let x = -12; x <= -4; x++) {
+      for (let y = 9; y <= 14; y++) {
+        for (let z = 7; z <= 13; z++) {
+          if (world.getBlock(x, y, z) === BLOCK_IDS.AIR) continue;
+          visibleGymBlocks++;
+          expect(collected.has(`${x},${y},${z}`), `missing visible gym block ${x},${y},${z}`).toBe(true);
+        }
+      }
+    }
+    expect(visibleGymBlocks).toBeGreaterThan(20);
+    expect(blocks.every((b) => baseModuleAt(b.x, b.y, b.z) === 'gym')).toBe(true);
+    expect(blocks.some((b) => b.x === -7 && b.z === 5)).toBe(true);
+    expect(blocks.some((b) => b.x === -4 && b.z === 7)).toBe(true);
   });
 
   it('collects the exposed patch of the same terrain around the aimed block', () => {

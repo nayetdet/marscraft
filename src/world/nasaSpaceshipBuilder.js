@@ -398,7 +398,6 @@ export function buildNasaSpaceshipAndBase(world) {
   const groundY = WORLD_CONFIG.GROUND_LEVEL; // 8
   buildMainWhiteHabitat(world, groundY);
   buildGreenhouseDome(world, groundY);
-  buildNasaAscentLander(world, groundY);
   buildGymModule(world, groundY);
   buildNorthModule(world, groundY);
 }

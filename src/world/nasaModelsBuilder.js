@@ -147,6 +147,8 @@ export function buildNasaCustomModels(scene) {
 
   // 9. MAV (Mars Ascent Vehicle) na plataforma de lancamento + fabrica de combustivel ISRU
   const { pad, rocket, factory } = createMavModel(mats, MAV_CONFIG.PAD_POSITION.x, groundTopY, MAV_CONFIG.PAD_POSITION.z);
+  rocket.userData.scanId = 'lander';
+  factory.userData.scanId = 'mav-panel';
   group.add(pad);
   group.add(rocket);
   solidObjects.push(rocket);
@@ -154,14 +156,17 @@ export function buildNasaCustomModels(scene) {
   solidObjects.push(factory);
   // 8. Equipamentos 3D do Módulo da Academia (Esteira Espacial, Bicicleta Ergométrica e Scanner MedBay)
   const treadmill = createSpaceTreadmillModel(mats, -9.2, floorTopY, 10.2);
+  treadmill.userData.scanId = 'gym';
   group.add(treadmill);
   solidObjects.push(treadmill);
 
   const exerciseBike = createExerciseBikeModel(mats, -5.8, floorTopY, 10.4);
+  exerciseBike.userData.scanId = 'gym';
   group.add(exerciseBike);
   solidObjects.push(exerciseBike);
 
   const gymMedbay = createGymMedbayModel(mats, -7.6, floorTopY, 12.1);
+  gymMedbay.userData.scanId = 'gym';
   group.add(gymMedbay);
   solidObjects.push(gymMedbay);
 
@@ -205,6 +210,19 @@ export function buildNasaCustomModels(scene) {
       if (plants.includes(obj)) obj.userData.collider = collider;
     }
   }
+
+  // A screen-sized scan target on the ISRU/MAV control panel. The broad factory
+  // collider remains useful for navigation, while this gives the scope a precise
+  // target when the player aims directly at the panel.
+  colliders.push({
+    scanId: 'mav-panel',
+    minX: MAV_CONFIG.PAD_POSITION.x + 4.05,
+    maxX: MAV_CONFIG.PAD_POSITION.x + 5.15,
+    minY: groundTopY + 0.68,
+    maxY: groundTopY + 1.22,
+    minZ: MAV_CONFIG.PAD_POSITION.z - 0.52,
+    maxZ: MAV_CONFIG.PAD_POSITION.z - 0.38,
+  });
 
   // Keep plants and the driven rover as independent objects; merge static scenery.
   // O foguete do MAV tambem fica separado: ele sobe na animacao de decolagem.

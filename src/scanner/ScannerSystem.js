@@ -28,9 +28,11 @@ export class ScannerSystem {
   update(dt, targetId) {
     if (targetId !== this.targetId) {
       this.targetId = targetId;
-      this.progress = 0;
-      this.completedTargetId = null;
       this.targetWasKnown = targetId ? this.journal.has(targetId) : false;
+      // Previously discovered targets are identified immediately; only new science
+      // requires holding the scope steady for a full scan.
+      this.progress = this.targetWasKnown ? 1 : 0;
+      this.completedTargetId = this.targetWasKnown ? targetId : null;
     }
 
     const known = this.targetWasKnown;

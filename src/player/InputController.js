@@ -1,4 +1,5 @@
 import { BLOCK_INTERACTION_CONFIG } from '../config/constants.js';
+import { BLOCK_IDS } from '../config/blockTypes.js';
 import { applyMouseLook, requestRawPointerLock } from './mouseLook.js';
 
 export class InputController {
@@ -134,9 +135,13 @@ export class InputController {
   }
 
   _useSelectedItem() {
-    const hit = this.getTargetedBlock();
     const slot = this.survival.slots[this.hud.selectedSlot];
     if (!slot || slot.count <= 0) return;
+    if (slot.id === BLOCK_IDS.SCOPE) {
+      this._setScope(!this.isScannerOpen, !this.isScannerOpen);
+      return;
+    }
+    const hit = this.getTargetedBlock();
 
     if (slot.consumable) {
       const previousCount = slot.count;
@@ -200,10 +205,6 @@ export class InputController {
         this.keys.Sprint = !this.keys.Sprint;
         button.classList.toggle('is-active', this.keys.Sprint);
       }
-    } else if (action === 'zoom' && !this.isRoverActive()) {
-      const open = !this.isScannerOpen || !this.isZoomed;
-      this._setScope(open, open);
-      button.classList.toggle('is-active', open);
     } else if (action === 'inventory') {
       this._toggleInventory();
     }
@@ -255,6 +256,7 @@ export class InputController {
   _syncHandWithSlot() {
     const slot = this.survival.slots[this.hud.selectedSlot];
     this.playerHand.setHeldBlock(slot?.id, slot?.count ?? 0);
+    if (slot?.id !== BLOCK_IDS.SCOPE && this.isScannerOpen) this._setScope(false, false);
   }
 
   _canBreak(hit) {
@@ -486,16 +488,13 @@ export class InputController {
 
       if (e.code === 'KeyQ' && this.isLocked && !e.repeat) {
         const slot = this.survival.slots[this.hud.selectedSlot];
+        if (slot?.equipment) return;
         if (slot && this.survival.useBlockFromSlot(this.hud.selectedSlot)) {
           this.world.spawnPlayerDrop(this.player.pos, this.player.yaw, slot.id);
           this.hud.renderHotbar(this.survival.slots);
           this._syncHandWithSlot();
         }
         return;
-      }
-
-      if (e.code === 'KeyZ') {
-        this._setScope(!this.isScannerOpen, false);
       }
 
       if (e.code === 'KeyT') {
