@@ -26,6 +26,13 @@ describe('radiationTone', () => {
 });
 
 describe('missionStatus', () => {
+  it('prioritizes the red window breach alert until the base is sealed', () => {
+    const mission = fakeMission({ battery: { percent: 5 }, storm: { phase: 'active', storm: STORM, hoursLeft: 2 } });
+    const damaged = missionStatus(mission, FETCHED, { brokenWindows: 2 });
+    expect(damaged.air.tone).toBe('danger');
+    expect(damaged.alerts[0]).toMatchObject({ id: 'breach', tone: 'danger' });
+    expect(missionStatus(fakeMission(), FETCHED, { brokenWindows: 0 }).alerts).toEqual([]);
+  });
   it('shows the resources and no alerts when everything is calm', () => {
     const s = missionStatus(fakeMission(), FETCHED);
     expect(s.power).toEqual({ pct: 80, tone: 'ok', trend: 'up' });

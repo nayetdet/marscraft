@@ -75,3 +75,13 @@ Extras, se der tempo:
 - Rotule sempre: **"ao vivo"** só se o fetch funcionou; caso contrário, **"dados reais de DD/MM/AAAA"**.
 - Tenha uma tela de **"Fontes / Dados da NASA"** acessível pelo menu, listando DONKI, RadLab, InSight, OSDR e Mars Trek com links.
 - Não use o logo da NASA em texturas ou na UI geradas.
+
+## Atualização da estufa — 14/11/2026
+
+O snapshot e vários gaps acima estão desatualizados: o código já contém estufa plantável, energia, comunicação e fontes NASA. A estufa agora diferencia alface (rápida), batata (equilibrada) e soja (maior custo/rendimento), acompanha as três culturas colhidas e revela registros reais da API OSDR no caderno, com data e links. Veja o procedimento reprodutível em `docs/data/apis-nasa.md`. Tempos e rendimentos são regras do jogo, identificadas assim na tela; os estudos embutidos são históricos.
+
+### Culturas como itens e modelos voxel
+
+Batata, alface e soja têm IDs próprios, sprites de inventário e modelos 3D distintos, compartilhados entre mão e drops. As plantas do canteiro usam modelos próprios, com crescimento ancorado no piso. A colheita do painel solta o alimento no mundo; é preciso recolher e usar para comer. O inventário mantém nove slots de hotbar e 27 de mochila. As cenouras decorativas/mineráveis continuam separadas. Modelos e ícones novos foram construídos em código, sem assets externos, com assistência de IA.
+
+O ponto de interação da estufa abre o painel de cultivo. As folhas das portas do airlock são recortadas no limite do vão durante o deslizamento, impedindo que apareçam atravessando os blocos laterais; o ciclo de pressão e a colisão continuam operantes.

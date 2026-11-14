@@ -1,4 +1,5 @@
-import { STATION_CONFIG as C } from '../config/constants.js';
+import { CROP_ITEM_IDS } from '../config/blockTypes.js';
+import { STATION_CONFIG as C, CROP_CONFIG } from '../config/constants.js';
 
 const RADIO_SILENT = 'Radio silent: the Sun is between Mars and Earth (solar conjunction). You must decide on your own until it passes.';
 
@@ -23,6 +24,9 @@ export class StationSystem {
     this.messageKind = null;
     this.freshFood = C.FRESH_FOOD_DURATION;
     this.crop = null;
+    this.harvestCount = 0;
+    this.cropCollection = new Set();
+    this.discoveryIndex = -1;
     this.messageTimer = 0;
     this.message = 'No transmission pending.';
     this.wasInside = false;
@@ -37,7 +41,7 @@ export class StationSystem {
     this.boneDensity = Math.max(0, this.boneDensity - C.FITNESS_DECAY * 1.15 * dt);
     this.muscleStrength = Math.max(0, this.muscleStrength - C.FITNESS_DECAY * dt);
     this.fitness = Math.max(0, this.fitness - C.FITNESS_DECAY * dt);
-    if (this.crop && this.mission.greenhousePowered && !this.contaminated) this.crop.progress = Math.min(C.CROP_GROWTH_TIME, this.crop.progress + dt);
+    if (this.crop && this.mission.greenhousePowered && !this.contaminated) this.crop.progress = Math.min(CROP_CONFIG[this.crop.type].seconds, this.crop.progress + dt);
     if (inside && (this.contaminated || this.co2 >= 80)) survival.health = Math.max(0, survival.health - C.DUST_DAMAGE * dt);
     if (this.messageTimer > 0) {
       this.messageTimer = Math.max(0, this.messageTimer - dt);
@@ -100,21 +104,28 @@ export class StationSystem {
     return this.message;
   }
   plant(type, survival) {
-    if (!['potato', 'lettuce', 'soy'].includes(type)) return 'Unknown crop.';
+    if (!Object.hasOwn(CROP_CONFIG, type)) return 'Unknown crop.';
     if (this.crop) return 'Harvest the current crop first.';
-    if (survival.water < C.CROP_WATER_COST) return 'Not enough water.';
-    if (!this.mission.spend(C.CROP_ENERGY_COST)) return 'Not enough power.';
-    survival.water -= C.CROP_WATER_COST;
+    const recipe = CROP_CONFIG[type];
+    if (survival.water < recipe.water) return 'Not enough water.';
+    if (!this.mission.spend(recipe.energy)) return 'Not enough power.';
+    survival.water -= recipe.water;
     this.crop = { type, progress: 0 };
     return `Planted ${type}. Growth needs power and a clean greenhouse.`;
   }
-  harvest(survival) {
-    if (!this.crop || this.crop.progress < C.CROP_GROWTH_TIME) return 'The crop is not ready.';
+  harvest(survival, spawnDrop) {
+    if (!this.crop || this.crop.progress < CROP_CONFIG[this.crop.type].seconds) return 'The crop is not ready.';
     const type = this.crop.type;
+    const id = CROP_ITEM_IDS[type];
+    if (spawnDrop) spawnDrop(id);
+    else if (!survival.addBlockToInventory(id)) return 'Inventory is full. Make room before harvesting.';
+    this.harvestCount++;
+    this.cropCollection.add(type);
+    this.discoveryIndex++;
     this.crop = null;
     this.freshFood = C.FRESH_FOOD_DURATION;
-    survival.food = Math.min(survival.maxStat, survival.food + C.CROP_NUTRITION);
-    return `Harvested ${type}. Fresh food restores nutrition and work speed.`;
+
+    return `Harvested ${type}. Pick up your harvest and use it to eat. A real NASA study is now in your field notebook!`;
   }
   sendMav({ delaySeconds = C.COMMS_DELAY, blackout = false } = {}) {
     if (this.mavSent) return 'MAV science package already received.';

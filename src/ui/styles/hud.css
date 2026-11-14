@@ -139,7 +139,7 @@
 /* Cada conjunto de leituras ocupa o mesmo canto, mas só o ativo é exibido. */
 .mc-top-info.hidden { display: none; }
 
-.mc-top-info div {
+.mc-top-info > div:not(.rover-bucket):not(.rover-gps) {
   background: rgba(0, 0, 0, 0.35);
   padding: 2px 6px;
   width: fit-content;
@@ -1062,8 +1062,200 @@
 }
 
 /* Textos antigos do canto superior esquerdo (Sol, XYZ, ambiente, objetivo...): escondidos para
-   deixar a tela limpa. Agua e O2 da base ficam no painel da direita. */
-#astronaut-info { display: none; }
+   deixar a tela limpa. Agua e O2 da base ficam no painel da direita.
+   No modo rover, os textos de telemetria sao substituidos pelo baldinho cinza que enche de agua azul. */
+#astronaut-info,
+#rover-speed,
+#rover-heading,
+#rover-coords,
+#rover-ice,
+#rover-battery,
+#rover-objective {
+  display: none;
+}
+
+.mc-top-info .rover-bucket {
+  background: transparent;
+  padding: 0;
+}
+
+/* Baldinho cinza do Rover que vai enchendo com água azul conforme coleta gelo/água */
+.mc-top-info .rover-bucket {
+  position: relative;
+  width: 78px;
+  height: 88px;
+  margin-left: 8px;
+  margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.65));
+  pointer-events: none;
+}
+
+.mc-top-info .rover-bucket-handle {
+  width: 58px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 4px solid #cbd5e1;
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  box-shadow: inset 0 2px 0 #f8fafc, 0 -2px 0 #1e293b;
+  margin-bottom: -2px;
+  z-index: 1;
+}
+
+.mc-top-info .rover-bucket-rim {
+  width: 72px;
+  height: 11px;
+  box-sizing: border-box;
+  background: linear-gradient(90deg, #94a3b8 0%, #cbd5e1 28%, #64748b 82%, #475569 100%);
+  border: 3px solid #1e293b;
+  box-shadow: inset 0 2px 0 #e2e8f0;
+  z-index: 3;
+}
+
+.mc-top-info .rover-bucket-body {
+  position: relative;
+  width: 64px;
+  height: 58px;
+  margin-top: -3px;
+  box-sizing: border-box;
+  background: linear-gradient(90deg, #64748b 0%, #94a3b8 24%, #64748b 70%, #475569 100%);
+  clip-path: polygon(0 0, 100% 0, 86% 100%, 14% 100%);
+  padding: 3px 6px 5px;
+  z-index: 2;
+}
+
+.mc-top-info .rover-bucket-cavity {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #1e293b 0%, #334155 35%, #1e293b 100%);
+  clip-path: polygon(2% 0, 98% 0, 86% 100%, 14% 100%);
+  overflow: hidden;
+  box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.65);
+}
+
+.mc-top-info .rover-bucket-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0%;
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 35%, #1d4ed8 100%);
+  box-shadow: inset 0 3px 0 #7dd3fc, inset 0 -4px 0 #1e40af;
+  transition: height 0.14s linear;
+}
+
+.mc-top-info .rover-bucket-wave {
+  position: absolute;
+  top: -4px;
+  left: -10%;
+  width: 120%;
+  height: 7px;
+  background: repeating-linear-gradient(
+    90deg,
+    #bae6fd 0 8px,
+    #38bdf8 8px 16px
+  );
+  animation: rover-bucket-wave-shift 0.8s steps(4, end) infinite;
+}
+
+.mc-top-info .rover-bucket-stream {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 10px;
+  height: 100%;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.mc-top-info .rover-bucket.is-filling .rover-bucket-stream {
+  opacity: 1;
+}
+
+.mc-top-info .rover-bucket-stream i {
+  position: absolute;
+  left: 2px;
+  width: 6px;
+  height: 9px;
+  background: #7dd3fc;
+  box-shadow: 0 2px 0 #38bdf8;
+  animation: rover-bucket-drop 0.42s linear infinite;
+}
+
+.mc-top-info .rover-bucket-stream i:nth-child(2) {
+  animation-delay: 0.14s;
+  left: 1px;
+}
+
+.mc-top-info .rover-bucket-stream i:nth-child(3) {
+  animation-delay: 0.28s;
+  left: 3px;
+}
+
+.mc-top-info .rover-bucket-bubbles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mc-top-info .rover-bucket-bubbles i {
+  position: absolute;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  background: #e0f2fe;
+  opacity: 0.75;
+  animation: rover-bucket-bubble 1.1s steps(5, end) infinite;
+}
+
+.mc-top-info .rover-bucket-bubbles i:nth-child(1) { left: 26%; animation-delay: 0s; }
+.mc-top-info .rover-bucket-bubbles i:nth-child(2) { left: 52%; animation-delay: 0.35s; }
+.mc-top-info .rover-bucket-bubbles i:nth-child(3) { left: 70%; animation-delay: 0.7s; }
+
+.mc-top-info .rover-bucket.is-filling {
+  animation: rover-bucket-pulse 0.32s ease-in-out infinite alternate;
+}
+
+.mc-top-info .rover-bucket.is-full .rover-bucket-rim {
+  border-color: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.75), inset 0 2px 0 #bae6fd;
+}
+
+@keyframes rover-bucket-wave-shift {
+  from { transform: translateX(0); }
+  to { transform: translateX(-16px); }
+}
+
+@keyframes rover-bucket-drop {
+  0% { top: -8px; opacity: 1; }
+  85% { top: 82%; opacity: 1; }
+  100% { top: 95%; opacity: 0; }
+}
+
+@keyframes rover-bucket-bubble {
+  0% { transform: translateY(0); opacity: 0.85; }
+  100% { transform: translateY(-28px); opacity: 0; }
+}
+
+@keyframes rover-bucket-pulse {
+  from { transform: translateY(0) scale(1); }
+  to { transform: translateY(-2px) scale(1.04); }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .mc-top-info .rover-bucket {
+    width: 62px;
+    height: 70px;
+    transform: scale(0.86);
+    transform-origin: top left;
+  }
+}
 
 
 .rover-controls-hint {
@@ -1282,7 +1474,7 @@
   font-size: 11px;
 }
 
-.touch-mode .mc-top-info div {
+.touch-mode .mc-top-info > div:not(.rover-bucket):not(.rover-gps) {
   overflow: hidden;
   max-width: 100%;
   white-space: nowrap;
@@ -1365,4 +1557,73 @@
   .touch-mode .touch-control-caption {
     width: 96px;
   }
+}
+
+
+/* North-up rover navigation: blue marks the ice crater, white marks the rover. */
+.rover-gps {
+  position: relative;
+  width: 112px;
+  padding: 5px;
+  box-sizing: border-box;
+  color: #eee;
+  background: rgba(20, 20, 20, .86);
+  border: 2px solid #777;
+  box-shadow: inset 2px 2px #333, 3px 3px rgba(0, 0, 0, .5);
+  font: 700 10px 'Courier New', monospace;
+}
+.rover-gps-title { display: flex; justify-content: space-between; color: #f5cf4d; }
+.rover-gps-title span { color: #fff; }
+.rover-gps-map {
+  position: relative;
+  height: 88px;
+  margin: 4px 0;
+  overflow: hidden;
+  border: 2px solid #444;
+  background-color: #53382c;
+  background-image: linear-gradient(#6b4939 1px, transparent 1px), linear-gradient(90deg, #6b4939 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.rover-gps-ice, .rover-gps-player { position: absolute; }
+.rover-gps-ice {
+  width: 9px; height: 9px;
+  background: #55d8ff;
+  border: 2px solid #d8faff;
+  box-shadow: 2px 2px #183b50;
+  transform: translate(-50%, -50%);
+}
+.rover-gps-player {
+  left: 50%; top: 50%;
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 12px solid #fff;
+  filter: drop-shadow(1px 1px #111);
+}
+.rover-gps-distance { color: #8fe8ff; white-space: nowrap; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .touch-mode .rover-gps { width: 92px; }
+  .touch-mode .rover-gps-map { height: 64px; }
+  .touch-mode .rover-gps-distance { font-size: 9px; }
+}
+
+/* Keep the map and cargo gauge together even when the story HUD moves them. */
+#rover-info {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  width: fit-content;
+}
+
+.mc-top-info .rover-bucket {
+  margin: 0;
+}
+
+.mc-top-info .rover-bucket.is-full::after {
+  content: 'FULL';
+  position: absolute;
+  bottom: -12px;
+  color: #b4f187;
+  font: bold 10px 'Courier New', monospace;
+  text-shadow: 1px 1px #000;
 }

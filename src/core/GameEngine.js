@@ -1,5 +1,7 @@
+import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS } from '../world/greenhouseLayout.js';
+import { createCropPlantModel } from '../graphics/cropModels.js';
 import * as THREE from 'three';
-import { CAMERA_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, SURVIVAL_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, CROP_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, SURVIVAL_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
 import { createBaseStock } from '../crew/baseStock.js';
@@ -101,6 +103,7 @@ export class GameEngine {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.toneMapping = THREE.NoToneMapping;
+    this.renderer.localClippingEnabled = true;
     this.container.appendChild(this.renderer.domElement);
 
     const { materials, previews, atlas } = createBlockMaterials();
@@ -149,7 +152,6 @@ export class GameEngine {
     this.stationPanel = new StationPanel(this);
     this.adminPanel = new AdminPanel(this); // F8 no dev ou ?admin: testes (tempestade, agua, teleporte)
     this._buildStationMarkers();
-    this.growingCrops = [];
     this._interactionDir = new THREE.Vector3();
     this._interactionOffset = new THREE.Vector3();
     this._interactionPoint = new THREE.Vector3();
@@ -287,11 +289,10 @@ export class GameEngine {
     const crop = this.stations.crop;
     this.stationCrop.visible = Boolean(crop);
     if (crop) {
-      this.stationCrop.scale.y = 0.2 + 0.8 * crop.progress / STATION_CONFIG.CROP_GROWTH_TIME;
-      this.stationCrop.material.color.setHex(({ potato: 0x69a63c, lettuce: 0x77d749, soy: 0x3b8551 })[crop.type]);
+      this.stationCrop.scale.y = 0.2 + 0.8 * crop.progress / CROP_CONFIG[crop.type].seconds;
+      for (const [type, model] of Object.entries(this.stationCropModels)) model.visible = type === crop.type;
     }
     this.airlock.update(dt, this.player.pos);
-    this._growCrops(dt);
     if (this.survival.health <= 0) this.survival.isDead = true;
     const hasPriorityInteraction = ['crew', 'water_dispenser', 'rover_terminal', 'mav', 'greenhouse', 'info'].includes(this.currentInteraction);
     document.getElementById('interaction-hint').textContent = (hasPriorityInteraction || this.gymController.isActive) ? '' : (this._getInteraction()?.label ?? '');
@@ -354,8 +355,7 @@ export class GameEngine {
     const collider = plant.userData.collider;
     const colliderIndex = this.customColliders.indexOf(collider);
     if (colliderIndex >= 0) this.customColliders.splice(colliderIndex, 1);
-    plant.scale.setScalar(0.25);
-    this.growingCrops.push({ plant, collider, elapsed: 0 });
+    plant.removeFromParent();
     return true;
   }
 
@@ -390,7 +390,7 @@ export class GameEngine {
       { type: 'hygiene', x: -16.0, y: 11.1, z: -38.3, label: 'Press F: bathroom & water recycler' },
       { type: 'hygiene', x: -19.85, y: 11.6, z: -32.5, label: 'Press F: bathroom & water recycler' },
       { type: 'workshop', x: 11.5, y: 11.5, z: -38.1, label: 'Press F: 3D printer workshop' },
-      { type: 'greenhouse', x: -17, y: 11.4, z: 0, label: 'Press F: harvest carrot' },
+      { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
       { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
@@ -399,7 +399,8 @@ export class GameEngine {
       this._interactionPoint.set(candidate.x, candidate.y, candidate.z);
       this._interactionOffset.copy(this._interactionPoint).sub(this.player.pos);
       const distance = this._interactionOffset.length();
-      if (distance < bestDistance && distance > 0 && this._interactionOffset.dot(dir) / distance > 0.8) {
+      const minDot = candidate.minDot ?? 0.8;
+      if (distance < bestDistance && distance > 0 && this._interactionOffset.dot(dir) / distance > minDot) {
         best = candidate; bestDistance = distance;
       }
     }
@@ -532,8 +533,12 @@ export class GameEngine {
     this._buildShelterWater();
     const dark = new THREE.MeshLambertMaterial({ color: 0x293b43 });
     // Voxel hydroponic tray and grow lights.
-    this.stationCrop = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.7, 0.65), new THREE.MeshLambertMaterial({ color: 0x61b54c }));
-    this.stationCrop.position.set(-16.5, 10.7, 0); this.stationCrop.visible = false; this.scene.add(this.stationCrop);
+    this.stationCrop = new THREE.Group();
+    this.stationCropModels = Object.fromEntries(Object.keys(CROP_CONFIG).map(type => {
+      const model = createCropPlantModel(type); model.visible = false;
+      this.stationCrop.add(model); return [type, model];
+    }));
+    this.stationCrop.position.set(GREENHOUSE_CENTER.x + GARDEN_CROP_BED.dx + 0.5, WORLD_CONFIG.GROUND_LEVEL + 2, GREENHOUSE_CENTER.z + GARDEN_CROP_BED.dz + 0.5); this.stationCrop.visible = false; this.scene.add(this.stationCrop);
     const colors = { treadmill: 0x38bdf8, bike: 0x4ade80, medical: 0xe76b65 };
     for (const [type, x, z] of [['treadmill', -9.2, 9.2], ['bike', -5.8, 9.5], ['medical', -7.6, 12.4]]) {
       const frame = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.12), dark);
@@ -848,7 +853,7 @@ export class GameEngine {
       if (message) this.hud.showToast(message, event.type === 'storm-warning' ? 8000 : 4500);
     }
 
-    this.missionHud.update(this.mission, { survival: this.survival, stations: this.stations });
+    this.missionHud.update(this.mission, { survival: this.survival, stations: this.stations, world: this.world });
     this._panelRefreshTimer = (this._panelRefreshTimer ?? 0) + dt;
     if (this.missionHud.isMavPanelOpen && this._panelRefreshTimer > 0.25) {
       this._panelRefreshTimer = 0;
@@ -1165,16 +1170,16 @@ export class GameEngine {
     if (this.roverController.canUnloadIce()) {
       const res = this.roverController.unloadIce();
       if (res.success) {
-        const added = this.survival.addBaseWater(
+        this.survival.addBaseWater(
           res.amount * WATER_SYSTEM_CONFIG.LITERS_PER_KG_ICE
         );
-        this.hud.showToast(`Offloaded ${res.amount}kg ice! +${added}L purified water into habitat.`);
+        this._playGymTone(520, 0.14, 380);
       }
     } else if (this.roverController.canCollectIce()) {
       const res = this.roverController.collectIce();
-      this.hud.showToast(res.message || res.reason);
-    } else {
-      this.hud.showToast('No ice deposits nearby or not at habitat water intake bay');
+      if (res.success) {
+        this._playGymTone(260, 0.14, 480);
+      }
     }
   }
 
@@ -1231,15 +1236,6 @@ export class GameEngine {
       return;
     }
 
-    // 3. Estufa / Plantações de Batata (x: -18, z: 0)
-    const distGreenhouse = Math.hypot(this.player.pos.x + 18, this.player.pos.z);
-    const dyGreenhouse = Math.abs(this.player.pos.y - 11.0);
-    if (distGreenhouse < 5.8 && dyGreenhouse < 2.2) {
-      this.currentInteraction = 'greenhouse';
-      this.hud.setInteractionPrompt(true, '[F] Harvest Carrot (Irrigated Greenhouse)');
-      return;
-    }
-
     this.currentInteraction = null;
     this.hud.setInteractionPrompt(false);
   }
@@ -1284,9 +1280,7 @@ export class GameEngine {
       const res = this.survival.drinkFromBaseDispenser();
       this.hud.showToast(res.message);
     } else if (this.currentInteraction === 'greenhouse') {
-      const res = this.survival.harvestGreenhouseCrop();
-      this.hud.showToast(res.message);
-      this.hud.renderHotbar(this.survival.slots);
+      this.stationPanel.open('greenhouse');
     }
   }
 

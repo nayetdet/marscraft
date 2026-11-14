@@ -191,12 +191,14 @@ export class InputController {
       if (!this.isRoverActive()) this.keys.Space = true;
     } else if (action === 'mine') {
       if (this.isRoverActive()) this.onRoverAction();
+      else if (this.getInteraction?.()?.type === 'greenhouse') this.onInteract();
       else {
         this.isBreakButtonHeld = true;
         this._startBreaking();
       }
     } else if (action === 'use') {
       if (this.isRoverActive()) this.onRoverAction();
+      else if (this.getInteraction?.()?.type === 'greenhouse') this.onInteract();
       else this._useSelectedItem();
     } else if (action === 'interact') {
       this.onInteract();
@@ -317,7 +319,7 @@ export class InputController {
     if (target.progress >= 1) {
       if (target.type === 'crop') {
         const position = target.plant.getWorldPosition(target.plant.position.clone());
-        if (this.harvestCrop(target.plant)) this.world.spawnCropDrop(position);
+        if (this.harvestCrop(target.plant)) this.world.spawnCropDrop(position, target.plant.userData.cropItemId);
       } else {
         this.world.breakBlock(target.x, target.y, target.z);
       }
@@ -532,7 +534,7 @@ export class InputController {
       }
 
       const interaction = this.getInteraction?.();
-      if (interaction && ['treadmill', 'bike', 'medical'].includes(interaction.type) && (e.button === 0 || e.button === 2)) {
+      if (interaction && ['treadmill', 'bike', 'medical', 'greenhouse'].includes(interaction.type) && (e.button === 0 || e.button === 2)) {
         this.onInteract?.();
         return;
       }

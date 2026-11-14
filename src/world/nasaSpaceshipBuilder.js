@@ -1,3 +1,4 @@
+import { isGreenhouseBed } from './greenhouseLayout.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { WORLD_CONFIG } from '../config/constants.js';
 import { HABITAT_LAYOUT, NORTH_WING, mainHabCell, northLinkBox } from './habitatLayout.js';
@@ -110,11 +111,7 @@ function buildGreenhouseDome(world, groundY) {
       // Piso da Redoma
       if (horizDist <= domeRadius - 0.8) {
         // Canteiros de plantação hidropônica em fileiras com corredor central
-        const isWalkway = Math.abs(dz) <= 1 || Math.abs(dx) <= 1;
-        const isPlanter =
-          !isWalkway &&
-          horizDist <= domeRadius - 1.6 &&
-          (Math.abs(dz) === 2 || Math.abs(dz) === 3 || Math.abs(dz) === 4);
+        const isPlanter = isGreenhouseBed(dx, dz);
 
         world.setBlock(
           x,
@@ -396,8 +393,10 @@ function buildNorthModule(world, groundY) {
 
 export function buildNasaSpaceshipAndBase(world) {
   const groundY = WORLD_CONFIG.GROUND_LEVEL; // 8
+  world.recordBaseWindows = true;
   buildMainWhiteHabitat(world, groundY);
   buildGreenhouseDome(world, groundY);
   buildGymModule(world, groundY);
   buildNorthModule(world, groundY);
+  world.recordBaseWindows = false;
 }

@@ -1,5 +1,6 @@
+import { createCropItemModel } from '../graphics/cropModels.js';
 import * as THREE from 'three';
-import { BLOCK_IDS } from '../config/blockTypes.js';
+import { BLOCK_IDS, CROP_TYPES_BY_ID } from '../config/blockTypes.js';
 import { BLOCK_INTERACTION_CONFIG } from '../config/constants.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
 
@@ -26,6 +27,14 @@ export class PlayerHand {
     this._buildHeldBlockMesh();
     this._buildScopeMesh();
 
+    this.heldCrops = {};
+    for (const [id, type] of Object.entries(CROP_TYPES_BY_ID)) {
+      const model = createCropItemModel(type);
+      model.scale.setScalar(.5); model.position.set(-.08, .14, -.22);
+      model.rotation.set(.2, .4, -.3); model.visible = false;
+      model.traverse(node => { node.renderOrder = 999; });
+      this.handGroup.add(model); this.heldCrops[id] = model;
+    }
     this.camera.add(this.handGroup);
   }
 
@@ -165,6 +174,7 @@ export class PlayerHand {
       return;
     }
     this.heldCarrotMesh.visible = false;
+    for (const model of Object.values(this.heldCrops)) model.visible = false;
     this.heldScopeMesh.visible = blockId === BLOCK_IDS.SCOPE && count > 0;
     if (this.heldScopeMesh.visible) {
       this.heldBlockMesh.visible = false;
@@ -177,6 +187,12 @@ export class PlayerHand {
       return;
     }
 
+    if (this.heldCrops[blockId]) {
+      this.heldBlockMesh.visible = false;
+      this.heldCrops[blockId].visible = true;
+      this.armMesh.position.set(.08, -.06, .08);
+      return;
+    }
     if (blockId === BLOCK_IDS.HYDRO_PLANT) {
       this.heldBlockMesh.visible = false;
       this.heldCarrotMesh.visible = true;
