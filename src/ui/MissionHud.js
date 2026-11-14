@@ -1,16 +1,35 @@
 import { MAV_CONFIG } from '../config/constants.js';
-import { formatDose, formatHours, stormSourceText } from '../mission/missionText.js';
+import { missionStatus } from './missionCards.js';
+import { pixelIconSvg } from './pixelIcons.js';
 
-// So escreve no DOM quando o texto ou a classe mudam (o update roda a cada frame)
-function setText(el, text, className = '') {
-  if (el._text !== text) {
-    el._text = text;
-    el.textContent = text;
-  }
+// So escreve no DOM quando a classe ou o texto mudam (o update roda a cada frame)
+function setClass(el, className) {
   if (el._cls !== className) {
     el._cls = className;
     el.className = className;
   }
+}
+
+function setIcon(el, name) {
+  if (el._icon === name) return;
+  el._icon = name;
+  el.innerHTML = pixelIconSvg(name);
+}
+
+function setWidth(el, pct) {
+  const width = `${Math.round(Math.max(0, Math.min(100, pct)))}%`;
+  if (el._width !== width) {
+    el._width = width;
+    el.style.width = width;
+  }
+}
+
+function setText(el, text, className) {
+  if (el._text !== text) {
+    el._text = text;
+    el.textContent = text;
+  }
+  if (className !== undefined) setClass(el, className);
 }
 
 export class MissionHud {
@@ -18,12 +37,15 @@ export class MissionHud {
     this.donkiFetched = donkiFetched;
     const $ = (id) => document.getElementById(id);
 
-    this.powerEl = $('mission-power');
-    this.radiationEl = $('mission-radiation');
-    this.shieldEl = $('mission-shield');
-    this.stormEl = $('mission-storm');
-    this.mavEl = $('mission-mav');
-    this.sourceEl = $('mission-source');
+    this.rows = {
+      power: this._row($('res-power')),
+      water: this._row($('res-water')),
+      air: this._row($('res-air')),
+      radiation: this._row($('res-radiation')),
+      rocket: this._row($('res-rocket')),
+    };
+    this.levelEls = [...$('res-radiation').querySelectorAll('.res-levels i')];
+    this.alerts = [this._alert($('mission-alerts')), this._alert($('mission-alerts'))];
 
     this.mavOverlayEl = $('mav-overlay');
     this.mavOverallEl = $('mav-overall');
@@ -53,36 +75,118 @@ export class MissionHud {
     $('play-again-btn').addEventListener('click', () => window.location.reload());
   }
 
-  update(mission) {
-    const power = Math.round(mission.battery.percent);
-    const sun = mission.chargeRate > 0.05 ? `charging +${mission.chargeRate.toFixed(1)}%/h` : 'no sun, not charging';
-    setText(this.powerEl, `Power: ${power}% (${sun})`, power <= 15 ? 'danger' : '');
+  // Guarda os nos de uma linha do painel e desenha o icone uma vez
+  _row(root) {
+    const row = {
+      root,
+      icon: root.querySelector('.res-icon'),
+      value: root.querySelector('.res-value'),
+      fill: root.querySelector('.res-fill'),
+      trend: root.querySelector('.res-trend'),
+      key: root.querySelector('.res-key'),
+      delta: root.querySelector('.res-delta'),
+    };
+    setIcon(row.icon, root.dataset.icon);
+    return row;
+  }
 
-    const rate = mission.doseRate;
-    setText(
-      this.radiationEl,
-      `Radiation: ${rate.toFixed(2)} mSv/h | Your dose: ${formatDose(mission.totalDoseMsv)}`,
-      rate >= 3 ? 'danger' : rate >= 0.5 ? 'warn' : ''
-    );
+  // Cartao de alerta pre-criado (no maximo dois); so troca texto e classe
+  _alert(container) {
+    const root = document.createElement('div');
+    root.className = 'mission-alert hidden';
+    root.innerHTML = `
+      <span class="alert-icon"></span>
+      <div class="alert-body">
+        <div class="alert-title"></div>
+        <div class="alert-text"></div>
+        <div class="alert-timer"><i></i></div>
+        <div class="alert-source"></div>
+      </div>`;
+    container.appendChild(root);
+    return {
+      root,
+      icon: root.querySelector('.alert-icon'),
+      title: root.querySelector('.alert-title'),
+      text: root.querySelector('.alert-text'),
+      timer: root.querySelector('.alert-timer'),
+      timerFill: root.querySelector('.alert-timer i'),
+      source: root.querySelector('.alert-source'),
+    };
+  }
 
-    if (!mission.shieldOn) setText(this.shieldEl, 'Radiation shield [R]: OFF', '');
-    else if (mission.insideShield) setText(this.shieldEl, 'Radiation shield [R]: ON (uses energy)', 'ok');
-    else setText(this.shieldEl, 'Radiation shield [R]: ON, but you are outside the bubble!', 'warn');
+  // `survival` traz a agua da base e `stations` o ar do habitat (CO2, poeira)
+  update(mission, { survival, stations } = {}) {
+    const view = missionStatus(mission, this.donkiFetched, {
+      water: survival?.baseWater,
+      maxWater: survival?.maxBaseWater,
+      hydration: survival?.greenhouseHydration,
+      co2: stations?.co2,
+      contaminated: stations?.contaminated,
+    });
+    const { power, water, air, radiation, rocket } = this.rows;
 
-    const { phase, storm, hoursUntil, hoursLeft } = mission.storm;
-    if (phase === 'warning') {
-      setText(this.stormEl, `Solar storm arrives in ${formatHours(hoursUntil)}!`, 'warn');
-      setText(this.sourceEl, stormSourceText(storm, this.donkiFetched), 'mission-source');
-    } else if (phase === 'active') {
-      setText(this.stormEl, `SOLAR STORM NOW! Ends in ${formatHours(hoursLeft)}. Hide inside or use the shield [R]`, 'danger');
-      setText(this.sourceEl, stormSourceText(storm, this.donkiFetched), 'mission-source');
-    } else {
-      setText(this.stormEl, 'Space weather: calm', '');
-      setText(this.sourceEl, '', 'mission-source');
+    setClass(power.root, `res-row ${view.power.tone}`);
+    setText(power.value, `${view.power.pct}%`);
+    setWidth(power.fill, view.power.pct);
+    setIcon(power.trend, view.power.trend);
+    setClass(power.trend, `res-trend ${view.power.trend}`);
+    power.trend.title = view.power.trend === 'up' ? 'The Sun is charging the battery' : 'Night: no sun, the battery goes down';
+
+    setClass(water.root, `res-row ${view.water.tone}`);
+    setText(water.value, `${view.water.liters} L`);
+    setWidth(water.fill, view.water.pct);
+    // Estufa seca: plantinha murcha no lugar da seta
+    setClass(water.trend, `res-trend ${view.water.greenhouseDry ? 'dry' : ''}`);
+    if (view.water.greenhouseDry) setIcon(water.trend, 'plant');
+    else if (water.trend._icon) {
+      water.trend._icon = null;
+      water.trend.innerHTML = '';
     }
+    this._showWaterDelta(water, survival?.baseWater);
 
-    const progress = mission.progress;
-    setText(this.mavEl, `Rocket home (MAV): ${Math.floor(progress.overallPct)}% ready`, progress.ready ? 'ok' : '');
+    setClass(air.root, `res-row ${view.air.tone}`);
+    setText(air.value, `${view.air.pct}%`);
+    setWidth(air.fill, view.air.pct);
+
+    setClass(radiation.root, `res-row ${view.radiation.tone}`);
+    setIcon(radiation.icon, view.radiation.icon);
+    setText(radiation.value, view.radiation.word);
+    this.levelEls.forEach((el, i) => setClass(el, i < view.radiation.level ? `on l${i + 1}` : ''));
+    setClass(radiation.key, `res-key ${view.shieldOn ? 'on' : ''}`);
+
+    setClass(rocket.root, `res-row ${view.rocket.tone}`);
+    setText(rocket.value, `${view.rocket.pct}%`);
+    setWidth(rocket.fill, view.rocket.pct);
+
+    this.alerts.forEach((alert, i) => {
+      const data = view.alerts[i];
+      if (!data) {
+        setClass(alert.root, 'mission-alert hidden');
+        return;
+      }
+      setClass(alert.root, `mission-alert ${data.tone}`);
+      setIcon(alert.icon, data.icon);
+      setText(alert.title, data.title);
+      setText(alert.text, data.text);
+      setClass(alert.timer, data.fill === undefined ? 'alert-timer hidden' : 'alert-timer');
+      if (data.fill !== undefined) setWidth(alert.timerFill, data.fill * 100);
+      setText(alert.source, data.source ?? '');
+    });
+  }
+
+  // Saltos de 1 L ou mais (gelo descarregado, agua bebida) aparecem como "+12 L" / "-2 L"
+  _showWaterDelta(row, liters) {
+    if (liters === undefined) return;
+    if (this._lastWater !== undefined) {
+      const delta = Math.round(liters - this._lastWater);
+      if (Math.abs(delta) >= 1) {
+        row.delta.textContent = `${delta > 0 ? '+' : ''}${delta} L`;
+        row.delta.className = 'res-delta';
+        void row.delta.offsetWidth; // reinicia a animacao
+        row.delta.className = `res-delta show ${delta > 0 ? 'up' : 'down'}`;
+      }
+    }
+    this._lastWater = liters;
   }
 
   openMavPanel() {
