@@ -1,5 +1,4 @@
-import { BLOCK_IDS } from '../config/blockTypes.js';
-import { WORLD_CONFIG } from '../config/constants.js';
+import { BLOCK_INTERACTION_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 
 export class InputController {
   constructor({
@@ -28,6 +27,9 @@ export class InputController {
     this.keys = {};
     this.isLocked = false;
     this.isZoomed = false;
+    this.breakState = null;
+    this.breakSwingTimer = 0;
+    this.isBreakButtonHeld = false;
 
     this._bindEvents();
   }
@@ -39,14 +41,76 @@ export class InputController {
     }
   }
 
+  _canBreak(hit) {
+    return hit.hit && hit.y > 0 && Math.hypot(hit.x, hit.z) < WORLD_CONFIG.CRATER_RADIUS - 4;
+  }
+
+  _startBreaking() {
+    const hit = this.getTargetedBlock();
+    if (!this._canBreak(hit)) return;
+
+    this.breakState = {
+      x: hit.x,
+      y: hit.y,
+      z: hit.z,
+      block: hit.block,
+      progress: 0,
+    };
+    this.breakSwingTimer = 0;
+    this.playerHand.triggerSwing();
+    this.world.updateBreakCracks(hit.x, hit.y, hit.z, 0.01);
+  }
+
+  _cancelBreaking() {
+    if (!this.breakState) return;
+    this.breakState = null;
+    this.world.clearBreakCracks();
+  }
+
+  update(dt) {
+    if (!this.isBreakButtonHeld) {
+      this._cancelBreaking();
+      return;
+    }
+
+    if (!this.breakState) {
+      this._startBreaking();
+      return;
+    }
+
+    const hit = this.getTargetedBlock();
+    const target = this.breakState;
+    const isSameBlock = hit.hit && hit.x === target.x && hit.y === target.y && hit.z === target.z && hit.block === target.block;
+    if (!this.isLocked || !isSameBlock) {
+      this._cancelBreaking();
+      return;
+    }
+
+    target.progress = Math.min(1, target.progress + dt / BLOCK_INTERACTION_CONFIG.BREAK_TIME);
+    this.world.updateBreakCracks(target.x, target.y, target.z, target.progress);
+    this.breakSwingTimer += dt;
+    if (this.breakSwingTimer >= 0.18) {
+      this.playerHand.triggerSwing();
+      this.breakSwingTimer = 0;
+    }
+
+    if (target.progress >= 1) {
+      this.world.breakBlock(target.x, target.y, target.z);
+      this._cancelBreaking();
+    }
+  }
+
   _bindEvents() {
     const overlay = document.getElementById('overlay');
     const startBtn = document.getElementById('start-btn');
+    const resetBtn = document.getElementById('reset-btn');
     const respawnBtn = document.getElementById('respawn-btn');
 
     startBtn.addEventListener('click', () => {
       this.domElement.requestPointerLock();
     });
+
+    resetBtn.addEventListener('click', () => window.location.reload());
 
     if (respawnBtn) {
       respawnBtn.addEventListener('click', () => {
@@ -59,6 +123,7 @@ export class InputController {
 
     document.addEventListener('pointerlockchange', () => {
       this.isLocked = document.pointerLockElement === this.domElement;
+      if (!this.isLocked) this._cancelBreaking();
       if (!this.isLocked) this.keys = {};
       if (!this.survival.isDead && !this.hud.isInventoryOpen) {
         overlay.classList.toggle('hidden', this.isLocked);
@@ -131,28 +196,16 @@ export class InputController {
     window.addEventListener('mousedown', (e) => {
       if (!this.isLocked || this.survival.isDead) return;
 
+      if (e.button === 0) {
+        this.isBreakButtonHeld = true;
+        this._startBreaking();
+        return;
+      }
+
       this.playerHand.triggerSwing();
       const hit = this.getTargetedBlock();
 
-      if (e.button === 0) {
-        if (!hit.hit) return;
-        if (hit.type === 'crop') {
-          if (this.survival.addHarvestedCrop() && this.harvestCrop(hit.plant)) {
-            this.hud.renderHotbar(this.survival.slots);
-            this._syncHandWithSlot();
-          }
-          return;
-        }
-        const distFromCenter = Math.hypot(hit.x, hit.z);
-        // Protege o paredão externo da cratera e a camada base
-        if (hit.y > 0 && distFromCenter < WORLD_CONFIG.CRATER_RADIUS - 4) {
-          const brokenBlockId = hit.block;
-          this.world.setBlock(hit.x, hit.y, hit.z, BLOCK_IDS.AIR, true);
-          this.survival.addBlockToInventory(brokenBlockId);
-          this.hud.renderHotbar(this.survival.slots);
-          this._syncHandWithSlot();
-        }
-      } else if (e.button === 2) {
+      if (e.button === 2) {
         const slot = this.survival.slots[this.hud.selectedSlot];
         if (!slot || slot.count <= 0) return;
 
@@ -181,6 +234,18 @@ export class InputController {
           }
         }
       }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 0) {
+        this.isBreakButtonHeld = false;
+        this._cancelBreaking();
+      }
+    });
+
+    window.addEventListener('blur', () => {
+      this.isBreakButtonHeld = false;
+      this._cancelBreaking();
     });
 
     window.addEventListener('contextmenu', (e) => e.preventDefault());

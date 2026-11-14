@@ -142,6 +142,16 @@ export class GameEngine {
       if (this.input.isLocked && !this.survival.isDead) {
         this.player.update(dt, this.input.keys);
         this.survival.update(dt, this.player.pos);
+        this.input.update(dt);
+      }
+
+      const pickedUpBlocks = this.world.updateDrops(dt, this.player.pos);
+      if (pickedUpBlocks.length > 0) {
+        pickedUpBlocks.forEach((blockId) => this.survival.addBlockToInventory(blockId));
+        this.hud.renderHotbar(this.survival.slots);
+        const heldSlot = this.survival.slots[this.hud.selectedSlot];
+        this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
+        this.hud.showToast(`Picked up ${pickedUpBlocks.length} block${pickedUpBlocks.length > 1 ? 's' : ''}`);
       }
 
       this.playerHand.update(dt, this.player.isMoving);
