@@ -2,9 +2,13 @@ import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { createSeededRandom, fillNoise, makeCanvasTexture } from './textureGenerator.js';
 
+const TILE = 16;
+
 export function createBlockMaterials() {
   const materials = {};
   const previews = {};
+
+  const atlasEntries = [];
 
   // Usa MeshLambertMaterial para visual 100% fosco (matte), claro e muito mais otimizado
   const register = (id, drawFn, matOptions = {}) => {
@@ -14,6 +18,7 @@ export function createBlockMaterials() {
       ...matOptions,
     });
     previews[id] = dataUrl;
+    atlasEntries.push({ id, drawFn, matOptions });
   };
 
   // 1. Areia Marciana (Alaranjado vivo, claro e fosco)
@@ -190,5 +195,84 @@ export function createBlockMaterials() {
     { emissive: new THREE.Color('#fb923c'), emissiveIntensity: 0.8 }
   );
 
-  return { materials, previews };
+  const atlas = createBlockAtlas(atlasEntries);
+
+  return { materials, previews, atlas };
+}
+
+// Junta as texturas dos blocos opacos num atlas para que cada chunk do mundo
+// seja desenhado com um unico material (um draw call por chunk, em vez de um por tipo).
+function createBlockAtlas(entries) {
+  const opaque = entries.filter((e) => !e.matOptions.transparent);
+  const cols = Math.ceil(Math.sqrt(opaque.length));
+  const rows = Math.ceil(opaque.length / cols);
+  const atlasW = cols * TILE;
+  const atlasH = rows * TILE;
+
+  const colorCanvas = document.createElement('canvas');
+  colorCanvas.width = atlasW;
+  colorCanvas.height = atlasH;
+  const colorCtx = colorCanvas.getContext('2d');
+
+  // Mapa emissivo em espaco linear: preto = sem brilho, cor = emissive * intensidade
+  const emissiveCanvas = document.createElement('canvas');
+  emissiveCanvas.width = atlasW;
+  emissiveCanvas.height = atlasH;
+  const emissiveCtx = emissiveCanvas.getContext('2d');
+  emissiveCtx.fillStyle = '#000000';
+  emissiveCtx.fillRect(0, 0, atlasW, atlasH);
+
+  // Pequena margem para o filtro Nearest nunca amostrar o tile vizinho
+  const eps = 0.01 / TILE;
+  const uvRects = {};
+
+  opaque.forEach(({ id, drawFn, matOptions }, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const px = col * TILE;
+    const py = row * TILE;
+
+    colorCtx.save();
+    colorCtx.translate(px, py);
+    colorCtx.beginPath();
+    colorCtx.rect(0, 0, TILE, TILE);
+    colorCtx.clip();
+    drawFn(colorCtx);
+    colorCtx.restore();
+
+    if (matOptions.emissive) {
+      const e = matOptions.emissive.clone().multiplyScalar(matOptions.emissiveIntensity ?? 1);
+      const to8 = (v) => Math.round(Math.min(1, Math.max(0, v)) * 255);
+      emissiveCtx.fillStyle = `rgb(${to8(e.r)},${to8(e.g)},${to8(e.b)})`;
+      emissiveCtx.fillRect(px, py, TILE, TILE);
+    }
+
+    // CanvasTexture usa flipY: a linha 0 do canvas fica em v = 1
+    uvRects[id] = {
+      u0: col / cols + eps,
+      u1: (col + 1) / cols - eps,
+      v0: 1 - (row + 1) / rows + eps,
+      v1: 1 - row / rows - eps,
+    };
+  });
+
+  const map = new THREE.CanvasTexture(colorCanvas);
+  map.magFilter = THREE.NearestFilter;
+  map.minFilter = THREE.NearestFilter;
+  map.generateMipmaps = false;
+  map.colorSpace = THREE.SRGBColorSpace;
+
+  const emissiveMap = new THREE.CanvasTexture(emissiveCanvas);
+  emissiveMap.magFilter = THREE.NearestFilter;
+  emissiveMap.minFilter = THREE.NearestFilter;
+  emissiveMap.generateMipmaps = false;
+  emissiveMap.colorSpace = THREE.NoColorSpace;
+
+  const material = new THREE.MeshLambertMaterial({
+    map,
+    emissive: new THREE.Color(0xffffff),
+    emissiveMap,
+  });
+
+  return { material, uvRects };
 }

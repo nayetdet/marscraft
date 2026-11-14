@@ -6,10 +6,58 @@ import { buildNasaSpaceshipAndBase } from './nasaSpaceshipBuilder.js';
 import { raycastVoxel } from './voxelRaycaster.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
 
+const CHUNK_SIZE = 16;
+
+// Cada face: normal, vizinho a checar e 4 cantos em ordem anti-horaria vista de fora
+// (inferior-esquerdo, inferior-direito, superior-direito, superior-esquerdo).
+const FACES = [
+  { dir: [1, 0, 0], corners: [[1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]] },
+  { dir: [-1, 0, 0], corners: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]] },
+  { dir: [0, 1, 0], corners: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]] },
+  { dir: [0, -1, 0], corners: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]] },
+  { dir: [0, 0, 1], corners: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]] },
+  { dir: [0, 0, -1], corners: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]] },
+];
+
+class FaceBuffer {
+  constructor() {
+    this.positions = [];
+    this.normals = [];
+    this.uvs = [];
+    this.indices = [];
+  }
+
+  addFace(x, y, z, face, rect) {
+    const base = this.positions.length / 3;
+    const [nx, ny, nz] = face.dir;
+    const c = face.corners;
+    for (let i = 0; i < 4; i++) {
+      this.positions.push(x + c[i][0], y + c[i][1], z + c[i][2]);
+      this.normals.push(nx, ny, nz);
+    }
+    this.uvs.push(rect.u0, rect.v0, rect.u1, rect.v0, rect.u1, rect.v1, rect.u0, rect.v1);
+    this.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  }
+
+  toGeometry() {
+    if (this.indices.length === 0) return null;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(this.positions, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(this.normals, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(this.uvs, 2));
+    geo.setIndex(this.indices);
+    geo.computeBoundingSphere();
+    return geo;
+  }
+}
+
+const FULL_UV = { u0: 0, u1: 1, v0: 0, v1: 1 };
+
 export class VoxelWorld {
-  constructor(scene, materials) {
+  constructor(scene, materials, atlas) {
     this.scene = scene;
     this.materials = materials;
+    this.atlas = atlas;
 
     this.sizeX = WORLD_CONFIG.SIZE_X;
     this.sizeY = WORLD_CONFIG.SIZE_Y;
@@ -33,6 +81,17 @@ export class VoxelWorld {
     this.breakOverlay = this._createBreakOverlay();
     this.scene.add(this.breakOverlay);
 
+
+    this.chunksX = Math.ceil(this.sizeX / CHUNK_SIZE);
+    this.chunksZ = Math.ceil(this.sizeZ / CHUNK_SIZE);
+    this.chunks = [];
+    for (let cz = 0; cz < this.chunksZ; cz++) {
+      for (let cx = 0; cx < this.chunksX; cx++) {
+        this.chunks.push({ cx, cz, opaqueMesh: null, glassMesh: null });
+      }
+    }
+    this.dirtyChunks = new Set();
+
     generateMartianTerrain(this);
     buildNasaSpaceshipAndBase(this);
     this.rebuildMeshes();
@@ -53,12 +112,23 @@ export class VoxelWorld {
     return idx === -1 ? BLOCK_IDS.AIR : this.data[idx];
   }
 
+  // Igual a getBlock, mas trata o lado de fora do mundo (bordas e fundo) como solido,
+  // para nao gerar faces que ninguem consegue ver. Acima do teto continua sendo ar.
+  _getBlockForMeshing(ix, iy, iz) {
+    if (iy >= this.sizeY) return BLOCK_IDS.AIR;
+    if (ix < 0 || ix >= this.sizeX || iy < 0 || iz < 0 || iz >= this.sizeZ) {
+      return BLOCK_IDS.BASALT;
+    }
+    return this.data[iy * this.sizeX * this.sizeZ + iz * this.sizeX + ix];
+  }
+
   setBlock(x, y, z, id, rebuild = false) {
     const idx = this._index(x, y, z);
     if (idx === -1) return false;
     this.data[idx] = id;
     if (rebuild) {
-      this.rebuildMeshes();
+      this._markDirtyAround(Math.floor(x) + this.halfX, Math.floor(z) + this.halfZ);
+      this._rebuildDirtyChunks();
     }
     return true;
   }
@@ -68,8 +138,8 @@ export class VoxelWorld {
     if (blockId === BLOCK_IDS.AIR) return BLOCK_IDS.AIR;
 
     this.clearBreakCracks();
-    this.setBlock(x, y, z, BLOCK_IDS.AIR, false);
-    this.rebuildMeshes();
+    // Reconstroi so o chunk do bloco (e o vizinho, se estiver na borda)
+    this.setBlock(x, y, z, BLOCK_IDS.AIR, true);
     this._spawnBreakParticles(x, y, z, blockId);
     this._spawnDrop(x, y, z, blockId);
     return blockId;
@@ -234,66 +304,92 @@ export class VoxelWorld {
     return collected;
   }
 
-  _isBlockOccluded(x, y, z) {
-    const neighbors = [
-      [1, 0, 0],
-      [-1, 0, 0],
-      [0, 1, 0],
-      [0, -1, 0],
-      [0, 0, 1],
-      [0, 0, -1],
-    ];
-    for (const [dx, dy, dz] of neighbors) {
-      const nb = this.getBlock(x + dx, y + dy, z + dz);
-      if (nb === BLOCK_IDS.AIR || nb === BLOCK_IDS.HAB_GLASS) {
-        return false;
-      }
+  // Marca o chunk do bloco e, se ele estiver na borda, o chunk vizinho (a face dele muda)
+  _markDirtyAround(ix, iz) {
+    const cx = Math.floor(ix / CHUNK_SIZE);
+    const cz = Math.floor(iz / CHUNK_SIZE);
+    const lx = ix - cx * CHUNK_SIZE;
+    const lz = iz - cz * CHUNK_SIZE;
+    this._markDirty(cx, cz);
+    if (lx === 0) this._markDirty(cx - 1, cz);
+    if (lx === CHUNK_SIZE - 1) this._markDirty(cx + 1, cz);
+    if (lz === 0) this._markDirty(cx, cz - 1);
+    if (lz === CHUNK_SIZE - 1) this._markDirty(cx, cz + 1);
+  }
+
+  _markDirty(cx, cz) {
+    if (cx < 0 || cx >= this.chunksX || cz < 0 || cz >= this.chunksZ) return;
+    this.dirtyChunks.add(cz * this.chunksX + cx);
+  }
+
+  _rebuildDirtyChunks() {
+    for (const chunkIdx of this.dirtyChunks) {
+      this._rebuildChunk(this.chunks[chunkIdx]);
     }
-    return true;
+    this.dirtyChunks.clear();
   }
 
   rebuildMeshes() {
-    while (this.worldGroup.children.length > 0) {
-      const child = this.worldGroup.children[0];
-      child.geometry.dispose();
-      this.worldGroup.remove(child);
+    for (const chunk of this.chunks) {
+      this._rebuildChunk(chunk);
     }
+    this.dirtyChunks.clear();
+  }
 
-    const buckets = {};
-    for (let x = -this.halfX; x < this.halfX; x++) {
-      for (let y = 0; y < this.sizeY; y++) {
-        for (let z = -this.halfZ; z < this.halfZ; z++) {
-          const id = this.getBlock(x, y, z);
-          if (id === BLOCK_IDS.AIR || this._isBlockOccluded(x, y, z)) continue;
+  _rebuildChunk(chunk) {
+    const GLASS = BLOCK_IDS.HAB_GLASS;
+    const AIR = BLOCK_IDS.AIR;
+    const { uvRects } = this.atlas;
+    const opaque = new FaceBuffer();
+    const glass = new FaceBuffer();
 
-          if (!buckets[id]) buckets[id] = [];
-          buckets[id].push(x, y, z);
+    const x0 = chunk.cx * CHUNK_SIZE;
+    const z0 = chunk.cz * CHUNK_SIZE;
+    const x1 = Math.min(x0 + CHUNK_SIZE, this.sizeX);
+    const z1 = Math.min(z0 + CHUNK_SIZE, this.sizeZ);
+
+    for (let iy = 0; iy < this.sizeY; iy++) {
+      for (let iz = z0; iz < z1; iz++) {
+        for (let ix = x0; ix < x1; ix++) {
+          const id = this.data[iy * this.sizeX * this.sizeZ + iz * this.sizeX + ix];
+          if (id === AIR) continue;
+
+          const isGlass = id === GLASS;
+          const rect = isGlass ? FULL_UV : uvRects[id];
+          if (!rect) continue;
+          const target = isGlass ? glass : opaque;
+          const wx = ix - this.halfX;
+          const wz = iz - this.halfZ;
+
+          for (const face of FACES) {
+            const nb = this._getBlockForMeshing(ix + face.dir[0], iy + face.dir[1], iz + face.dir[2]);
+            // Bloco opaco aparece atras de ar ou vidro; vidro so aparece contra o ar
+            const visible = isGlass ? nb === AIR : nb === AIR || nb === GLASS;
+            if (visible) target.addFace(wx, iy, wz, face, rect);
+          }
         }
       }
     }
 
-    const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-    const dummy = new THREE.Object3D();
+    chunk.opaqueMesh = this._swapChunkMesh(chunk.opaqueMesh, opaque.toGeometry(), this.atlas.material);
+    chunk.glassMesh = this._swapChunkMesh(chunk.glassMesh, glass.toGeometry(), this.materials[GLASS]);
+  }
 
-    for (const [idStr, coords] of Object.entries(buckets)) {
-      const id = Number(idStr);
-      const mat = this.materials[id];
-      if (!mat) continue;
-
-      const count = coords.length / 3;
-      const instMesh = new THREE.InstancedMesh(boxGeo, mat, count);
-      for (let i = 0; i < count; i++) {
-        dummy.position.set(
-          coords[i * 3] + 0.5,
-          coords[i * 3 + 1] + 0.5,
-          coords[i * 3 + 2] + 0.5
-        );
-        dummy.updateMatrix();
-        instMesh.setMatrixAt(i, dummy.matrix);
+  _swapChunkMesh(mesh, geometry, material) {
+    if (mesh) {
+      mesh.geometry.dispose();
+      if (!geometry) {
+        this.worldGroup.remove(mesh);
+        return null;
       }
-      instMesh.instanceMatrix.needsUpdate = true;
-      this.worldGroup.add(instMesh);
+      mesh.geometry = geometry;
+      return mesh;
     }
+    if (!geometry) return null;
+    const created = new THREE.Mesh(geometry, material);
+    created.matrixAutoUpdate = false;
+    this.worldGroup.add(created);
+    return created;
   }
 
   raycast(origin, direction, maxDist) {
