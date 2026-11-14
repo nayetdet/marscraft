@@ -36,10 +36,11 @@ Card de abertura (logo depois da animação de chegada): *"Welcome, Commander! Y
 
 **Atraso de comunicação.** Ao chegar no console, o card diz: *"Earth is 198 million km away today. Radio waves take 11 minutes to get there, and 11 more to come back. Nobody on Earth can help you right now: you decide!"*
 
-- Distância real de 2026-11-14: **1,3244 UA = 198,1 milhões de km**, segundo o NASA JPL Horizons (Mars `499` vista do geocentro `500@399`, quantidade 20).
-- Ida: 1,3244 × 499,005 s = **661 s ≈ 11,0 min**. Ida e volta: **22,0 min**.
-- No jogo, a espera vale **22 minutos de jogo** (≈ 18 s reais com `GAME_HOURS_PER_SECOND = 0.02`): a escala do tempo de jogo, com a duração real.
-- O número entra em `docs/data/numeros-reais.md` e em `src/data/commsDelay.js` com a data e a fonte, rotulado como "real data from 14/11/2026", nunca "ao vivo".
+**Revisão no merge com a `main` (2026-11-14).** O PR #67 (issue #56) trouxe o `CommsLink`, que calcula a distância Terra–Marte e o atraso de rádio para a data real da partida a partir das órbitas do JPL. Para o jogo ter um rádio só, a história passou a usar o `CommsLink`, e a constante própria (`src/data/commsDelay.js`) saiu:
+
+- O card e a legenda do pouso mostram a distância e os minutos de luz **do dia** (em 14/11/2026: ~198 milhões de km e 11 min só de ida, o mesmo valor do JPL Horizons).
+- A espera pela resposta usa a escala do rádio da base (`COMMS_CONFIG.GAME_SECONDS_PER_LIGHT_MINUTE = 3`): 22 min de ida e volta viram ~66 s reais, e o objetivo mostra a contagem em segundos (`Waiting for Earth to answer: 40 s`).
+- O card cita a fonte como "Distance calculated for DD/MM/AAAA from NASA/JPL planet orbits", nunca "live".
 
 A resposta de `await-reply` pede o gelo: *"Mission Control: Welcome to Mars, Commander! First job: bring 1 block of ice into the base. On Mars, ice is water, air and rocket fuel."*
 
@@ -68,7 +69,6 @@ Morrer não reinicia a história: a tela de morte e o respawn continuam iguais, 
 src/story/storyChapters.js     dados: atos, objetivos, textos dos cards (sem lógica)
 src/story/StoryDirector.js     lógica pura (sem DOM/Three.js): update(snapshot) -> eventos
 src/story/StoryDirector.test.js
-src/data/commsDelay.js         distância e atraso reais (JPL Horizons, 2026-11-14)
 src/ui/StoryHud.js             card de rádio + linha de objetivo + overlay de janela fechada
 ```
 

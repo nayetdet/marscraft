@@ -22,7 +22,7 @@ export const CARDS = {
   },
   stormGuide: {
     title: 'SOLAR STORM WARNING',
-    text: 'A solar storm is coming! Two ways to stay safe: hide inside the base (safe, but you stop working outside), or turn on the shield [R] (you keep working, but it eats your battery).',
+    text: 'A solar storm is coming! Two ways to stay safe: hide inside the base (the storm shelter with its water wall is the safest spot, but you stop working outside), or turn on the shield [R] (you keep working, but it eats your battery).',
   },
   window: {
     title: 'MISSION CONTROL',
