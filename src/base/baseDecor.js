@@ -87,7 +87,7 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
     box(t, 0.04, z2 - z1, mat, x1 + t / 2, y, (z1 + z2) / 2);
     box(t, 0.04, z2 - z1, mat, x2 - t / 2, y, (z1 + z2) / 2);
   };
-  zoneBorder(zoneMats.command, -0.9, 2.1, -4.9, -1.5);
+  zoneBorder(zoneMats.command, -1.85, 1.85, -4.9, -1.5);
   zoneBorder(zoneMats.lifeSupport, 3.3, 6.9, -3.1, 3.55);
   zoneBorder(zoneMats.quarters, -5.9, -3.25, -3.95, -1.0);
   zoneBorder(zoneMats.medical, -3.85, -1.05, 2.25, 5.9);
@@ -103,7 +103,7 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   sill.rotation.set(-Math.PI / 2, 0, 0);
 
   // ---------- Placas de modulo (acima das janelas, y = 13..14) ----------
-  sign('command', 2.6, 0.8, 13.66, -4.97, '+z');
+  sign('command', 2.4, 1.65, 13.5, -4.97, '+z');
   sign('lifeSupport', 2.6, 6.97, 13.68, 0.5, '-x');
   sign('quarters', 2.4, -5.97, 13.6, -2.5, '+x');
   sign('greenhouse', 2.4, -5.97, 13.45, 0.5, '+x');
@@ -133,7 +133,7 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   const meterZ = L.SHELTER_Z_MAX - 0.012;
 
   // ---------- Suporte de vida (LSS-1) ----------
-  poster('air', 6.97, posterY, -2.5, '-x');
+  poster('air', 6.97, F + 0.77, 0.5, '-x', 0.75);
 
   // ---------- Enfermaria (MED-1), canto sudoeste do habitat ----------
   box(1.35, 1.0, 0.56, mats.white, -2.82, F + 0.5, 5.68);
@@ -160,15 +160,18 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   box(0.3, 0.3, 0.04, mats.charcoal, -1.57, F + 1.1, 5.445);
   box(0.06, 0.5, 0.04, mats.silver, -1.3, F + 0.9, 5.445);
   solid(-2.0, -1.14, 5.4, 6.0, 2.0);
-  poster('eva', 2.5, F + 1.75, 5.97, '-z', 0.64);
+  poster('eva', 1.99, F + 1.45, 7.5, '-x', 0.64);
 
   // ---------- Estufa (GRN-1): tanque de agua, tela e poster ----------
   // Tanque com nivel que acompanha a agua da base, na ponta norte do corredor
   box(1.0, 0.2, 1.0, mats.slate, -17.5, F + 0.1, -5.2);
   box(0.84, 1.5, 0.84, mats.glass, -17.5, F + 0.95, -5.2);
-  box(0.92, 0.1, 0.92, mats.gray, -17.5, F + 1.75, -5.2);
+  box(0.92, 0.1, 0.92, mats.slate, -17.5, F + 1.75, -5.2);
+  for (const dx of [-0.4, 0.4]) {
+    for (const dz of [-0.4, 0.4]) box(0.07, 1.5, 0.07, mats.slate, -17.5 + dx, F + 0.95, -5.2 + dz);
+  }
   solid(-18.02, -16.98, -5.72, -4.68, 1.8);
-  plane(labelTexture('BASE WATER', 5, '#60a5fa'), 0.9, 0.18, -17.5, F + 1.75, -4.735, '+z');
+  plane(labelTexture('BASE WATER', 5, '#60a5fa'), 0.9, 0.18, -17.5, F + 0.1, -4.695, '+z');
   // Poster num cavalete na ponta oeste
   box(0.08, POSTER_H + 0.14, POSTER_W + 0.14, mats.charcoal, -23.0, posterY, 0.5);
   for (const dz of [-0.6, 0.6]) box(0.1, 0.35, 0.1, mats.silver, -23.0, F + 0.17, 0.5 + dz);
@@ -183,7 +186,7 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   poster('exercise', -7.5, posterY, 8.03, '+z');
 
   // Molduras das telas vivas
-  box(3.32, 1.32, 0.06, mats.charcoal, 0.8, 12.72, -4.965);
+  box(2.5, 1.02, 0.06, mats.charcoal, 1.65, 12.68, -4.965);
   box(0.06, 1.56, 2.3, mats.charcoal, 6.965, 12.2, 0.5);
   box(1.3, 0.86, 0.06, mats.charcoal, meterX, F + 1.6, meterZ - 0.02);
 
@@ -199,7 +202,7 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
     shelter: new ScreenCanvas(384, 250),
     greenhouse: new ScreenCanvas(416, 288),
   };
-  plane(screens.command.texture, 3.2, 1.2, 0.8, 12.72, -4.93, '+z', dynamic);
+  plane(screens.command.texture, 2.4, 0.9, 1.65, 12.68, -4.93, '+z', dynamic);
   plane(screens.power.texture, 2.2, 1.467, 6.93, 12.2, 0.5, '-x', dynamic);
   plane(screens.shelter.texture, 1.2, 0.78, meterX, F + 1.6, meterZ - 0.055, '-z', dynamic);
   plane(screens.greenhouse.texture, 1.3, 0.9, -17.5, F + 1.5, 5.255, '-z', dynamic);
