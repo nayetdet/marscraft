@@ -1,21 +1,100 @@
 /* Historia em 3 atos: objetivo, card de radio e as animacoes de chegada e de decolagem */
 
-/* Objetivo atual, em destaque na coluna de leituras do canto superior esquerdo */
-.mc-top-info #mission-objective {
-  max-width: min(420px, 44vw);
-  color: #ffff55;
+/* Painel do objetivo atual, no canto superior esquerdo (mesmo estilo do painel da base) */
+.story-objective {
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  left: calc(14px + env(safe-area-inset-left, 0px));
+  z-index: 12;
+  box-sizing: border-box;
+  width: 300px;
+  padding: 8px 10px;
+  color: #ffffff;
+  background: rgba(16, 4, 16, 0.86);
+  border: 2px solid #1a031a;
+  box-shadow: inset 0 0 0 2px #b8860b, 3px 3px 0 rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.story-objective.hidden { display: none; }
+
+.story-objective header {
+  margin-bottom: 4px;
+  color: #ffcf3a;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.story-objective p {
+  margin: 0;
+  font-size: 14px;
   font-weight: 700;
-  background: rgba(0, 0, 0, 0.55);
-  border-left: 3px solid #ffcf3a;
+  line-height: 1.3;
+  text-shadow: 2px 2px 0 #000;
 }
 
-.mc-top-info #mission-objective:empty { display: none; }
+/* No modo rover as leituras do rover usam o mesmo canto: elas descem para baixo do painel */
+.hud:has(.story-objective:not(.hidden)) #rover-info { margin-top: 112px; }
 
-/* No toque as leituras do canto sao cortadas em uma linha; o objetivo precisa aparecer inteiro */
-.touch-mode .mc-top-info #mission-objective {
-  overflow: visible;
-  white-space: normal;
+/* Seta do objetivo na tela. O elemento fica no ponto exato (transform vem do WaypointHud). */
+.waypoint {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 11;
+  width: 0;
+  height: 0;
+  pointer-events: none;
 }
+
+.waypoint.hidden { display: none; }
+
+.waypoint-bob {
+  position: absolute;
+  left: -13px;
+  top: -44px;
+  filter: drop-shadow(2px 2px 0 #000);
+  animation: waypoint-bob 0.9s steps(6, end) infinite alternate;
+}
+
+/* Seta com haste apontando para baixo (com haste a direcao fica clara quando ela gira);
+   o WaypointHud gira a seta quando o lugar esta fora da tela */
+.waypoint-arrow {
+  display: block;
+  width: 26px;
+  height: 34px;
+  background: #ffcf3a;
+  clip-path: polygon(34% 0, 66% 0, 66% 48%, 100% 48%, 50% 100%, 0 48%, 34% 48%);
+  transform-origin: 13px 17px;
+}
+
+@keyframes waypoint-bob {
+  from { transform: translateY(-7px); }
+  to { transform: translateY(0); }
+}
+
+.waypoint-tag {
+  position: absolute;
+  left: 0;
+  bottom: 52px;
+  display: flex;
+  gap: 8px;
+  padding: 2px 7px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #ffcf3a;
+  transform: translateX(-50%);
+}
+
+.waypoint-tag b { color: #ffcf3a; }
+.waypoint-tag i { font-style: normal; }
+
+/* Lugar fora da tela: a seta fica centrada no ponto da borda e o nome vai para baixo dela */
+.waypoint.is-edge .waypoint-bob { top: -17px; animation: none; }
+.waypoint.is-edge .waypoint-tag { bottom: auto; top: 26px; }
 
 /* Card de radio: mensagens do Controle da Missao. Nao pausa o jogo. */
 .story-card {
@@ -105,8 +184,9 @@ body.touch-device .story-card-ok { min-height: 44px; min-width: 110px; }
   }
   .story-card header { margin-bottom: 3px; font-size: 11px; }
   .story-card-ok { margin-top: 6px; }
-  /* O objetivo fica na coluna da esquerda, fora da area do card */
-  .mc-top-info #mission-objective { max-width: 28vw; font-size: 12px; }
+  .story-objective { width: 232px; padding: 6px 8px; }
+  .story-objective header { font-size: 10px; }
+  .story-objective p { font-size: 12px; }
 }
 
 /* ---------- Animacoes (cutscenes) ---------- */

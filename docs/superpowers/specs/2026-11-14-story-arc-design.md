@@ -109,6 +109,26 @@ Painel **não modal** no topo e centro (estilo *Mission Control radio*), visíve
 
 Duas *cutscenes* dentro do motor, puláveis: a **chegada** (pouso da cápsula, 14,8 s, no primeiro Play) e a **decolagem** do MAV (15,5 s, ao apertar IGNITE). O roteiro plano a plano, com tempos, câmeras e legendas, está em [`../plans/2026-11-14-story-arc.md`](../plans/2026-11-14-story-arc.md). O motor de cutscene fica em `src/story/cutscene/` (`timeline.js` puro + `CutscenePlayer`), e a camada de UI em `src/ui/CutsceneHud.js`.
 
+## Painel do objetivo e setas (adicionados em 2026-11-14, a pedido)
+
+O HUD novo da `main` (#59) escondeu o canto superior esquerdo, então o objetivo ganhou um painel próprio ali (`#story-objective`): o título do ato (`PART 1 OF 3: ARRIVAL`) e o texto do objetivo.
+
+Cada objetivo aponta para um lugar, e duas setas mostram o caminho:
+
+- **Seta 3D** (`src/story/WaypointBeacon.js`): flutua em cima do lugar, sobe e desce, e cresce com a distância.
+- **Seta na tela** (`src/ui/WaypointHud.js`): com o lugar à vista, fica em cima dele com nome e distância (`ICE CRATER 41 m`); com o lugar fora da tela ou atrás do jogador, encosta na borda e gira para o lado certo. Ela aparece mesmo através das paredes.
+
+| Objetivo | Lugar |
+|---|---|
+| `enter-base`, `return-base`, `storm-guide` | Airlock |
+| `report`, `send-data` | Console de comando |
+| `collect-ice` | Cratera de gelo |
+| `act2`, `fuel` | Cratera de gelo se a mochila está sem gelo; foguete se há gelo para entregar; nenhum se o tanque não precisa de mais gelo |
+| `ignite` | Foguete (MAV) |
+| `await-reply`, `done`, `failed` | Nenhum |
+
+**Rota pelo airlock.** A base só tem uma entrada. Se o lugar fica lá fora e o jogador está dentro (ou o contrário), a seta aponta primeiro para o airlock. Dirigindo o rover, a câmera está lá fora, então a rota não passa pelo airlock. A regra é pura e testada em `src/story/waypoints.js` (`objectiveTarget` e `routeWaypoint`).
+
 ## Fora do escopo (bônus, se sobrar tempo)
 
 - Evento surpresa no meio do ato 2 (tripulante doente, filtro saturado).

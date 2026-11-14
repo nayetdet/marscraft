@@ -39,6 +39,13 @@ export const CARDS = {
   },
 };
 
+// Titulo de cada ato, mostrado em cima do objetivo
+export const ACT_TITLES = {
+  1: 'PART 1 OF 3: ARRIVAL',
+  2: 'PART 2 OF 3: GET READY TO GO HOME',
+  3: 'PART 3 OF 3: LAUNCH WINDOW',
+};
+
 export const OBJECTIVES = {
   'enter-base': 'Go inside the base through the airlock',
   report: 'Tell Mission Control you landed: go to the command console',

@@ -50,6 +50,16 @@
       <div id="station-warning" style="color:#ffcf64"></div>
     </div>
 
+    <!-- Historia: objetivo atual (canto superior esquerdo) e seta que aponta para onde ir -->
+    <section id="story-objective" class="story-objective hidden" aria-live="polite">
+      <header id="story-objective-act"></header>
+      <p id="story-objective-text"></p>
+    </section>
+    <div id="waypoint" class="waypoint hidden" aria-hidden="true">
+      <span class="waypoint-bob"><span id="waypoint-arrow" class="waypoint-arrow"></span></span>
+      <span class="waypoint-tag"><b id="waypoint-name"></b><i id="waypoint-dist"></i></span>
+    </div>
+
     <!-- Coluna da direita: caixa da missao em cima e, abaixo, o scanner (toast + ficha) -->
     <div class="hud-right">
     <!-- Painel da base (estilo jogos de gestao): recurso = icone + nome + barra + valor + tendencia.

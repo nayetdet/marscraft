@@ -40,6 +40,10 @@ import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
 import { COMMS_DELAY } from '../data/commsDelay.js';
 import { StoryDirector } from '../story/StoryDirector.js';
+import { ACT_TITLES } from '../story/storyChapters.js';
+import { WAYPOINT_LABELS, objectiveTarget, routeWaypoint } from '../story/waypoints.js';
+import { WaypointBeacon } from '../story/WaypointBeacon.js';
+import { WaypointHud } from '../ui/WaypointHud.js';
 import { StoryHud } from '../ui/StoryHud.js';
 import { CutsceneHud } from '../ui/CutsceneHud.js';
 import { CutscenePlayer } from '../story/cutscene/CutscenePlayer.js';
@@ -583,6 +587,7 @@ export class GameEngine {
 
     this.playerHand.handGroup.visible = false;
     this.highlightBox.visible = false;
+    this.waypointBeacon.hide();
     const { x, z } = MAV_CONFIG.PAD_POSITION;
     const pad = { x, y: this.mavRocket.position.y, z };
     this.engineFlame.setSize(1.0, 5.5);
@@ -660,13 +665,21 @@ export class GameEngine {
   _initStory() {
     this.story = new StoryDirector();
     this.storyHud = new StoryHud();
-    this.objectiveEl = document.getElementById('mission-objective');
+    this.objectivePanelEl = document.getElementById('story-objective');
+    this.objectiveActEl = document.getElementById('story-objective-act');
+    this.objectiveTextEl = document.getElementById('story-objective-text');
     this._objectiveText = '';
+    this._objectiveAct = 0;
     // Retrato do jogo que o diretor le a cada frame (objeto reaproveitado)
     this._storySnapshot = {
-      hours: 0, insideHabitat: false, iceCount: 0, atConsole: false,
+      hours: 0, insideHabitat: false, iceCount: 0, iceNeeded: 0, atConsole: false,
       stormPhase: 'calm', stormsSurvived: 0, propellantPct: 0, dataSent: false, launched: false,
     };
+
+    // Setas do objetivo: uma flutua no mundo e a outra fica na tela (aponta mesmo atraves das paredes)
+    this.waypoints = this._buildWaypoints();
+    this.waypointBeacon = new WaypointBeacon(this.scene);
+    this.waypointHud = new WaypointHud();
 
     this.cutsceneHud = new CutsceneHud({ onSkip: () => this.cutscenes.skip() });
     this.cutscenes = new CutscenePlayer({ hud: this.cutsceneHud });
@@ -678,6 +691,22 @@ export class GameEngine {
     this.scene.add(this.lander);
     this.engineFlame = new EngineFlame();
     this.puffs = new ParticlePuffs(this.scene, { count: 96, color: 0xc98a5a });
+  }
+
+  // Posicao no mundo de cada lugar para onde a seta do objetivo pode apontar
+  _buildWaypoints() {
+    const ground = WORLD_CONFIG.GROUND_LEVEL + 1;
+    const outerDoor = this.airlock.doors.find((door) => door.name === 'outer');
+    const ice = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER;
+    let iceTop = this.world.sizeY - 1;
+    while (iceTop > 0 && !this.world.getBlock(ice.x, iceTop, ice.z)) iceTop--;
+    const pad = MAV_CONFIG.PAD_POSITION;
+    return {
+      airlock: { x: 0.5, y: ground + 3.2, z: outerDoor.z + 0.5, label: WAYPOINT_LABELS.airlock },
+      console: { x: 0, y: ground + 3, z: -3.6, label: WAYPOINT_LABELS.console },
+      ice: { x: ice.x + 0.5, y: iceTop + 1.6, z: ice.z + 0.5, label: WAYPOINT_LABELS.ice },
+      mav: { x: pad.x, y: ground + 9.2, z: pad.z, label: WAYPOINT_LABELS.mav },
+    };
   }
 
   _playArrival() {
@@ -725,6 +754,7 @@ export class GameEngine {
     s.hours = this._skyHours();
     s.insideHabitat = this.survival.insidePressurizedShip;
     s.iceCount = this.survival.countItem(BLOCK_IDS.MARS_ICE);
+    s.iceNeeded = this.mission.iceNeeded();
     s.atConsole = this.currentInteraction === 'rover_terminal';
     s.stormPhase = this.mission.storm.phase;
     s.stormsSurvived = this.mission.stormsSurvived;
@@ -738,6 +768,7 @@ export class GameEngine {
       else if (event.type === 'start-storms') this.mission.startStorms(s.hours);
       else if (event.type === 'window-closed') {
         this.storyHud.showWindowClosed();
+        this.waypointBeacon.hide();
         document.exitPointerLock();
       }
     }
@@ -747,8 +778,24 @@ export class GameEngine {
     if (text !== this._objectiveText) {
       this._objectiveText = text;
       this.expedition.objective = text;
-      this.objectiveEl.textContent = text ? `OBJECTIVE: ${text}` : '';
+      this.objectiveTextEl.textContent = text;
+      this.objectivePanelEl.classList.toggle('hidden', !text);
     }
+    if (this.story.act !== this._objectiveAct) {
+      this._objectiveAct = this.story.act;
+      this.objectiveActEl.textContent = ACT_TITLES[this.story.act] ?? '';
+    }
+
+    // Seta do objetivo. Dirigindo o rover a camera esta la fora, entao a rota nao passa pelo airlock.
+    const inside = s.insideHabitat && !this.roverController.isActive;
+    const place = this._finishedStory() ? null : routeWaypoint(objectiveTarget(this.story.objectiveId, s), inside);
+    const target = place ? this.waypoints[place] : null;
+    this.waypointBeacon.update(dt, target, this.camera.position);
+    this.waypointHud.update(this.camera, target);
+  }
+
+  _finishedStory() {
+    return this.mission.launched || this.storyHud.isWindowClosedShown;
   }
 
   _buildCrew(size) {
