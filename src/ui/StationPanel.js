@@ -1,6 +1,7 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { MISSION_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U } from '../config/constants.js';
+import { COMMS_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
+import { formatDateDMY, formatHours } from '../mission/missionText.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
 import { RESEARCH_DATA as DATA } from '../data/missionResearch.js';
 import { GymWorkout } from './gymWorkout.js';
@@ -477,10 +478,10 @@ export class StationPanel {
       return stations.exercise('bike');
     }
     if (action === 'treat') return stations.treat(survival);
-    if (action === 'send') return stations.send();
+    if (action === 'send') return stations.send(this.engine.radioOptions(true));
     if (action === 'upgrade') return stations.upgrade();
     if (action === 'upgradeTool') return stations.upgradeTool();
-    if (action === 'sendMav') return stations.sendMav();
+    if (action === 'sendMav') return stations.sendMav(this.engine.radioOptions());
     if (action === 'harvest') return stations.harvest(survival);
     if (action.startsWith('plant:')) return stations.plant(action.slice(6), survival);
     if (action === 'analyze') {
@@ -561,6 +562,20 @@ export class StationPanel {
       'Real case: the first 3D print in space was made on the Space Station in 2014.';
   }
 
+  _radioText(s) {
+    const c = this.engine.comms;
+    const status = c.blackout
+      ? `RADIO: SILENT, solar conjunction (${c.realConjunction ? 'real' : 'simulated'}). ${formatHours(c.blackoutHoursLeft)} left.`
+      : `RADIO: ${s.message}`;
+    const next = c.blackout ? '' : `Next solar conjunction (simulated): in ${formatHours(c.hoursUntilConjunction)}.\n`;
+    return `EARTH IS NOW ${Math.round(c.distanceKm / 1e6)} million km away.\n` +
+      `A radio message needs ${c.lightMinutes.toFixed(1)} min to get there and ${(2 * c.lightMinutes).toFixed(1)} min to come back.\n` +
+      `(Calculated for ${formatDateDMY(c.date.toISOString())} from NASA/JPL planet orbits. In the game, each real minute is ${COMMS_CONFIG.GAME_SECONDS_PER_LIGHT_MINUTE} s.)\n` +
+      `${status}\n${next}\n` +
+      'Asking Mission Control costs power, and the answer only tells you what they saw when you asked. ' +
+      'About every 26 months the Sun gets between Mars and Earth and the radio goes silent for about 2 weeks. Then the crew decides alone.';
+  }
+
   _shelterText(mission, survival) {
     const water = Math.round(mission.shelterWaterL);
     const blocked = Math.round((1 - shelterDoseFactor(mission.shelterWaterL)) * 100);
@@ -593,7 +608,7 @@ export class StationPanel {
     if (this.gymContainer) this.gymContainer.classList.add('hidden');
 
     const pages = {
-      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nRADIATION: ${Math.round(m.radiation)}%   FILTER: ${Math.round(s.filter)}%\nSCIENCE POINTS: ${s.science}\n\nNASA DONKI historical CME: ${DATA.cme.observed}, ${DATA.cme.speedKmS} km/s.\nNASA RadLab Curiosity MSL-RAD: ${DATA.radiation.start} to ${DATA.radiation.end}; median ${DATA.radiation.median} (raw, unit unconfirmed).\nNASA data retrieved ${DATA.cme.retrieved}; archived, not live. The storm and its effects are simulated and game-scaled.`, [['mission', 'Start / report mission'], ['send', 'Send message to Earth'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
+      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nRADIATION: ${Math.round(m.radiation)}%   FILTER: ${Math.round(s.filter)}%\nSCIENCE POINTS: ${s.science}\n\nNASA DONKI historical CME: ${DATA.cme.observed}, ${DATA.cme.speedKmS} km/s.\nNASA RadLab Curiosity MSL-RAD: ${DATA.radiation.start} to ${DATA.radiation.end}; median ${DATA.radiation.median} (raw, unit unconfirmed).\nNASA data retrieved ${DATA.cme.retrieved}; archived, not live. The storm and its effects are simulated and game-scaled.`, [['mission', 'Start / report mission'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
       airlock: ['AIRLOCK & SUIT', `SUIT DUST: ${s.dirtySuit ? 'CLEANING NEEDED' : 'CLEAN'}
 HABITAT: ${s.contaminated ? 'CONTAMINATED' : 'CLEAN'}
 
@@ -601,7 +616,7 @@ Clean your suit before entering the habitat. Use the doors to cycle the airlock.
       power: ['LIFE SUPPORT / ECLSS', `BATTERY: ${Math.round(m.energy)}%\nCO2 FILTER: ${Math.round(s.filter)}%\nCO2: ${Math.round(s.co2)}%\n\nThe oxygen system and greenhouse need power. A worn filter lets CO2 build up.`, [['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
       greenhouse: ['HYDROPONIC GREENHOUSE', `POWER: ${m.greenhousePowered ? 'ON' : 'OFF'}\nHABITAT: ${s.contaminated ? 'CONTAMINATED' : 'CLEAN'}\nCARROTS REGROWING: ${this.engine.growingCrops.length}\nCROP: ${s.crop ? `${s.crop.type.toUpperCase()} ${Math.round(s.crop.progress / C.CROP_GROWTH_TIME * 100)}%` : 'EMPTY'}\nFRESH FOOD: ${s.freshFood > 0 ? 'AVAILABLE' : 'LOW'}\n\nPlanting costs water and power. Growth pauses without power or in a contaminated habitat.`, [['plant:potato', 'Plant potato'], ['plant:lettuce', 'Plant lettuce'], ['plant:soy', 'Plant soy'], ['harvest', 'Harvest fresh food'], ['cleanBase', 'Clean habitat']]],
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\nRADIATION: ${Math.round(m.radiation)}%\n\nIn Mars's 0.38g gravity, astronauts lose bone mineral density and muscle mass. Use the treadmill and bike in the Gym Wing!`, [['treat', 'Use medical station']]],
-      science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   SAMPLES: ${s.samples}\nRADIO: ${s.message}\n\nAnalyze one regolith block to earn science.\nA radio message needs 3 to 22 minutes to travel between Mars and Earth, one way, so Mission Control cannot help you right away. In the game the wait is shorter.`, [['analyze', 'Analyze regolith'], ['send', 'Send data to Earth'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
+      science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   SAMPLES: ${s.samples}\n\n${this._radioText(s)}`, [['analyze', 'Analyze regolith'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
       mav: ['MAV DATA TERMINAL', `ANALYZED SAMPLES: ${s.analyzedSamples}/${C.MAV_REQUIRED_SAMPLES}\nPACKAGE: ${s.mavSent ? 'RECEIVED' : s.message}\n\nAnalyze samples at the science station, then send the package from the MAV.`, [['sendMav', 'Send MAV science package']]],
       powerroom: ['POWER & HEAT ROOM', this._powerText(), this._powerButtons()],
       galley: ['KITCHEN & PANTRY', this._galleyText(v), [['eatRation', 'Eat a ration (pantry)'], ['cookMeal', `Cook fresh meal (1 carrot, ${U.MEAL_WATER_L} L, ${U.MEAL_POWER}% power)`]]],

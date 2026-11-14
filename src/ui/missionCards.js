@@ -80,6 +80,9 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       source: stormSourceShort(storm, fetchedIso),
     });
   }
+  if (mission.radioBlackout) {
+    alerts.push({ id: 'radio', icon: 'sun', tone: 'warn', title: 'Radio silent', text: 'The Sun is between Mars and Earth. Decide on your own!' });
+  }
   if (mission.shieldOn && !mission.insideShield) {
     alerts.push({ id: 'bubble', icon: 'shield', tone: 'warn', title: 'Outside the shield!', text: 'Walk back into the blue bubble.' });
   }

@@ -106,6 +106,7 @@ export class AdminPanel {
       <pre id="admin-status" class="admin-status"></pre>
       <p id="admin-feedback" class="admin-feedback" role="status"></p>
       ${group('Solar storm', [['storm:warning', 'Warning now'], ['storm:active', 'Storm now'], ['storm:end', 'End storm']])}
+      ${group('Radio to Earth', [['radio:on', 'Solar conjunction now'], ['radio:off', 'End conjunction']])}
       ${group('Power', [['power:100', 'Battery 100%'], ['power:15', 'Battery 15%'], ['power:0', 'Battery 0%']])}
       ${group('Water', [['water:add', 'Base tank +20 L'], ['water:empty', 'Base tank 0 L'], ['wall:full', 'Shelter wall full'], ['wall:empty', 'Shelter wall empty']])}
       ${group('Astronaut', [['me:refill', 'Refill astronaut'], ['me:dose', 'Reset radiation dose'], ['me:hurt', 'Health to 25%']])}
@@ -122,6 +123,9 @@ export class AdminPanel {
     switch (kind) {
       case 'storm':
         return `Storm phase is now: ${mission.forceStorm(arg).toUpperCase()}`;
+      case 'radio':
+        this.engine.comms.forceConjunction(arg === 'on');
+        return arg === 'on' ? 'Radio silent (simulated solar conjunction).' : 'Radio contact is back.';
       case 'power':
         mission.battery.charge = mission.battery.capacity * Number(arg) / 100;
         return `Battery set to ${arg}%.`;
@@ -196,6 +200,7 @@ export class AdminPanel {
       `Inside habitat: ${survival.insidePressurizedShip ? 'yes' : 'no'}   In shelter: ${mission.insideShelter ? 'yes' : 'no'}   Shield: ${mission.shieldOn ? 'on' : 'off'}`,
       `Battery: ${mission.battery.percent.toFixed(0)}%   Base tank: ${Math.round(survival.baseWater)} L   Wall: ${Math.round(mission.shelterWaterL)} L`,
       `Health: ${Math.round(survival.health)}/${survival.maxStat}   O2: ${Math.round(survival.oxygen)}`,
+      `Radio: ${this.engine.comms.blackout ? 'SILENT' : 'ok'}   Earth: ${Math.round(this.engine.comms.distanceKm / 1e6)} Mkm, ${this.engine.comms.lightMinutes.toFixed(1)} min one way`,
       `Heater: ${this.engine.utility.heaterOn ? 'on' : 'off'}${this.engine.utility.cold ? ' (FREEZING)' : ''}   Water filter: ${Math.round(this.engine.utility.waterFilter)}%   Pantry: ${Math.floor(this.engine.crewStock.food)}`,
       `Position: ${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)}, ${player.pos.z.toFixed(1)}`,
     ].join('\n');

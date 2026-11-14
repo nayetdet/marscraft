@@ -217,6 +217,23 @@ export const UTILITY_CONFIG = {
   GAME_SECONDS_PER_HOUR: 50,
 };
 
+// Radio Terra-Marte (issue #56, A2). Fontes em docs/data/numeros-reais.md.
+export const COMMS_CONFIG = {
+  SPEED_OF_LIGHT_KM_S: 299792.458,
+  AU_KM: 149597870.7,
+  // [Ref] NASA/JPL: os comandos para Marte param quando o Sol fica a menos de ~2 graus de Marte
+  // no ceu da Terra (conjuncao solar, a cada ~26 meses, ~2 semanas)
+  CONJUNCTION_SUN_ANGLE_DEG: 2,
+  // [Ref] 1 sol = 24 h 39 min = 1,0275 dia da Terra (Mars Fact Sheet): avanca a data real do jogo
+  EARTH_DAYS_PER_SOL: 1.0275,
+  // Escala de jogo: cada minuto real de viagem da luz vira 3 s de espera (ida e volta)
+  GAME_SECONDS_PER_LIGHT_MINUTE: 3,
+  // Conjuncao encenada uma vez por partida (a real so volta em 2028): comeca depois de
+  // ~1,5 sol de jogo e dura 6 horas de jogo (5 min reais)
+  GAME_CONJUNCTION_START_HOURS: 36,
+  GAME_CONJUNCTION_HOURS: 6,
+};
+
 export const STATION_CONFIG = {
   WORK_ENERGY_PER_HOUR: 2, // % de bateria por estacao operada
   DEGRADE_PER_HOUR: 0.08, // sem operador a estacao estraga devagar

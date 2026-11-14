@@ -32,6 +32,7 @@ import { StationSystem } from './StationSystem.js';
 import { StationPanel } from '../ui/StationPanel.js';
 import { AdminPanel } from '../ui/AdminPanel.js';
 import { UtilityModule } from './UtilityModule.js';
+import { CommsLink } from '../mission/commsLink.js';
 import { getCategoryLabel } from '../data/scanCatalog.js';
 import { ScanJournal } from '../scanner/scanJournal.js';
 import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js';
@@ -111,6 +112,9 @@ export class GameEngine {
     this.player = new PlayerPhysics(this.world, colliders);
     this.survival = new SurvivalSystem();
     this.mission = new MissionSystem({ cmes: donkiCme.cmes, startHours: this._skyHours() });
+    // Radio Terra-Marte (issue #56, A2): atraso pela distancia real de hoje e conjuncao solar
+    this.comms = new CommsLink({ startDate: new Date(), startHours: this._skyHours() });
+    this._wasBlackout = false;
     this.expedition = new ExpeditionSystem();
     Object.defineProperty(this.expedition, 'energy', {
       get: () => this.mission.battery.charge,
@@ -278,6 +282,42 @@ export class GameEngine {
     this.crewStock.frozen = this.utility.cold;
     this.crewStock.greenhouseDark = !this.utility.greenhouseLightsOn;
     this.crewStock.waterRecovery = this.utility.waterRecovery;
+
+    this.comms.update(hours);
+    this.mission.radioBlackout = this.comms.blackout;
+    if (this.comms.blackout !== this._wasBlackout) {
+      this._wasBlackout = this.comms.blackout;
+      this.hud.showToast(this.comms.blackout
+        ? 'SOLAR CONJUNCTION: the Sun is between Mars and Earth. The radio is silent, so you must decide on your own!'
+        : 'The Sun moved away: radio contact with Earth is back.', 7000);
+    }
+    if (this.stations.arrived) {
+      this.hud.showToast(this.stations.arrived, 8000);
+      this.stations.arrived = null;
+    }
+  }
+
+  // Resposta do Controle da Missao, montada com a situacao do momento do envio.
+  // Ela chega atrasada: ate la, a situacao pode ter mudado.
+  missionControlAdvice() {
+    const m = this.mission;
+    const phase = m.storm.phase;
+    if (phase === 'active' || phase === 'warning') return 'A solar storm is on the way. Fill the shelter water wall and hide in the storm shelter.';
+    if (m.battery.percent < 30) return 'Your battery is low. Turn off the fuel factory or the greenhouse lights until the Sun is back, but keep the heater on at night.';
+    if (m.shelterWaterL < 20 && this.survival.baseWater > 30) return 'Put some water in the storm shelter wall before the next storm.';
+    if (this.utility.waterFilter < 30) return 'Your water filter is dirty. Clean it in the bathroom so you get back more water.';
+    if ((this.crew?.stations ?? []).some((st) => st.health < 0.5)) return 'A crew station is wearing out. Print a spare part in the workshop.';
+    if (this.comms.hoursUntilConjunction < 12) return 'Solar conjunction is coming: the radio will go silent for a while. Plan ahead!';
+    return 'Everything looks good from here. Keep collecting ice and science samples.';
+  }
+
+  // Opcoes de envio do radio no estado atual
+  radioOptions(withAdvice = false) {
+    return {
+      delaySeconds: this.comms.roundTripGameSeconds,
+      blackout: this.comms.blackout,
+      advice: withAdvice ? this.missionControlAdvice() : null,
+    };
   }
 
   _harvestCrop(plant) {
@@ -653,6 +693,10 @@ export class GameEngine {
       this.hud.showToast('Go to the command console inside the base to send science data.');
       return;
     }
+    if (this.comms.blackout) {
+      this.hud.showToast('Radio silent: the Sun is between Mars and Earth. Send the data after the solar conjunction.', 5000);
+      return;
+    }
     const result = this.mission.sendData();
     const messages = {
       sent: 'Science data sent! Radio waves take 3 to 22 minutes to reach Earth, so Mission Control cannot help you right away.',
@@ -707,7 +751,8 @@ export class GameEngine {
     const sources = `Solar storms: real CMEs from NASA DONKI (real data from ${formatDateDMY(donkiCme.fetched)}). ` +
       'Radiation: Curiosity RAD on the Mars surface (NASA RadLab). Sunlight on Mars: 43% of Earth (NASA Mars Fact Sheet). ' +
       'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station. ' +
-      'Storm shelter water wall: PREDICCS shielding model (University of New Hampshire, Curiosity RAD data) and NASA storm shelter studies.';
+      'Storm shelter water wall: PREDICCS shielding model (University of New Hampshire, Curiosity RAD data) and NASA storm shelter studies. ' +
+      'Radio delay: Earth-Mars distance from NASA/JPL planet orbits; solar conjunction rules from NASA/JPL.';
     this.missionHud.showVictory(rows, sources);
     document.exitPointerLock();
   }

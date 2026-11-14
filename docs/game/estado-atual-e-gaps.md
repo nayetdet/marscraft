@@ -26,7 +26,7 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Vite, sem backend, de
 | **Condição de vitória** | ✅ | Abastecer o MAV (gelo + energia), sobreviver a 3 tempestades e enviar os dados científicos (issue #30). |
 | **Produção de comida** | 🟡 | Batatas são um estoque finito; não há cultivo, nem custo de água/energia na estufa. |
 | **Módulo norte (issue #56, parte B)** | ✅ | Sala de energia e aquecimento (consumo de cada sistema e corte de carga; o aquecedor gasta mais à noite e desligado congela canos e estufa), cozinha e despensa (ração da despensa × refeição fresca com cenoura, água e energia), banheiro (lavar vira água cinza; filtro gasto recupera menos que 98 %) e oficina com impressora 3D (regolito + energia consertam a estação mais gasta). O depósito de carga (B6) foi descartado: ensina pouco pelo esforço. |
-| **Atraso de comunicação** | 🟡 | Terminal de rádio no habitat (issue #56): enviar mensagem custa energia e a resposta chega depois de um atraso fixo de jogo. Falta o atraso pela distância Terra–Marte real e a conjunção solar (#56, A2). |
+| **Atraso de comunicação** | ✅ | Terminal de rádio no habitat (issue #56): o atraso vem da distância Terra–Marte calculada para a data (órbitas do JPL); pedir conselho ao Controle da Missão custa energia e a resposta chega atrasada, montada com a situação do momento do envio. Uma conjunção solar encenada deixa o rádio mudo e a criança decide sozinha. |
 | **Toda escolha tem custo (trade-off)** | ❌ | **Este é o gap principal.** Hoje não há nenhuma decisão com custo: a estratégia ótima é ficar dentro da nave. |
 | **Dados reais da NASA** | ❌ | Nenhum dado real. O céu é "inspirado", não alimentado por dados. |
 | **Atribuição de fontes no jogo** | ❌ | Não há tela de créditos ou fontes. |

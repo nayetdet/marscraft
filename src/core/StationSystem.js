@@ -1,5 +1,7 @@
 import { STATION_CONFIG as C } from '../config/constants.js';
 
+const RADIO_SILENT = 'Radio silent: the Sun is between Mars and Earth (solar conjunction). You must decide on your own until it passes.';
+
 // All times, costs and penalties are scaled for gameplay.
 export class StationSystem {
   constructor(mission) {
@@ -41,7 +43,9 @@ export class StationSystem {
       this.messageTimer = Math.max(0, this.messageTimer - dt);
       if (!this.messageTimer) {
         if (this.messageKind === 'mav') { this.mavSent = true; this.message = 'Mission Control: MAV science package received.'; }
-        else this.message = 'Mission Control: message received. Use the storm shelter when a solar storm comes.';
+        else this.message = `Mission Control: ${this.pendingAdvice ?? 'message received. Use the storm shelter when a solar storm comes.'}`;
+        this.arrived = this.message; // o motor mostra um aviso e limpa
+        this.pendingAdvice = null;
         this.messageKind = null;
       }
     }
@@ -83,12 +87,16 @@ export class StationSystem {
     survival.health = Math.min(survival.maxStat, survival.health + 5);
     return 'Treatment restored health. Radiation dose cannot be erased.';
   }
-  send() {
+  // Pergunta ao Controle da Missao. `delaySeconds` = ida e volta da luz (CommsLink);
+  // `advice` = resposta calculada com a situacao de AGORA, que chega atrasada.
+  send({ delaySeconds = C.COMMS_DELAY, blackout = false, advice = null } = {}) {
+    if (blackout) return RADIO_SILENT;
     if (this.messageTimer > 0) return 'Transmission already in progress.';
     if (!this.mission.spend(C.COMMS_COST)) return 'Not enough power.';
-    this.messageTimer = C.COMMS_DELAY;
+    this.messageTimer = delaySeconds;
     this.messageKind = 'message';
-    this.message = 'Transmission in progress; delay is accelerated for play.';
+    this.pendingAdvice = advice;
+    this.message = `Question sent. The answer needs about ${Math.round(delaySeconds)} s (game time) to come back.`;
     return this.message;
   }
   plant(type, survival) {
@@ -108,13 +116,14 @@ export class StationSystem {
     survival.food = Math.min(survival.maxStat, survival.food + C.CROP_NUTRITION);
     return `Harvested ${type}. Fresh food restores nutrition and work speed.`;
   }
-  sendMav() {
+  sendMav({ delaySeconds = C.COMMS_DELAY, blackout = false } = {}) {
     if (this.mavSent) return 'MAV science package already received.';
+    if (blackout) return RADIO_SILENT;
     if (this.messageTimer > 0) return 'Transmission already in progress.';
     if (this.analyzedSamples < C.MAV_REQUIRED_SAMPLES) return `Analyze ${C.MAV_REQUIRED_SAMPLES} samples first.`;
     if (!this.mission.spend(C.MAV_TRANSMISSION_COST)) return 'Not enough power.';
     this.messageKind = 'mav';
-    this.messageTimer = C.COMMS_DELAY;
+    this.messageTimer = delaySeconds;
     this.message = 'MAV data package in transit; game delay is accelerated.';
     return this.message;
   }
