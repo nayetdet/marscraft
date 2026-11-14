@@ -22,12 +22,13 @@ export function createBlockMaterials() {
     atlasEntries.push({ id, drawFn, matOptions });
   };
 
-  // 1. Areia Marciana (Alaranjado vivo, claro e fosco)
+  // 1. Areia Marciana (ferrugem empoeirado, grao de baixo contraste). A variacao de bloco para
+  // bloco vem da cor por vertice (voxelShading.naturalTint), nao da textura.
   register(BLOCK_IDS.REGOLITH, (ctx) => {
-    fillNoise(ctx, [242, 152, 72], 24, 101);
+    fillNoise(ctx, [182, 112, 74], 12, 101);
     const rand = createSeededRandom(102);
-    for (let i = 0; i < 24; i++) {
-      ctx.fillStyle = rand() > 0.5 ? '#e08438' : '#ffba75';
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = rand() > 0.5 ? '#a26440' : '#c68e68';
       ctx.fillRect(Math.floor(rand() * 16), Math.floor(rand() * 16), 1, 1);
     }
   });
@@ -42,9 +43,9 @@ export function createBlockMaterials() {
     }
   });
 
-  // 3. Arenito Alaranjado Claro (Textura granular de rocha sedimentar, sem aspecto de madeira)
+  // 3. Arenito das encostas (um pouco mais claro e amarelado que a areia, com faixas suaves)
   register(BLOCK_IDS.SANDSTONE, (ctx) => {
-    fillNoise(ctx, [232, 146, 74], 28, 303);
+    fillNoise(ctx, [196, 130, 90], 14, 303);
 
     const rand = createSeededRandom(304);
     // Faixas sedimentares irregulares e sutis (quebradas para nao parecer madeira)
@@ -52,22 +53,22 @@ export function createBlockMaterials() {
     for (const y of bandRows) {
       for (let x = 0; x < 16; x++) {
         if (rand() > 0.28) {
-          ctx.fillStyle = y < 8 ? 'rgba(255, 206, 148, 0.24)' : 'rgba(176, 92, 34, 0.22)';
+          ctx.fillStyle = y < 8 ? 'rgba(236, 190, 142, 0.16)' : 'rgba(150, 84, 44, 0.16)';
           ctx.fillRect(x, y, 1, 1);
         }
       }
     }
 
     // Graos minerais e pequenas fissuras de arenito
-    for (let i = 0; i < 28; i++) {
+    for (let i = 0; i < 12; i++) {
       const x = Math.floor(rand() * 16);
       const y = Math.floor(rand() * 16);
-      ctx.fillStyle = rand() > 0.5 ? '#ffc98c' : '#b86328';
+      ctx.fillStyle = rand() > 0.5 ? '#dba878' : '#a8683c';
       ctx.fillRect(x, y, 1, 1);
     }
 
     // Pequenos blocos de rocha compactada
-    ctx.fillStyle = 'rgba(138, 68, 22, 0.28)';
+    ctx.fillStyle = 'rgba(130, 72, 36, 0.16)';
     ctx.fillRect(2, 6, 2, 2);
     ctx.fillRect(10, 2, 2, 1);
     ctx.fillRect(12, 13, 2, 2);
@@ -275,10 +276,12 @@ function createBlockAtlas(entries) {
   emissiveMap.generateMipmaps = false;
   emissiveMap.colorSpace = THREE.NoColorSpace;
 
+  // vertexColors: cada vertice carrega tinta do bloco x sombra de canto (VoxelWorld._shadeFace)
   const material = new THREE.MeshLambertMaterial({
     map,
     emissive: new THREE.Color(0xffffff),
     emissiveMap,
+    vertexColors: true,
   });
 
   return { material, uvRects };

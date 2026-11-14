@@ -137,6 +137,37 @@ describe('VoxelWorld meshing', () => {
     expect(faceCount(chunk.opaqueMesh) - before).toBe(10);
   });
 
+  // Brilho (cor por vertice) dos 4 cantos da face de cima do bloco em (x, y, z)
+  function topFaceShades(chunk, x, y, z) {
+    const { position, color } = chunk.opaqueMesh.geometry.attributes;
+    expect(color.count).toBe(position.count);
+    for (let v = 0; v < position.count; v += 4) {
+      const ks = [0, 1, 2, 3];
+      const isTop = ks.every((k) => position.getY(v + k) === y + 1)
+        && Math.min(...ks.map((k) => position.getX(v + k))) === x
+        && Math.min(...ks.map((k) => position.getZ(v + k))) === z;
+      if (isTop) return ks.map((k) => color.getX(v + k));
+    }
+    return null;
+  }
+
+  it('sombra de canto: um bloco vizinho escurece so os cantos encostados nele', () => {
+    const chunk = chunkOf(world, 0, 0);
+
+    // Casco isolado no ar: sem tinta e sem vizinhos, todos os cantos em brilho total
+    world.setBlock(0, SKY_Y, 0, BLOCK_IDS.NASA_HULL, true);
+    expect(topFaceShades(chunk, 0, SKY_Y, 0)).toEqual([1, 1, 1, 1]);
+
+    // Um degrau a leste, uma camada acima: os dois cantos de x = 1 escurecem, os de x = 0 nao
+    world.setBlock(1, SKY_Y + 1, 0, BLOCK_IDS.NASA_HULL, true);
+    const { position } = chunk.opaqueMesh.geometry.attributes;
+    const shades = topFaceShades(chunk, 0, SKY_Y, 0);
+    expect(Math.min(...shades)).toBeLessThan(1);
+    expect(Math.max(...shades)).toBe(1);
+    expect(shades.filter((s) => s < 1)).toHaveLength(2);
+    expect(position.count).toBeGreaterThan(0);
+  });
+
   it('vidro esconde faces entre vidros, e o bloco opaco continua visivel atras do vidro', () => {
     const chunk = chunkOf(world, 0, 0);
     const opaqueBefore = faceCount(chunk.opaqueMesh);
