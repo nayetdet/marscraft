@@ -152,7 +152,9 @@ export class GameEngine {
       const dt = Math.min(frameMs / 1000, 0.05);
       this.lastTime = now;
 
-      if (this.input.isLocked && !this.survival.isDead) {
+      // player.update so roda com o jogo travado; fora disso isMoving ficaria congelado.
+      const isGameRunning = this.input.isLocked && !this.survival.isDead;
+      if (isGameRunning) {
         this.player.update(dt, this.input.keys);
         this.survival.update(dt, this.player.pos);
         this.input.update(dt);
@@ -166,7 +168,7 @@ export class GameEngine {
         this.hud.showToast(pickedUpBlocks.every((id) => id === BLOCK_IDS.HYDRO_PLANT) ? 'Picked up a Mars carrot' : `Picked up ${pickedUpBlocks.length} item${pickedUpBlocks.length > 1 ? 's' : ''}`);
       }
 
-      this.playerHand.update(dt, this.player.isMoving);
+      this.playerHand.update(dt, isGameRunning && this.player.isMoving);
       this._updateCamera();
       this.sky.update(dt, this.player.pos);
 
