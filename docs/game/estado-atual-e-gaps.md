@@ -20,9 +20,10 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Vite, sem backend, de
 | Requisito do desafio | Situação | Gap |
 |---|---|---|
 | Posto avançado na Lua/Marte | ✅ Marte | — |
-| **Suporte de vida** | 🟡 parcial | O O2 existe, mas **não tem custo**: entrar na nave recarrega de graça e para sempre. |
-| **Blindagem contra radiação** | ❌ | Não existe radiação, evento solar nem blindagem. |
-| **Orçamento de energia** | ❌ | Painéis solares são só decoração. Não existe recurso "energia". |
+| **Suporte de vida** | ✅ | O O2 do habitat só recarrega com energia da bateria (issue #30). |
+| **Blindagem contra radiação** | ✅ | Tempestades solares a partir de CMEs reais do DONKI, dose em mSv (RadLab), abrigo no habitat e blindagem [R] que gasta energia (issue #30). |
+| **Orçamento de energia** | ✅ | Bateria carregada pelo Sol (43 % da Terra, zero à noite); gastam O2, blindagem, fábrica de combustível e rádio (issue #30). |
+| **Condição de vitória** | ✅ | Abastecer o MAV (gelo + energia), sobreviver a 3 tempestades e enviar os dados científicos (issue #30). |
 | **Produção de comida** | 🟡 | Batatas são um estoque finito; não há cultivo, nem custo de água/energia na estufa. |
 | **Atraso de comunicação** | ❌ | Não existe. |
 | **Toda escolha tem custo (trade-off)** | ❌ | **Este é o gap principal.** Hoje não há nenhuma decisão com custo: a estratégia ótima é ficar dentro da nave. |

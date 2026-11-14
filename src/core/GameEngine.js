@@ -1,5 +1,10 @@
 import * as THREE from 'three';
-import { CAMERA_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import donkiCme from '../data/donkiCme.json';
+import { MissionSystem, oxygenPointsToKg } from '../mission/MissionSystem.js';
+import { formatDateDMY, formatDose, stormEventMessage } from '../mission/missionText.js';
+import { MissionHud } from '../ui/MissionHud.js';
+import { requestRawPointerLock } from '../player/mouseLook.js';
 import { createCarrotTexture } from '../graphics/carrotTexture.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { createBlockMaterials } from '../graphics/blockMaterials.js';
@@ -80,6 +85,17 @@ export class GameEngine {
     this._initBaseLights();
     this._initHighlightWireframe();
 
+    // Missao: energia, tempestades solares (CMEs reais do DONKI) e o MAV
+    this.mission = new MissionSystem({ cmes: donkiCme.cmes, startHours: this._skyHours() });
+    this.missionHud = new MissionHud({
+      donkiFetched: donkiCme.fetched,
+      onLoadIce: (count) => this._loadIceIntoMav(count),
+      onToggleFactory: () => this.mission.toggleFactory(),
+      onIgnite: () => this._launchMav(),
+      onClose: () => this._closeMavPanel(),
+    });
+    this._wasDead = false;
+
     this.input = new InputController({
       domElement: this.renderer.domElement,
       player: this.player,
@@ -107,6 +123,9 @@ export class GameEngine {
             : 'Tactical 3rd-person';
         this.hud.showToast(`Camera: ${modeName}`);
       },
+      onToggleShield: () => this._toggleShield(),
+      onSendData: () => this._sendScienceData(),
+      isMissionModalOpen: () => this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown,
     });
 
     this._lookDir = new THREE.Vector3();
@@ -159,6 +178,120 @@ export class GameEngine {
     }
   }
 
+  // Horas de jogo desde o inicio do sol 1
+  _skyHours() {
+    return (this.sky.solCount - 1) * 24 + this.sky.timeOfDay;
+  }
+
+  _isNearMav() {
+    const { x, z } = MAV_CONFIG.PAD_POSITION;
+    return Math.hypot(this.player.pos.x - x, this.player.pos.z - z) <= MAV_CONFIG.INTERACT_RADIUS;
+  }
+
+  _openMavPanel() {
+    this.missionHud.openMavPanel();
+    this._refreshMavPanel();
+    document.exitPointerLock();
+  }
+
+  _closeMavPanel() {
+    this.missionHud.closeMavPanel();
+    requestRawPointerLock(this.renderer.domElement);
+  }
+
+  // [G] no console de comando da base: envia o pacote de dados cientificos para a Terra
+  _sendScienceData() {
+    if (this.currentInteraction !== 'rover_terminal') {
+      this.hud.showToast('Go to the command console inside the base to send science data.');
+      return;
+    }
+    const result = this.mission.sendData();
+    const messages = {
+      sent: 'Science data sent! Radio waves take 3 to 22 minutes to reach Earth, so Mission Control cannot help you right away.',
+      'no-energy': 'Not enough energy to power the radio. Wait for the Sun to charge the battery.',
+      'already-sent': 'Your science data is already on its way to Earth.',
+    };
+    this.hud.showToast(messages[result], 5000);
+  }
+
+  // Sobrevivencia com o O2 do habitat pago pela bateria
+  _updateSurvival(dt) {
+    this.survival.update(dt, this.player.pos, this.mission.oxygenRefillBudget());
+    this.mission.chargeOxygen(this.survival.lastOxygenRefilled);
+  }
+
+  _refreshMavPanel() {
+    this.missionHud.updateMavPanel(this.mission, this.survival.countItem(BLOCK_IDS.MARS_ICE));
+  }
+
+  _toggleShield() {
+    if (!this.mission.toggleShield()) {
+      this.hud.showToast('The battery is empty: the shield cannot turn on.');
+      return;
+    }
+    this.hud.showToast(this.mission.shieldOn
+      ? 'Radiation shield ON: it blocks solar particles but uses energy.'
+      : 'Radiation shield OFF.');
+  }
+
+  _loadIceIntoMav(count) {
+    const inBag = this.survival.countItem(BLOCK_IDS.MARS_ICE);
+    const accepted = this.mission.deliverIce(Math.min(count, inBag));
+    if (accepted <= 0) return;
+    this.survival.removeItems(BLOCK_IDS.MARS_ICE, accepted);
+    this.hud.renderHotbar(this.survival.slots);
+    const heldSlot = this.survival.slots[this.hud.selectedSlot];
+    this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
+    this._refreshMavPanel();
+  }
+
+  _launchMav() {
+    if (!this.mission.ignite()) return;
+    const m = this.mission;
+    const rows = [
+      ['Sols on Mars (1 sol = 1 Mars day)', String(this.sky.solCount)],
+      ['Radiation dose you got', `${formatDose(m.totalDoseMsv)} (NASA career limit: ${RADIATION_CONFIG.CAREER_LIMIT_MSV} mSv)`],
+      ['Solar storms survived', String(m.stormsSurvived)],
+      ['Oxygen made by the base', `${oxygenPointsToKg(m.oxygenProducedPoints).toFixed(2)} kg`],
+      ['Ice turned into rocket fuel', `${m.iceDelivered} blocks`],
+      ['Solar energy collected', `${(m.solarEnergyCollected / m.battery.capacity).toFixed(1)} full batteries`],
+    ];
+    const sources = `Solar storms: real CMEs from NASA DONKI (real data from ${formatDateDMY(donkiCme.fetched)}). ` +
+      'Radiation: Curiosity RAD on the Mars surface (NASA RadLab). Sunlight on Mars: 43% of Earth (NASA Mars Fact Sheet).';
+    this.missionHud.showVictory(rows, sources);
+    document.exitPointerLock();
+  }
+
+  _updateMission(dt) {
+    // Com o painel do MAV aberto o jogador continua la fora: a radiacao conta
+    const playing = this.input.isLocked || this.missionHud.isMavPanelOpen;
+    const active = playing && !this.survival.isDead && !this.missionHud.isVictoryShown;
+    const damage = this.mission.update(this._skyHours(), {
+      insideHabitat: this.survival.insidePressurizedShip,
+      active,
+    });
+    if (active) this.survival.takeDamage(damage);
+
+    if (this.survival.isDead && !this._wasDead) {
+      this.mission.markDeath();
+      this.missionHud.closeMavPanel(); // a tela de morte precisa aparecer por cima
+      this.hud.showDeathScreen(); // a radiacao pode matar depois do hud.update deste frame
+    }
+    this._wasDead = this.survival.isDead;
+
+    for (const event of this.mission.drainEvents()) {
+      const message = stormEventMessage(event, donkiCme.fetched);
+      if (message) this.hud.showToast(message, event.type === 'storm-warning' ? 8000 : 4500);
+    }
+
+    this.missionHud.update(this.mission);
+    this._panelRefreshTimer = (this._panelRefreshTimer ?? 0) + dt;
+    if (this.missionHud.isMavPanelOpen && this._panelRefreshTimer > 0.25) {
+      this._panelRefreshTimer = 0;
+      this._refreshMavPanel();
+    }
+  }
+
   _onResize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
@@ -191,12 +324,20 @@ export class GameEngine {
       return;
     }
 
+    // 0. MAV na plataforma de lancamento
+    if (this._isNearMav()) {
+      this.currentInteraction = 'mav';
+      this.hud.setInteractionPrompt(true, '[F] Open the MAV rocket panel');
+      return;
+    }
+
     // 1. Console de Comando do Rover (x: 0, z: -3.6, y: ~11)
     const distConsole = Math.hypot(this.player.pos.x - 0, this.player.pos.z - (-3.6));
     const dyConsole = Math.abs(this.player.pos.y - 11.0);
     if (distConsole < 3.2 && dyConsole < 2.2) {
       this.currentInteraction = 'rover_terminal';
-      this.hud.setInteractionPrompt(true, '[F] Operate Rover Remote Terminal');
+      const dataHint = this.mission.dataSent ? '' : ' · [G] Send science data to Earth';
+      this.hud.setInteractionPrompt(true, `[F] Operate Rover Remote Terminal${dataHint}`);
       return;
     }
 
@@ -226,6 +367,16 @@ export class GameEngine {
   }
 
   handlePlayerInteract() {
+    if (this.missionHud.isVictoryShown) return;
+    if (this.missionHud.isMavPanelOpen) {
+      this._closeMavPanel();
+      return;
+    }
+    if (this.currentInteraction === 'mav' && this.input.isLocked) {
+      this._openMavPanel();
+      return;
+    }
+
     if (this.roverController.isActive) {
       this.toggleRoverMode();
       return;
@@ -267,17 +418,17 @@ export class GameEngine {
       const dt = Math.min(frameMs / 1000, 0.05);
       this.lastTime = now;
 
-      const isGameRunning = this.input.isLocked && !this.survival.isDead;
+      const isGameRunning = this.input.isLocked && !this.survival.isDead && !this.missionHud.isVictoryShown;
       if (isGameRunning) {
         if (this.roverController.isActive) {
           this.roverController.update(dt, this.input.keys);
           this.sky.update(dt, this.roverController.pos);
-          this.survival.update(dt, this.player.pos);
+          this._updateSurvival(dt);
           this.highlightBox.visible = false;
-          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isZoomed: false, isRoverActive: true, roverTelemetry: this.roverController.getTelemetry() });
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isZoomed: false, isRoverActive: true, roverTelemetry: this.roverController.getTelemetry(), mission: this.mission });
         } else {
           this.player.update(dt, this.input.keys);
-          this.survival.update(dt, this.player.pos);
+          this._updateSurvival(dt);
           this.input.update(dt);
           this.roverController.update(dt, {});
           this.playerHand.update(dt, this.player.isMoving);
@@ -300,7 +451,7 @@ export class GameEngine {
             this.highlightBox.visible = false;
           }
 
-          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isZoomed: this.isZoomed, isRoverActive: false });
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isZoomed: this.isZoomed, isRoverActive: false, mission: this.mission });
         }
       } else {
         if (this.roverController.isActive) this.roverController.update(dt, {});
@@ -317,6 +468,8 @@ export class GameEngine {
       }
 
       if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
+      this._updateMission(dt);
+
       this.renderer.render(this.scene, this.camera);
       this.debug.frame(frameMs);
     };

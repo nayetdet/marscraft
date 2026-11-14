@@ -34,7 +34,17 @@
       <div id="player-coords">XYZ: 0 / 13 / 19</div>
       <div id="env-status">Environment: Martian Crater (using oxygen)</div>
       <div id="base-water-status">Base Water: 25L · Greenhouse: 100% (Hydrated)</div>
-      <div class="mc-help-line">[E] Inventory · [Q] Drop item · [Z] Scope · [F] Interact · [W]×2 Sprint</div>
+      <div class="mc-help-line">[E] Inventory · [Q] Drop item · [Z] Scope · [F] Interact · [W]×2 Sprint · [R] Radiation shield</div>
+    </div>
+
+    <!-- Missao: energia, radiacao, tempestade solar e progresso do MAV -->
+    <div id="mission-box" class="mission-box">
+      <div id="mission-power">Power: 80%</div>
+      <div id="mission-radiation">Radiation: 0.02 mSv/h</div>
+      <div id="mission-shield">Shield [R]: OFF</div>
+      <div id="mission-storm" class="mission-storm">Space weather: calm</div>
+      <div id="mission-mav">Rocket home (MAV): 0% ready</div>
+      <div id="mission-source" class="mission-source"></div>
     </div>
 
     <!-- Rotulos simples no ceu (sem emojis) -->
@@ -125,6 +135,10 @@
             <span class="mc-bar-label">HEALTH</span>
             <div id="health-bar" class="mc-icon-row"></div>
           </div>
+          <div class="mc-bar-row">
+            <span class="mc-bar-label">ENERGY</span>
+            <div id="energy-bar" class="mc-icon-row"></div>
+          </div>
         </div>
 
         <div class="mc-status-col right">
@@ -171,8 +185,55 @@
   <div id="death-overlay" class="mc-death-overlay hidden">
     <div class="mc-menu">
       <h1 class="mc-death-title">You Died!</h1>
-      <p class="mc-death-sub">You ran out of oxygen, water, or food on Mars.</p>
+      <p class="mc-death-sub">You ran out of oxygen, water, or food, or got too much radiation on Mars.</p>
       <button id="respawn-btn" class="mc-btn">Respawn</button>
+    </div>
+  </div>
+
+  <!-- Painel do MAV (Mars Ascent Vehicle): o foguete que leva a tripulacao de volta -->
+  <div id="mav-overlay" class="inventory-overlay hidden">
+    <section class="inventory-window mav-window" aria-label="Mars Ascent Vehicle">
+      <header><h2>MAV - Mars Ascent Vehicle</h2><span id="mav-overall">0% ready</span></header>
+      <p class="mav-intro">This rocket takes you back to orbit, on your way home. Finish all three jobs, then press IGNITE.</p>
+
+      <div class="mav-req">
+        <h3>1. Rocket fuel: <span id="mav-fuel-pct">0%</span></h3>
+        <div class="mav-track"><div id="mav-fuel-fill" class="mav-fill"></div></div>
+        <p>The fuel factory splits Martian ice into hydrogen and oxygen, then mixes the hydrogen with carbon dioxide from the Mars air to make methane. Methane + oxygen = rocket fuel. It needs ice and uses energy.</p>
+        <p id="mav-fuel-status" class="mav-status"></p>
+        <div class="mav-actions">
+          <button id="mav-load-one" class="mc-btn">Load 1 ice</button>
+          <button id="mav-load-all" class="mc-btn">Load all ice</button>
+          <button id="mav-factory" class="mc-btn">Factory: ON</button>
+        </div>
+      </div>
+
+      <div class="mav-req">
+        <h3>2. Solar storms survived: <span id="mav-storms">0/3</span></h3>
+        <p>A solar storm starts when the Sun throws out a huge cloud of fast particles (scientists call it a CME). Stay alive until 3 storms pass: hide in the base or turn on the shield [R].</p>
+      </div>
+
+      <div class="mav-req">
+        <h3>3. Science data sent: <span id="mav-data">No</span></h3>
+        <p>Send your Mars discoveries to Earth from the command console inside the base: stand next to it and press [G]. The radio uses energy.</p>
+      </div>
+
+      <p id="mav-power" class="mav-status"></p>
+      <div class="mav-actions">
+        <button id="mav-ignite" class="mc-btn primary" disabled>IGNITE</button>
+        <button id="mav-close" class="mc-btn">Close [F]</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Tela de vitoria: decolagem do MAV -->
+  <div id="victory-overlay" class="mc-overlay victory-overlay hidden">
+    <div class="mc-menu">
+      <h1 class="mc-death-title">Liftoff!</h1>
+      <p class="mc-death-sub victory-sub">The MAV is on its way to orbit. Mission complete!</p>
+      <div id="victory-summary" class="mc-panel victory-summary"></div>
+      <p id="victory-sources" class="victory-sources"></p>
+      <button id="play-again-btn" class="mc-btn primary">Play again</button>
     </div>
   </div>
 

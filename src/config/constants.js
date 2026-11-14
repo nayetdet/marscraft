@@ -135,9 +135,6 @@ export const MAV_CONFIG = {
   PAD_POSITION: { x: 24, z: 20 },
   PAD_RADIUS: 4,
   INTERACT_RADIUS: 6,
-  // Console de controle dentro do habitat (nasaModelsBuilder: mesa em x = 0, z = -3.6)
-  CONSOLE_POSITION: { x: 0, z: -3.6 },
-  CONSOLE_INTERACT_RADIUS: 3,
   ICE_BLOCKS_FOR_FULL_TANK: 10,
   ISRU_HOURS_PER_ICE_BLOCK: 0.6,
   STORMS_TO_SURVIVE: 3,

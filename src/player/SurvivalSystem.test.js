@@ -102,3 +102,36 @@ describe('harvested carrots', () => {
     expect(survival.slots[4].count).toBe(4);
   });
 });
+
+describe('mission hooks', () => {
+  it('oxygen refill inside the base is limited by the energy budget', () => {
+    const survival = new SurvivalSystem();
+    survival.oxygen = 5;
+    survival.update(1.0, { x: 0, y: 11.7, z: 0 }, 0);
+    expect(survival.oxygen).toBe(5);
+    expect(survival.lastOxygenRefilled).toBe(0);
+    expect(survival.oxygenNeedsPower).toBe(true);
+
+    survival.update(1.0, { x: 0, y: 11.7, z: 0 }, 2);
+    expect(survival.lastOxygenRefilled).toBeCloseTo(2);
+    expect(survival.oxygen).toBeCloseTo(7);
+  });
+
+  it('takeDamage kills at zero health', () => {
+    const survival = new SurvivalSystem();
+    survival.takeDamage(5);
+    expect(survival.health).toBe(15);
+    survival.takeDamage(50);
+    expect(survival.isDead).toBe(true);
+  });
+
+  it('counts and removes ice blocks from the inventory', () => {
+    const survival = new SurvivalSystem();
+    const iceId = survival.slots[3].id;
+    survival.inventorySlots[12] = { id: iceId, name: 'ice', count: 4 };
+    expect(survival.countItem(iceId)).toBe(9);
+    expect(survival.removeItems(iceId, 7)).toBe(7);
+    expect(survival.countItem(iceId)).toBe(2);
+    expect(survival.removeItems(iceId, 10)).toBe(2);
+  });
+});
