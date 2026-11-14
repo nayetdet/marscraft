@@ -55,8 +55,11 @@ export const BLOCK_INTERACTION_CONFIG = {
 
 export const SURVIVAL_CONFIG = {
   MAX_STAT: 20,
-  OXYGEN_DRAIN_RATE: 0.32,
+  OXYGEN_DRAIN_RATE: 20 / 360, // tanque cheio dura 6 minutos fora da base
   OXYGEN_REFILL_RATE: 4.5,
+  BREACH_OXYGEN_DRAIN_RATE: 1.0, // pontos de O2 do jogador por segundo
+  BASE_OXYGEN_LEAK_RATE: 5, // porcentagem por segundo, para qualquer abertura
+  BASE_OXYGEN_REFILL_RATE: 2, // porcentagem por segundo após vedar a base
   WATER_DRAIN_RATE: 0.14,
   FOOD_DRAIN_RATE: 0.11,
   STARVE_DAMAGE_RATE: 0.8,
@@ -82,7 +85,7 @@ export const WATER_SYSTEM_CONFIG = {
 };
 
 // Missao: energia, tempestades solares e o MAV (issue #30).
-// Taxas "por hora de jogo": com autoAdvanceSpeed = 0.02, 1 hora de jogo = 50 s reais.
+// Taxas "por hora de jogo": com GAME_HOURS_PER_SECOND = 0.01, 1 hora de jogo = 100 s reais.
 // Fontes dos numeros reais em docs/data/numeros-reais.md.
 export const MISSION_CONFIG = {
   MAX_ENERGY: 100, START_ENERGY: 80, SOLAR_RATE: 0.22,
@@ -95,7 +98,7 @@ export const MISSION_CONFIG = {
   RADIATION_RATE: 0.04, STORM_RADIATION_RATE: 0.25,
 
   // Hora de jogo por segundo real (igual a MarsSkySystem.autoAdvanceSpeed)
-  GAME_HOURS_PER_SECOND: 0.02,
+  GAME_HOURS_PER_SECOND: 0.01,
   // Passo maximo de simulacao, para avancos de tempo grandes (tecla T) nao pularem eventos
   MAX_STEP_HOURS: 0.05,
   // Hora do nascer do sol no relogio do jogo (MarsSkySystem: sol no horizonte as 6h e 18h)

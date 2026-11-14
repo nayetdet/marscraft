@@ -112,5 +112,5 @@ Simplificação a explicar: a "blindagem ligada" (tecla R) é um escudo ativo qu
 | Parâmetro no código | Valor atual | Real | Comentário |
 |---|---|---|---|
 | `PHYSICS_CONFIG.MARS_GRAVITY` (`src/config/constants.js`) | `12.0` | 3,71 m/s² | Ajustado para "sensação" de jogo. Se mantiver, explique isso no jogo ou nos créditos; o critério *Validity* olha isso. |
-| Duração de 1 sol (`MarsSkySystem.autoAdvanceSpeed = 0.02` h/s) | ~20 min reais por dia de 24 h | 24 h 39 min | O relógio usa 24 h. Pode virar 24,65 h para ficar fiel. |
+| Duração de 1 sol (`MISSION_CONFIG.GAME_HOURS_PER_SECOND = 0.01` h/s) | ~40 min reais por dia de 24 h | 24 h 39 min | O relógio usa 24 h. Pode virar 24,65 h para ficar fiel. |
 | Taxas de O2/água/comida (`SURVIVAL_CONFIG`) | arbitrárias | — | Ok ser escala de jogo, mas a **razão** entre elas pode seguir o consumo real de um astronauta (O2 ~0,84 kg/dia, água ~2,5–3,5 kg/dia, comida ~1,8 kg/dia; fonte: NASA ECLSS / BVAD). |

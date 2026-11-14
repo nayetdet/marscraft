@@ -180,7 +180,7 @@ describe('MissionSystem launch', () => {
 
 describe('oxygenPointsToKg', () => {
   it('one sol of breathing outside equals 0.84 kg of O2', () => {
-    expect(oxygenPointsToKg(0.32 * 1200)).toBeCloseTo(0.84);
+    expect(oxygenPointsToKg((20 / 360) * 2400)).toBeCloseTo(0.84);
   });
 
   it('keeps space weather calm until the story starts the storms', () => {

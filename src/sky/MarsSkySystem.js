@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { MISSION_CONFIG } from '../config/constants.js';
 import { createAtmosphereDome } from './atmosphereShader.js';
 import {
   createEarthAndMoonSystem,
@@ -19,9 +20,9 @@ const _sunDir = new THREE.Vector3();
 export class MarsSkySystem {
   constructor(scene) {
     this.scene = scene;
-    this.timeOfDay = 15.2; // Tarde ensolarada e clara em Marte
+    this.timeOfDay = 9; // Manhã: mais tempo de luz no início da missão
     this.solCount = 1;
-    this.autoAdvanceSpeed = 0.02;
+    this.autoAdvanceSpeed = MISSION_CONFIG.GAME_HOURS_PER_SECOND;
 
     this.celestialGroup = new THREE.Group();
     this.scene.add(this.celestialGroup);

@@ -53,13 +53,13 @@ export function missionStatus(mission, fetchedIso, base = {}) {
   const co2 = base.co2 ?? 0;
   const contaminated = Boolean(base.contaminated);
   const brokenWindows = base.brokenWindows > 0;
-  const airPct = Math.round(100 - co2);
-  const airTone = co2 >= CO2_DAMAGE || contaminated || brokenWindows ? 'danger' : co2 >= CO2_WARN ? 'warn' : 'ok';
+  const airPct = Math.round(Math.min(100 - co2, base.baseOxygen ?? 100));
+  const airTone = co2 >= CO2_DAMAGE || airPct <= 20 || contaminated || brokenWindows ? 'danger' : co2 >= CO2_WARN || airPct <= 50 ? 'warn' : 'ok';
 
   const { phase, storm, hoursUntil, hoursLeft } = mission.storm;
   const alerts = [];
   if (brokenWindows) {
-    alerts.push({ id: 'breach', icon: 'air', tone: 'danger', title: 'BASE WINDOW BROKEN!', text: 'Outside dust could dirty the air. Seal every broken window with a block.' });
+    alerts.push({ id: 'breach', icon: 'air', tone: 'danger', title: 'BASE WINDOW BROKEN!', text: 'Oxygen is leaking! Seal every broken window with a block.' });
   }
   if (phase === 'active') {
     alerts.push({
