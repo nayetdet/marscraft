@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { generateMartianTerrain } from './terrainGenerator.js';
+import { generateMartianTerrain, isBuildZone } from './terrainGenerator.js';
 import { buildNasaSpaceshipAndBase } from './nasaSpaceshipBuilder.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { CUTSCENE_CONFIG, MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { CUTSCENE_CONFIG, MAV_CONFIG, WATER_SYSTEM_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { terrainOffset } from '../data/marsTerrain.js';
 
 function createArrayWorld() {
@@ -94,5 +94,16 @@ describe('Martian Terrain & NASA Base Builder', () => {
     const site = CUTSCENE_CONFIG.LANDING_SITE;
     expect(surfaceY(world, pad.x, pad.z)).toBe(WORLD_CONFIG.GROUND_LEVEL);
     expect(surfaceY(world, site.x, site.z)).toBe(WORLD_CONFIG.GROUND_LEVEL);
+  });
+
+  it('knows where the ground was shaped for the game', () => {
+    const pad = MAV_CONFIG.PAD_POSITION;
+    const ice = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER;
+    for (const [x, z] of [[-4, 0], [pad.x, pad.z], [ice.x, ice.z], [-28, -40], [-27, 16]]) {
+      expect(isBuildZone(x, z)).toBe(true);
+    }
+    for (const [x, z] of [[64, 64], [-70, -60], [100, -40], [0, 60]]) {
+      expect(isBuildZone(x, z)).toBe(false);
+    }
   });
 });

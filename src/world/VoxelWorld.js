@@ -7,6 +7,7 @@ import { buildNasaSpaceshipAndBase } from './nasaSpaceshipBuilder.js';
 import { raycastVoxel } from './voxelRaycaster.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
 import { OCCLUSION_BRIGHTNESS, naturalTint, vertexOcclusion } from './voxelShading.js';
+import { createSurfaceRocks } from './surfaceRocks.js';
 
 const CHUNK_SIZE = 16;
 
@@ -127,6 +128,9 @@ export class VoxelWorld {
       if (this.data[idx] !== BLOCK_IDS.HAB_GLASS) this.baseWindows.delete(idx);
     }
     this.rebuildMeshes();
+    // Pedras decorativas sobre o terreno natural (sem colisao)
+    this.surfaceRocks = createSurfaceRocks(this);
+    this.scene.add(this.surfaceRocks);
   }
 
   _index(x, y, z) {
