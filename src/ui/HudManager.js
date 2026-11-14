@@ -1,3 +1,14 @@
+import * as THREE from 'three';
+
+const ICONS_PER_BAR = 10;
+
+const STAT_ICON_PATHS = {
+  heart: '<path d="M1 1h2v1h2V1h2v1h1v3H7v1H6v1H5v1H3V7H2V6H1V5H0V2h1Z"/>',
+  oxygen: '<path d="M2 0h4v1h1v1h1v4H7v1H6v1H2V7H1V6H0V2h1V1h1Z"/>',
+  water: '<path d="M3 0h2v1h1v1h1v1h1v3H7v1H6v1H2V7H1V6H0V3h1V2h1V1h1Z"/>',
+  food: '<path d="M1 0h3v1h1v1h1v2H5v2H4v1H2V5H1V3H0V1h1Z M6 5h2v3H6Z"/>',
+};
+
 export class HudManager {
   constructor(previews, initialSlots, { onInventorySwap } = {}) {
     this.previews = previews;
@@ -24,6 +35,24 @@ export class HudManager {
     this.oxygenBarEl = document.getElementById('oxygen-bar');
     this.waterBarEl = document.getElementById('water-bar');
     this.foodBarEl = document.getElementById('food-bar');
+
+    this.statBars = [
+      this._createIconBar(this.healthBarEl, 'heart'),
+      this._createIconBar(this.oxygenBarEl, 'oxygen'),
+      this._createIconBar(this.waterBarEl, 'water'),
+      this._createIconBar(this.foodBarEl, 'food'),
+    ];
+
+    // Ultimos valores escritos no DOM: so reescreve quando algo muda
+    this._lastClockText = '';
+    this._lastCoordsText = '';
+    this._lastInsideShip = null;
+
+    this._camDir = new THREE.Vector3();
+    this._earthPos = new THREE.Vector3();
+    this._phobosPos = new THREE.Vector3();
+    this._deimosPos = new THREE.Vector3();
+    this._scratch = new THREE.Vector3();
 
     this.renderHotbar(initialSlots);
     this._initSkyLabels();
@@ -122,8 +151,11 @@ export class HudManager {
     const el = document.createElement('div');
     el.className = cls;
     el.textContent = text;
+    el.style.left = '0px';
+    el.style.top = '0px';
+    el.style.opacity = '0';
     this.skyLabelsEl.appendChild(el);
-    return el;
+    return { el, visible: false, x: NaN, y: NaN };
   }
 
   selectSlot(index, slots) {
@@ -155,15 +187,24 @@ export class HudManager {
     this.deathOverlayEl.classList.add('hidden');
   }
 
-  _renderIconBar(container, currentVal, type) {
-    const icons = {
-      heart: '<path d="M1 1h2v1h2V1h2v1h1v3H7v1H6v1H5v1H3V7H2V6H1V5H0V2h1Z"/>',
-      oxygen: '<path d="M2 0h4v1h1v1h1v4H7v1H6v1H2V7H1V6H0V2h1V1h1Z"/>',
-      water: '<path d="M3 0h2v1h1v1h1v1h1v3H7v1H6v1H2V7H1V6H0V3h1V2h1V1h1Z"/>',
-      food: '<path d="M1 0h3v1h1v1h1v2H5v2H4v1H2V5H1V3H0V1h1Z M6 5h2v3H6Z"/>',
-    };
-    let html = '';
-    for (let i = 0; i < 10; i++) {
+  // Cria os 10 icones (SVG) uma unica vez; depois so troca a classe dos que mudaram
+  _createIconBar(container, type) {
+    container.innerHTML = '';
+    const icons = [];
+    for (let i = 0; i < ICONS_PER_BAR; i++) {
+      const span = document.createElement('span');
+      span.className = `mc-stat-icon ${type} empty`;
+      span.setAttribute('aria-hidden', 'true');
+      span.innerHTML = `<svg viewBox="0 0 8 8" shape-rendering="crispEdges">${STAT_ICON_PATHS[type]}</svg>`;
+      container.appendChild(span);
+      icons.push({ span, state: 'empty' });
+    }
+    return { type, icons };
+  }
+
+  _updateIconBar(bar, currentVal) {
+    // 10 icones (cada icone = 2 pontos de 20)
+    for (let i = 0; i < ICONS_PER_BAR; i++) {
       const thresholdFull = (i + 1) * 2;
       const thresholdHalf = i * 2 + 1;
       let state = 'empty';
@@ -172,30 +213,43 @@ export class HudManager {
       } else if (currentVal >= thresholdHalf - 0.2) {
         state = 'half';
       }
-      html += `<span class="mc-stat-icon ${type} ${state}" aria-hidden="true"><svg viewBox="0 0 8 8" shape-rendering="crispEdges">${icons[type]}</svg></span>`;
+      const icon = bar.icons[i];
+      if (icon.state !== state) {
+        icon.state = state;
+        icon.span.className = `mc-stat-icon ${bar.type} ${state}`;
+      }
     }
-    container.innerHTML = html;
   }
 
-  _projectLabel(el, worldPos, camera, camDir) {
-    const toTarget = worldPos.clone().sub(camera.position).normalize();
+  _setLabelVisible(label, visible) {
+    if (label.visible === visible) return;
+    label.visible = visible;
+    label.el.style.opacity = visible ? '1' : '0';
+  }
+
+  _projectLabel(label, worldPos, camera, camDir) {
+    const toTarget = this._scratch.copy(worldPos).sub(camera.position).normalize();
     if (camDir.dot(toTarget) <= 0.05) {
-      el.style.opacity = '0';
+      this._setLabelVisible(label, false);
       return;
     }
 
-    const projected = worldPos.clone().project(camera);
-    const x = (projected.x * 0.5 + 0.5) * window.innerWidth;
-    const y = (-projected.y * 0.5 + 0.5) * window.innerHeight;
+    const projected = this._scratch.copy(worldPos).project(camera);
+    const x = Math.round((projected.x * 0.5 + 0.5) * window.innerWidth);
+    const y = Math.round((-projected.y * 0.5 + 0.5) * window.innerHeight);
 
     if (x < -100 || x > window.innerWidth + 100 || y < -50 || y > window.innerHeight + 50) {
-      el.style.opacity = '0';
+      this._setLabelVisible(label, false);
       return;
     }
 
-    el.style.opacity = '1';
-    el.style.left = `${x}px`;
-    el.style.top = `${y - 16}px`;
+    this._setLabelVisible(label, true);
+    if (label.x !== x || label.y !== y) {
+      label.x = x;
+      label.y = y;
+      // transform so recompoe a camada, sem recalcular o layout da pagina
+      label.el.style.transform = `translate(${x}px, ${y - 16}px) translate(-50%, -100%)`;
+    }
   }
 
   update({ player, survival, sky, camera, isZoomed }) {
@@ -205,42 +259,52 @@ export class HudManager {
     }
 
     const { clockText } = sky.getFormattedTime();
-    this.solTimeEl.textContent = clockText;
+    if (clockText !== this._lastClockText) {
+      this._lastClockText = clockText;
+      this.solTimeEl.textContent = clockText;
+    }
 
     const px = Math.round(player.pos.x);
     const py = Math.round(player.pos.y - player.height);
     const pz = Math.round(player.pos.z);
-    this.coordsEl.textContent = `XYZ: ${px} / ${py} / ${pz}`;
+    const coordsText = `XYZ: ${px} / ${py} / ${pz}`;
+    if (coordsText !== this._lastCoordsText) {
+      this._lastCoordsText = coordsText;
+      this.coordsEl.textContent = coordsText;
+    }
 
-    if (survival.insidePressurizedShip) {
-      this.envStatusEl.textContent = 'Environment: Pressurized Habitat (refilling oxygen)';
-      this.envStatusEl.style.color = '#7cfc00';
-    } else {
-      this.envStatusEl.textContent = 'Environment: Martian Crater (using oxygen)';
-      this.envStatusEl.style.color = '#ffffff';
+    if (survival.insidePressurizedShip !== this._lastInsideShip) {
+      this._lastInsideShip = survival.insidePressurizedShip;
+      if (survival.insidePressurizedShip) {
+        this.envStatusEl.textContent = 'Environment: Pressurized Habitat (refilling oxygen)';
+        this.envStatusEl.style.color = '#7cfc00';
+      } else {
+        this.envStatusEl.textContent = 'Environment: Martian Crater (using oxygen)';
+        this.envStatusEl.style.color = '#ffffff';
+      }
     }
 
     // Atualiza barras de status Survival estilo Minecraft
-    this._renderIconBar(this.healthBarEl, survival.health, 'heart');
-    this._renderIconBar(this.oxygenBarEl, survival.oxygen, 'oxygen');
-    this._renderIconBar(this.waterBarEl, survival.water, 'water');
-    this._renderIconBar(this.foodBarEl, survival.food, 'food');
+    const [healthBar, oxygenBar, waterBar, foodBar] = this.statBars;
+    this._updateIconBar(healthBar, survival.health);
+    this._updateIconBar(oxygenBar, survival.oxygen);
+    this._updateIconBar(waterBar, survival.water);
+    this._updateIconBar(foodBar, survival.food);
 
-    const earthPos = sky.getEarthWorldPosition();
-    const phobosPos = sky.getPhobosWorldPosition();
-    const deimosPos = sky.getDeimosWorldPosition();
-    const camDir = player.getLookDirection();
+    const earthPos = sky.getEarthWorldPosition(this._earthPos);
+    const phobosPos = sky.getPhobosWorldPosition(this._phobosPos);
+    const deimosPos = sky.getDeimosWorldPosition(this._deimosPos);
+    const camDir = player.getLookDirection(this._camDir);
 
     this._projectLabel(this.earthLabel, earthPos, camera, camDir);
     this._projectLabel(this.phobosLabel, phobosPos, camera, camDir);
     this._projectLabel(this.deimosLabel, deimosPos, camera, camDir);
 
     if (isZoomed) {
-      const dirToEarth = earthPos.clone().sub(camera.position).normalize();
-      if (camDir.angleTo(dirToEarth) < 0.14) {
-        this.zoomTargetEl.textContent = 'Earth + Moon';
-      } else {
-        this.zoomTargetEl.textContent = '';
+      const dirToEarth = this._scratch.copy(earthPos).sub(camera.position).normalize();
+      const zoomText = camDir.angleTo(dirToEarth) < 0.14 ? 'Earth + Moon' : '';
+      if (this.zoomTargetEl.textContent !== zoomText) {
+        this.zoomTargetEl.textContent = zoomText;
       }
     }
   }

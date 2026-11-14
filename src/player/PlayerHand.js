@@ -62,6 +62,20 @@ export class PlayerHand {
     this.handGroup.add(this.heldBlockMesh);
   }
 
+  // Um clone por tipo de bloco, reaproveitado (antes clonava a cada troca de slot e vazava)
+  _getHandMaterial(blockId) {
+    if (!this._handMaterials) this._handMaterials = {};
+    if (!this._handMaterials[blockId]) {
+      const baseMat = this.materials[blockId];
+      if (!baseMat) return null;
+      const cloned = baseMat.clone();
+      cloned.depthTest = true;
+      cloned.depthWrite = !cloned.transparent;
+      this._handMaterials[blockId] = cloned;
+    }
+    return this._handMaterials[blockId];
+  }
+
   setHeldBlock(blockId, count) {
     if (!blockId || count <= 0) {
       this.heldBlockMesh.visible = false;
@@ -69,13 +83,9 @@ export class PlayerHand {
       return;
     }
 
-    const baseMat = this.materials[blockId];
-    if (baseMat) {
-      const cloned = baseMat.clone();
-      // Keep opaque held items solid; preserve transparency for glass blocks.
-      cloned.depthTest = true;
-      cloned.depthWrite = !cloned.transparent;
-      this.heldBlockMesh.material = cloned;
+    const handMat = this._getHandMaterial(blockId);
+    if (handMat) {
+      this.heldBlockMesh.material = handMat;
       this.heldBlockMesh.visible = true;
       this.armMesh.position.set(0.08, -0.06, 0.08);
     }

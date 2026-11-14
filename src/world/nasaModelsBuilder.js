@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { WORLD_CONFIG } from '../config/constants.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
 
@@ -135,7 +136,6 @@ export function buildNasaCustomModels(scene) {
   group.add(dish);
   solidObjects.push(dish);
 
-  scene.add(group);
   group.updateMatrixWorld(true);
 
   // Extrai caixas de colisão AABB tanto do objeto inteiro quanto de cada malha individual
@@ -156,7 +156,83 @@ export function buildNasaCustomModels(scene) {
     }
   }
 
-  return { group, colliders, plants };
+  // Colliders acima saem das caixas individuais; so depois junta as malhas.
+  // As plantas ficam como objetos separados porque podem ser colhidas (raycast + remocao).
+  const merged = mergeByMaterial(group, plants);
+  scene.add(merged);
+  return { group: merged, colliders, plants };
+}
+
+// Junta as centenas de caixas em uma malha por material (de ~300 draw calls para ~20).
+// Os modelos sao estaticos, entao a transformacao de cada caixa e "assada" na geometria.
+// Objetos em `separateObjects` mantem a identidade (e o userData), so que cada um vira
+// uma unica malha com cor por vertice.
+export function mergeByMaterial(group, separateObjects = []) {
+  group.updateMatrixWorld(true);
+  const separate = new Set(separateObjects);
+  const buckets = new Map();
+
+  const collect = (obj) => {
+    if (separate.has(obj)) return;
+    if (obj.isMesh) {
+      const geo = obj.geometry.clone().applyMatrix4(obj.matrixWorld);
+      geo.clearGroups();
+      if (!buckets.has(obj.material)) buckets.set(obj.material, []);
+      buckets.get(obj.material).push(geo);
+      obj.geometry.dispose();
+    }
+    for (const child of obj.children) collect(child);
+  };
+  collect(group);
+
+  const merged = new THREE.Group();
+  for (const [material, geos] of buckets) {
+    const geometry = mergeGeometries(geos, false);
+    geos.forEach((g) => g.dispose());
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.matrixAutoUpdate = false;
+    merged.add(mesh);
+  }
+
+  const vertexColorMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  for (const obj of separateObjects) {
+    bakeIntoSingleMesh(obj, vertexColorMat);
+    merged.attach(obj); // preserva a posicao no mundo ao trocar de pai
+  }
+  return merged;
+}
+
+// Troca os filhos de `root` por uma unica malha, guardando a cor de cada material nos vertices
+function bakeIntoSingleMesh(root, vertexColorMat) {
+  root.updateMatrixWorld(true);
+  const toLocal = root.matrixWorld.clone().invert();
+  const geos = [];
+  const meshes = [];
+  root.traverse((obj) => {
+    if (obj === root || !obj.isMesh) return;
+    const matrix = toLocal.clone().multiply(obj.matrixWorld);
+    const geo = obj.geometry.clone().applyMatrix4(matrix);
+    geo.clearGroups();
+    const { r, g, b } = obj.material.color;
+    const colors = new Float32Array(geo.attributes.position.count * 3);
+    for (let i = 0; i < colors.length; i += 3) {
+      colors[i] = r;
+      colors[i + 1] = g;
+      colors[i + 2] = b;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geos.push(geo);
+    meshes.push(obj);
+  });
+  if (geos.length === 0) return;
+
+  for (const mesh of meshes) {
+    mesh.geometry.dispose();
+    mesh.removeFromParent();
+  }
+  const geometry = mergeGeometries(geos, false);
+  geos.forEach((g) => g.dispose());
+  root.add(new THREE.Mesh(geometry, vertexColorMat));
 }
 
 function addBox(parent, w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) {
