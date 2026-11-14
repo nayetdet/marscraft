@@ -16,14 +16,24 @@ describe('RoverController', () => {
     const telemetry = controller.getTelemetry();
     expect(telemetry.speedKmh).toBe('0.0');
     expect(telemetry.battery).toBeGreaterThanOrEqual(90);
+    expect(controller.cameraYaw).toBe(controller.yaw);
+    expect(controller.cameraPitch).toBe(-0.22);
   });
 
-  it('ativa e desativa o modo rover corretamente', () => {
+  it('ativa o rover e permite olhar ao redor sem ultrapassar os limites da câmera', () => {
     const roverGroup = new THREE.Group();
     const controller = new RoverController({ roverGroup, wheels: [] });
 
     controller.activate();
     expect(controller.isActive).toBe(true);
+
+    const initialYaw = controller.cameraYaw;
+    controller.look(50, 50);
+    expect(controller.cameraYaw).toBeLessThan(initialYaw);
+    expect(controller.cameraPitch).toBeLessThan(-0.22);
+
+    controller.look(0, 100000);
+    expect(controller.cameraPitch).toBe(-1.15);
 
     controller.deactivate();
     expect(controller.isActive).toBe(false);

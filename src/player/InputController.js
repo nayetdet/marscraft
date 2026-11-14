@@ -171,9 +171,7 @@ export class InputController {
     } else if (action === 'interact') {
       this.onInteract();
     } else if (action === 'sprint') {
-      if (this.isRoverActive()) {
-        this.onToggleRoverCamera();
-      } else {
+      if (!this.isRoverActive()) {
         this.keys.Sprint = !this.keys.Sprint;
         button.classList.toggle('is-active', this.keys.Sprint);
       }
@@ -520,9 +518,10 @@ export class InputController {
       const dy = e.clientY - this.lastTouchLookY;
       this.lastTouchLookX = e.clientX;
       this.lastTouchLookY = e.clientY;
-      if (!this.isRoverActive()) {
-        applyMouseLook(this.player, Math.max(-100, Math.min(100, dx)), Math.max(-100, Math.min(100, dy)), this.isZoomed);
-      }
+      const boundedDx = Math.max(-100, Math.min(100, dx));
+      const boundedDy = Math.max(-100, Math.min(100, dy));
+      if (this.isRoverActive()) this.onRoverLook(boundedDx, boundedDy);
+      else applyMouseLook(this.player, boundedDx, boundedDy, this.isZoomed);
     });
 
     window.addEventListener('pointerup', (e) => this._releaseTouchPointer(e.pointerId));

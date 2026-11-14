@@ -95,10 +95,8 @@ export class HudManager {
     }
     const useLabel = document.getElementById('touch-use-label');
     const mineLabel = document.getElementById('touch-mine-label');
-    const sprintLabel = document.getElementById('touch-sprint-label');
     if (useLabel) useLabel.textContent = 'USE';
     if (mineLabel) mineLabel.textContent = active ? 'DRILL' : 'MINE';
-    if (sprintLabel) sprintLabel.textContent = active ? 'CAM' : 'RUN';
     if (this.bottomAreaEl) this.bottomAreaEl.style.display = '';
     if (this.crosshairEl) {
       this.crosshairEl.style.display = active ? 'none' : '';

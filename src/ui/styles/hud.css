@@ -914,6 +914,10 @@
   display: none;
 }
 
+.touch-mode.rover-active .mobile-sprint-button {
+  display: none;
+}
+
 .mobile-joystick {
   position: absolute;
   left: max(14px, env(safe-area-inset-left));
