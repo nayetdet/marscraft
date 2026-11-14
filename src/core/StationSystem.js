@@ -25,7 +25,7 @@ export class StationSystem {
     this.message = 'No transmission pending.';
     this.wasInside = false;
   }
-  update(dt, inside, shelter, survival, storm, outside = !inside) {
+  update(dt, inside, survival, outside = !inside) {
     if (outside) this.dirtySuit = true;
     if (inside && !this.wasInside && this.dirtySuit) this.contaminated = true;
     this.wasInside = inside;
@@ -37,12 +37,11 @@ export class StationSystem {
     this.fitness = Math.max(0, this.fitness - C.FITNESS_DECAY * dt);
     if (this.crop && this.mission.greenhousePowered && !this.contaminated) this.crop.progress = Math.min(C.CROP_GROWTH_TIME, this.crop.progress + dt);
     if (inside && (this.contaminated || this.co2 >= 80)) survival.health = Math.max(0, survival.health - C.DUST_DAMAGE * dt);
-    if (storm && inside && !shelter) this.mission.radiation = Math.min(100, this.mission.radiation + 0.04 * dt);
     if (this.messageTimer > 0) {
       this.messageTimer = Math.max(0, this.messageTimer - dt);
       if (!this.messageTimer) {
         if (this.messageKind === 'mav') { this.mavSent = true; this.message = 'Mission Control: MAV science package received.'; }
-        else this.message = 'Mission Control: message received. Keep your shelter ready.';
+        else this.message = 'Mission Control: message received. Use the storm shelter when a solar storm comes.';
         this.messageKind = null;
       }
     }

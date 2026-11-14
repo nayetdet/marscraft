@@ -42,6 +42,12 @@ export const HABITAT_LAYOUT = {
   GYM_X_MAX: -5,
   GYM_Z_MIN: 8,
   GYM_Z_MAX: 12,
+  // Abrigo de tempestade (issue #56): cabine aberta para oeste no canto sudeste do habitat,
+  // entre a bancada do laboratorio e o airlock. Coordenadas do mundo (nao de bloco).
+  SHELTER_X_MIN: 2.85,
+  SHELTER_X_MAX: 5.75,
+  SHELTER_Z_MIN: 3.85,
+  SHELTER_Z_MAX: 5.8,
 };
 
 const L = HABITAT_LAYOUT;
@@ -125,4 +131,9 @@ export function isInsidePressurizedVolume(x, y, z) {
     inGymCorridor(bx, by, bz) ||
     inGymModule(bx, by, bz)
   );
+}
+
+// Posicao do jogador (pes ou olhos) dentro da cabine do abrigo de tempestade.
+export function isInsideShelter(x, z) {
+  return x > L.SHELTER_X_MIN && x < L.SHELTER_X_MAX && z > L.SHELTER_Z_MIN && z < L.SHELTER_Z_MAX;
 }

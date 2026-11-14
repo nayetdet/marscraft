@@ -36,6 +36,7 @@ import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js
 import { resolveScanTarget, collectScanBlocks } from '../scanner/scanTargeting.js';
 import { ScanHighlight } from '../scanner/scanHighlight.js';
 import { isInsideShieldZone, SHIELD_ZONE } from '../mission/shieldZone.js';
+import { HABITAT_LAYOUT, isInsideShelter } from '../world/habitatLayout.js';
 import { ShieldBubble } from '../graphics/shieldBubble.js';
 import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
@@ -47,6 +48,8 @@ const SKY_SCAN_RADII = { sun: 0.05, earth: 0.035, moon: 0.02, phobos: 0.04, deim
 const SKY_HIGHLIGHT_RADII = { sun: 10, earth: 8.5, moon: 3, phobos: 7, deimos: 3.5 };
 // Alvos de terreno pintam a mancha em volta do bloco mirado, então a chave inclui o bloco.
 const TERRAIN_PATCH_IDS = new Set(['regolith', 'sandstone', 'crater-rock', 'water-ice', 'crater-rim']);
+// Topo do piso do habitat (y = 10), onde a agua do abrigo comeca
+const SHELTER_FLOOR_TOP = HABITAT_LAYOUT.FLOOR_Y + 1;
 
 function getLocalStorage() {
   try {
@@ -235,12 +238,12 @@ export class GameEngine {
   _updateExpedition(dt) {
     const inside = this.survival.isPlayerInsideShip(this.player.pos);
     const insideCore = inside && !(Math.abs(this.player.pos.x - 0.5) < 1.5 && this.player.pos.z >= 6);
-    const shelter = insideCore && this.player.pos.x > -3 && this.player.pos.x < -1 && Math.abs(this.player.pos.z - 0.5) < 1.3;
     this.expedition.greenhousePowered = this.expedition.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
     if (this.expedition.stage === 'outside' && !inside) this.expedition.stage = 'sample';
     if (this.expedition.stage === 'return' && inside) this.expedition.stage = 'report';
     const storm = this.mission.storm.phase === 'active';
-    this.stations.update(dt, insideCore, shelter, this.survival, storm, !inside);
+    this.stations.update(dt, insideCore, this.survival, !inside);
+    this._updateShelterWater();
     this.expedition.radiation = Math.min(100, this.mission.totalDoseMsv / RADIATION_CONFIG.CAREER_LIMIT_MSV * 100);
     const crop = this.stations.crop;
     this.stationCrop.visible = Boolean(crop);
@@ -256,7 +259,12 @@ export class GameEngine {
     document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
     document.getElementById('mission-objective').textContent = this.expedition.objective;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
-    document.getElementById('station-warning').textContent = this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : '';
+    const inAirlock = inside && !insideCore;
+    const inShelter = this.mission.insideShelter;
+    document.getElementById('station-warning').textContent = inAirlock && this.stations.dirtySuit ? 'DUSTY SUIT: clean it at the airlock panel before going in'
+      : storm && inShelter ? `IN STORM SHELTER: ${Math.round(this.mission.shelterWaterL)} L of water in the wall`
+      : storm && insideCore ? 'SOLAR STORM: hide in the storm shelter (water wall)'
+      : this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : '';
   }
 
   _harvestCrop(plant) {
@@ -292,6 +300,10 @@ export class GameEngine {
     const candidates = [
       ...this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' })),
       { type: 'power', x: 4.6, y: 11.4, z: -1.5, label: 'Press F: life support' },
+      { type: 'console', x: 3.0, y: 11.5, z: -4.8, label: 'Press F: mission computer' },
+      { type: 'science', x: 4.5, y: 11.5, z: -4.8, label: 'Press F: science & radio to Earth' },
+      { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
+      { type: 'airlock', x: 1.85, y: 11.3, z: 7.5, label: 'Press F: clean your suit' },
       { type: 'greenhouse', x: -17, y: 11.4, z: 0, label: 'Press F: harvest carrot' },
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
@@ -386,7 +398,43 @@ export class GameEngine {
     oscillator.stop(audio.currentTime + 0.25);
   }
 
+  // Nivel da agua nas paredes do abrigo de tempestade (issue #56)
+  _buildShelterWater() {
+    const L = HABITAT_LAYOUT;
+    const material = new THREE.MeshLambertMaterial({ color: 0x38bdf8, emissive: 0x0369a1, emissiveIntensity: 0.25, transparent: true, opacity: 0.75 });
+    const floor = SHELTER_FLOOR_TOP;
+    const midX = (L.SHELTER_X_MIN + L.SHELTER_X_MAX) / 2;
+    const midZ = (L.SHELTER_Z_MIN + L.SHELTER_Z_MAX) / 2;
+    const width = L.SHELTER_X_MAX - L.SHELTER_X_MIN;
+    const depth = L.SHELTER_Z_MAX - L.SHELTER_Z_MIN;
+    this.shelterWater = [
+      [midX, L.SHELTER_Z_MIN + 0.07, width, 0.1],
+      [midX, L.SHELTER_Z_MAX - 0.07, width, 0.1],
+      [L.SHELTER_X_MAX - 0.07, midZ, 0.1, depth - 0.2],
+    ].map(([x, z, w, d]) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, 1, d), material);
+      mesh.position.set(x, floor, z);
+      mesh.visible = false;
+      this.scene.add(mesh);
+      return mesh;
+    });
+    this._shelterWaterShown = -1;
+  }
+
+  _updateShelterWater() {
+    const liters = this.mission.shelterWaterL;
+    if (liters === this._shelterWaterShown) return;
+    this._shelterWaterShown = liters;
+    const height = 2.2 * liters / RADIATION_CONFIG.SHELTER_WALL_MAX_L;
+    for (const mesh of this.shelterWater) {
+      mesh.visible = height > 0.01;
+      mesh.scale.y = Math.max(0.01, height);
+      mesh.position.y = SHELTER_FLOOR_TOP + 0.05 + height / 2;
+    }
+  }
+
   _buildStationMarkers() {
+    this._buildShelterWater();
     const dark = new THREE.MeshLambertMaterial({ color: 0x293b43 });
     // Voxel hydroponic tray and grow lights.
     this.stationCrop = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.7, 0.65), new THREE.MeshLambertMaterial({ color: 0x61b54c }));
@@ -634,7 +682,8 @@ export class GameEngine {
     ];
     const sources = `Solar storms: real CMEs from NASA DONKI (real data from ${formatDateDMY(donkiCme.fetched)}). ` +
       'Radiation: Curiosity RAD on the Mars surface (NASA RadLab). Sunlight on Mars: 43% of Earth (NASA Mars Fact Sheet). ' +
-      'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station.';
+      'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station. ' +
+      'Storm shelter water wall: PREDICCS shielding model (University of New Hampshire, Curiosity RAD data) and NASA storm shelter studies.';
     this.missionHud.showVictory(rows, sources);
     document.exitPointerLock();
   }
@@ -646,6 +695,7 @@ export class GameEngine {
     const damage = this.mission.update(this._skyHours(), {
       insideHabitat: this.survival.insidePressurizedShip,
       insideShield: isInsideShieldZone(this.player.pos),
+      insideShelter: this.survival.insidePressurizedShip && isInsideShelter(this.player.pos.x, this.player.pos.z),
       active,
     });
     if (active) this.survival.takeDamage(damage * (this.stations.upgraded && !this.survival.insidePressurizedShip ? STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR : 1));
@@ -816,7 +866,7 @@ export class GameEngine {
     // 1. Console de Comando do Rover (x: 0, z: -3.6, y: ~11)
     const distConsole = Math.hypot(this.player.pos.x - 0, this.player.pos.z - (-3.6));
     const dyConsole = Math.abs(this.player.pos.y - 11.0);
-    if (distConsole < 3.2 && dyConsole < 2.2) {
+    if (distConsole < 2.6 && dyConsole < 2.2) {
       this.currentInteraction = 'rover_terminal';
       const dataHint = this.mission.dataSent ? '' : ' · [G] Send science data to Earth';
       this.hud.setInteractionPrompt(true, `[F] Operate Rover Remote Terminal${dataHint}`);
@@ -829,7 +879,7 @@ export class GameEngine {
       this.player.pos.z - WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.z
     );
     const dyWater = Math.abs(this.player.pos.y - 11.0);
-    if (distWater < 2.5 && dyWater < 2.2) {
+    if (distWater < 1.6 && dyWater < 2.2) {
       this.currentInteraction = 'water_dispenser';
       this.hud.setInteractionPrompt(true, '[F] Drink Clean Water (Habitat Reservoir)');
       return;

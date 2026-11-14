@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BASE_DOSE_MSV_PER_HOUR, doseRateMsvPerHour, radiationDamage } from './radiation.js';
+import { BASE_DOSE_MSV_PER_HOUR, doseRateMsvPerHour, radiationDamage, shelterDoseFactor } from './radiation.js';
 
 describe('radiation', () => {
   it('base dose comes from Curiosity RAD (6.93 uGy/h x quality factor 3.05)', () => {
@@ -20,5 +20,16 @@ describe('radiation', () => {
     expect(radiationDamage(stormOutside, 1)).toBeGreaterThan(0);
     const stormInsideShielded = doseRateMsvPerHour({ stormMultiplier: 900, insideHabitat: true, shieldOn: true });
     expect(radiationDamage(stormInsideShielded, 1)).toBe(0);
+  });
+});
+
+describe('storm shelter water wall', () => {
+  it('blocks more radiation with more water and needs water to help at all', () => {
+    expect(shelterDoseFactor(0)).toBe(1);
+    expect(shelterDoseFactor(4)).toBeCloseTo(0.58);
+    expect(shelterDoseFactor(40)).toBeCloseTo(0.17);
+    const inside = doseRateMsvPerHour({ stormMultiplier: 900, insideHabitat: true });
+    const sheltered = doseRateMsvPerHour({ stormMultiplier: 900, insideHabitat: true, shelterWaterL: 40 });
+    expect(sheltered).toBeLessThan(inside * 0.2);
   });
 });

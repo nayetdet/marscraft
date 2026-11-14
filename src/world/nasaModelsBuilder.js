@@ -163,6 +163,20 @@ export function buildNasaCustomModels(scene) {
   group.add(gymMedbay);
   solidObjects.push(gymMedbay);
 
+  // Issue #56: abrigo de tempestade com parede de agua, terminal de comunicacao e painel do airlock
+  const shelter = createStormShelterModel(mats, floorTopY);
+  for (const wall of shelter.walls) {
+    group.add(wall);
+    solidObjects.push(wall);
+  }
+  group.add(shelter.roof); // teto so visual, fora da colisao para nao fechar a cabine
+
+  const commsTerminal = createCommsTerminalModel(mats, 3.75, floorTopY, -4.65);
+  group.add(commsTerminal);
+  solidObjects.push(commsTerminal);
+
+  group.add(createAirlockSuitPanelModel(mats, 1.92, floorTopY, 7.5));
+
   group.updateMatrixWorld(true);
 
   // Extrai caixas de colisão AABB tanto do objeto inteiro quanto de cada malha individual
@@ -673,5 +687,64 @@ function createGymMedbayModel(mats, x, y, z) {
   addBox(g, 0.32, 0.45, 0.32, mats.waterGlass, 0.42, 1.16, 0.05);
   addBox(g, 0.36, 0.1, 0.36, mats.cyanGlow, 0.42, 1.42, 0.05);
 
+  return g;
+}
+
+// Abrigo de tempestade (issue #56, A1): cabine aberta para oeste no canto sudeste do habitat.
+// As paredes guardam tanques de agua; o nivel da agua e desenhado no GameEngine.
+// Cada parede e um objeto solido separado para a colisao nao fechar a entrada.
+function createStormShelterModel(mats, y) {
+  const walls = [];
+  const wall = (cx, cz, w, d) => {
+    const g = new THREE.Group();
+    g.position.set(cx, y, cz);
+    addBox(g, w, 2.4, d, mats.whiteMetal, 0, 1.2, 0);
+    // Faixas de tanque (aros escuros) para ler como parede de agua
+    for (const ty of [0.35, 1.2, 2.05]) addBox(g, w + 0.02, 0.06, d + 0.02, mats.darkSlate, 0, ty, 0);
+    walls.push(g);
+    return g;
+  };
+  wall(4.3, 3.775, 3.2, 0.15); // norte
+  wall(4.3, 5.875, 3.2, 0.15); // sul
+  const east = wall(5.825, 4.825, 0.15, 1.95); // leste, com o painel
+  addBox(east, 0.06, 0.62, 0.8, mats.charcoal, -0.24, 1.3, 0);
+  addBox(east, 0.03, 0.5, 0.68, mats.cyanGlow, -0.28, 1.3, 0);
+  addBox(east, 0.05, 0.1, 0.1, mats.yellowBtn, -0.25, 0.88, -0.2);
+  addBox(east, 0.05, 0.1, 0.1, mats.redBtn, -0.25, 0.88, 0.2);
+  // Teto e faixa amarela de aviso na entrada
+  const roof = new THREE.Group();
+  roof.position.set(4.3, y, 4.825);
+  addBox(roof, 3.2, 0.14, 2.25, mats.whiteMetal, 0, 2.47, 0);
+  addBox(roof, 0.08, 0.18, 2.25, mats.yellowBtn, -1.58, 2.3, 0);
+  return { walls, roof };
+}
+
+// Terminal de comunicacao e computador da missao (issue #56, A2/A3), na parede norte,
+// embaixo da antena parabolica do teto. Tela azul = computador da missao, verde = ciencia e radio.
+function createCommsTerminalModel(mats, x, y, z) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  addBox(g, 3.0, 0.12, 0.6, mats.whiteMetal, 0, 0.9, 0);
+  addBox(g, 0.2, 0.9, 0.55, mats.lightGray, -1.4, 0.45, 0);
+  addBox(g, 0.2, 0.9, 0.55, mats.lightGray, 1.4, 0.45, 0);
+  for (const [mx, screen] of [[-0.75, mats.cyanGlow], [0.75, mats.greenGlow]]) {
+    addBox(g, 1.1, 0.7, 0.08, mats.charcoal, mx, 1.55, -0.2);
+    addBox(g, 1.0, 0.6, 0.04, screen, mx, 1.55, -0.15);
+    addBox(g, 0.7, 0.05, 0.22, mats.darkSlate, mx, 0.99, 0.08);
+  }
+  // Cabo ate a antena do teto
+  addBox(g, 0.1, 3.0, 0.1, mats.darkSlate, 1.45, 2.4, -0.22);
+  addBox(g, 0.12, 0.12, 0.12, mats.redBtn, 1.45, 1.2, -0.12);
+  return g;
+}
+
+// Painel de limpeza do traje dentro do airlock (issue #56, A3), na parede leste.
+function createAirlockSuitPanelModel(mats, x, y, z) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  addBox(g, 0.1, 0.8, 1.0, mats.lightGray, 0, 1.3, 0);
+  addBox(g, 0.04, 0.42, 0.6, mats.cyanGlow, -0.06, 1.38, 0);
+  for (const nz of [-0.35, 0, 0.35]) addBox(g, 0.14, 0.1, 0.1, mats.darkSlate, -0.05, 2.1, nz);
+  addBox(g, 0.05, 0.1, 0.1, mats.greenGlow, -0.06, 1.0, 0);
   return g;
 }

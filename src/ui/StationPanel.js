@@ -1,8 +1,14 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { STATION_CONFIG as C } from '../config/constants.js';
+import { RADIATION_CONFIG, STATION_CONFIG as C } from '../config/constants.js';
+import { shelterDoseFactor } from '../mission/radiation.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
 import { RESEARCH_DATA as DATA } from '../data/missionResearch.js';
 import { GymWorkout } from './gymWorkout.js';
+
+const SHELTER_SOURCES = {
+  prediccs: 'https://posters.unh.edu/private_media/4209/',
+  nasa: 'https://ntrs.nasa.gov/citations/20210009760',
+};
 
 export class StationPanel {
   constructor(engine) {
@@ -451,6 +457,8 @@ export class StationPanel {
     if (action === 'mission') return mission.console();
     if (action === 'filter') return stations.replaceFilter();
     if (action === 'cleanSuit') return stations.cleanSuit();
+    if (action === 'fillWall') return this.engine.mission.fillShelterWall(survival);
+    if (action === 'drainWall') return this.engine.mission.drainShelterWall(survival);
     if (action === 'cleanBase') return stations.cleanBase();
     if (action === 'exercise') return stations.exercise(this.gymMode || 'treadmill');
     if (action === 'exercise:treadmill') {
@@ -482,8 +490,23 @@ export class StationPanel {
     return '';
   }
 
+  _shelterText(mission, survival) {
+    const water = Math.round(mission.shelterWaterL);
+    const blocked = Math.round((1 - shelterDoseFactor(mission.shelterWaterL)) * 100);
+    const phase = mission.storm.phase;
+    const storm = phase === 'active' ? 'ACTIVE, stay in here!' : phase === 'warning' ? 'COMING SOON' : 'none right now';
+    return `WATER WALL: ${water} / ${RADIATION_CONFIG.SHELTER_WALL_MAX_L} L\n` +
+      `BLOCKS: ${blocked}% of storm radiation inside this booth\n` +
+      `BASE WATER TANK: ${Math.round(survival.baseWater)} / ${survival.maxBaseWater} L\n` +
+      `SOLAR STORM: ${storm}\n\n` +
+      'Water stops radiation. Water in the wall is water you cannot drink.\n\n' +
+      'A solar storm throws fast particles (protons) at Mars. Water is full of hydrogen, which slows them down. ' +
+      'Astronauts in the Orion capsule build a shelter like this with their water and food bags.\n' +
+      'Real model: a 10 cm layer of water (10 g/cm2) blocks about 83% of a storm dose. Game-scaled.';
+  }
+
   render() {
-    const { expedition: m, stations: s, survival: v } = this.engine;
+    const { expedition: m, stations: s, survival: v, mission } = this.engine;
 
     if (this._isGymStation() && this.gymContainer) {
       this.title.textContent = 'MARS GYM';
@@ -500,20 +523,22 @@ export class StationPanel {
 
     const pages = {
       console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nRADIATION: ${Math.round(m.radiation)}%   FILTER: ${Math.round(s.filter)}%\nSCIENCE POINTS: ${s.science}\n\nNASA DONKI historical CME: ${DATA.cme.observed}, ${DATA.cme.speedKmS} km/s.\nNASA RadLab Curiosity MSL-RAD: ${DATA.radiation.start} to ${DATA.radiation.end}; median ${DATA.radiation.median} (raw, unit unconfirmed).\nNASA data retrieved ${DATA.cme.retrieved}; archived, not live. The storm and its effects are simulated and game-scaled.`, [['mission', 'Start / report mission'], ['send', 'Send message to Earth'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
-      airlock: ['AIRLOCK & SUIT', `SUIT DUST: ${s.dirtySuit ? 'CLEANING NEEDED' : 'CLEAN'}\nHABITAT: ${s.contaminated ? 'CONTAMINATED' : 'CLEAN'}\n\nClean your suit before entering the habitat. Use the doors to cycle the airlock.`, [['cleanSuit', 'Clean suit'], ['cleanBase', 'Clean habitat']]],
+      airlock: ['AIRLOCK & SUIT', `SUIT DUST: ${s.dirtySuit ? 'CLEANING NEEDED' : 'CLEAN'}\nHABITAT: ${s.contaminated ? 'CONTAMINATED' : 'CLEAN'}\nBATTERY: ${Math.round(m.energy)}%\n\nMars dust is very fine and sticks to everything. Brushing it off here, before the inner door, costs ${C.DECONTAMINATION_COST}% power. If you skip it, the dust gets into the habitat and you must clean the whole base.`, [['cleanSuit', 'Clean suit']]],
       power: ['LIFE SUPPORT / ECLSS', `BATTERY: ${Math.round(m.energy)}%\nCO2 FILTER: ${Math.round(s.filter)}%\nCO2: ${Math.round(s.co2)}%\n\nThe oxygen system and greenhouse need power. A worn filter lets CO2 build up.`, [['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
       greenhouse: ['HYDROPONIC GREENHOUSE', `POWER: ${m.greenhousePowered ? 'ON' : 'OFF'}\nHABITAT: ${s.contaminated ? 'CONTAMINATED' : 'CLEAN'}\nCARROTS REGROWING: ${this.engine.growingCrops.length}\nCROP: ${s.crop ? `${s.crop.type.toUpperCase()} ${Math.round(s.crop.progress / C.CROP_GROWTH_TIME * 100)}%` : 'EMPTY'}\nFRESH FOOD: ${s.freshFood > 0 ? 'AVAILABLE' : 'LOW'}\n\nPlanting costs water and power. Growth pauses without power or in a contaminated habitat.`, [['plant:potato', 'Plant potato'], ['plant:lettuce', 'Plant lettuce'], ['plant:soy', 'Plant soy'], ['harvest', 'Harvest fresh food'], ['cleanBase', 'Clean habitat']]],
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\nRADIATION: ${Math.round(m.radiation)}%\n\nIn Mars's 0.38g gravity, astronauts lose bone mineral density and muscle mass. Use the treadmill and bike in the Gym Wing!`, [['treat', 'Use medical station']]],
-      science: ['SCIENCE & COMMUNICATIONS', `SCIENCE POINTS: ${s.science}   SAMPLES: ${s.samples}\n${s.message}\n\nAnalyze one regolith block to earn science. Transmission delay is shortened for play.`, [['analyze', 'Analyze regolith'], ['send', 'Send data to Earth'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
+      science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   SAMPLES: ${s.samples}\nRADIO: ${s.message}\n\nAnalyze one regolith block to earn science.\nA radio message needs 3 to 22 minutes to travel between Mars and Earth, one way, so Mission Control cannot help you right away. In the game the wait is shorter.`, [['analyze', 'Analyze regolith'], ['send', 'Send data to Earth'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
       mav: ['MAV DATA TERMINAL', `ANALYZED SAMPLES: ${s.analyzedSamples}/${C.MAV_REQUIRED_SAMPLES}\nPACKAGE: ${s.mavSent ? 'RECEIVED' : s.message}\n\nAnalyze samples at the science station, then send the package from the MAV.`, [['sendMav', 'Send MAV science package']]],
-      suitport: ['SUITPORT', `SUIT DUST: ${s.dirtySuit ? 'CLEANING NEEDED' : 'CLEAN'}\n\nA suitport concept keeps the suit outside the habitat. Use the airlock for this simulated EVA.`, [['cleanSuit', 'Clean suit']]],
-      shelter: ['STORM SHELTER', `RADIATION: ${Math.round(m.radiation)}%\n\nStay in the marked central shelter during a simulated solar storm. The simulation uses archived NASA DONKI and NASA RadLab data, not a live forecast.`, []],
+      shelter: ['STORM SHELTER', this._shelterText(mission, v), [['fillWall', `Fill wall (+${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`], ['drainWall', `Drain wall (-${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`]]],
     };
     const [title, text, buttons] = pages[this.type];
     this.title.textContent = title;
     this.content.textContent = text;
-    const links = this.type === 'console' || this.type === 'shelter'
-      ? [['NASA DONKI: historical event', DATA.cme.url], ['NASA RadLab: radiation data', DATA.radiation.url]] : [];
+    const links = this.type === 'console'
+      ? [['NASA DONKI: historical event', DATA.cme.url], ['NASA RadLab: radiation data', DATA.radiation.url]]
+      : this.type === 'shelter'
+        ? [['PREDICCS: water shielding (UNH, MSL/RAD data)', SHELTER_SOURCES.prediccs], ['NASA: storm shelters and water walls', SHELTER_SOURCES.nasa]]
+        : [];
     this.sources.replaceChildren(...links.map(([label, url]) => {
       const link = document.createElement('a');
       link.textContent = label;

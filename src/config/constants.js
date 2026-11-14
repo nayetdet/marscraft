@@ -125,6 +125,15 @@ export const RADIATION_CONFIG = {
   DAMAGE_PER_EXCESS_MSV: 1.5, // pontos de vida por mSv acima do limite
   // [Ref] limite de carreira de astronautas da NASA: 600 mSv (NASA-STD-3001, 2022)
   CAREER_LIMIT_MSV: 600,
+  // Abrigo de tempestade com parede de agua (issue #56, A1).
+  // [Ref] PREDICCS (Quinn et al., UNH, dados MSL/RAD): reducao media da dose das tempestades
+  // solares de 2012 com agua: 1 g/cm2 -> 42 %, 5 g/cm2 -> 79 %, 10 g/cm2 (abrigo) -> 83 %.
+  // Pares [g/cm2 de agua, fracao da dose que ainda passa].
+  SHELTER_WATER_CURVE: [[0, 1], [1, 0.58], [5, 0.21], [10, 0.17]],
+  // Escala de jogo: a parede cheia (40 L do tanque da base) vale 10 g/cm2, o abrigo do PREDICCS
+  SHELTER_WALL_MAX_L: 40,
+  SHELTER_G_CM2_PER_L: 0.25,
+  SHELTER_FILL_STEP_L: 10,
 };
 
 export const STORM_CONFIG = {
