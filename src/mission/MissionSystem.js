@@ -39,6 +39,8 @@ export class MissionSystem {
     this.lastHours = startHours;
 
     this.shieldOn = false;
+    // Jogador dentro da bolha do escudo (shieldZone). O escudo só reduz a dose de quem está nela.
+    this.insideShield = true;
     this.factoryOn = true;
     this.iceStock = 0; // blocos de gelo esperando na fabrica
     this.propellant = 0; // %
@@ -68,7 +70,9 @@ export class MissionSystem {
 
   // Avanca a missao ate `hours`. `active` = jogo rodando (sem pausa e jogador vivo):
   // so entao a radiacao atinge o jogador. Devolve o dano de radiacao a aplicar na vida.
-  update(hours, { insideHabitat = false, active = true } = {}) {
+  // `insideShield` = jogador dentro da bolha do escudo; fora dela o escudo ligado nao protege.
+  update(hours, { insideHabitat = false, insideShield = true, active = true } = {}) {
+    this.insideShield = insideShield;
     let remaining = hours - this.lastHours;
     let damage = 0;
     while (remaining > 1e-9) {
@@ -99,7 +103,7 @@ export class MissionSystem {
     this._updateStormPhase();
 
     const multiplier = this.storm.phase === 'active' ? this.storm.storm.multiplier : 1;
-    this.doseRate = doseRateMsvPerHour({ stormMultiplier: multiplier, insideHabitat, shieldOn: this.shieldOn });
+    this.doseRate = doseRateMsvPerHour({ stormMultiplier: multiplier, insideHabitat, shieldOn: this.shieldOn && this.insideShield });
     if (!active) return 0;
 
     if (this.storm.phase === 'active') this._playedDuringStorm = true;

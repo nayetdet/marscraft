@@ -30,6 +30,8 @@ import { ScanJournal } from '../scanner/scanJournal.js';
 import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js';
 import { resolveScanTarget, collectScanBlocks } from '../scanner/scanTargeting.js';
 import { ScanHighlight } from '../scanner/scanHighlight.js';
+import { isInsideShieldZone, SHIELD_ZONE } from '../mission/shieldZone.js';
+import { ShieldBubble } from '../graphics/shieldBubble.js';
 import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
 
@@ -119,6 +121,7 @@ export class GameEngine {
 
     // Missao: energia, tempestades solares (CMEs reais do DONKI) e o MAV
     this.mission = new MissionSystem({ cmes: donkiCme.cmes, startHours: this._skyHours() });
+    this.shieldBubble = new ShieldBubble(this.scene, SHIELD_ZONE);
     this.missionHud = new MissionHud({
       donkiFetched: donkiCme.fetched,
       onLoadIce: (count) => this._loadIceIntoMav(count),
@@ -383,7 +386,7 @@ export class GameEngine {
       return;
     }
     this.hud.showToast(this.mission.shieldOn
-      ? 'Radiation shield ON: it blocks solar particles but uses energy.'
+      ? 'Radiation shield ON: a magnetic field around the base deflects solar particles. Stay inside the bubble! Uses energy.'
       : 'Radiation shield OFF.');
   }
 
@@ -422,6 +425,7 @@ export class GameEngine {
     const active = playing && !this.survival.isDead && !this.missionHud.isVictoryShown;
     const damage = this.mission.update(this._skyHours(), {
       insideHabitat: this.survival.insidePressurizedShip,
+      insideShield: isInsideShieldZone(this.player.pos),
       active,
     });
     if (active) this.survival.takeDamage(damage);
@@ -728,6 +732,7 @@ export class GameEngine {
       }
 
       this.iceSensor.update(dt);
+      this.shieldBubble.update(dt, { on: this.mission.shieldOn, storm: this.mission.storm.phase === 'active' });
       if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
       this._updateMission(dt);
       this._updateCrew(dt);

@@ -49,6 +49,19 @@ describe('MissionSystem energy', () => {
     expect(mission.oxygenProducedPoints).toBe(2);
   });
 
+  it('the shield only lowers the dose of a player inside its bubble', () => {
+    const mission = createMission(12);
+    mission.battery.charge = 100;
+    mission.update(12.1, { insideShield: true });
+    const unshielded = mission.doseRate;
+    mission.toggleShield();
+    mission.update(12.2, { insideShield: true });
+    expect(mission.doseRate).toBeLessThan(unshielded);
+    mission.update(12.3, { insideShield: false });
+    expect(mission.doseRate).toBeCloseTo(unshielded);
+    expect(mission.insideShield).toBe(false);
+  });
+
   it('the shield drains energy and turns itself off when the battery is empty', () => {
     const mission = createMission(0);
     mission.battery.charge = 5;
