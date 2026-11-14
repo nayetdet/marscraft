@@ -90,7 +90,7 @@ export class HudManager {
   setInteractionPrompt(visible, text = '[F] Operate Rover Remote Terminal') {
     if (!this.interactionPromptEl) return;
     if (visible) {
-      this.interactionPromptEl.innerHTML = `<span class="key-badge">[F]</span> ${text.replace(/^\[F\]\s*/, '')}`;
+      this.interactionPromptEl.textContent = text.replace(/^\[F\]\s*/, 'Press F: ');
       this.interactionPromptEl.classList.remove('hidden');
     } else {
       this.interactionPromptEl.classList.add('hidden');
