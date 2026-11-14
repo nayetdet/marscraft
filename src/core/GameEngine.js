@@ -1,5 +1,11 @@
 import * as THREE from 'three';
-import { CAMERA_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { CrewManager } from '../crew/CrewManager.js';
+import { CrewAvatar } from '../crew/CrewAvatar.js';
+import { createBaseStock } from '../crew/baseStock.js';
+import { createStations } from '../crew/stations.js';
+import { crewEventMessage } from '../crew/crewText.js';
+import { CrewPanel, CrewPicker } from '../ui/CrewPanel.js';
 import donkiCme from '../data/donkiCme.json';
 import { MissionSystem, oxygenPointsToKg } from '../mission/MissionSystem.js';
 import { formatDateDMY, formatDose, stormEventMessage } from '../mission/missionText.js';
@@ -96,6 +102,20 @@ export class GameEngine {
     });
     this._wasDead = false;
 
+    // Tripulacao NPC (issues #47 e #48): o tamanho e escolhido no menu antes do primeiro Play
+    this.crewStock = createBaseStock({ survival: this.survival, mission: this.mission });
+    this.crewAvatars = [];
+    this._buildCrew(CREW_CONFIG.DEFAULT_CREW);
+    this.crewPanel = new CrewPanel({
+      onAssign: (memberId, task) => this._assignCrew(memberId, task),
+      onClose: () => this._closeCrewPanel(),
+    });
+    this.crewPicker = new CrewPicker({
+      initial: CREW_CONFIG.DEFAULT_CREW,
+      onChange: (size) => this._buildCrew(size),
+    });
+    this.talkTarget = null;
+
     this.input = new InputController({
       domElement: this.renderer.domElement,
       player: this.player,
@@ -124,8 +144,10 @@ export class GameEngine {
         this.hud.showToast(`Camera: ${modeName}`);
       },
       onToggleShield: () => this._toggleShield(),
+      onToggleCrewPanel: () => this._toggleCrewPanel(),
       onSendData: () => this._sendScienceData(),
-      isMissionModalOpen: () => this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown,
+      isMissionModalOpen: () =>
+        this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown || this.crewPanel.isOpen,
     });
 
     this._lookDir = new THREE.Vector3();
@@ -257,7 +279,8 @@ export class GameEngine {
       ['Solar energy collected', `${(m.solarEnergyCollected / m.battery.capacity).toFixed(1)} full batteries`],
     ];
     const sources = `Solar storms: real CMEs from NASA DONKI (real data from ${formatDateDMY(donkiCme.fetched)}). ` +
-      'Radiation: Curiosity RAD on the Mars surface (NASA RadLab). Sunlight on Mars: 43% of Earth (NASA Mars Fact Sheet).';
+      'Radiation: Curiosity RAD on the Mars surface (NASA RadLab). Sunlight on Mars: 43% of Earth (NASA Mars Fact Sheet). ' +
+      'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station.';
     this.missionHud.showVictory(rows, sources);
     document.exitPointerLock();
   }
@@ -289,6 +312,93 @@ export class GameEngine {
     if (this.missionHud.isMavPanelOpen && this._panelRefreshTimer > 0.25) {
       this._panelRefreshTimer = 0;
       this._refreshMavPanel();
+    }
+  }
+
+  _buildCrew(size) {
+    for (const avatar of this.crewAvatars) avatar.dispose();
+    this.crew = new CrewManager({ size, stations: createStations(), base: this.crewStock });
+    this.crewAvatars = this.crew.members.map(
+      (member, i) => new CrewAvatar(this.scene, member, CREW_CONFIG.SUIT_COLORS[i])
+    );
+  }
+
+  _openCrewPanel(memberId = null) {
+    this.crewPanel.open(memberId);
+    this.crewPanel.render(this.crew, this.crewStock);
+    document.exitPointerLock();
+  }
+
+  _closeCrewPanel() {
+    this.crewPanel.close();
+    requestRawPointerLock(this.renderer.domElement);
+  }
+
+  _toggleCrewPanel() {
+    if (this.crewPanel.isOpen) this._closeCrewPanel();
+    else if (this.input.isLocked && !this.roverController.isActive) this._openCrewPanel(null);
+  }
+
+  _assignCrew(memberId, task) {
+    const result = this.crew.assign(memberId, task);
+    this.hud.showToast(result.ok ? result.message : result.reason, 3500);
+    if (result.ok && this.crewPanel.focusId !== null) this._closeCrewPanel();
+    else this.crewPanel.render(this.crew, this.crewStock);
+  }
+
+  // Tripulante para quem o jogador esta olhando, dentro do raio de conversa.
+  // Exigir o olhar evita roubar o [F] do bebedouro ou da estufa quando alguem trabalha ao lado.
+  _nearestCrewMember() {
+    const look = this.player.getLookDirection(this._lookDir);
+    const lookLen = Math.hypot(look.x, look.z) || 1;
+    let best = null;
+    let bestDist = CREW_CONFIG.TALK_RADIUS;
+    for (const avatar of this.crewAvatars) {
+      if (!avatar.member.isActive) continue;
+      const p = avatar.position;
+      const dx = p.x - this.player.pos.x;
+      const dz = p.z - this.player.pos.z;
+      const dist = Math.hypot(dx, dz);
+      const facing = dist > 0 ? (dx * look.x + dz * look.z) / (dist * lookLen) : 1;
+      if (dist < bestDist && facing > CREW_CONFIG.TALK_FACING_DOT && Math.abs(this.player.pos.y - (p.y + 1.6)) < 2.2) {
+        best = avatar.member;
+        bestDist = dist;
+      }
+    }
+    return best;
+  }
+
+  _updateCrew(dt) {
+    const hours = this._skyHours();
+    const delta = hours - (this._crewLastHours ?? hours);
+    this._crewLastHours = hours;
+
+    if (this.input.isLocked && !this.crewPicker.locked) this.crewPicker.lock();
+    const playing = this.input.isLocked || this.crewPanel.isOpen;
+    const active = playing && !this.survival.isDead && !this.missionHud.isVictoryShown;
+
+    if (active && delta > 0) {
+      this.crew.update(delta, performance.now() / 1000);
+      // Cura da enfermaria: so vale com o comandante dentro da base e com ar suficiente
+      if (this.survival.insidePressurizedShip && this.survival.canHeal()) {
+        this.survival.health = Math.min(this.survival.maxStat, this.survival.health + this.crewStock.playerHeal);
+      }
+    }
+    this.crewStock.playerHeal = 0;
+    if (active) this.crew.updateMovement(dt);
+
+    this.mission.oxygenCostMultiplier = this.crew.oxygenCostMultiplier();
+    for (const avatar of this.crewAvatars) avatar.update(dt);
+
+    for (const event of this.crew.drainEvents()) {
+      const message = crewEventMessage(event);
+      if (message) this.hud.showToast(message, 5000);
+    }
+
+    this._crewPanelTimer = (this._crewPanelTimer ?? 0) + dt;
+    if (this.crewPanel.isOpen && this._crewPanelTimer > 0.25) {
+      this._crewPanelTimer = 0;
+      this.crewPanel.render(this.crew, this.crewStock);
     }
   }
 
@@ -331,6 +441,15 @@ export class GameEngine {
       return;
     }
 
+    // Tripulante por perto: [F] para dar uma ordem
+    const member = this._nearestCrewMember();
+    if (member) {
+      this.currentInteraction = 'crew';
+      this.talkTarget = member.id;
+      this.hud.setInteractionPrompt(true, `[F] Talk to ${member.name} (${member.role}) · [C] Crew panel`);
+      return;
+    }
+
     // 1. Console de Comando do Rover (x: 0, z: -3.6, y: ~11)
     const distConsole = Math.hypot(this.player.pos.x - 0, this.player.pos.z - (-3.6));
     const dyConsole = Math.abs(this.player.pos.y - 11.0);
@@ -368,6 +487,14 @@ export class GameEngine {
 
   handlePlayerInteract() {
     if (this.missionHud.isVictoryShown) return;
+    if (this.crewPanel.isOpen) {
+      this._closeCrewPanel();
+      return;
+    }
+    if (this.currentInteraction === 'crew' && this.input.isLocked) {
+      this._openCrewPanel(this.talkTarget);
+      return;
+    }
     if (this.missionHud.isMavPanelOpen) {
       this._closeMavPanel();
       return;
@@ -469,6 +596,7 @@ export class GameEngine {
 
       if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
       this._updateMission(dt);
+      this._updateCrew(dt);
 
       this.renderer.render(this.scene, this.camera);
       this.debug.frame(frameMs);

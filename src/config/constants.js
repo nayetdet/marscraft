@@ -168,6 +168,7 @@ export const CREW_CONFIG = {
   ALERT_COOLDOWN_S: 30, // segundos reais entre avisos da mesma estacao
   WALK_SPEED: 2.2, // blocos por segundo real
   TALK_RADIUS: 2.6,
+  TALK_FACING_DOT: 0.8, // precisa olhar para o tripulante (~37 graus) para conversar
   MAX_STEP_HOURS: 0.05,
 };
 
