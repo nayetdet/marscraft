@@ -17,42 +17,42 @@ export const MARTIAN_SKY_FRAGMENT_SHADER = `
   void main() {
     vec3 dir = normalize(vWorldDirection);
     float y = clamp(dir.y, 0.0, 1.0);
-    float horizonFactor = pow(1.0 - y, 2.5);
+    float horizonFactor = pow(1.0 - y, 2.3);
 
-    float dayFactor = smoothstep(-0.12, 0.28, uSunElevation);
+    float dayFactor = smoothstep(-0.15, 0.25, uSunElevation);
     float twilightFactor = smoothstep(-0.22, 0.05, uSunElevation) * (1.0 - smoothstep(0.05, 0.36, uSunElevation));
 
-    // Cores diurnas reais de Marte (Alaranjado ocre/caramelo suave no zênite e dourado poeirento no horizonte)
-    vec3 dayZenith = vec3(0.74, 0.46, 0.22);
-    vec3 dayHorizon = vec3(0.94, 0.70, 0.42);
+    // Cores diurnas claras e alaranjadas de Marte
+    vec3 dayZenith = vec3(0.84, 0.54, 0.28);
+    vec3 dayHorizon = vec3(0.98, 0.78, 0.52);
 
-    // Cores do crepúsculo marciano (Alaranjado âmbar no horizonte)
-    vec3 duskZenith = vec3(0.22, 0.16, 0.22);
-    vec3 duskHorizon = vec3(0.84, 0.49, 0.24);
+    // Crepúsculo marciano claro
+    vec3 duskZenith = vec3(0.28, 0.22, 0.30);
+    vec3 duskHorizon = vec3(0.90, 0.56, 0.30);
 
-    // Cores noturnas marcianas
-    vec3 nightZenith = vec3(0.02, 0.025, 0.045);
-    vec3 nightHorizon = vec3(0.14, 0.08, 0.04);
+    // Noite marciana mais visível
+    vec3 nightZenith = vec3(0.05, 0.06, 0.10);
+    vec3 nightHorizon = vec3(0.20, 0.12, 0.08);
 
     vec3 zenithCol = mix(nightZenith, dayZenith, dayFactor);
-    zenithCol = mix(zenithCol, duskZenith, twilightFactor * 0.85);
+    zenithCol = mix(zenithCol, duskZenith, twilightFactor * 0.8);
 
     vec3 horizonCol = mix(nightHorizon, dayHorizon, dayFactor);
-    horizonCol = mix(horizonCol, duskHorizon, twilightFactor * 0.85);
+    horizonCol = mix(horizonCol, duskHorizon, twilightFactor * 0.8);
 
     vec3 skyColor = mix(zenithCol, horizonCol, horizonFactor);
 
-    // Espalhamento frontal Mie da poeira marciana (Halo azulado real de Marte ao redor do Sol)
+    // Halo azulado real de Marte ao redor do Sol
     float sunCos = max(dot(dir, normalize(uSunDir)), 0.0);
-    float blueMieCone = pow(sunCos, 9.0) * (0.35 + 0.65 * twilightFactor) * smoothstep(-0.18, 0.35, uSunElevation);
-    vec3 martianBlueGlow = vec3(0.42, 0.68, 0.90);
+    float blueMieCone = pow(sunCos, 8.0) * (0.35 + 0.65 * twilightFactor) * smoothstep(-0.18, 0.35, uSunElevation);
+    vec3 martianBlueGlow = vec3(0.50, 0.76, 0.96);
     skyColor = mix(skyColor, martianBlueGlow, clamp(blueMieCone * 0.78, 0.0, 0.82));
 
-    float sunCore = pow(sunCos, 180.0) * smoothstep(-0.12, 0.05, uSunElevation);
-    skyColor += vec3(0.95, 0.96, 1.0) * sunCore * 0.9;
+    float sunCore = pow(sunCos, 160.0) * smoothstep(-0.12, 0.05, uSunElevation);
+    skyColor += vec3(0.98, 0.98, 1.0) * sunCore * 0.9;
 
     if (vWorldDirection.y < 0.0) {
-      vec3 groundCol = mix(vec3(0.10, 0.06, 0.03), vec3(0.68, 0.41, 0.19), dayFactor);
+      vec3 groundCol = mix(vec3(0.18, 0.11, 0.06), vec3(0.82, 0.52, 0.26), dayFactor);
       skyColor = mix(skyColor, groundCol, clamp(-vWorldDirection.y * 4.0, 0.0, 1.0));
     }
 
@@ -62,11 +62,11 @@ export const MARTIAN_SKY_FRAGMENT_SHADER = `
 
 export function createAtmosphereDome() {
   const uniforms = {
-    uSunDir: { value: new THREE.Vector3(1, 0.2, 0) },
-    uSunElevation: { value: 0.2 },
+    uSunDir: { value: new THREE.Vector3(1, 0.4, 0) },
+    uSunElevation: { value: 0.4 },
   };
 
-  const skyGeo = new THREE.SphereGeometry(420, 40, 28);
+  const skyGeo = new THREE.SphereGeometry(420, 32, 24);
   const skyMat = new THREE.ShaderMaterial({
     vertexShader: MARTIAN_SKY_VERTEX_SHADER,
     fragmentShader: MARTIAN_SKY_FRAGMENT_SHADER,

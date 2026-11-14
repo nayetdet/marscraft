@@ -11,137 +11,49 @@ function fillBox(world, x1, y1, z1, x2, y2, z2, blockId) {
   }
 }
 
-function buildLandingPadAndLegs(world, groundY) {
-  // Marcas de queima no solo de basalto sob os propulsores
-  for (let x = -5; x <= 5; x++) {
-    for (let z = -5; z <= 5; z++) {
-      if (Math.hypot(x, z) <= 5.5) {
-        world.setBlock(x, groundY, z, BLOCK_IDS.BASALT, false);
-      }
-    }
-  }
+// 1. Módulo Hab Principal Branco da NASA (x: -7..7, z: -6..6)
+function buildMainWhiteHabitat(world, groundY) {
+  const floorY = groundY + 1; // y = 9
+  const ceilY = groundY + 6;  // y = 14
 
-  // Faróis de perímetro da pista de pouso
-  const padCorners = [
-    [-10, -10],
-    [10, -10],
-    [-10, 10],
-    [10, 10],
-  ];
-  for (const [px, pz] of padCorners) {
-    world.setBlock(px, groundY + 1, pz, BLOCK_IDS.THRUSTER_METAL, false);
-    world.setBlock(px, groundY + 2, pz, BLOCK_IDS.RED_BEACON, false);
-  }
+  for (let x = -7; x <= 7; x++) {
+    for (let z = -6; z <= 6; z++) {
+      // Cantos chanfrados para formato octogonal de módulo espacial da NASA
+      if (Math.abs(x) + Math.abs(z) >= 12) continue;
 
-  // 4 Sapatas hidráulicas de pouso
-  const legPositions = [
-    [-5, -5],
-    [5, -5],
-    [-5, 5],
-    [5, 5],
-  ];
-  for (const [lx, lz] of legPositions) {
-    fillBox(world, lx - 1, groundY + 1, lz - 1, lx + 1, groundY + 1, lz + 1, BLOCK_IDS.THRUSTER_METAL);
-    fillBox(world, lx, groundY + 2, lz, lx, groundY + 4, lz, BLOCK_IDS.THRUSTER_METAL);
-    world.setBlock(lx, groundY + 3, lz, BLOCK_IDS.GOLD_FOIL, false);
-  }
+      for (let y = floorY; y <= ceilY; y++) {
+        const isWall =
+          Math.abs(x) === 7 ||
+          Math.abs(z) === 6 ||
+          Math.abs(x) + Math.abs(z) === 11;
 
-  // 4 Campânulas dos motores foguete
-  const nozzles = [
-    [-2, -2],
-    [2, -2],
-    [-2, 2],
-    [2, 2],
-  ];
-  for (const [nx, nz] of nozzles) {
-    world.setBlock(nx, groundY + 2, nz, BLOCK_IDS.THRUSTER_METAL, false);
-    world.setBlock(nx, groundY + 3, nz, BLOCK_IDS.GOLD_FOIL, false);
-  }
-}
-
-function buildDeck1ScienceAndAirlock(world, groundY) {
-  const d1Floor = groundY + 4;
-  const d1Ceil = groundY + 9;
-
-  for (let x = -5; x <= 5; x++) {
-    for (let z = -5; z <= 5; z++) {
-      if (Math.abs(x) === 5 && Math.abs(z) === 5) continue;
-
-      for (let y = d1Floor; y <= d1Ceil; y++) {
-        const isOuterRing =
-          Math.abs(x) === 5 ||
-          Math.abs(z) === 5 ||
-          (Math.abs(x) === 4 && Math.abs(z) === 4);
-
-        if (y === d1Floor) {
-          world.setBlock(x, y, z, BLOCK_IDS.GOLD_FOIL, false);
-        } else if (y === d1Ceil) {
-          world.setBlock(x, y, z, BLOCK_IDS.NASA_HULL, false);
-        } else if (isOuterRing) {
-          if ((y === d1Floor + 2 || y === d1Floor + 3) && (Math.abs(x) <= 2 || Math.abs(z) <= 2)) {
-            world.setBlock(x, y, z, BLOCK_IDS.HAB_GLASS, false);
-          } else if (y === d1Floor + 1) {
-            world.setBlock(x, y, z, BLOCK_IDS.GOLD_FOIL, false);
-          } else {
-            world.setBlock(x, y, z, BLOCK_IDS.NASA_HULL, false);
-          }
-        } else {
-          world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
-        }
-      }
-    }
-  }
-
-  // Iluminação, Hidroponia e Consoles do Deck 1
-  world.setBlock(0, d1Ceil, 0, BLOCK_IDS.HAB_LIGHT, false);
-  world.setBlock(-3, d1Ceil, 0, BLOCK_IDS.HAB_LIGHT, false);
-  world.setBlock(3, d1Ceil, 0, BLOCK_IDS.HAB_LIGHT, false);
-  fillBox(world, -4, d1Floor + 1, -2, -4, d1Floor + 1, 2, BLOCK_IDS.HYDRO_PLANT);
-  fillBox(world, 4, d1Floor + 1, -2, 4, d1Floor + 2, 1, BLOCK_IDS.CONSOLE_SCREEN);
-
-  // Airlock e Rampa Sul
-  fillBox(world, -2, d1Floor, 5, 2, d1Floor + 4, 7, BLOCK_IDS.NASA_HULL);
-  fillBox(world, -1, d1Floor + 1, 5, 1, d1Floor + 3, 7, BLOCK_IDS.AIR);
-  world.setBlock(0, d1Floor + 4, 6, BLOCK_IDS.HAB_LIGHT, false);
-
-  for (let step = 0; step < 4; step++) {
-    const sz = 11 - step;
-    const sy = groundY + 1 + step;
-    fillBox(world, -1, groundY + 1, sz, 1, sy, sz, BLOCK_IDS.THRUSTER_METAL);
-    world.setBlock(-2, sy + 1, sz, BLOCK_IDS.GOLD_FOIL, false);
-    world.setBlock(2, sy + 1, sz, BLOCK_IDS.GOLD_FOIL, false);
-  }
-
-  // Escada interna para o Deck 2
-  fillBox(world, -1, d1Ceil, -3, 1, d1Ceil, -1, BLOCK_IDS.AIR);
-  for (let s = 0; s < 5; s++) {
-    world.setBlock(0, d1Floor + 1 + s, 1 - s, BLOCK_IDS.THRUSTER_METAL, false);
-  }
-}
-
-function buildDeck2CockpitAndArrays(world, groundY) {
-  const d1Ceil = groundY + 9;
-  const d2Floor = d1Ceil;
-  const d2Ceil = d1Ceil + 5;
-
-  for (let x = -4; x <= 4; x++) {
-    for (let z = -4; z <= 4; z++) {
-      if (Math.abs(x) === 4 && Math.abs(z) === 4) continue;
-
-      for (let y = d2Floor + 1; y <= d2Ceil; y++) {
-        const isEdge =
-          Math.abs(x) === 4 ||
-          Math.abs(z) === 4 ||
-          (Math.abs(x) === 3 && Math.abs(z) === 3);
-
-        if (y === d2Ceil) {
+        if (y === floorY) {
+          // Piso branco limpo com corredor técnico central
+          const isCenterPath = Math.abs(x) <= 1 || Math.abs(z) <= 1;
+          world.setBlock(
+            x,
+            y,
+            z,
+            isCenterPath ? BLOCK_IDS.THRUSTER_METAL : BLOCK_IDS.NASA_HULL,
+            false
+          );
+        } else if (y === ceilY) {
+          // Teto branco com claraboias de vidro e luminárias LED
           if (Math.abs(x) <= 2 && Math.abs(z) <= 2) {
             world.setBlock(x, y, z, BLOCK_IDS.HAB_GLASS, false);
+          } else if ((Math.abs(x) === 4 && z === 0) || (x === 0 && Math.abs(z) === 3)) {
+            world.setBlock(x, y, z, BLOCK_IDS.HAB_LIGHT, false);
           } else {
             world.setBlock(x, y, z, BLOCK_IDS.NASA_HULL, false);
           }
-        } else if (isEdge) {
-          if (y === d2Floor + 2 || y === d2Floor + 3) {
+        } else if (isWall) {
+          // Janelas panorâmicas nas paredes (y = 11 e 12)
+          const isWindowHeight = y === floorY + 2 || y === floorY + 3;
+          const isWindowSpan =
+            (Math.abs(x) >= 3 && Math.abs(x) <= 5 && Math.abs(z) === 6) ||
+            (Math.abs(z) >= 2 && Math.abs(z) <= 4 && Math.abs(x) === 7);
+
+          if (isWindowHeight && isWindowSpan) {
             world.setBlock(x, y, z, BLOCK_IDS.HAB_GLASS, false);
           } else {
             world.setBlock(x, y, z, BLOCK_IDS.NASA_HULL, false);
@@ -153,39 +65,163 @@ function buildDeck2CockpitAndArrays(world, groundY) {
     }
   }
 
-  fillBox(world, -2, d2Floor + 1, -3, 2, d2Floor + 1, -3, BLOCK_IDS.CONSOLE_SCREEN);
-  world.setBlock(-2, d2Floor + 4, 0, BLOCK_IDS.HAB_LIGHT, false);
-  world.setBlock(2, d2Floor + 4, 0, BLOCK_IDS.HAB_LIGHT, false);
+  // Entrada Principal / Airlock Branco no Lado Sul (z = 6..9)
+  fillBox(world, -2, floorY, 6, 2, floorY + 4, 8, BLOCK_IDS.NASA_HULL);
+  fillBox(world, -1, floorY + 1, 6, 1, floorY + 3, 8, BLOCK_IDS.AIR);
+  world.setBlock(0, floorY + 4, 7, BLOCK_IDS.HAB_LIGHT, false);
 
-  // Asas Solares Fotovoltaicas
-  fillBox(world, -13, d1Ceil, -2, -6, d1Ceil, 2, BLOCK_IDS.SOLAR_PANEL);
-  fillBox(world, -13, d1Ceil, 0, -6, d1Ceil, 0, BLOCK_IDS.THRUSTER_METAL);
-  fillBox(world, 6, d1Ceil, -2, 13, d1Ceil, 2, BLOCK_IDS.SOLAR_PANEL);
-  fillBox(world, 6, d1Ceil, 0, 13, d1Ceil, 0, BLOCK_IDS.THRUSTER_METAL);
+  // Rampa larga de acesso (z = 9..10)
+  fillBox(world, -2, floorY, 9, 2, floorY, 10, BLOCK_IDS.THRUSTER_METAL);
 
-  // Antena de Espaço Profundo apontada para a Terra
-  fillBox(world, 0, d2Ceil + 1, 0, 0, d2Ceil + 6, 0, BLOCK_IDS.THRUSTER_METAL);
-  world.setBlock(0, d2Ceil + 7, 0, BLOCK_IDS.RED_BEACON, false);
-  fillBox(world, -1, d2Ceil + 4, -1, 1, d2Ceil + 5, -1, BLOCK_IDS.GOLD_FOIL);
+  // Segundo Andar: Cúpula de Observação Astronômica no Teto (y = 15..18)
+  const cupFloor = ceilY;
+  const cupCeil = ceilY + 4;
+  for (let x = -3; x <= 3; x++) {
+    for (let z = -3; z <= 3; z++) {
+      if (Math.abs(x) === 3 && Math.abs(z) === 3) continue;
+      for (let y = cupFloor + 1; y <= cupCeil; y++) {
+        const isEdge = Math.abs(x) === 3 || Math.abs(z) === 3;
+        if (y === cupCeil) {
+          world.setBlock(x, y, z, BLOCK_IDS.HAB_GLASS, false);
+        } else if (isEdge) {
+          world.setBlock(
+            x,
+            y,
+            z,
+            y >= cupFloor + 2 ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL,
+            false
+          );
+        } else {
+          world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
+        }
+      }
+    }
+  }
 }
 
-function buildMarsRover(world, groundY) {
-  const rx = 12;
-  const rz = 9;
-  world.setBlock(rx - 2, groundY + 1, rz - 1, BLOCK_IDS.THRUSTER_METAL, false);
-  world.setBlock(rx + 2, groundY + 1, rz - 1, BLOCK_IDS.THRUSTER_METAL, false);
-  world.setBlock(rx - 2, groundY + 1, rz + 1, BLOCK_IDS.THRUSTER_METAL, false);
-  world.setBlock(rx + 2, groundY + 1, rz + 1, BLOCK_IDS.THRUSTER_METAL, false);
-  fillBox(world, rx - 1, groundY + 2, rz - 1, rx + 1, groundY + 2, rz + 1, BLOCK_IDS.GOLD_FOIL);
-  fillBox(world, rx - 1, groundY + 3, rz, rx, groundY + 3, rz + 1, BLOCK_IDS.SOLAR_PANEL);
-  world.setBlock(rx + 1, groundY + 3, rz - 1, BLOCK_IDS.THRUSTER_METAL, false);
-  world.setBlock(rx + 1, groundY + 4, rz - 1, BLOCK_IDS.CONSOLE_SCREEN, false);
+// 2. Túnel Pressurizado Branco + Redoma de Estufa Geodésica (Lado Oeste: x = -18, z = 0)
+function buildGreenhouseDome(world, groundY) {
+  const floorY = groundY + 1; // y = 9
+  const domeCenterX = -18;
+  const domeCenterZ = 0;
+  const domeRadius = 7;
+
+  // Redoma Hemisférica de Vidro com Arcos Brancos Estruturais
+  for (let dx = -domeRadius; dx <= domeRadius; dx++) {
+    for (let dz = -domeRadius; dz <= domeRadius; dz++) {
+      const horizDist = Math.hypot(dx, dz);
+      if (horizDist > domeRadius + 0.4) continue;
+
+      const x = domeCenterX + dx;
+      const z = domeCenterZ + dz;
+
+      // Piso da Redoma
+      if (horizDist <= domeRadius - 0.8) {
+        // Canteiros de plantação hidropônica em fileiras com corredor central
+        const isWalkway = Math.abs(dz) <= 1 || Math.abs(dx) <= 1;
+        const isPlanter =
+          !isWalkway &&
+          horizDist <= domeRadius - 1.6 &&
+          (Math.abs(dz) === 2 || Math.abs(dz) === 3 || Math.abs(dz) === 4);
+
+        world.setBlock(
+          x,
+          floorY,
+          z,
+          isPlanter ? BLOCK_IDS.HYDRO_PLANT : BLOCK_IDS.NASA_HULL,
+          false
+        );
+      } else {
+        // Anel branco de fundação da estufa
+        world.setBlock(x, floorY, z, BLOCK_IDS.NASA_HULL, false);
+        world.setBlock(x, floorY + 1, z, BLOCK_IDS.NASA_HULL, false);
+      }
+
+      // Cúpula esférica de vidro acima do piso
+      for (let dy = 1; dy <= domeRadius; dy++) {
+        const sphereDist = Math.hypot(dx, dy * 1.05, dz);
+        const y = floorY + dy;
+
+        if (sphereDist >= domeRadius - 0.65 && sphereDist <= domeRadius + 0.45) {
+          // Nervuras brancas geodésicas no meridiano central (dx === 0 ou dz === 0)
+          const isWhiteRib =
+            dy === 1 ||
+            (Math.abs(dx) === 0 && dy < domeRadius) ||
+            (Math.abs(dz) === 0 && dy < domeRadius);
+
+          world.setBlock(
+            x,
+            y,
+            z,
+            isWhiteRib ? BLOCK_IDS.NASA_HULL : BLOCK_IDS.HAB_GLASS,
+            false
+          );
+        } else if (sphereDist < domeRadius - 0.65) {
+          world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
+        }
+      }
+    }
+  }
+
+  // Luminária central no topo da Redoma de Estufa
+  world.setBlock(domeCenterX, floorY + domeRadius, domeCenterZ, BLOCK_IDS.HAB_LIGHT, false);
+
+  // Túnel Branco Pressurizado ligando o Habitat Principal (x = -7) à Redoma de Estufa (x = -11)
+  for (let x = -12; x <= -7; x++) {
+    for (let z = -2; z <= 2; z++) {
+      for (let y = floorY; y <= floorY + 4; y++) {
+        if (y === floorY) {
+          world.setBlock(x, y, z, BLOCK_IDS.THRUSTER_METAL, false);
+        } else if (y === floorY + 4 || Math.abs(z) === 2) {
+          world.setBlock(
+            x,
+            y,
+            z,
+            y === floorY + 2 && Math.abs(z) === 2 ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL,
+            false
+          );
+        } else {
+          world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
+        }
+      }
+    }
+  }
+}
+
+// 3. Foguete / Lander Branco de Ascensão da NASA no Lado Leste (x = 14, z = -3)
+function buildNasaAscentLander(world, groundY) {
+  const cx = 14;
+  const cz = -3;
+
+  // Plataforma de pouso
+  fillBox(world, cx - 4, groundY, cz - 4, cx + 4, groundY, cz + 4, BLOCK_IDS.BASALT);
+
+  // 4 Sapatas de pouso
+  const legs = [
+    [-3, -3],
+    [3, -3],
+    [-3, 3],
+    [3, 3],
+  ];
+  for (const [lx, lz] of legs) {
+    world.setBlock(cx + lx, groundY + 1, cz + lz, BLOCK_IDS.THRUSTER_METAL, false);
+    world.setBlock(cx + lx, groundY + 2, cz + lz, BLOCK_IDS.THRUSTER_METAL, false);
+  }
+
+  // Estágio base dourado (Kapton) + Corpo cilíndrico branco do foguete NASA
+  fillBox(world, cx - 2, groundY + 2, cz - 2, cx + 2, groundY + 3, cz + 2, BLOCK_IDS.GOLD_FOIL);
+  fillBox(world, cx - 2, groundY + 4, cz - 2, cx + 2, groundY + 8, cz + 2, BLOCK_IDS.NASA_HULL);
+  // Janela da cápsula
+  world.setBlock(cx, groundY + 7, cz + 2, BLOCK_IDS.HAB_GLASS, false);
+  // Cone do nariz branco + sinalizador
+  fillBox(world, cx - 1, groundY + 9, cz - 1, cx + 1, groundY + 10, cz + 1, BLOCK_IDS.NASA_HULL);
+  world.setBlock(cx, groundY + 11, cz, BLOCK_IDS.THRUSTER_METAL, false);
+  world.setBlock(cx, groundY + 12, cz, BLOCK_IDS.RED_BEACON, false);
 }
 
 export function buildNasaSpaceshipAndBase(world) {
-  const groundY = WORLD_CONFIG.GROUND_LEVEL;
-  buildLandingPadAndLegs(world, groundY);
-  buildDeck1ScienceAndAirlock(world, groundY);
-  buildDeck2CockpitAndArrays(world, groundY);
-  buildMarsRover(world, groundY);
+  const groundY = WORLD_CONFIG.GROUND_LEVEL; // 8
+  buildMainWhiteHabitat(world, groundY);
+  buildGreenhouseDome(world, groundY);
+  buildNasaAscentLander(world, groundY);
 }
