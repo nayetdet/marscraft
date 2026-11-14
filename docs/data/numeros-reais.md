@@ -55,6 +55,28 @@ Essas constantes geram trade-offs prontos:
 - **Lua:** a noite de 14 dias obriga a guardar energia (baterias) ou cortar sistemas. É um dilema forte de energia contra suporte de vida.
 - **Marte:** o painel solar rende menos e a poeira derruba ainda mais. O atraso de até 22 min impede o "controle da missão" de salvar o jogador em tempo real, então ele precisa decidir sozinho.
 
+## Missão do MAV: energia, tempestades e radiação (issue #30)
+
+Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG`, `STORM_CONFIG`, `MAV_CONFIG`):
+
+| Uso no jogo | Valor | Fonte |
+|---|---|---|
+| Rendimento dos painéis solares em Marte | **43 %** do que renderiam na Terra | [Ref] Mars Fact Sheet (irradiância ~590 W/m²) |
+| Dose normal na superfície | **6,93 µGy/h** | [API, RadLab] Curiosity MSL-RAD, mediana |
+| Conversão µGy → µSv (fator de qualidade) | **3,05** (0,21 mGy/dia → 0,64 mSv/dia) | [Ref] Hassler et al., *Science* 343 (2014), MSL-RAD |
+| Dose normal resultante | **0,021 mSv/h** | conta acima |
+| Multiplicador na tempestade | velocidade da CME em km/s, limitada a **250–1000×** | mapeamento do jogo dentro da faixa "centenas a mil vezes" desta página |
+| Tempo de aviso da tempestade | 227,9 milhões de km ÷ velocidade da CME | [Ref] semieixo maior de Marte, Mars Fact Sheet; 1 dia real de viagem = 1 hora de jogo |
+| Tempestades usadas | CMEs reais ≥ 500 km/s de 01/11 a 13/11/2026 | [API, DONKI] `src/data/donkiCme.json`, gerado por `node scripts/fetch-donki-cme.mjs` |
+| Limite de carreira exibido na vitória | **600 mSv** | [Ref] NASA-STD-3001 (2022) |
+| O2 em kg no resumo da vitória | 1 sol respirando lá fora = **0,84 kg** | [Ref] NASA BVAD |
+| Consumo da tripulação NPC (`CREW_CONFIG`) | água : comida = 0,5 L : 0,3 ração por hora de jogo (proporção BVAD ~3 kg : ~1,8 kg por pessoa/dia); O2 pago em energia | [Ref] NASA BVAD |
+| Reciclador de água (`STATION_CONFIG.WATER_RECOVERY`) | **98 %** da água usada volta ao tanque | [Ref] NASA, sistema de recuperação de água da ISS (2023) |
+
+Escala de jogo (não é dado real): capacidade da bateria, custos de energia em %, duração da tempestade (3 h de jogo), dano por mSv e o limite de 3 mSv/h a partir do qual a radiação machuca.
+
+Simplificação a explicar: a "blindagem ligada" (tecla R) é um escudo ativo que gasta energia. Escudos magnéticos ativos ainda são pesquisa; nas bases reais, o abrigo de tempestade usa massa (água, regolito).
+
 ## Calibração atual do jogo vs. realidade
 
 | Parâmetro no código | Valor atual | Real | Comentário |

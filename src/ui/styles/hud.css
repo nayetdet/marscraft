@@ -213,6 +213,43 @@
 .mc-stat-icon.oxygen.full { color: #43b5dc; }
 .mc-stat-icon.water.full { color: #3982df; }
 .mc-stat-icon.food.full { color: #d98738; }
+.mc-stat-icon.energy.full { color: #f2d43d; }
+
+/* Caixa da missao no canto superior direito: energia, radiacao, tempestade, MAV */
+.mission-box {
+  position: fixed;
+  top: 10px;
+  right: 14px;
+  max-width: min(360px, 46vw);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  font-size: 14px;
+  line-height: 1.25;
+  color: #ffffff;
+  text-align: right;
+}
+
+.mission-box div {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 2px 6px;
+}
+
+.mission-box .hidden { display: none; }
+.mission-box .warn { color: #ffff55; }
+.mission-box .danger { color: #ff5555; animation: mission-blink 1s steps(2, end) infinite; }
+.mission-box .ok { color: #7cfc00; }
+.mission-source { font-size: 11px; color: #d0d0d0; }
+.mission-source:empty { display: none; }
+
+@keyframes mission-blink {
+  50% { opacity: 0.55; }
+}
+
+@media (max-width: 600px) {
+  .mission-box { font-size: 11px; }
+}
 
 /* Hotbar Clássica do Minecraft (9 Slots Chanfrados) */
 .mc-hotbar {

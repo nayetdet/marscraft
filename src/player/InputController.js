@@ -16,8 +16,16 @@ export class InputController {
     isRoverActive = () => false,
     onInteract = () => {},
     onRoverAction = () => {},
+    onToggleShield = () => {},
+    onToggleCrewPanel = () => {},
+    onSendData = () => {},
+    isMissionModalOpen = () => false,
     onRoverLook = () => {},
   }) {
+    this.onToggleShield = onToggleShield;
+    this.onToggleCrewPanel = onToggleCrewPanel;
+    this.onSendData = onSendData;
+    this.isMissionModalOpen = isMissionModalOpen;
     this.domElement = domElement;
     this.player = player;
     this.playerHand = playerHand;
@@ -164,7 +172,7 @@ export class InputController {
         this.keys = {};
         this.player.isMoving = false;
       }
-      if (!this.survival.isDead && !this.hud.isInventoryOpen) {
+      if (!this.survival.isDead && !this.hud.isInventoryOpen && !this.isMissionModalOpen()) {
         overlay.classList.toggle('hidden', this.isLocked);
       }
     });
@@ -180,7 +188,16 @@ export class InputController {
 
     window.addEventListener('keydown', (e) => {
       if (this.survival.isDead) return;
+      // Painel do MAV, da tripulacao ou vitoria abertos: so [F] e [C] (fechar o painel) funcionam
+      if (this.isMissionModalOpen()) {
+        if (e.code === 'KeyF' && !e.repeat) this.onInteract();
+        if (e.code === 'KeyC' && !e.repeat) this.onToggleCrewPanel();
+        return;
+      }
       if (this.hud.isInventoryOpen && e.code !== 'KeyE') return;
+      if (e.code === 'KeyR' && this.isLocked && !e.repeat) this.onToggleShield();
+      if (e.code === 'KeyC' && this.isLocked && !e.repeat) this.onToggleCrewPanel();
+      if (e.code === 'KeyG' && this.isLocked && !e.repeat) this.onSendData();
       if (this.isLocked && this._isBrowserShortcut(e)) e.preventDefault();
       if (e.code === 'KeyW' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const now = performance.now();

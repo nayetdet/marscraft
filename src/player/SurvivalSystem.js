@@ -53,17 +53,23 @@ export class SurvivalSystem {
     return isInsidePressurizedVolume(pos.x, pos.y, pos.z);
   }
 
-  update(dt, playerPos) {
+  // maxOxygenRefill: quanto O2 a bateria da base consegue pagar neste frame (sem energia = 0)
+  update(dt, playerPos, maxOxygenRefill = Infinity) {
+    this.lastOxygenRefilled = 0;
     if (this.isDead) return;
 
     this.insidePressurizedShip = this.isPlayerInsideShip(playerPos);
 
     if (this.insidePressurizedShip) {
-      this.oxygen = Math.min(
-        this.maxStat,
-        this.oxygen + SURVIVAL_CONFIG.OXYGEN_REFILL_RATE * dt
-      );
+      this.lastOxygenRefilled = Math.max(0, Math.min(
+        this.maxStat - this.oxygen,
+        SURVIVAL_CONFIG.OXYGEN_REFILL_RATE * dt,
+        maxOxygenRefill
+      ));
+      this.oxygen += this.lastOxygenRefilled;
+      this.oxygenNeedsPower = this.oxygen < this.maxStat - 0.01 && maxOxygenRefill <= 0;
     } else {
+      this.oxygenNeedsPower = false;
       this.oxygen = Math.max(
         0,
         this.oxygen - SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE * dt
@@ -104,6 +110,29 @@ export class SurvivalSystem {
   // Comida nao substitui ar: sem oxigenio suficiente, nada recupera vida.
   canHeal() {
     return this.oxygen > SURVIVAL_CONFIG.HEAL_MIN_OXYGEN;
+  }
+
+  takeDamage(amount) {
+    if (this.isDead || amount <= 0) return;
+    this.health = Math.max(0, this.health - amount);
+    if (this.health <= 0) this.isDead = true;
+  }
+
+  countItem(blockId) {
+    return this.inventorySlots.reduce((total, item) => total + (item?.id === blockId ? item.count : 0), 0);
+  }
+
+  // Tira ate `count` itens do inventario (hotbar primeiro) e devolve quantos saiu
+  removeItems(blockId, count) {
+    let removed = 0;
+    for (const item of this.inventorySlots) {
+      if (removed >= count) break;
+      if (item?.id !== blockId) continue;
+      const take = Math.min(item.count, count - removed);
+      item.count -= take;
+      removed += take;
+    }
+    return removed;
   }
 
   addHarvestedCrop() {

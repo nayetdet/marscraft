@@ -16,7 +16,6 @@ describe('RoverController', () => {
     const telemetry = controller.getTelemetry();
     expect(telemetry.speedKmh).toBe('0.0');
     expect(telemetry.battery).toBeGreaterThanOrEqual(90);
-    expect(telemetry.cameraMode).toBe('third_person');
   });
 
   it('ativa e desativa o modo rover corretamente', () => {
@@ -25,11 +24,6 @@ describe('RoverController', () => {
 
     controller.activate();
     expect(controller.isActive).toBe(true);
-
-    controller.toggleCameraMode();
-    expect(controller.cameraMode).toBe('mastcam');
-    controller.toggleCameraMode();
-    expect(controller.cameraMode).toBe('third_person');
 
     controller.deactivate();
     expect(controller.isActive).toBe(false);

@@ -1,5 +1,5 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { WORLD_CONFIG } from '../config/constants.js';
+import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 
 function noise2D(x, z) {
   const s1 = Math.sin(x * 0.06) * Math.cos(z * 0.06) * 2.2;
@@ -30,6 +30,14 @@ export function generateMartianTerrain(world) {
       const distBaseArea = Math.hypot(x + 4, z);
       if (distBaseArea < 24) {
         const blend = Math.max(0, Math.min(1, (distBaseArea - 18) / 6));
+        h = groundY * (1 - blend) + h * blend;
+      }
+
+      // Plataforma de lancamento plana para o MAV
+      const distLaunchPad = Math.hypot(x - MAV_CONFIG.PAD_POSITION.x, z - MAV_CONFIG.PAD_POSITION.z);
+      const padFlat = MAV_CONFIG.PAD_RADIUS + 2;
+      if (distLaunchPad < padFlat + 4) {
+        const blend = Math.max(0, Math.min(1, (distLaunchPad - padFlat) / 4));
         h = groundY * (1 - blend) + h * blend;
       }
 

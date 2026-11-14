@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { WORLD_CONFIG } from '../config/constants.js';
+import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
 
 export function buildNasaCustomModels(scene) {
@@ -139,6 +139,14 @@ export function buildNasaCustomModels(scene) {
   const iceDepot = createIceProcessingDepotModel(mats, 5.5, groundTopY, 9.5);
   group.add(iceDepot);
   solidObjects.push(iceDepot);
+
+  // 9. MAV (Mars Ascent Vehicle) na plataforma de lancamento + fabrica de combustivel ISRU
+  const { pad, rocket, factory } = createMavModel(mats, MAV_CONFIG.PAD_POSITION.x, groundTopY, MAV_CONFIG.PAD_POSITION.z);
+  group.add(pad);
+  group.add(rocket);
+  solidObjects.push(rocket);
+  group.add(factory);
+  solidObjects.push(factory);
 
   group.updateMatrixWorld(true);
 
@@ -458,7 +466,6 @@ function createExteriorSolarAndDish(mats, x, y, z) {
   return { solarArrays, dish };
 }
 
-
 function createIceProcessingDepotModel(mats, x, y, z) {
   const g = new THREE.Group();
   g.position.set(x, y, z);
@@ -488,4 +495,63 @@ function createIceProcessingDepotModel(mats, x, y, z) {
   addBox(g, 0.28, 0.28, 0.28, mats.cyanGlow, 1.1, 1.55, -0.8);
 
   return g;
+}
+
+// MAV: foguete de subida em blocos (sem logos), plataforma e uma pequena fabrica ISRU ao lado
+function createMavModel(mats, x, y, z) {
+  const pad = new THREE.Group();
+  pad.position.set(x, y, z);
+  addBox(pad, 7.0, 0.06, 7.0, mats.darkSlate, 0, 0.03, 0);
+  addBox(pad, 7.2, 0.07, 0.3, mats.yellowBtn, 0, 0.04, 3.45);
+  addBox(pad, 7.2, 0.07, 0.3, mats.yellowBtn, 0, 0.04, -3.45);
+  addBox(pad, 0.3, 0.07, 7.2, mats.yellowBtn, 3.45, 0.04, 0);
+  addBox(pad, 0.3, 0.07, 7.2, mats.yellowBtn, -3.45, 0.04, 0);
+
+  const rocket = new THREE.Group();
+  rocket.position.set(x, y, z);
+
+  // Pernas de pouso
+  for (const [lx, lz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    addBox(rocket, 0.2, 1.5, 0.2, mats.lightGray, lx * 1.15, 0.75, lz * 1.15, lz * 0.3, 0, -lx * 0.3);
+    addBox(rocket, 0.5, 0.1, 0.5, mats.charcoal, lx * 1.4, 0.05, lz * 1.4);
+  }
+
+  // Bocal do motor
+  addBox(rocket, 1.1, 0.5, 1.1, mats.charcoal, 0, 0.9, 0);
+  addBox(rocket, 0.7, 0.3, 0.7, mats.darkSlate, 0, 0.55, 0);
+
+  // Estagio de baixo: tanques de metano e oxigenio
+  addBox(rocket, 2.2, 3.4, 2.2, mats.whiteMetal, 0, 2.85, 0);
+  addBox(rocket, 2.26, 0.35, 2.26, mats.goldFoil, 0, 1.3, 0);
+  addBox(rocket, 2.26, 0.25, 2.26, mats.redBtn, 0, 3.4, 0);
+  addBox(rocket, 2.26, 0.25, 2.26, mats.charcoal, 0, 4.45, 0);
+
+  // Aletas
+  addBox(rocket, 0.12, 1.4, 0.9, mats.lightGray, 1.16, 1.9, 0);
+  addBox(rocket, 0.12, 1.4, 0.9, mats.lightGray, -1.16, 1.9, 0);
+  addBox(rocket, 0.9, 1.4, 0.12, mats.lightGray, 0, 1.9, 1.16);
+  addBox(rocket, 0.9, 1.4, 0.12, mats.lightGray, 0, 1.9, -1.16);
+
+  // Estagio de cima: cabine da tripulacao com janela
+  addBox(rocket, 1.8, 2.2, 1.8, mats.whiteMetal, 0, 5.65, 0);
+  addBox(rocket, 0.7, 0.5, 0.06, mats.cyanGlow, 0, 6.0, 0.91);
+  addBox(rocket, 1.86, 0.2, 1.86, mats.goldFoil, 0, 4.7, 0);
+
+  // Nariz em degraus
+  addBox(rocket, 1.4, 0.6, 1.4, mats.whiteMetal, 0, 7.05, 0);
+  addBox(rocket, 1.0, 0.5, 1.0, mats.whiteMetal, 0, 7.6, 0);
+  addBox(rocket, 0.6, 0.4, 0.6, mats.lightGray, 0, 8.05, 0);
+  addBox(rocket, 0.2, 0.5, 0.2, mats.redBtn, 0, 8.5, 0);
+
+  // Fabrica de combustivel (ISRU): caixa com dois tanques e um cano ate o foguete
+  const factory = new THREE.Group();
+  factory.position.set(x + 4.6, y, z - 1.2);
+  addBox(factory, 1.6, 1.3, 1.4, mats.lightGray, 0, 0.65, 0);
+  addBox(factory, 1.0, 0.4, 0.06, mats.screenMat, 0, 0.95, 0.72);
+  addBox(factory, 0.6, 1.6, 0.6, mats.whiteMetal, -0.5, 0.8, -1.1);
+  addBox(factory, 0.6, 1.6, 0.6, mats.nasaBlue, 0.4, 0.8, -1.1);
+  // O cano fica na plataforma (sem colisao), para nao virar uma parede invisivel
+  addBox(pad, 2.4, 0.14, 0.14, mats.darkSlate, 2.6, 0.12, -1.2);
+
+  return { pad, rocket, factory };
 }

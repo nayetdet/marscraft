@@ -7,6 +7,7 @@ const STAT_ICON_PATHS = {
   heart: '<path d="M1 1h2v1h2V1h2v1h1v3H7v1H6v1H5v1H3V7H2V6H1V5H0V2h1Z"/>',
   oxygen: '<path d="M2 0h4v1h1v1h1v4H7v1H6v1H2V7H1V6H0V2h1V1h1Z"/>',
   water: '<path d="M3 0h2v1h1v1h1v1h1v3H7v1H6v1H2V7H1V6H0V3h1V2h1V1h1Z"/>',
+  energy: '<path d="M4 0h3v1H6v2h2v1H7v1H6v1H5v1H4v1H3V6h1V5H1V4h1V3h1V2h1Z"/>',
   food: '<path d="M1 0h3v1h1v1h1v2H5v2H4v1H2V5H1V3H0V1h1Z M6 5h2v3H6Z"/>',
 };
 
@@ -43,6 +44,7 @@ export class HudManager {
       this._createIconBar(this.waterBarEl, 'water'),
       this._createIconBar(this.foodBarEl, 'food'),
     ];
+    this.energyBar = this._createIconBar(document.getElementById('energy-bar'), 'energy');
 
     // Ultimos valores escritos no DOM: so reescreve quando algo muda
     this._lastClockText = '';
@@ -209,13 +211,13 @@ export class HudManager {
     this.zoomOverlayEl.classList.toggle('hidden', !isZoomed);
   }
 
-  showToast(msg) {
+  showToast(msg, durationMs = 2400) {
     this.toastEl.textContent = msg;
     this.toastEl.classList.add('visible');
     clearTimeout(this._toastTimer);
     this._toastTimer = setTimeout(() => {
       this.toastEl.classList.remove('visible');
-    }, 2400);
+    }, durationMs);
   }
 
   showDeathScreen() {
@@ -294,7 +296,7 @@ export class HudManager {
     }
   }
 
-  update({ player, survival, sky, camera, isZoomed, isRoverActive = false, roverTelemetry = null }) {
+  update({ player, survival, sky, camera, isZoomed, isRoverActive = false, roverTelemetry = null, mission }) {
     if (survival.isDead) {
       this.showDeathScreen();
       return;
@@ -350,9 +352,13 @@ export class HudManager {
       this.coordsEl.textContent = coordsText;
     }
 
-    if (survival.insidePressurizedShip !== this._lastInsideShip) {
-      this._lastInsideShip = survival.insidePressurizedShip;
-      if (survival.insidePressurizedShip) {
+    const envKey = `${survival.insidePressurizedShip}:${Boolean(survival.oxygenNeedsPower)}`;
+    if (envKey !== this._lastInsideShip) {
+      this._lastInsideShip = envKey;
+      if (survival.insidePressurizedShip && survival.oxygenNeedsPower) {
+        this.envStatusEl.textContent = 'Environment: Pressurized Habitat (NO POWER: oxygen is not refilling)';
+        this.envStatusEl.style.color = '#ff5555';
+      } else if (survival.insidePressurizedShip) {
         this.envStatusEl.textContent = 'Environment: Pressurized Habitat (refilling oxygen)';
         this.envStatusEl.style.color = '#7cfc00';
       } else {
@@ -367,6 +373,9 @@ export class HudManager {
     this._updateIconBar(oxygenBar, survival.oxygen);
     this._updateIconBar(waterBar, survival.water);
     this._updateIconBar(foodBar, survival.food);
+    if (mission) {
+      this._updateIconBar(this.energyBar, (mission.battery.charge / mission.battery.capacity) * survival.maxStat);
+    }
 
     const earthPos = sky.getEarthWorldPosition(this._earthPos);
     const phobosPos = sky.getPhobosWorldPosition(this._phobosPos);

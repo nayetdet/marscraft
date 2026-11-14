@@ -56,12 +56,14 @@ src/world/
   voxelRaycaster.js        DDA para mirar blocos
 src/player/
   PlayerPhysics.js         movimento, gravidade, colisão AABB × voxels
-  InputController.js       teclado/mouse/pointer lock (WASD, Espaço, cliques, 1-9, E inventário, Z luneta, T avança tempo)
+  InputController.js       teclado/mouse/pointer lock (WASD, Espaço, cliques, 1-9, E inventário, Z luneta, T avança tempo, R escudo, G dados, C tripulação)
   SurvivalSystem.js        barras O2/vida/água/comida, áreas pressurizadas, inventário (9 slots de hotbar + 27 de mochila)
   PlayerHand.js            mão/bloco em 1ª pessoa
 src/sky/                   céu marciano: shader de atmosfera, Sol, Terra+Lua, Fobos/Deimos, ciclo de sols
 src/graphics/              texturas procedurais em canvas e materiais dos blocos
-src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu) + CSS
+src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades, ordens, avisos), estações
+                           (estufa, reciclador de água, gerador de O2, enfermaria), trilhos e avatar voxel
+src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu), CrewPanel + CSS
 docs/                      contexto do desafio, APIs e dados reais
 ```
 
