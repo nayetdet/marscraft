@@ -40,6 +40,7 @@
 
 .mc-menu.is-controls .mc-title-wrap { display: none; }
 .mc-menu.is-controls .mc-menu-card { padding-top: 0; }
+.mc-menu.is-controls .crew-picker { display: none; }
 
 .mc-title-wrap {
   position: relative;
