@@ -56,8 +56,8 @@ Segue o padrão do DONKI (`scripts/fetch-donki-cme.mjs` → `src/data/donkiCme.j
 
 ## Honestidade com o dado
 
-- **Real:** 90 % das colunas do mundo, sem alteração além do arredondamento para blocos inteiros.
-- **Alterado:** os 10 % sob a base, a ala norte, a estufa e a plataforma do MAV, nivelados para as construções (corte de até 3,0 m e aterro de até 1,5 m). Nivelar o terreno antes de construir é o que uma missão real faria.
+- **Real:** 95 % das colunas do mundo, sem alteração além do arredondamento para blocos inteiros (medido depois de integrar a ala leste).
+- **Alterado:** os 5 % restantes: o chão nivelado para as construções (base, alas norte e leste, estufa e plataforma do MAV, com corte de até 3,0 m e aterro de até 1,5 m) e a cratera de gelo. Nivelar o terreno antes de construir é o que uma missão real faria.
 - **Inventado:** a cratera de gelo (`ICE_CRATER_CENTER`), que é mecânica de jogo.
 - **Não verificado:** a foto orbital do Mars Trek para o mesmo ponto não mostra a cratera com clareza. A classificação "cratera" vem da forma no modelo de elevação. Não sobrepor foto e terreno sem conferir o alinhamento.
 - A resolução é de 1,0118 m, então o texto da UI diz "about 1 meter".
