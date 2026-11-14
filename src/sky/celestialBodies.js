@@ -154,7 +154,7 @@ export function createEarthAndMoonSystem() {
   const earthBaseDir = new THREE.Vector3(-0.28, 0.32, -0.90).normalize();
   earthSystemGroup.position.copy(earthBaseDir.multiplyScalar(320));
 
-  return { earthSystemGroup, earthMesh };
+  return { earthSystemGroup, earthMesh, moonMesh: terraMoonMesh };
 }
 
 export function createMartianMoons() {

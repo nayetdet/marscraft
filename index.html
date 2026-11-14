@@ -80,10 +80,19 @@
 
     </div>
 
-    <!-- Luneta simples quando aperta Z -->
+    <!-- Luneta (Z) com scanner: varredura, nome do alvo e barra de progresso pixelada -->
     <div id="zoom-overlay" class="zoom-overlay hidden">
-      <div id="zoom-target" class="zoom-target"></div>
+      <div class="scan-sweep"></div>
+      <div class="scan-readout">
+        <div id="scan-name" class="scan-name"></div>
+        <div class="scan-bar"><div id="scan-bar-fill" class="scan-bar-fill"></div></div>
+        <div id="scan-status" class="scan-status">Aim at something to scan it · scroll to zoom</div>
+      </div>
     </div>
+
+    <!-- Ficha do alvo escaneado e aviso de descoberta (nao pausam o jogo) -->
+    <aside id="scan-card" class="scan-card hidden" aria-live="polite"></aside>
+    <div id="scan-discovery" class="scan-discovery hidden" role="status"></div>
 
     <!-- Area Inferior: Mensagem de Item + Barras Survival + Hotbar 9 Slots -->
     <div class="mc-bottom-area">
@@ -148,10 +157,11 @@
             <div class="control-row"><kbd>Shift</kbd><span>Crouch</span></div>
             <div class="control-row"><kbd>Hold LMB</kbd><span>Break blocks</span></div>
             <div class="control-row"><kbd>RMB</kbd><span>Place or use item</span></div>
-            <div class="control-row"><kbd>Wheel</kbd><span>Select hotbar item</span></div>
+            <div class="control-row"><kbd>Wheel</kbd><span>Select hotbar item (zoom while scanning)</span></div>
             <div class="control-row"><kbd>E</kbd><span>Inventory</span></div>
             <div class="control-row"><kbd>Q</kbd><span>Drop item</span></div>
-            <div class="control-row"><kbd>Z</kbd><span>Scope</span></div>
+            <div class="control-row"><kbd>Z</kbd><span>Scope scanner</span></div>
+            <div class="control-row"><kbd>J</kbd><span>Discovery journal</span></div>
             <div class="control-row"><kbd>F</kbd><span>Interact</span></div>
           </div>
           <div class="controls-section">
@@ -173,6 +183,21 @@
       <div id="inventory-grid" class="inventory-grid"></div>
       <p class="inventory-hotbar-label">Hotbar</p>
       <div id="inventory-hotbar" class="inventory-hotbar"></div>
+    </section>
+  </div>
+
+  <div id="journal-overlay" class="journal-overlay hidden">
+    <section class="journal-window" aria-label="Discovery Journal">
+      <header>
+        <h2>Discovery Journal</h2>
+        <span id="journal-progress">0 discovered</span>
+      </header>
+      <p id="journal-rank" class="journal-rank"></p>
+      <div id="journal-body" class="journal-body"></div>
+      <footer class="journal-footer">
+        <span>[J] Back to game</span>
+        <button id="journal-done" class="mc-btn journal-done-btn" type="button">Done</button>
+      </footer>
     </section>
   </div>
 

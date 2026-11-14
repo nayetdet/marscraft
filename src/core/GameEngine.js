@@ -25,11 +25,30 @@ import { InputController } from '../player/InputController.js';
 import { HudManager } from '../ui/HudManager.js';
 import { DebugOverlay } from '../ui/DebugOverlay.js';
 import { RoverController } from '../rover/RoverController.js';
+import { getCategoryLabel } from '../data/scanCatalog.js';
+import { ScanJournal } from '../scanner/scanJournal.js';
+import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js';
+import { resolveScanTarget } from '../scanner/scanTargeting.js';
+import { IceSensorEffect } from '../scanner/iceSensor.js';
+import { ScannerHud } from '../ui/ScannerHud.js';
+
+// Raio angular (rad) em que a mira da luneta "pega" cada astro. A Lua fica a ~0,047 rad da
+// Terra, então os dois raios precisam ser menores que isso para não se sobreporem.
+const SKY_SCAN_RADII = { sun: 0.05, earth: 0.035, moon: 0.02, phobos: 0.04, deimos: 0.03 };
+
+function getLocalStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 export class GameEngine {
   constructor(container) {
     this.container = container;
     this.scene = new THREE.Scene();
+    this.isScannerOpen = false;
     this.isZoomed = false;
 
     this.camera = new THREE.PerspectiveCamera(
@@ -91,6 +110,7 @@ export class GameEngine {
 
     this._initBaseLights();
     this._initHighlightWireframe();
+    this._initScanner();
 
     // Missao: energia, tempestades solares (CMEs reais do DONKI) e o MAV
     this.mission = new MissionSystem({ cmes: donkiCme.cmes, startHours: this._skyHours() });
@@ -125,13 +145,19 @@ export class GameEngine {
       world: this.world,
       sky: this.sky,
       hud: this.hud,
-      onToggleZoom: (zoomed) => {
+      onToggleZoom: (scannerOpen, zoomed) => {
+        this.isScannerOpen = scannerOpen;
         this.isZoomed = zoomed;
         if (!this.roverController.isActive) {
           this.playerHand.handGroup.visible = !zoomed;
         }
       },
       getTargetedBlock: () => this._getTargetedBlock(),
+      isJournalOpen: () => this.scannerHud.isJournalOpen,
+      onToggleJournal: (open) => {
+        if (open) this.scannerHud.openJournal(this.scanJournal);
+        else this.scannerHud.closeJournal();
+      },
       harvestCrop: (plant) => removeCrop(plant, this.plants, this.customColliders),
       isRoverActive: () => this.roverController.isActive,
       onInteract: () => this.handlePlayerInteract(),
@@ -173,6 +199,82 @@ export class GameEngine {
     this.highlightBox = new THREE.LineSegments(hlGeo, hlMat);
     this.highlightBox.visible = false;
     this.scene.add(this.highlightBox);
+  }
+
+  _initScanner() {
+    this.scanJournal = new ScanJournal({ storage: getLocalStorage() });
+    this.scanner = new ScannerSystem(this.scanJournal);
+    this.scannerHud = new ScannerHud();
+    this.iceSensor = new IceSensorEffect(this.scene);
+    this._scanDir = new THREE.Vector3();
+    this._skyPos = new THREE.Vector3();
+    this._skyBodies = Object.entries(SKY_SCAN_RADII).map(([id, radius]) => ({ id, radius, dir: new THREE.Vector3() }));
+    this._skyGetters = {
+      sun: (t) => this.sky.getSunWorldPosition(t),
+      earth: (t) => this.sky.getEarthWorldPosition(t),
+      moon: (t) => this.sky.getMoonWorldPosition(t),
+      phobos: (t) => this.sky.getPhobosWorldPosition(t),
+      deimos: (t) => this.sky.getDeimosWorldPosition(t),
+    };
+    this._roverScanBox = { scanId: 'rover', minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: 0, maxZ: 0 };
+  }
+
+  // Scanner aberto (com ou sem zoom): resolve o alvo na mira, avança o scan e aplica a descoberta quando completa.
+  _updateScanner(dt) {
+    if (!this.isScannerOpen) {
+      if (this.scanner.targetId) this.scanner.reset();
+      return;
+    }
+
+    const origin = this.camera.position;
+    const dir = this.player.getLookDirection(this._scanDir);
+    for (const body of this._skyBodies) {
+      this._skyGetters[body.id](this._skyPos);
+      body.dir.copy(this._skyPos).sub(origin).normalize();
+    }
+
+    const rp = this.roverController.pos;
+    const box = this._roverScanBox;
+    box.minX = rp.x - 1.6; box.maxX = rp.x + 1.6;
+    box.minY = rp.y; box.maxY = rp.y + 2.7;
+    box.minZ = rp.z - 1.6; box.maxZ = rp.z + 1.6;
+
+    const target = resolveScanTarget({
+      world: this.world,
+      origin,
+      dir,
+      objects: [...this.customColliders, box],
+      skyBodies: this._skyBodies,
+      maxDist: this.scanJournal.scanRange(),
+    });
+    const state = this.scanner.update(dt, target?.id ?? null);
+    this.scannerHud.update(state);
+    if (state.completed) this._onScanCompleted(state.completed);
+  }
+
+  _onScanCompleted({ entry, discovery }) {
+    this.scannerHud.showCard(entry, discovery);
+    if (!discovery.isNew) return;
+
+    const reward = applyDiscoveryReward(entry, this.survival);
+    const lines = [...reward.messages];
+    if (reward.iceSensor && this.iceSensor.activate(this.world, this.player.pos) === 0) {
+      lines[lines.length - 1] = 'Ice sensor online: no exposed ice in range';
+    }
+    if (discovery.completedCategory) {
+      lines.push(
+        `${getCategoryLabel(discovery.completedCategory)} complete! Scope upgraded: ` +
+          `${this.scanJournal.scanDuration().toFixed(1)}s scan, ${this.scanJournal.scanRange()} block range`
+      );
+    }
+    if (discovery.completedAll) lines.push('Every target scanned: you are a Junior Astronaut!');
+    this.scannerHud.showDiscovery(`New Discovery! (${discovery.count}/${discovery.total})`, entry.title, lines);
+
+    if (reward.inventoryChanged) {
+      this.hud.renderHotbar(this.survival.slots);
+      const heldSlot = this.survival.slots[this.hud.selectedSlot];
+      this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
+    }
   }
 
   _getTargetedBlock() {
@@ -546,7 +648,7 @@ export class GameEngine {
           this.sky.update(dt, this.roverController.pos);
           this._updateSurvival(dt);
           this.highlightBox.visible = false;
-          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isZoomed: false, isRoverActive: true, roverTelemetry: this.roverController.getTelemetry(), mission: this.mission });
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: false, isRoverActive: true, roverTelemetry: this.roverController.getTelemetry(), mission: this.mission });
         } else {
           this.player.update(dt, this.input.keys);
           this._updateSurvival(dt);
@@ -572,7 +674,8 @@ export class GameEngine {
             this.highlightBox.visible = false;
           }
 
-          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isZoomed: this.isZoomed, isRoverActive: false, mission: this.mission });
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: this.isScannerOpen, isRoverActive: false, mission: this.mission });
+          this._updateScanner(dt);
         }
       } else {
         if (this.roverController.isActive) this.roverController.update(dt, {});
@@ -588,6 +691,7 @@ export class GameEngine {
         this.hud.showToast(pickedUpBlocks.every((id) => id === BLOCK_IDS.HYDRO_PLANT) ? 'Picked up a Mars carrot' : `Picked up ${pickedUpBlocks.length} item${pickedUpBlocks.length > 1 ? 's' : ''}`);
       }
 
+      this.iceSensor.update(dt);
       if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
       this._updateMission(dt);
       this._updateCrew(dt);
