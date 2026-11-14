@@ -175,18 +175,15 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   }
   solid(gx - 0.52, gx + 0.52, gz - 0.52, gz + 0.52, 1.8);
   plane(labelTexture('BASE WATER', 5, '#60a5fa'), 0.9, 0.18, gx + 0.505, F + 0.1, gz, '+x');
-  // Poster num cavalete, virado para quem chega pelo tunel
-  box(0.08, POSTER_H + 0.14, POSTER_W + 0.14, mats.charcoal, gx + 3.0, posterY, gz + 3.0);
-  for (const dz of [-0.6, 0.6]) box(0.1, 0.35, 0.1, mats.silver, gx + 3.0, F + 0.17, gz + 3.0 + dz);
-  solid(gx + 2.88, gx + 3.12, gz + 2.2, gz + 3.8, 2.2);
-  poster('plants', gx + 3.05, posterY, gz + 3.0, '+x');
-  // Totem da tela, do outro lado do caminho
-  box(0.14, 1.0, 0.14, mats.silver, gx + 3.0, F + 0.5, gz - 3.0);
-  box(0.08, 1.0, 1.42, mats.charcoal, gx + 3.0, F + 1.5, gz - 3.0);
-  solid(gx + 2.9, gx + 3.1, gz - 3.7, gz - 2.3, 2.0);
-  // Bandeja da cultura plantada pelo painel da estufa (o broto e do GameEngine)
-  box(0.95, 0.35, 0.95, mats.slate, gx - 3.0, F + 0.175, gz - 3.0);
-  solid(gx - 3.5, gx - 2.5, gz - 3.5, gz - 2.5, 0.4);
+  // Poster num cavalete a nordeste da praca, virado para quem chega pelo tunel
+  box(0.08, POSTER_H + 0.14, POSTER_W + 0.14, mats.charcoal, gx + 3.0, posterY, gz - 3.0);
+  for (const dz of [-0.6, 0.6]) box(0.1, 0.35, 0.1, mats.silver, gx + 3.0, F + 0.17, gz - 3.0 + dz);
+  solid(gx + 2.88, gx + 3.12, gz - 3.8, gz - 2.2, 2.2);
+  poster('plants', gx + 3.05, posterY, gz - 3.0, '+x');
+  // Totem da tela de status a sudoeste (o monitor de comida e o jardim ficam a sudeste)
+  box(0.14, 1.0, 0.14, mats.silver, gx - 3.0, F + 0.5, gz + 3.0);
+  box(0.08, 1.0, 1.42, mats.charcoal, gx - 3.0, F + 1.5, gz + 3.0);
+  solid(gx - 3.1, gx - 2.9, gz + 2.3, gz + 3.7, 2.0);
 
   // ---------- Academia (GYM-1) ----------
   poster('exercise', -7.5, posterY, 8.03, '+z');
@@ -211,7 +208,7 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   plane(screens.command.texture, 2.4, 0.9, 6.6, 12.68, -10.93, '+z', dynamic);
   plane(screens.power.texture, 2.2, 1.467, 12.93, 12.2, -0.5, '-x', dynamic);
   plane(screens.shelter.texture, 1.2, 0.78, meterX, F + 1.6, meterZ - 0.055, '-z', dynamic);
-  plane(screens.greenhouse.texture, 1.3, 0.9, gx + 3.045, F + 1.5, gz - 3.0, '+x', dynamic);
+  plane(screens.greenhouse.texture, 1.3, 0.9, gx - 2.955, F + 1.5, gz + 3.0, '+x', dynamic);
 
   const tankGeo = new THREE.BoxGeometry(0.72, 1, 0.72);
   tankGeo.translate(0, 0.5, 0);

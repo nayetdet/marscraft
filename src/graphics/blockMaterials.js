@@ -1,5 +1,6 @@
+import { createCropTexture } from './cropTextures.js';
 import * as THREE from 'three';
-import { BLOCK_IDS } from '../config/blockTypes.js';
+import { BLOCK_IDS, CROP_ITEM_IDS } from '../config/blockTypes.js';
 import { createSeededRandom, fillNoise, makeCanvasTexture } from './textureGenerator.js';
 
 const TILE = 16;
@@ -195,6 +196,12 @@ export function createBlockMaterials() {
     { emissive: new THREE.Color('#fb923c'), emissiveIntensity: 0.8 }
   );
 
+  // Food sprites are not voxel blocks and must not enter the terrain atlas.
+  for (const [type, id] of Object.entries(CROP_ITEM_IDS)) {
+    const { texture, dataUrl } = createCropTexture(type);
+    materials[id] = new THREE.MeshLambertMaterial({ map: texture, transparent: true, alphaTest: .1 });
+    previews[id] = dataUrl;
+  }
   const atlas = createBlockAtlas(atlasEntries);
 
   return { materials, previews, atlas };

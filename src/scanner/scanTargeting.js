@@ -1,6 +1,6 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { raycastVoxel } from '../world/voxelRaycaster.js';
-import { HABITAT_LAYOUT as L, mainHabCell } from '../world/habitatLayout.js';
+import { HABITAT_LAYOUT as L, NORTH_WING, mainHabCell, northLinkBox } from '../world/habitatLayout.js';
 
 // Resolve o que está na mira da luneta. Função pura (sem Three.js nem DOM) para testar com Vitest.
 // Ordem: objetos 3D (AABBs com scanId) e voxel competem pela distância; sem acerto, testa o céu.
@@ -21,16 +21,26 @@ const TERRAIN_BLOCKS = {
   [BLOCK_IDS.MARS_ICE]: 'water-ice',
 };
 
-// Foguete de ascensão em nasaSpaceshipBuilder.js (centro x = 22, z = -3, plataforma de 9x9).
-const LANDER = { X_MIN: 18, X_MAX: 26, Z_MIN: -7, Z_MAX: 1 };
-
 // Diz a qual módulo da base pertence um bloco estrutural (paredes incluídas), ou null.
 export function baseModuleAt(bx, by, bz) {
-  if (bx >= LANDER.X_MIN && bx <= LANDER.X_MAX && bz >= LANDER.Z_MIN && bz <= LANDER.Z_MAX) {
-    return 'lander';
-  }
   const ax = Math.abs(bx);
   const az = Math.abs(bz);
+  // Exercise and medbay wing.
+  if (bx >= -12 && bx <= -4 && bz >= 7 && bz <= 13 && by >= L.FLOOR_Y && by <= L.CEIL_Y) return 'gym';
+  // Full corridor footprint, including the two side walls built outside the air volume.
+  if (by >= L.FLOOR_Y && by <= L.CEIL_Y && bz >= 5 && bz <= 7 &&
+      ((bz === 5 && bx >= -7 && bx <= -5) || (bz >= 6 && bx >= -7 && bx <= -4))) return 'gym';
+  // Match the expanded north wing's actual shell, spine and connecting corridors.
+  if (by >= L.FLOOR_Y && by <= L.CEIL_Y) {
+    const { SPINE, ROOMS } = NORTH_WING;
+    if (bx >= SPINE.xMin - 1 && bx <= SPINE.xMax + 1 && bz >= SPINE.zMin - 1 && bz <= SPINE.zMax) return 'habitat';
+    for (const room of ROOMS) {
+      if (bx >= room.xMin - 1 && bx <= room.xMax + 1 && bz >= room.zMin - 1 && bz <= room.zMax + 1) return 'habitat';
+      const link = northLinkBox(room);
+      if (bx >= link.xMin - 1 && bx <= link.xMax + 1 && bz >= link.zMin - 1 && bz <= link.zMax + 1) return 'habitat';
+    }
+  }
+  if (bx >= -4 && bx <= -1 && bz >= -9 && bz <= -6 && by >= L.FLOOR_Y && by <= L.CEIL_Y) return 'tunnel';
   // Cúpula sobre o teto: ar em |x|,|z| <= CUPOLA_HALF, mais 1 bloco de parede.
   if (by > L.CEIL_Y && ax <= L.CUPOLA_HALF + 1 && az <= L.CUPOLA_HALF + 1) return 'cupola';
   // Airlock sul: corredor de ar |x| <= AIRLOCK_HALF_X, paredes 1 bloco além.
@@ -46,14 +56,13 @@ export function baseModuleAt(bx, by, bz) {
 }
 
 // Módulos que formam a base habitada (o foguete fica de fora da visão geral "base").
-const OUTPOST_MODULES = new Set(['habitat', 'airlock', 'tunnel', 'greenhouse', 'cupola']);
+const OUTPOST_MODULES = new Set(['habitat', 'airlock', 'tunnel', 'greenhouse', 'cupola', 'gym']);
 
 // Classifica um bloco sem levar a distância em conta (a visão geral "base" é decidida fora).
 function classifyBlockAt(block, x, y, z) {
   const terrainId = TERRAIN_BLOCKS[block];
   const module = baseModuleAt(x, y, z);
   if (terrainId) {
-    if (module === 'lander' && y >= L.FLOOR_Y - 1) return 'lander';
     if (terrainId !== 'water-ice' && Math.hypot(x, z) > SCAN_TARGETING_CONFIG.CRATER_RIM_RADIUS) return 'crater-rim';
     return terrainId;
   }
@@ -67,7 +76,6 @@ function classifyBlock(hit) {
 
   if (terrainId) {
     // O foguete pousa numa plataforma de basalto: ela é parte do foguete, não terreno solto.
-    if (module === 'lander' && hit.y >= L.FLOOR_Y - 1) return 'lander';
     if (terrainId !== 'water-ice' && Math.hypot(hit.x, hit.z) > SCAN_TARGETING_CONFIG.CRATER_RIM_RADIUS) {
       return 'crater-rim';
     }
@@ -156,7 +164,10 @@ export function resolveScanTarget({ world, origin, dir, objects = [], skyBodies 
       z: origin.z + dir.z * distance,
     };
     const module = baseModuleAt(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z));
-    return module ? { id: module, distance, hit: null } : null;
+    if (module) return { id: module, distance, hit: null };
+    // Unlabelled scenery (chairs, consoles, etc.) can sit in front of a scannable
+    // voxel. Let the voxel result below decide instead of making scenery a dead end.
+    if (!voxelHit.hit) return null;
   }
 
   if (voxelHit.hit) {
@@ -169,7 +180,8 @@ export function resolveScanTarget({ world, origin, dir, objects = [], skyBodies 
 }
 
 // Região que contém a base inteira (habitat, túnel, estufa, cúpula e foguete), em blocos.
-const BASE_REGION = { X_MIN: -27, X_MAX: 19, Y_MIN: 8, Y_MAX: 22, Z_MIN: -10, Z_MAX: 10 };
+// Includes the north wing, which extends to z = -21, as well as the greenhouse and MAV pad.
+const BASE_REGION = { X_MIN: -24, X_MAX: 20, Y_MIN: 8, Y_MAX: 22, Z_MIN: -42, Z_MAX: 14 };
 const PATCH_RADIUS = 3; // terreno: mancha em volta do bloco mirado
 const NEIGHBORS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
 
@@ -182,14 +194,14 @@ function isExposed(world, x, y, z) {
  * objeto inteiro. Módulos da base e o foguete: todos os blocos daquele módulo. Terreno e borda
  * da cratera: a mancha do mesmo tipo em volta do bloco mirado. Alvos sem bloco: lista vazia.
  */
-export function collectScanBlocks(world, target, maxBlocks = 4000) {
+export function collectScanBlocks(world, target, maxBlocks = Infinity) {
   if (!target) return [];
   const blocks = [];
   const add = (x, y, z) => {
     if (blocks.length < maxBlocks) blocks.push({ x, y, z });
   };
 
-  const wantsModule = target.id === 'base' || ['habitat', 'airlock', 'tunnel', 'greenhouse', 'cupola', 'lander'].includes(target.id);
+  const wantsModule = target.id === 'base' || ['habitat', 'airlock', 'tunnel', 'greenhouse', 'cupola', 'gym', 'lander'].includes(target.id);
   if (wantsModule) {
     const R = BASE_REGION;
     for (let x = R.X_MIN; x <= R.X_MAX; x++) {
@@ -199,7 +211,9 @@ export function collectScanBlocks(world, target, maxBlocks = 4000) {
           if (block === BLOCK_IDS.AIR) continue;
           const id = classifyBlockAt(block, x, y, z);
           const matches = target.id === 'base' ? OUTPOST_MODULES.has(id) : id === target.id;
-          if (matches && isExposed(world, x, y, z)) add(x, y, z);
+          // Gym scan traces every structural voxel, including blocks pressed against
+          // the ground or another wall block; AIR-only exposure was dropping them.
+          if (matches && (target.id === 'gym' || isExposed(world, x, y, z))) add(x, y, z);
         }
       }
     }

@@ -151,6 +151,32 @@
       <div id="rover-coords">Rover: X 7.5 / Y 8.5 / Z 10.5</div>
       <div id="rover-ice">Ice cargo: 0 / 50 kg</div>
       <div id="rover-battery">Battery: 99%</div>
+      <!-- Baldinho cinza que substitui os textos e vai enchendo com água azul -->
+      <div id="rover-bucket" class="rover-bucket" role="progressbar" aria-label="Rover water bucket" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="rover-bucket-handle" aria-hidden="true"></div>
+        <div class="rover-bucket-rim" aria-hidden="true"></div>
+        <div class="rover-bucket-body">
+          <div class="rover-bucket-cavity">
+            <div class="rover-bucket-stream" aria-hidden="true">
+              <i></i><i></i><i></i>
+            </div>
+            <div id="rover-bucket-fill" class="rover-bucket-fill" style="height: 0%">
+              <div class="rover-bucket-wave"></div>
+              <div class="rover-bucket-bubbles" aria-hidden="true">
+                <i></i><i></i><i></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="rover-gps" aria-label="Rover map, north is up">
+        <div class="rover-gps-title">ICE GPS <span>N</span></div>
+        <div class="rover-gps-map" aria-hidden="true">
+          <div id="rover-gps-ice" class="rover-gps-ice"></div>
+          <div id="rover-gps-player" class="rover-gps-player"></div>
+        </div>
+        <div id="rover-gps-distance" class="rover-gps-distance">ICE -- blocks</div>
+      </div>
     </div>
 
     <!-- Rotulos simples no ceu (sem emojis) -->
@@ -178,7 +204,6 @@
         <button class="touch-button" type="button" data-touch-action="mine" aria-label="Mine or drill"><span id="touch-mine-label">MINE</span></button>
         <button class="touch-button" type="button" data-touch-action="use" aria-label="Use or place block"><span id="touch-use-label">USE</span></button>
         <button class="touch-button" type="button" data-touch-action="interact" aria-label="Interact">TALK</button>
-        <button class="touch-button" type="button" data-touch-action="zoom" aria-label="Toggle scope scanner">SCOPE</button>
         <button class="touch-button" type="button" data-touch-action="inventory" aria-label="Open inventory">BAG</button>
       </div>
     </div>
@@ -205,7 +230,7 @@
 
     </div>
 
-    <!-- Luneta (Z) com scanner: varredura, nome do alvo e barra de progresso pixelada -->
+    <!-- Scope scanner: varredura, nome do alvo e barra de progresso pixelada -->
     <div id="zoom-overlay" class="zoom-overlay hidden">
       <div class="scan-readout">
         <div id="scan-name" class="scan-name"></div>
@@ -308,7 +333,7 @@
             <div class="control-row"><kbd>Wheel</kbd><span>Select hotbar item (zoom while scanning)</span></div>
             <div class="control-row"><kbd>E</kbd><span>Inventory</span></div>
             <div class="control-row"><kbd>Q</kbd><span>Drop item</span></div>
-            <div class="control-row"><kbd>Z</kbd><span>Scope scanner</span></div>
+            <div class="control-row"><kbd>Select Scope + RMB</kbd><span>Use scope scanner</span></div>
             <div class="control-row"><kbd>J</kbd><span>Discovery journal</span></div>
             <div class="control-row"><kbd>F</kbd><span>Interact</span></div>
           </div>
@@ -328,7 +353,7 @@
   <div id="station-overlay" class="station-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="station-title">
     <section class="station-window">
       <header><span id="station-title"></span><button id="station-close" aria-label="Close station">X</button></header>
-      <div class="station-screen"><pre id="station-content"></pre><div id="gym-interactive" class="gym-interactive hidden"></div><div id="station-sources" class="station-sources"></div><p id="station-feedback" role="status"></p></div>
+      <div class="station-screen"><pre id="station-content"></pre><div id="gym-interactive" class="gym-interactive hidden"></div><div id="greenhouse-monitor" class="gh-monitor hidden"></div><div id="station-sources" class="station-sources"></div><p id="station-feedback" role="status"></p></div>
       <div id="station-actions"></div>
       <p class="station-footer">MISSION SYSTEMS // SIMULATION PAUSED</p>
     </section>

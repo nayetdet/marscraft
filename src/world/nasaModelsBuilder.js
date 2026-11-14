@@ -1,3 +1,6 @@
+import { GREENHOUSE_MONITOR_POS, initialGreenhouseCrop, isGreenhouseBed } from './greenhouseLayout.js';
+import { createCropPlantModel } from '../graphics/cropModels.js';
+import { BLOCK_IDS } from '../config/blockTypes.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
@@ -90,6 +93,52 @@ export function buildNasaCustomModels(scene) {
     emissiveIntensity: 0.35,
   });
 
+  const { texture: greenhouseScreenTex } = makeCanvasTexture((ctx) => {
+    ctx.fillStyle = '#052e16';
+    ctx.fillRect(0, 0, 32, 24);
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(0, 0, 32, 1);
+    ctx.fillRect(0, 23, 32, 1);
+    ctx.fillRect(0, 0, 1, 24);
+    ctx.fillRect(31, 0, 1, 24);
+    // 3 crop cards on the 3D monitor screen (lettuce, potato, soy)
+    ctx.fillStyle = '#14532d';
+    ctx.fillRect(2, 3, 8, 13);
+    ctx.fillRect(12, 3, 8, 13);
+    ctx.fillRect(22, 3, 8, 13);
+    // Lettuce icon
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(4, 5, 4, 4);
+    ctx.fillStyle = '#86efac';
+    ctx.fillRect(5, 6, 2, 2);
+    // Potato icon
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(14, 5, 4, 4);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(15, 6, 2, 2);
+    // Soy icon
+    ctx.fillStyle = '#84cc16';
+    ctx.fillRect(24, 5, 4, 4);
+    ctx.fillStyle = '#bef264';
+    ctx.fillRect(25, 6, 2, 2);
+    // Mini buy buttons
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(3, 12, 6, 3);
+    ctx.fillRect(13, 12, 6, 3);
+    ctx.fillRect(23, 12, 6, 3);
+    // Bottom resource bars (water & power)
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(2, 18, 13, 3);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(17, 18, 13, 3);
+  }, 32, 24);
+
+  mats.greenhouseScreenMat = new THREE.MeshLambertMaterial({
+    map: greenhouseScreenTex,
+    emissive: new THREE.Color('#22c55e'),
+    emissiveIntensity: 0.42,
+  });
+
   const solidObjects = [];
 
   // 1. Painel de Controle Principal NASA + Cadeiras
@@ -118,12 +167,21 @@ export function buildNasaCustomModels(scene) {
     solidObjects.push(crewQuarters);
   }
 
-  // 5. Plantações 3D e Lâmpadas de Cultivo dentro da Redoma de Estufa (x = -18, z = 0)
+  // 5. Plantações 3D, Lâmpadas de Cultivo e Monitor da Estufa dentro da Redoma
   const { cropsGroup, plants } = createGreenhouseCropsModel(mats, HABITAT_LAYOUT.DOME_X, floorTopY, HABITAT_LAYOUT.DOME_Z);
   group.add(cropsGroup);
   for (const plant of plants) {
     solidObjects.push(plant);
   }
+  const greenhouseMonitor = createGreenhouseMonitorModel(
+    mats,
+    GREENHOUSE_MONITOR_POS.x,
+    floorTopY,
+    GREENHOUSE_MONITOR_POS.z
+  );
+  greenhouseMonitor.userData.scanId = 'greenhouse';
+  group.add(greenhouseMonitor);
+  solidObjects.push(greenhouseMonitor);
 
   // 6. Rover Marciano NASA 3D detalhado (Estacionado na frente da base: x = 7.5, z = 10.5)
   const { roverGroup: rover, wheels: roverWheels } = createMarsRoverModel(mats, 7.5, groundTopY, 10.5);
@@ -148,6 +206,8 @@ export function buildNasaCustomModels(scene) {
 
   // 9. MAV (Mars Ascent Vehicle) na plataforma de lancamento + fabrica de combustivel ISRU
   const { pad, rocket, factory } = createMavModel(mats, MAV_CONFIG.PAD_POSITION.x, groundTopY, MAV_CONFIG.PAD_POSITION.z);
+  rocket.userData.scanId = 'lander';
+  factory.userData.scanId = 'mav-panel';
   group.add(pad);
   group.add(rocket);
   solidObjects.push(rocket);
@@ -155,14 +215,17 @@ export function buildNasaCustomModels(scene) {
   solidObjects.push(factory);
   // 8. Equipamentos 3D do Módulo da Academia (Esteira Espacial, Bicicleta Ergométrica e Scanner MedBay)
   const treadmill = createSpaceTreadmillModel(mats, -9.2, floorTopY, 10.2);
+  treadmill.userData.scanId = 'gym';
   group.add(treadmill);
   solidObjects.push(treadmill);
 
   const exerciseBike = createExerciseBikeModel(mats, -5.8, floorTopY, 10.4);
+  exerciseBike.userData.scanId = 'gym';
   group.add(exerciseBike);
   solidObjects.push(exerciseBike);
 
   const gymMedbay = createGymMedbayModel(mats, -7.6, floorTopY, 12.1);
+  gymMedbay.userData.scanId = 'gym';
   group.add(gymMedbay);
   solidObjects.push(gymMedbay);
 
@@ -206,6 +269,19 @@ export function buildNasaCustomModels(scene) {
       if (plants.includes(obj)) obj.userData.collider = collider;
     }
   }
+
+  // A screen-sized scan target on the ISRU/MAV control panel. The broad factory
+  // collider remains useful for navigation, while this gives the scope a precise
+  // target when the player aims directly at the panel.
+  colliders.push({
+    scanId: 'mav-panel',
+    minX: MAV_CONFIG.PAD_POSITION.x + 4.05,
+    maxX: MAV_CONFIG.PAD_POSITION.x + 5.15,
+    minY: groundTopY + 0.68,
+    maxY: groundTopY + 1.22,
+    minZ: MAV_CONFIG.PAD_POSITION.z - 0.52,
+    maxZ: MAV_CONFIG.PAD_POSITION.z - 0.38,
+  });
 
   // Keep plants and the driven rover as independent objects; merge static scenery.
   // O foguete do MAV tambem fica separado: ele sobe na animacao de decolagem.
@@ -418,7 +494,7 @@ function createGreenhouseCropsModel(mats, centerX, floorTopY, centerZ) {
   const plants = [];
   const R = HABITAT_LAYOUT.DOME_RADIUS;
 
-  // Culturas de cenario das bandejas de fora, uma por quadrante (malha estatica, sem colisao)
+  // Culturas de cenario das bandejas, uma por quadrante (malha estatica, sem colisao)
   const field = {
     lettuce: new THREE.MeshLambertMaterial({ color: 0x86efac }),
     wheat: new THREE.MeshLambertMaterial({ color: 0xd9b44a }),
@@ -429,43 +505,45 @@ function createGreenhouseCropsModel(mats, centerX, floorTopY, centerZ) {
 
   for (let dx = -R; dx <= R; dx++) {
     for (let dz = -R; dz <= R; dz++) {
-      const cell = domeFloorCell(dx, dz);
       const px = dx + 0.5;
       const pz = dz + 0.5;
 
-      if (cell === 'crop') {
-        // Canteiros de dentro: plantas que o jogador colhe (cada uma e um objeto proprio)
-        const plant = new THREE.Group();
+      // Jardim: as duas plantas que ja nascem prontas para colher
+      const type = initialGreenhouseCrop(dx, dz);
+      if (type) {
+        const plant = type === 'potato' ? createCropPlantModel('potato') : new THREE.Group();
         plant.position.set(px, 0, pz);
-
-        addBox(plant, 0.14, 0.48, 0.14, mats.plantStem, 0, 0.24, 0);
-        addBox(plant, 0.52, 0.22, 0.22, mats.plantLeaf, 0, 0.36, 0);
-        addBox(plant, 0.22, 0.22, 0.52, mats.plantLeaf, 0, 0.42, 0);
-        addBox(plant, 0.18, 0.14, 0.18, mats.potato, 0.16, 0.07, 0.14);
-        addBox(plant, 0.16, 0.12, 0.16, mats.potato, -0.15, 0.06, -0.12);
-
+        plant.userData.cropItemId = type === 'potato' ? BLOCK_IDS.POTATO : BLOCK_IDS.HYDRO_PLANT;
+        if (type === 'carrot') {
+          addBox(plant, 0.14, 0.48, 0.14, mats.plantStem, 0, 0.24, 0);
+          addBox(plant, 0.52, 0.22, 0.22, mats.plantLeaf, 0, 0.36, 0);
+          addBox(plant, 0.22, 0.22, 0.52, mats.plantLeaf, 0, 0.42, 0);
+          addBox(plant, 0.18, 0.14, 0.18, mats.potato, 0.16, 0.07, 0.14);
+        }
         cropsGroup.add(plant);
         plants.push(plant);
-      } else if (cell === 'field') {
-        if (dx > 0 && dz < 0) {
-          addBox(cropsGroup, 0.62, 0.22, 0.62, field.lettuce, px, 0.11, pz);
-          addBox(cropsGroup, 0.34, 0.16, 0.34, mats.plantLeaf, px, 0.3, pz);
-        } else if (dx < 0 && dz < 0) {
-          addBox(cropsGroup, 0.5, 0.7, 0.12, field.wheat, px, 0.35, pz - 0.18);
-          addBox(cropsGroup, 0.5, 0.82, 0.12, field.wheat, px, 0.41, pz + 0.18);
-        } else if (dx < 0 && dz > 0) {
-          addBox(cropsGroup, 0.5, 0.62, 0.5, field.soy, px, 0.31, pz);
-          addBox(cropsGroup, 0.16, 0.16, 0.16, field.tomato, px + 0.22, 0.42, pz + 0.22);
-          addBox(cropsGroup, 0.16, 0.16, 0.16, field.tomato, px - 0.2, 0.26, pz + 0.26);
-        } else {
-          addBox(cropsGroup, 0.56, 0.4, 0.56, field.soy, px, 0.2, pz);
-          addBox(cropsGroup, 0.3, 0.2, 0.3, mats.plantStem, px, 0.5, pz);
-        }
+        continue;
+      }
+      if (isGreenhouseBed(dx, dz) || domeFloorCell(dx, dz) !== 'field') continue;
+
+      if (dx > 0 && dz < 0) {
+        addBox(cropsGroup, 0.62, 0.22, 0.62, field.lettuce, px, 0.11, pz);
+        addBox(cropsGroup, 0.34, 0.16, 0.34, mats.plantLeaf, px, 0.3, pz);
+      } else if (dx < 0 && dz < 0) {
+        addBox(cropsGroup, 0.5, 0.7, 0.12, field.wheat, px, 0.35, pz - 0.18);
+        addBox(cropsGroup, 0.5, 0.82, 0.12, field.wheat, px, 0.41, pz + 0.18);
+      } else if (dx < 0 && dz > 0) {
+        addBox(cropsGroup, 0.5, 0.62, 0.5, field.soy, px, 0.31, pz);
+        addBox(cropsGroup, 0.16, 0.16, 0.16, field.tomato, px + 0.22, 0.42, pz + 0.22);
+        addBox(cropsGroup, 0.16, 0.16, 0.16, field.tomato, px - 0.2, 0.26, pz + 0.26);
+      } else {
+        addBox(cropsGroup, 0.56, 0.4, 0.56, field.soy, px, 0.2, pz);
+        addBox(cropsGroup, 0.3, 0.2, 0.3, mats.plantStem, px, 0.5, pz);
       }
     }
   }
 
-  // Luzes de cultivo rosa/roxas sobre os canteiros de dentro e barras azuis sobre as bandejas de fora
+  // Luzes de cultivo rosa/roxas sobre o anel de dentro e barras azuis sobre o de fora
   const c = 0.5; // centro do bloco central da redoma
   addBox(cropsGroup, 9, 0.12, 0.24, growLight, c, 4.4, c - 5.5);
   addBox(cropsGroup, 9, 0.12, 0.24, growLight, c, 4.4, c + 5.5);
@@ -477,6 +555,33 @@ function createGreenhouseCropsModel(mats, centerX, floorTopY, centerZ) {
   addBox(cropsGroup, 0.24, 0.12, 10, mats.cyanGlow, c + 10.5, 5.0, c);
 
   return { cropsGroup, plants };
+}
+
+function createGreenhouseMonitorModel(mats, x, y, z) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  // Aponta para o corredor e a entrada do tunel da estufa
+  g.rotation.y = Math.PI - 0.38;
+
+  // Base e pedestal branco
+  addBox(g, 0.56, 0.08, 0.46, mats.darkSlate, 0, 0.04, 0);
+  addBox(g, 0.18, 0.92, 0.18, mats.whiteMetal, 0, 0.5, -0.04);
+  addBox(g, 0.06, 0.56, 0.04, mats.greenGlow, 0, 0.52, 0.06);
+
+  // Bandeja de botoes coloridos (1 para cada planta)
+  addBox(g, 0.72, 0.08, 0.36, mats.lightGray, 0, 0.96, 0.08, 0.22, 0, 0);
+  addBox(g, 0.14, 0.06, 0.12, mats.greenGlow, -0.2, 1.01, 0.14, 0.22, 0, 0);
+  addBox(g, 0.14, 0.06, 0.12, mats.yellowBtn, 0, 1.01, 0.14, 0.22, 0, 0);
+  addBox(g, 0.14, 0.06, 0.12, mats.cyanGlow, 0.2, 1.01, 0.14, 0.22, 0, 0);
+
+  // Moldura e tela do monitorzinho da estufa
+  addBox(g, 0.84, 0.62, 0.1, mats.whiteMetal, 0, 1.32, -0.03, -0.14, 0, 0);
+  addBox(g, 0.78, 0.56, 0.1, mats.charcoal, 0, 1.32, 0.0, -0.14, 0, 0);
+  addBox(g, 0.68, 0.46, 0.04, mats.greenhouseScreenMat, 0, 1.32, 0.05, -0.14, 0, 0);
+  // Luzinha verde no topo do monitor
+  addBox(g, 0.24, 0.06, 0.08, mats.greenGlow, 0, 1.65, -0.06, -0.14, 0, 0);
+
+  return g;
 }
 
 function createMarsRoverModel(mats, x, y, z) {
@@ -498,14 +603,14 @@ function createMarsRoverModel(mats, x, y, z) {
   addBox(r, 2.06, 0.28, 2.86, mats.goldFoil, 0, 0.82, 0);
   addBox(r, 1.7, 0.08, 2.2, mats.solarPanel, 0, 1.3, 0.1);
 
+  // Mastro óptico (Mastcam / SuperCam) na direita dianteira
   addBox(r, 0.18, 1.15, 0.18, mats.whiteMetal, 0.45, 1.8, -1.05);
   addBox(r, 0.62, 0.32, 0.36, mats.whiteMetal, 0.45, 2.42, -1.05);
   addBox(r, 0.16, 0.16, 0.08, mats.cyanGlow, 0.3, 2.42, -1.24);
   addBox(r, 0.16, 0.16, 0.08, mats.cyanGlow, 0.6, 2.42, -1.24);
 
-  addBox(r, 0.16, 0.16, 1.1, mats.lightGray, -0.45, 0.85, -1.75, 0.25, 0, 0);
-  addBox(r, 0.28, 0.28, 0.32, mats.darkSlate, -0.45, 0.68, -2.28);
-
+  // O sistema articulado de extração de água ISRU (braço robótico + broca + câmara térmica)
+  // é montado pelo RoverController sobre roverGroup para animar cada etapa em tempo real.
   return { roverGroup: r, wheels };
 }
 

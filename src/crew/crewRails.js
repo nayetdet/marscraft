@@ -7,7 +7,7 @@ export const RAIL_NODES = {
   water: { x: 9.4, z: 0 }, // ao lado da bancada de purificacao (10.4, 1.5), longe do bebedouro
   tunnelEast: { x: -6.5, z: 0 },
   tunnelWest: { x: -14.5, z: 0 },
-  greenhouse: { x: -21.5, z: 2.4 }, // na beira do caminho, ao lado dos canteiros da estufa
+  greenhouse: { x: -21.5, z: -2.4 }, // na beira do caminho, ao lado das bandejas da estufa
   medbay: { x: -2.5, z: 3.5 }, // canto sudoeste do habitat
 };
 

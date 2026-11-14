@@ -1,0 +1,28 @@
+{
+  "source": "NASA Open Science Data Repository",
+  "query": "https://osdr.nasa.gov/osdr/data/search?term=plant%20growth&type=cgene&size=3",
+  "retrieved": "2026-11-14T21:37:53.621Z",
+  "studies": [
+    {
+      "id": "OSD-772",
+      "title": "PH-04 Chile Peppers in Space",
+      "organism": "Microbiota",
+      "mission": "SpaceX-22",
+      "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-772"
+    },
+    {
+      "id": "OSD-177",
+      "title": "Draft Genome Sequences of Two Fusarium oxysporum Isolates Cultured from Infected Zinnia hybrida Plants Grown on the International Space Station",
+      "organism": "Fusarium oxysporum",
+      "mission": "SpaceX-3",
+      "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-177"
+    },
+    {
+      "id": "OSD-773",
+      "title": "Exposed Root On Orbit Test System (XROOTS), an aeroponic and hydroponic plant growth system technical demonstration on the International Space Station (ISS)",
+      "organism": "Microbiota",
+      "mission": "SpaceX-26  SpaceX-27  NG-17",
+      "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-773"
+    }
+  ]
+}

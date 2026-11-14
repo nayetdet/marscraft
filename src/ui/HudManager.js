@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.js';
+import { WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { airlockProgress } from './airlockProgress.js';
 
 const ICONS_PER_BAR = 10;
@@ -65,6 +66,9 @@ export class HudManager {
     // Elementos de interação e controle do Rover
     this.interactionPromptEl = document.getElementById('interaction-prompt');
     this.roverOverlayEl = document.getElementById('rover-overlay');
+    this.roverGpsIceEl = document.getElementById('rover-gps-ice');
+    this.roverGpsPlayerEl = document.getElementById('rover-gps-player');
+    this.roverGpsDistanceEl = document.getElementById('rover-gps-distance');
     this.astronautInfoEl = document.getElementById('astronaut-info');
     this.roverInfoEl = document.getElementById('rover-info');
     this.roverSpeedEl = document.getElementById('rover-speed');
@@ -72,6 +76,8 @@ export class HudManager {
     this.roverCoordsEl = document.getElementById('rover-coords');
     this.roverBatteryEl = document.getElementById('rover-battery');
     this.roverIceEl = document.getElementById('rover-ice');
+    this.roverBucketEl = document.getElementById('rover-bucket');
+    this.roverBucketFillEl = document.getElementById('rover-bucket-fill');
     this.roverActionBannerEl = document.getElementById('rover-action-banner');
     this.roverActionTextEl = document.getElementById('rover-action-text');
     this.bottomAreaEl = document.querySelector('.mc-bottom-area');
@@ -126,8 +132,9 @@ export class HudManager {
       slot.dataset.slotIndex = idx;
 
       const hasItems = (slotData?.count ?? 0) > 0;
+      const preview = slotData?.id === BLOCK_IDS.SCOPE ? this._scopePreview() : this.previews[slotData?.id];
       const swatchStyle = hasItems
-        ? `background-image: url('${this.previews[slotData.id]}'); opacity: 1;`
+        ? `background-image: url('${preview ?? ''}'); opacity: 1;`
         : '';
 
       slot.innerHTML = `
@@ -153,7 +160,7 @@ export class HudManager {
       slot.addEventListener('click', () => this._selectInventorySlot(index));
       if (slotData) {
         slot.innerHTML = `
-          <div class="mc-slot-icon${slotData.id === BLOCK_IDS.HYDRO_PLANT ? ' carrot' : ''}" style="background-image: url('${this.previews[slotData.id]}')"></div>
+          <div class="mc-slot-icon${slotData.id === BLOCK_IDS.HYDRO_PLANT ? ' carrot' : ''}" style="background-image: url('${slotData.id === BLOCK_IDS.SCOPE ? this._scopePreview() : this.previews[slotData.id] ?? ''}')"></div>
           <span class="mc-slot-count">${slotData.count > 0 ? slotData.count : ''}</span>
         `;
       }
@@ -168,6 +175,10 @@ export class HudManager {
     inventorySlots.slice(0, 9).forEach((slotData, index) => {
       this.inventoryHotbarEl.appendChild(renderSlot(slotData, index, true));
     });
+  }
+
+  _scopePreview() {
+    return `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges"><path fill="#263746" d="M7 11h18v10H7z"/><path fill="#b8c5cc" d="M4 9h4v14H4zm20 1h4v12h-4zM12 7h8v3h-8z"/><path fill="#38bdf8" d="M3 12h2v8H3z"/><path fill="#647985" d="M13 21h6v5h-6z"/></svg>')}`;
   }
 
   openInventory(inventorySlots) {
@@ -368,6 +379,30 @@ export class HudManager {
       if (this.roverCoordsEl) this.roverCoordsEl.textContent = `Rover: X ${roverTelemetry.x} / Y ${roverTelemetry.y} / Z ${roverTelemetry.z}`;
       if (this.roverBatteryEl) this.roverBatteryEl.textContent = `Battery: ${roverTelemetry.battery}%`;
       if (this.roverIceEl) this.roverIceEl.textContent = `Ice cargo: ${roverTelemetry.iceCargo} / ${roverTelemetry.maxIceCargo} kg`;
+
+      if (this.roverBucketEl && this.roverBucketFillEl) {
+        const ratio = roverTelemetry.waterFillRatio ?? (
+          roverTelemetry.maxIceCargo > 0 ? roverTelemetry.iceCargo / roverTelemetry.maxIceCargo : 0
+        );
+        const pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+        this.roverBucketFillEl.style.height = `${pct}%`;
+        this.roverBucketEl.setAttribute('aria-valuenow', String(pct));
+        this.roverBucketEl.classList.toggle('is-filling', Boolean(roverTelemetry.isDrilling));
+        this.roverBucketEl.classList.toggle('is-unloading', Boolean(roverTelemetry.isUnloading));
+        this.roverBucketEl.classList.toggle('is-full', pct >= 100);
+      }
+
+      const dx = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER.x - Number(roverTelemetry.x);
+      const dz = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER.z - Number(roverTelemetry.z);
+      const distance = Math.hypot(dx, dz);
+      // Keep the destination on the map edge when it is outside its local range.
+      const scale = distance > 0 ? Math.min(1 / 40, 0.42 / distance) : 0;
+      if (this.roverGpsIceEl) {
+        this.roverGpsIceEl.style.left = `${50 + dx * scale * 100}%`;
+        this.roverGpsIceEl.style.top = `${50 + dz * scale * 100}%`;
+      }
+      if (this.roverGpsPlayerEl) this.roverGpsPlayerEl.style.transform = `translate(-50%, -50%) rotate(${roverTelemetry.headingDeg}deg)`;
+      if (this.roverGpsDistanceEl) this.roverGpsDistanceEl.textContent = `ICE ${Math.round(distance)} blocks`;
 
       // Banner de acao contextual do Rover (Perfurar ou Descarregar)
       if (this.roverActionBannerEl && this.roverActionTextEl) {

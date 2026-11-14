@@ -81,13 +81,14 @@ const L = HABITAT_LAYOUT;
 
 // Planta do piso da estufa, em blocos a partir do centro da redoma (dx, dz):
 // 'ring' (fundacao), 'plaza' (praca central), 'walk' (cruz de 5 blocos, anel de caminhada e
-// borda), 'crop' (canteiros de dentro, com plantas que se colhem) e 'field' (bandejas de fora).
+// borda) e 'field' (bandejas de cultivo de cenario, em dois aneis). Os canteiros de terra onde
+// se planta de verdade ficam em greenhouseLayout.js (isGreenhouseBed).
 export function domeFloorCell(dx, dz) {
   const r = Math.hypot(dx, dz);
   if (r > L.DOME_RADIUS - 0.8) return 'ring';
   if (r < 4.5) return 'plaza';
   if (Math.abs(dx) <= 2 || Math.abs(dz) <= 2) return 'walk';
-  if (r < 7.5) return 'crop';
+  if (r < 7.5) return 'field';
   if (r < 8.8) return 'walk';
   return r <= L.DOME_RADIUS - 1.9 ? 'field' : 'walk';
 }

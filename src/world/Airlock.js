@@ -37,13 +37,26 @@ export class Airlock {
     const amber = new THREE.MeshLambertMaterial({ color: 0xe2ad3b });
     const lamp = new THREE.MeshLambertMaterial({ color: 0xe34434, emissive: 0x661100 });
     const box = (parent, w, h, d, x, y, zz, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, zz); parent.add(m); return m; };
+    // Sliding leaves retract into wall pockets. Clip the moving panels to the
+    // doorway so their thin geometry cannot emerge through adjacent voxel walls.
+    const pocketPlanes = [
+      new THREE.Plane(new THREE.Vector3(1, 0, 0), 1),
+      new THREE.Plane(new THREE.Vector3(-1, 0, 0), 2),
+    ];
+    const panelMaterials = [material, dark, amber].map(base => {
+      const panelMaterial = base.clone();
+      panelMaterial.clippingPlanes = pocketPlanes;
+      panelMaterial.clipShadows = true;
+      return panelMaterial;
+    });
+    const [panelMetal, panelDark, panelAmber] = panelMaterials;
     const left = new THREE.Group(), right = new THREE.Group();
     group.add(left, right);
     for (const [panel, x] of [[left, -0.72], [right, 0.72]]) {
-      box(panel, 1.42, 2.9, 0.22, x, 1.45, 0, material);
-      box(panel, 1.15, 0.18, 0.26, x, 0.38, 0, amber);
-      box(panel, 1.1, 0.15, 0.26, x, 2.4, 0, dark);
-      box(panel, 0.48, 0.48, 0.26, x, 1.65, 0, dark);
+      box(panel, 1.42, 2.9, 0.22, x, 1.45, 0, panelMetal);
+      box(panel, 1.15, 0.18, 0.26, x, 0.38, 0, panelAmber);
+      box(panel, 1.1, 0.15, 0.26, x, 2.4, 0, panelDark);
+      box(panel, 0.48, 0.48, 0.26, x, 1.65, 0, panelDark);
     }
     box(group, 3.1, 0.18, 0.35, 0, 2.95, 0, dark);
     const indicator = box(group, 0.35, 0.15, 0.38, 0, 2.95, 0, lamp);

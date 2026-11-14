@@ -1,4 +1,4 @@
-import { BLOCK_IDS, HOTBAR_BLOCKS } from '../config/blockTypes.js';
+import { BLOCK_IDS, HOTBAR_BLOCKS, ITEM_DEFINITIONS } from '../config/blockTypes.js';
 import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { isInsidePressurizedVolume } from '../world/habitatLayout.js';
 
@@ -25,16 +25,13 @@ export class SurvivalSystem {
   }
 
   resetInventory() {
-    this.slots = HOTBAR_BLOCKS.map((b) => b.initialCount > 0 ? ({
+    this.slots = HOTBAR_BLOCKS.slice(0, 9).map((b) => b.initialCount > 0 ? ({
       id: b.id,
       name: b.name,
       count: b.initialCount,
       consumable: b.consumable,
+      equipment: b.equipment ?? false,
     }) : null);
-    const foodIndex = this.slots.findIndex((slot) => slot?.consumable?.type === 'food');
-    if (foodIndex > 0) {
-      [this.slots[0], this.slots[foodIndex]] = [this.slots[foodIndex], this.slots[0]];
-    }
     // The first nine inventory spaces are the hotbar; the rest are backpack slots.
     this.inventorySlots = [...this.slots, ...Array(27).fill(null)];
   }
@@ -172,7 +169,7 @@ export class SurvivalSystem {
 
   addBlockToInventory(blockId) {
     // Special habitat blocks become hull blocks in the inventory.
-    const block = HOTBAR_BLOCKS.find((item) => item.id === blockId) ?? HOTBAR_BLOCKS[5];
+    const block = ITEM_DEFINITIONS.find((item) => item.id === blockId) ?? HOTBAR_BLOCKS[5];
     const slot = this.inventorySlots.find((item) => item?.id === block.id && item.count < 64);
     if (slot) { slot.count++; return true; }
     const emptyIndex = this.inventorySlots.findIndex((item) => !item || item.count <= 0);
@@ -203,8 +200,9 @@ export class SurvivalSystem {
         this.health = Math.min(this.maxStat, this.health + slot.consumable.heal);
       }
       slot.count--;
-      if (!this.canHeal()) return 'You ate a Mars carrot (+Food). No oxygen! Food cannot heal you, go back to the base';
-      return 'You ate a Mars carrot (+Food)';
+      const foodName = slot.id === BLOCK_IDS.HYDRO_PLANT ? 'Mars carrot' : slot.name.split(' (')[0];
+      if (!this.canHeal()) return `You ate a ${foodName} (+Food). No oxygen! Food cannot heal you, go back to the base`;
+      return `You ate a ${foodName} (+Food)`;
     }
 
     return null;
@@ -212,7 +210,7 @@ export class SurvivalSystem {
 
   useBlockFromSlot(slotIndex) {
     const slot = this.slots[slotIndex];
-    if (!slot || slot.count <= 0) return false;
+    if (!slot || slot.count <= 0 || slot.equipment) return false;
     slot.count--;
     return true;
   }

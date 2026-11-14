@@ -141,3 +141,11 @@ curl "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&times
 
 - `POST https://api.spaceappschallenge.org/graphql` (Apollo; bloqueia GET por CSRF, então mande `Content-Type: application/json`).
 - O texto do desafio também vem embutido no HTML da página, no payload RSC do Next (`self.__next_f.push`). O objeto `ChallengePage` tem `detailsContent` e `resourcesTabContent` (HTML). Foi assim que [`../challenge/`](../challenge/) foi gerado.
+
+## Integração da estufa: estudos OSDR reais
+
+`node scripts/fetch-osdr-plants.mjs` consulta a busca oficial (`plant growth`, `type=cgene`, três resultados) e grava `src/data/osdrPlants.json`, com URL, data de coleta, accession, título, organismo e missão. Falha de rede ou resposta inválida interrompe o script; não gera estudos fictícios. Também aceita um arquivo bruto baixado desse endpoint como argumento, para redes que exigem download separado.
+
+O jogo usa o snapshot real embutido porque OSDR não libera CORS para o site. O caderno da estufa revela um registro por colheita e oferece links para OSD-772, OSD-177 e OSD-773 (snapshot de 14/11/2026). Não é consulta ao vivo. Os estudos contextualizam cultivo no espaço, sem extrapolar seus resultados para produção em Marte.
+
+A proposta educativa de autossuficiência vem do [toolkit da CSA](https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/) e da página [Growing healthy food](https://www.asc-csa.gc.ca/eng/sciences/food-production/growing-healthy-food-in-space-and-remote-areas.asp). Custos, rendimento e duração de alface/batata/soja são escolhas explícitas de balanceamento em `CROP_CONFIG`, não medições dessas agências. A UI informa essa distinção.

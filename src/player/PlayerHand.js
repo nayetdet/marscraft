@@ -1,5 +1,6 @@
+import { createCropItemModel } from '../graphics/cropModels.js';
 import * as THREE from 'three';
-import { BLOCK_IDS } from '../config/blockTypes.js';
+import { BLOCK_IDS, CROP_TYPES_BY_ID } from '../config/blockTypes.js';
 import { BLOCK_INTERACTION_CONFIG } from '../config/constants.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
 
@@ -24,7 +25,16 @@ export class PlayerHand {
 
     this._buildArmMesh();
     this._buildHeldBlockMesh();
+    this._buildScopeMesh();
 
+    this.heldCrops = {};
+    for (const [id, type] of Object.entries(CROP_TYPES_BY_ID)) {
+      const model = createCropItemModel(type);
+      model.scale.setScalar(.5); model.position.set(-.08, .14, -.22);
+      model.rotation.set(.2, .4, -.3); model.visible = false;
+      model.traverse(node => { node.renderOrder = 999; });
+      this.handGroup.add(model); this.heldCrops[id] = model;
+    }
     this.camera.add(this.handGroup);
   }
 
@@ -116,6 +126,34 @@ export class PlayerHand {
     this.handGroup.add(this.heldCarrotMesh);
   }
 
+  _buildScopeMesh() {
+    const scope = new THREE.Group();
+    const bodyMat = new THREE.MeshLambertMaterial({ color: 0x263746 });
+    const metalMat = new THREE.MeshLambertMaterial({ color: 0xb8c5cc });
+    const lensMat = new THREE.MeshLambertMaterial({ color: 0x38bdf8, emissive: 0x075985, emissiveIntensity: 0.5 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.09, 0.48, 8), bodyMat);
+    body.rotation.x = Math.PI / 2;
+    scope.add(body);
+    for (const [z, radius] of [[-0.22, 0.115], [0.2, 0.105]]) {
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, 0.045, 8), metalMat);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.z = z;
+      scope.add(ring);
+    }
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.082, 8), lensMat);
+    lens.position.z = -0.245;
+    scope.add(lens);
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.055, 0.25), metalMat);
+    rail.position.set(0, 0.11, 0);
+    scope.add(rail);
+    scope.position.set(-0.08, 0.14, -0.22);
+    scope.rotation.set(-0.3, 0.1, 0.25);
+    scope.traverse((node) => { if (node.isMesh) node.renderOrder = 999; });
+    this.heldScopeMesh = scope;
+    this.heldScopeMesh.visible = false;
+    this.handGroup.add(scope);
+  }
+
   // Um clone por tipo de bloco, reaproveitado (antes clonava a cada troca de slot e vazava)
   _getHandMaterial(blockId) {
     if (!this._handMaterials) this._handMaterials = {};
@@ -136,12 +174,25 @@ export class PlayerHand {
       return;
     }
     this.heldCarrotMesh.visible = false;
+    for (const model of Object.values(this.heldCrops)) model.visible = false;
+    this.heldScopeMesh.visible = blockId === BLOCK_IDS.SCOPE && count > 0;
+    if (this.heldScopeMesh.visible) {
+      this.heldBlockMesh.visible = false;
+      this.armMesh.position.set(0.08, -0.06, 0.08);
+      return;
+    }
     if (!blockId || count <= 0) {
       this.heldBlockMesh.visible = false;
       this.armMesh.position.set(0, 0, 0);
       return;
     }
 
+    if (this.heldCrops[blockId]) {
+      this.heldBlockMesh.visible = false;
+      this.heldCrops[blockId].visible = true;
+      this.armMesh.position.set(.08, -.06, .08);
+      return;
+    }
     if (blockId === BLOCK_IDS.HYDRO_PLANT) {
       this.heldBlockMesh.visible = false;
       this.heldCarrotMesh.visible = true;

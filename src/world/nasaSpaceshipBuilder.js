@@ -1,3 +1,4 @@
+import { isGreenhouseBed } from './greenhouseLayout.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { WORLD_CONFIG } from '../config/constants.js';
 import { HABITAT_LAYOUT, NORTH_WING, domeFloorCell, mainHabCell, northLinkBox } from './habitatLayout.js';
@@ -104,8 +105,7 @@ function buildGreenhouseDome(world, groundY) {
     ring: BLOCK_IDS.NASA_HULL,
     plaza: BLOCK_IDS.THRUSTER_METAL,
     walk: BLOCK_IDS.NASA_HULL,
-    crop: BLOCK_IDS.HYDRO_PLANT,
-    // Bandejas de metal: as plantas de fora sao so cenario, nao dao comida ao quebrar o piso
+    // Bandejas de metal: as plantas delas sao so cenario, nao dao comida ao quebrar o piso
     field: BLOCK_IDS.THRUSTER_METAL,
   };
 
@@ -116,7 +116,8 @@ function buildGreenhouseDome(world, groundY) {
 
       const x = domeCenterX + dx;
       const z = domeCenterZ + dz;
-      world.setBlock(x, floorY, z, FLOOR_BLOCKS[domeFloorCell(dx, dz)], false);
+      // Canteiros de terra do jardim (greenhouseLayout) por cima da planta do piso
+      world.setBlock(x, floorY, z, isGreenhouseBed(dx, dz) ? BLOCK_IDS.HYDRO_PLANT : FLOOR_BLOCKS[domeFloorCell(dx, dz)], false);
 
       // Casca da redoma acima do piso
       for (let dy = 1; dy <= domeRadius; dy++) {
@@ -377,9 +378,10 @@ function buildNorthModule(world, groundY) {
 
 export function buildNasaSpaceshipAndBase(world) {
   const groundY = WORLD_CONFIG.GROUND_LEVEL; // 8
+  world.recordBaseWindows = true;
   buildMainWhiteHabitat(world, groundY);
   buildGreenhouseDome(world, groundY);
-  buildNasaAscentLander(world, groundY);
   buildGymModule(world, groundY);
   buildNorthModule(world, groundY);
+  world.recordBaseWindows = false;
 }
