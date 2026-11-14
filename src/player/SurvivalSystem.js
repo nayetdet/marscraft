@@ -180,8 +180,10 @@ export class SurvivalSystem {
   }
 
   addBlockToInventory(blockId) {
-    // Special habitat blocks become hull blocks in the inventory.
-    const block = ITEM_DEFINITIONS.find((item) => item.id === blockId) ?? HOTBAR_BLOCKS[5];
+    // Special habitat blocks (metal floor, solar panel, console...) become hull blocks in the inventory.
+    // Looked up by id: a positional index breaks whenever the hotbar list gains an item.
+    const block = ITEM_DEFINITIONS.find((item) => item.id === blockId)
+      ?? ITEM_DEFINITIONS.find((item) => item.id === BLOCK_IDS.NASA_HULL);
     const slot = this.inventorySlots.find((item) => item?.id === block.id && item.count < 64);
     if (slot) { slot.count++; return true; }
     const emptyIndex = this.inventorySlots.findIndex((item) => !item || item.count <= 0);

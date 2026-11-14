@@ -206,3 +206,12 @@ describe('distinct crop inventory items', () => {
     expect(survival.countItem(id)).toBe(1);
   });
 });
+
+describe('habitat blocks without their own item', () => {
+  it.each(['THRUSTER_METAL', 'SOLAR_PANEL', 'CONSOLE_SCREEN', 'RED_BEACON'])('%s is collected as a hull block, never as ice', (key) => {
+    const survival = new SurvivalSystem();
+    expect(survival.addBlockToInventory(BLOCK_IDS[key])).toBe(true);
+    expect(survival.countItem(BLOCK_IDS.NASA_HULL)).toBe(1);
+    expect(survival.countItem(BLOCK_IDS.MARS_ICE)).toBe(0);
+  });
+});
