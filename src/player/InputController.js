@@ -17,6 +17,7 @@ export class InputController {
     onInteract = () => {},
     onToggleRoverCamera = () => {},
     onRoverAction = () => {},
+    onRoverLook = () => {},
   }) {
     this.domElement = domElement;
     this.player = player;
@@ -32,6 +33,7 @@ export class InputController {
     this.onInteract = onInteract;
     this.onToggleRoverCamera = onToggleRoverCamera;
     this.onRoverAction = onRoverAction;
+    this.onRoverLook = onRoverLook;
 
     this.keys = {};
     this.isLocked = false;
@@ -119,7 +121,21 @@ export class InputController {
     const overlay = document.getElementById('overlay');
     const startBtn = document.getElementById('start-btn');
     const resetBtn = document.getElementById('reset-btn');
+    const controlsBtn = document.getElementById('controls-btn');
+    const controlsBackBtn = document.getElementById('controls-back-btn');
+    const menuMain = document.getElementById('menu-main');
+    const controlsScreen = document.getElementById('controls-screen');
     const respawnBtn = document.getElementById('respawn-btn');
+
+    controlsBtn.addEventListener('click', () => {
+      menuMain.classList.add('hidden');
+      controlsScreen.classList.remove('hidden');
+    });
+
+    controlsBackBtn.addEventListener('click', () => {
+      controlsScreen.classList.add('hidden');
+      menuMain.classList.remove('hidden');
+    });
 
     document.addEventListener('keydown', (e) => {
       const gameHasFocus = this.isLocked || document.pointerLockElement === this.domElement;
@@ -156,7 +172,11 @@ export class InputController {
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (!this.isLocked || this.survival.isDead || this.isRoverActive()) return;
+      if (!this.isLocked || this.survival.isDead) return;
+      if (this.isRoverActive()) {
+        this.onRoverLook(e.movementX, e.movementY);
+        return;
+      }
       applyMouseLook(this.player, e.movementX, e.movementY, this.isZoomed);
     });
 
