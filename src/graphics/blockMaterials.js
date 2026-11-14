@@ -36,18 +36,36 @@ export function createBlockMaterials() {
     }
   });
 
-  // 3. Arenito Alaranjado Claro (Camadas laranja-ocre suaves)
+  // 3. Arenito Alaranjado Claro (Textura granular de rocha sedimentar, sem aspecto de madeira)
   register(BLOCK_IDS.SANDSTONE, (ctx) => {
-    const layers = ['#f5a256', '#e69145', '#fab36e', '#d98236', '#f09a4d'];
-    for (let y = 0; y < 16; y++) {
-      ctx.fillStyle = layers[y % layers.length];
-      ctx.fillRect(0, y, 16, 1);
+    fillNoise(ctx, [232, 146, 74], 28, 303);
+
+    const rand = createSeededRandom(304);
+    // Faixas sedimentares irregulares e sutis (quebradas para nao parecer madeira)
+    const bandRows = [3, 4, 10, 11];
+    for (const y of bandRows) {
+      for (let x = 0; x < 16; x++) {
+        if (rand() > 0.28) {
+          ctx.fillStyle = y < 8 ? 'rgba(255, 206, 148, 0.24)' : 'rgba(176, 92, 34, 0.22)';
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
     }
-    const rand = createSeededRandom(303);
-    for (let i = 0; i < 25; i++) {
-      ctx.fillStyle = 'rgba(120, 60, 15, 0.15)';
-      ctx.fillRect(Math.floor(rand() * 16), Math.floor(rand() * 16), 2, 1);
+
+    // Graos minerais e pequenas fissuras de arenito
+    for (let i = 0; i < 28; i++) {
+      const x = Math.floor(rand() * 16);
+      const y = Math.floor(rand() * 16);
+      ctx.fillStyle = rand() > 0.5 ? '#ffc98c' : '#b86328';
+      ctx.fillRect(x, y, 1, 1);
     }
+
+    // Pequenos blocos de rocha compactada
+    ctx.fillStyle = 'rgba(138, 68, 22, 0.28)';
+    ctx.fillRect(2, 6, 2, 2);
+    ctx.fillRect(10, 2, 2, 1);
+    ctx.fillRect(12, 13, 2, 2);
+    ctx.fillRect(5, 13, 1, 2);
   });
 
   // 4. Gelo de Agua Marciano (Azul claro brilhante)
