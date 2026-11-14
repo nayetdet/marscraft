@@ -85,7 +85,7 @@ export class SurvivalSystem {
     this.food = Math.max(0, this.food - SURVIVAL_CONFIG.FOOD_DRAIN_RATE * dt);
 
     // Regeneração natural se comida e água estiverem altas (estilo Minecraft)
-    if (this.food >= 16 && this.water >= 12 && this.oxygen > 5 && this.health < this.maxStat) {
+    if (this.food >= 16 && this.water >= 12 && this.canHeal() && this.health < this.maxStat) {
       this.health = Math.min(this.maxStat, this.health + 0.35 * dt);
     }
 
@@ -101,6 +101,11 @@ export class SurvivalSystem {
         this.isDead = true;
       }
     }
+  }
+
+  // Comida nao substitui ar: sem oxigenio suficiente, nada recupera vida.
+  canHeal() {
+    return this.oxygen > SURVIVAL_CONFIG.HEAL_MIN_OXYGEN;
   }
 
   addHarvestedCrop() {
@@ -141,14 +146,16 @@ export class SurvivalSystem {
     }
 
     if (slot.consumable.type === 'food') {
-      if (this.food >= this.maxStat - 0.5 && this.health >= this.maxStat - 0.5) {
+      const heals = Boolean(slot.consumable.heal) && this.canHeal() && this.health < this.maxStat - 0.5;
+      if (this.food >= this.maxStat - 0.5 && !heals) {
         return 'Your food level is already full';
       }
       this.food = Math.min(this.maxStat, this.food + slot.consumable.amount);
-      if (slot.consumable.heal) {
+      if (heals) {
         this.health = Math.min(this.maxStat, this.health + slot.consumable.heal);
       }
       slot.count--;
+      if (!this.canHeal()) return 'You ate a Mars carrot (+Food). No oxygen! Food cannot heal you, go back to the base';
       return 'You ate a Mars carrot (+Food)';
     }
 

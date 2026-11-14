@@ -52,4 +52,32 @@ describe('harvested carrots', () => {
     expect(survival.food).toBe(16);
     expect(survival.slots[4].count).toBe(4);
   });
+
+  it('does not heal when oxygen is empty, but still fills food', () => {
+    const survival = new SurvivalSystem();
+    survival.oxygen = 0;
+    survival.health = 10;
+    survival.food = 10;
+    expect(survival.consumeSlotItem(4)).toContain('No oxygen');
+    expect(survival.health).toBe(10);
+    expect(survival.food).toBe(16);
+    expect(survival.slots[4].count).toBe(4);
+  });
+
+  it('refuses to eat just for healing when oxygen is empty and food is full', () => {
+    const survival = new SurvivalSystem();
+    survival.oxygen = 0;
+    survival.health = 10;
+    expect(survival.consumeSlotItem(4)).toContain('already full');
+    expect(survival.health).toBe(10);
+    expect(survival.slots[4].count).toBe(5);
+  });
+
+  it('heals with normal oxygen even when food is full', () => {
+    const survival = new SurvivalSystem();
+    survival.health = 10;
+    expect(survival.consumeSlotItem(4)).toBe('You ate a Mars carrot (+Food)');
+    expect(survival.health).toBe(12);
+    expect(survival.slots[4].count).toBe(4);
+  });
 });

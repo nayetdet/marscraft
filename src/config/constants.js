@@ -48,4 +48,6 @@ export const SURVIVAL_CONFIG = {
   WATER_DRAIN_RATE: 0.14,
   FOOD_DRAIN_RATE: 0.11,
   STARVE_DAMAGE_RATE: 0.8,
+  // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
+  HEAL_MIN_OXYGEN: 5,
 };
