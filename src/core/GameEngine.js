@@ -267,7 +267,8 @@ export class GameEngine {
       const dt = Math.min(frameMs / 1000, 0.05);
       this.lastTime = now;
 
-      if (this.input.isLocked && !this.survival.isDead) {
+      const isGameRunning = this.input.isLocked && !this.survival.isDead;
+      if (isGameRunning) {
         if (this.roverController.isActive) {
           this.roverController.update(dt, this.input.keys);
           this.sky.update(dt, this.roverController.pos);
@@ -315,6 +316,7 @@ export class GameEngine {
         this.hud.showToast(pickedUpBlocks.every((id) => id === BLOCK_IDS.HYDRO_PLANT) ? 'Picked up a Mars carrot' : `Picked up ${pickedUpBlocks.length} item${pickedUpBlocks.length > 1 ? 's' : ''}`);
       }
 
+      if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
       this.renderer.render(this.scene, this.camera);
       this.debug.frame(frameMs);
     };
