@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BLOCK_IDS } from '../config/blockTypes.js';
 
 const ICONS_PER_BAR = 10;
 
@@ -111,7 +112,7 @@ export class HudManager {
         : '';
 
       slot.innerHTML = `
-        <div class="mc-slot-icon" style="${swatchStyle}"></div>
+        <div class="mc-slot-icon${slotData?.id === BLOCK_IDS.HYDRO_PLANT ? ' carrot' : ''}" style="${swatchStyle}"></div>
         <span class="mc-slot-count">${hasItems ? slotData.count : ''}</span>
       `;
       this.hotbarEl.appendChild(slot);
@@ -133,7 +134,7 @@ export class HudManager {
       slot.addEventListener('click', () => this._selectInventorySlot(index));
       if (slotData) {
         slot.innerHTML = `
-          <div class="mc-slot-icon" style="background-image: url('${this.previews[slotData.id]}')"></div>
+          <div class="mc-slot-icon${slotData.id === BLOCK_IDS.HYDRO_PLANT ? ' carrot' : ''}" style="background-image: url('${this.previews[slotData.id]}')"></div>
           <span class="mc-slot-count">${slotData.count > 0 ? slotData.count : ''}</span>
         `;
       }
