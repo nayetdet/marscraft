@@ -1,0 +1,66 @@
+{
+  "source": "https://trek.nasa.gov/mars/TrekServices/ws/index/eq/searchItems?bbox=-180,-90,180,90&q=jezero&proj=urn:ogc:def:crs:EPSG::104905&start=0&rows=5",
+  "numFound": 2035,
+  "docs": [
+    {
+      "title": "Curiosity Landing Site",
+      "itemType": "bookmark",
+      "bbox": "136.78344100200877,-5.1083794384352,138.06883879799125,-4.0660536615647995",
+      "description": "Curiosity landed in Gale Crater on Mars on August 6th, 2012. With a diameter of 154 km and a central peak 5.5 km tall, Gale Crater was chosen as the landing site for the Mars Science Laboratory Curiosity rover. The choice was based on evidence from orbiting spacecraft that indicate that the crater may have once contained large amounts of liquid water. The central peak, Mount Sharp, exhibits layered rock deposits rich in sedimentary minerals including clays, sulfates, and salts that require water to form.",
+      "mediaURL": [
+        "https://trek.nasa.gov/mars/jpl/assets/features/curiosity/images/curiosity_rover_story.png"
+      ],
+      "layers": [
+        "[{\"Mars_Viking_MDIM21_ClrMosaic_global_232m\",1},{\"curiosity_hirise_mosaic\",1}]"
+      ]
+    },
+    {
+      "title": "InSight Landing Site",
+      "itemType": "bookmark",
+      "bbox": "134.75369,4.13727,136.94436,4.936",
+      "description": "InSightâ€™s planned targeted landing area takes the form of an ellipse. (Click on the central point of the landing area to learn more about InSight, landing ellipses, and Elysium Planitia.) Note that three landing ellipses are shown. These show the differences that will result depending upon which of the planned dates InSight actually launches. The ellipse that is lowest in the west and highest in the east is the landing ellipse corresponding to the primary launch date of May 5, 2018. Rotating clockwise, the next ellipse corresponds to a launch date of May 26, 2018. The third ellipse corresponds to a launch on June 8, 2018. As time progresses between these dates, the relative positions between Earth and Mars change, resulting in different trajectories for the spacecraft. These, in turn, result in different landing ellipses.",
+      "mediaURL": [
+        "https://trek.nasa.gov/mars/jpl/assets/features/insight/images/InSight-Lander.jpg"
+      ],
+      "layers": [
+        "[{\"Mars_Viking_MDIM21_ClrMosaic_global_232m\",1},{\"InSightCTXMosaic_112917\",1},{\"ESP_058005_1845_RED_spline_rect\",1}]"
+      ]
+    },
+    {
+      "title": "Jezero Crater Features and Landforms",
+      "itemType": "bookmark",
+      "bbox": "75.1537692,15.9058484,78.8717121,19.4453003",
+      "description": "Jezero Crater was selected as the exploration site for the Perseverance rover. Jezero's floor is rich in sedimentary deposits that accumulated on the crater floor when water once flowed across the surface of Mars. This ancient lakebed preserves clues about Mars' ancient environment, its possible past habitability, potential biomarkers preserved in sedimentary deposits, and changing geological processes over time. This tour takes a broad look at Jezero Crater, including locations not scheduled to be visited by Perseverance but helpful to understanding the importance of Jezero Crater and to providing context to the actual locations visited by Perseverance as shown in Mars Trek's Perseverance Landing Site bookmark.",
+      "mediaURL": [
+        "https://trek.nasa.gov/assets/bookmarks/mars/perseverance/jezero_bookmark_map.jpg"
+      ],
+      "layers": [
+        "[{\"Mars_Viking_MDIM21_ClrMosaic_global_232m\",1},{\"JEZ_ctx_B_soc_008_orthoMosaic_6m_Eqc_latTs0_lon0\",1},{\"JEZ_hirise_soc_006_orthoMosaic_25cm_Eqc_latTs0_lon0_first_dd\",1}]"
+      ]
+    },
+    {
+      "title": "Major Features",
+      "itemType": "bookmark",
+      "bbox": "-83.57181394153805,-44.70289863375659,80.95910394421809,88.71480080565463",
+      "description": "Though small (only about half the diameter of the Earth), Mars is a world rich in spectacular landforms on a very grand scale. They include the most titanic volcanoes (all most likely now extinct) that we have yet seen anywhere in the solar system. Gigantic rift valleys fracture the surface over vast distances. Huge outflow channels tell the stories of cataclysmic floods in Mars' distant past, when water flowed across its surface. Studying these landforms reveals how Mars' environment has gone through tremendous changes over time, lets us look back to a time when Mars might have been more hospitable to life, and understand how life might possibly have survived there to the present. This list contains a representative selection of some of Mars' more interesting sights. Use them as a starting point for your own exploration of Mars' amazing terrain using Mars Trek.",
+      "mediaURL": [
+        "https://trek.nasa.gov/mars/jpl/assets/features/major/images/story.png"
+      ],
+      "layers": [
+        "[{\"Mars_Viking_MDIM21_ClrMosaic_global_232m\",1}]"
+      ]
+    },
+    {
+      "title": "Opportunity Landing Site",
+      "itemType": "bookmark",
+      "bbox": "-5.741557185038795,-2.8465461384351998,-4.8296937913076405,-1.8042203615647998",
+      "description": "On January 25, 2004, Opportunity, also known as Mars Exploration Rover - B, landed in Meridiani Planum. One of two robotic rovers in NASA's Mars Exploration Rover program, Opportunity was designed to explore the geology of Mars, look for evidence for the presence of liquid water on Mars' surface in the past, look for geological clues to the environmental conditions that existed when liquid water was present, and assess whether those environments were conducive to life.",
+      "mediaURL": [
+        "https://trek.nasa.gov/mars/jpl/assets/features/opportunity/images/opportunity_rover_story.png"
+      ],
+      "layers": [
+        "[{\"Mars_Viking_MDIM21_ClrMosaic_global_232m\",1},{\"opportunity_hirise_mosaic\",1}]"
+      ]
+    }
+  ]
+}

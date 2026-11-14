@@ -1,0 +1,59 @@
+{
+  "fetched": "2026-11-14",
+  "field": "absorbed_dose_rate",
+  "unit_note": "Unidade nao vem na resposta; pela ordem de grandeza (Curiosity ~7 => ~0,17 mGy/dia) e provavelmente uGy/h. Confirmar na Knowledgebase da RadLab antes de exibir a unidade no jogo.",
+  "series": [
+    {
+      "label": "Curiosity MSL-RAD (superficie de Marte, Cratera Gale)",
+      "query": "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&timestamp>=2022-11-16&timestamp<2022-12-11&absorbed_dose_rate&format=json",
+      "n": 2036,
+      "first_ts": "2022-11-16T00:03:22",
+      "last_ts": "2022-12-10T23:50:02",
+      "min": 5.737,
+      "p10": 6.388,
+      "median": 6.929,
+      "mean": 6.958,
+      "p90": 7.55,
+      "max": 9.863
+    },
+    {
+      "label": "Orion HERA-HSU1 (Artemis I, Terra->Lua->Terra)",
+      "query": "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Orion&instrument=HERA-HSU1&timestamp>=2022-11-16&timestamp<2022-12-11&absorbed_dose_rate&format=json",
+      "n": 35589,
+      "first_ts": "2022-11-16T06:51:00",
+      "last_ts": "2022-12-10T23:59:00",
+      "min": 0.0,
+      "p10": 14.174,
+      "median": 16.686,
+      "mean": 19.576,
+      "p90": 20.297,
+      "max": 8012.58
+    },
+    {
+      "label": "LRO CRaTER (orbita lunar)",
+      "query": "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=LRO&timestamp>=2022-11-16&timestamp<2022-11-18&absorbed_dose_rate&format=json",
+      "n": 48,
+      "first_ts": "2022-11-16T00:59:59",
+      "last_ts": "2022-11-17T23:59:59",
+      "min": 8.487,
+      "p10": 8.707,
+      "median": 9.206,
+      "mean": 9.241,
+      "p90": 9.761,
+      "max": 12.677
+    },
+    {
+      "label": "ISS DosTel1 (orbita baixa da Terra)",
+      "query": "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument=DOSTEL1&timestamp>=2023-01-01&timestamp<2023-01-02&absorbed_dose_rate&format=json",
+      "n": 895,
+      "first_ts": "2023-01-01T00:01:18",
+      "last_ts": "2023-01-01T23:59:08",
+      "min": 1.281,
+      "p10": 1.895,
+      "median": 4.742,
+      "mean": 28.303,
+      "p90": 48.146,
+      "max": 510.373
+    }
+  ]
+}

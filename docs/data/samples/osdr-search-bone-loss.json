@@ -1,0 +1,76 @@
+{
+  "source": "https://osdr.nasa.gov/osdr/data/search?term=bone%20loss&size=5&type=cgene",
+  "total": 36,
+  "hits": [
+    {
+      "Accession": "OSD-342",
+      "Study Title": "Targeting myostatin/activin A protects against skeletal muscle and bone loss during spaceflight [plasma proteomics]",
+      "Study Description": "Among the physiological consequences of extended spaceflight are loss of skeletal muscle and bone mass. One signaling pathway that plays an important role in maintaining muscle and bone homeostasis is that regulated by the secreted signaling proteins, myostatin (MSTN) and activin A. Here, we used both genetic and pharmacological approaches to investigate the effect of targeting MSTN/activin A signaling in mice that were sent to the International Space Station. Wild type mice lost significant muscle and bone mass during the 33 d spent in microgravity. Muscle weights of Mstn -/- mice, which are about twice those of wild type mice, were largely maintained during spaceflight. Systemic inhibition of MSTN/activin A signaling using a soluble form of the activin type IIB receptor (ACVR2B), which can bind each of these ligands, led to dramatic increases in both muscle and bone mass, with effects being comparable in ground and flight mice. Exposure to microgravity and treatment with the soluble receptor each led to alterations in numerous signaling pathways, which were reflected in changes in levels of key signaling components in the blood as well as their RNA expression levels in muscle and bone. These findings have implications for therapeutic strategies to combat the concomitant muscle and bone loss occurring in people afflicted with disuse atrophy on Earth as well as in astronauts in space, especially during prolonged missions.",
+      "Flight Program": "International Space Station (ISS)",
+      "Mission": {
+        "Start Date": "15-Dec-2019",
+        "End Date": "07-Jan-2020",
+        "Name": "SpaceX-19"
+      },
+      "organism": "Mus musculus",
+      "Study Factor Name": "Spaceflight     Treatment     Dissection Timeline",
+      "Study Publication Title": "Targeting myostatin/activin A protects against skeletal muscle and bone loss during spaceflight"
+    },
+    {
+      "Accession": "OSD-18",
+      "Study Title": "Microarray Profile of Gene Expression during Osteoclast Differentiation in Modeled Microgravity",
+      "Study Description": "Microgravity leads to a 10-15% loss of bone mass in astronauts during space flight. Osteoclast is the multinucleated bone resorbing cell. In this study, we used NASA developed ground based Rotary Wall Vessel Bioreactor (RWV), Rotary Cell Culture System (RCCS) to simulate microgravity (uXg) conditions and demonstrated a significant increase (2-fold) in osteoclastogenesis compared to ground based control (Xg) mouse bone marrow cultures. We further determined the gene expression profiling of RAW 264.7 osteoclast progenitor cells in microgravity by agilent microarray analysis. Gene expression pattern was functional group clustered by transcriptome analysis using gene ontology tree machine (GOTM) for cell proliferation/survival, differentiation and function. We confirm the microgravity modulated gene expression critical for osteoclast differentiation by real-time RT-PCR and Western blot analysis in murine bone marrow cultures. We identify transcription factors such as c-Jun, c-Fos, PU-1 critical for osteoclast differentiation is up-regulated in microgravity conditions. In addition, microgravity resulted in 2.3 and 2.0-fold increase in the level of cathepsin K and MMP-9 matrix metalloproteinase expression in preosteoclast cells involved in the bone resorption process respectively. We also demonstrate a significant increase in the expression levels of M-CSF receptor, c-Fms and PLCy2 and S100A8 molecules that play an important role in Ca2+ signaling essential for osteoclast function. Further, microgravity stimulated preosteoclast cells showed elevated cytosolic Ca2+ levels compared to ground based control cells. Thus, microgravity regulated gene expression profiling in preosteoclast cells provide new insights in to molecular mechanisms and therapeutic targets of osteoclast differentiation/activation responsible for bone loss and fracture risk in astronauts during space flight mission. Microgravity associated with space flight is a challenge for normal bone homeostasis. Astronauts experience 10-15% bone loss during a space flight mission. We aimed to determine the effect of simulated microgravity on osteoclast preosteoclasts cells. RAW264.7 cells (1.5 x 106 /ml) were loaded in RCCS with DMEM containing 10% FBS for 24 h. The cells were stimulated with RANKL (80ng/ml) for 24 h to obtain preosteoclasts in parallel with ground based control cells. Total RNA was isolated using RNAzol reagent (Biotecx Labs, Houston, TX) from control (Xg) and microgravity (uXg) subjected cells and hybridized with Agilent whole mouse genome 4x44K array system. Slides were washed and scanned on an Agilent G2565 microarray scanner. Data obtained were analyzed with Agilent feature extraction and GeneSpring GX v7.3.1 software packages (Genus biosystem, Inc. Northbrook, IL, USA).",
+      "Flight Program": "",
+      "Mission": {
+        "Start Date": "",
+        "End Date": "",
+        "Name": ""
+      },
+      "organism": "Mus musculus",
+      "Study Factor Name": "Microgravity Simulation",
+      "Study Publication Title": "Microarray profile of gene expression during osteoclast differentiation in modelled microgravity."
+    },
+    {
+      "Accession": "OSD-417",
+      "Study Title": "Specific Host Metabolite and Gut Microbiome Alterations Are Associated with Bone-loss During Spaceflight",
+      "Study Description": "Understanding the axis of the human microbiome and physiological homeostasis is an essential task in managing deep-space travel associated health risks. The NASA led Rodent Research 5 mission enabled an ancillary investigation of the gut microbiome varying exposure to microgravity (flight) relative to ground controls in the context of previously shown bone mineral density (BMD) loss that was observed in these flight groups. We demonstrate elevated abundance of Lactobacillus murinus and Dorea sp. during microgravity exposure relative to ground control through whole genome sequencing and 16S rRNA analyses. Specific functionally assigned gene clusters of Lactobacillus murinus and Dorea sp. capable of producing metabolites, lactic acid, leucine/isoleucine, and glutathione are enriched. These metabolites are elevated in the microgravity-exposed host serum through LC-MS/MS metabolomic analysis. Along with BMD loss, ELISA analysis reveals increases of osteocalcin and reductions in tartrate-resistant acid phosphatase 5b signifying additional loss of bone homeostasis in flight.",
+      "Flight Program": "International Space Station (ISS)",
+      "Mission": {
+        "End Date": "07/03/2017",
+        "Start Date": "06/03/2017",
+        "Name": "SpaceX-11"
+      },
+      "organism": "Mus musculus     Microbiota",
+      "Study Factor Name": "Spaceflight     Time     Euthanasia Location",
+      "Study Publication Title": "Specific host metabolite and gut microbiome alterations are associated with bone loss during spaceflight"
+    },
+    {
+      "Accession": "OSD-107",
+      "Study Title": "The Role of PTHrP in Osteoblast Response to Microgravity: Implications for Osteoporosis Development.",
+      "Study Description": "Prolonged skeletal unloading through bedrest results in bone loss similar to that observed in elderly osteoporotic patients, but with an accelerated timeframe. This rapid effect on weight-bearing bones is also observed in astronauts who lose up to 2% of their bone mass per month spent in Space. Despite important implications for Spaceflight travellers and bedridden patients on Earth, the exact mechanisms involved in disuse osteoporosis have not been elucidated. Parathyroid hormone-related protein (PTHrP) regulates many physiological processes including skeletal development, and has been proposed as a gravisensor. To investigate the role of PTHrP in microgravity-induced bone loss, trabecular osteoblasts (TOs) from Pthrp+/+ and -/- mice were exposed to simulated microgravity for 6 days. Viability of TOs decreased in inverse proportion to PTHrP expression levels. Microarray analysis of Pthrp+/+ TOs after 6 days at 0g revealed expression changes in genes encoding prolactins,apoptosis and survival molecules, bone metabolism and extra-cellular matrix composition proteins, chemokines, IGF family and Wnt-related signalling molecules. Importantly, 88% of 0g-induced expression changes in Pthrp+/+ cells overlap those observed in Pthrp-/- cells in normal gravity. Pulsatile treatment with PTHrP1-36 peptide during microgravity exposure reversed a large proportion of 0g-induced changes in Pthrp+/+ TOs. Our results confirm PTHrP efficacy as an anabolic agent to prevent microgravity-induced cell death in TOs. Total RNA samples extracted from Pthrp+/+and -/- trabecular osteoblasts (TOs) exposed for 6 days to simulated 0g in Synthecon rotating cell, or left 6 days in culture at 1g. Cells had either been treated with a pulsatile treatment (2 h/day) of PTHrP1-36 peptide (10-8M) or received a change in growth medium. In total: 8 different conditions with 2 replicates each, i.e. Pthrp+/+ TOs at 0g or 1g with or without PTHrP1-36 treatment, and Pthrp-/- TOs at 0g or 1 g,with or without PTHrP1-36 treatment.",
+      "Flight Program": "",
+      "Mission": {
+        "Start Date": "",
+        "End Date": "",
+        "Name": ""
+      },
+      "organism": "Mus musculus",
+      "Study Factor Name": "Treatment     Genotype     Microgravity Simulation",
+      "Study Publication Title": "The Role of Parathyroid Hormone-Related Protein (PTHrP) in Osteoblast Response to Microgravity: Mechanistic Implications for Osteoporosis Development."
+    },
+    {
+      "Accession": "OSD-240",
+      "Study Title": "Transcriptional analysis of dorsal skin from mice flown on the RR-5 mission",
+      "Study Description": "The objective of the Rodent Research-5 (RR-5) study was to evaluate bone loss in mice during spaceflight and to determine if treatment with a modified version of NEL-like molecule-1 (NELL-1) can reduce or prevent bone loss that would otherwise occur during spaceflight. To this end, a cohort of forty 30-weeks-old female BALB/cAnNTac mice were flown to the ISS and housed in the Rodent Habitat. Six days after launch half of the mice were treated with NELL-1 (10 mg/kg in 0.3 ml PBS), while the other half were treated with vehicle control (0.3 mls PBS). Fourteen days after launch animals were again treated with NELL-1 or vehicle control as before, except that all animals were also injected with the bone marker, calcein green (20 mg/kg in 0.1 ml). Injections of vehicle, NELL-1, and bone markers were intraperitoneal. After all forty mice on orbit received two treatments; ten control mice and ten experimental mice were randomly selected for live animal return (LAR). At approximately 30 days after launch the twenty LAR mice were transported live back to Earth. Animals were allowed to recover for 30 days in standard habitats before euthanasia via intraperitoneal injection with ketamine/xylazine. During the recovery, the animals received another two treatments. GeneLab received RNA later preserved dorsal skin from ten live animal return and ten matching ground control mice. These were from the vehicle control animals only. RNA was extracted, libraries generated (stranded, ribodepleted) and sequenced (target 60 M clusters at PE 150 bp).",
+      "Flight Program": "International Space Station (ISS)",
+      "Mission": {
+        "End Date": "7/3/17",
+        "Start Date": "6/3/17",
+        "Name": "SpaceX-11"
+      },
+      "organism": "Mus musculus",
+      "Study Factor Name": "Spaceflight",
+      "Study Publication Title": ""
+    }
+  ]
+}
