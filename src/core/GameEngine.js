@@ -568,6 +568,11 @@ export class GameEngine {
     }
 
     // Luz clara dentro do Módulo da Academia (Gym & MedBay)
+    // Luz do dormitorio (ala leste)
+    const dormLight = new THREE.PointLight(0xfef3c7, 1.5, 18);
+    dormLight.position.set(23.5, 13.0, -5.5);
+    this.scene.add(dormLight);
+
     const gymLight = new THREE.PointLight(0xe0f2fe, 1.5, 16);
     gymLight.position.set(-8, 13.0, 10.5);
     this.scene.add(gymLight);

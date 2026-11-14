@@ -69,6 +69,14 @@ export const NORTH_WING = {
   LINK_HEIGHT: 3,
 };
 
+// Ala leste: dormitorio da tripulacao, um modulo proprio ligado a parede leste do habitat por um
+// corredor curto. LINK inclui as duas colunas de parede (a do habitat e a do modulo), como em
+// northLinkBox; so tem LINK_HEIGHT blocos de altura.
+export const EAST_WING = {
+  LINK: { xMin: 13, xMax: 17, zMin: -9, zMax: -6 },
+  ROOM: { id: 'dorm', name: 'CREW QUARTERS', xMin: 18, xMax: 28, zMin: -10, zMax: -2 },
+};
+
 // Ar do corredor curto de um modulo: vai da parede do corredor central ate a parede do modulo
 export function northLinkBox(room) {
   const { SPINE } = NORTH_WING;
@@ -180,6 +188,12 @@ function inNorthWing(bx, by, bz) {
   return false;
 }
 
+function inEastWing(bx, by, bz) {
+  const { LINK, ROOM } = EAST_WING;
+  if (inBox(bx, by, bz, ROOM.xMin, ROOM.xMax, ROOM.zMin, ROOM.zMax)) return true;
+  return by <= L.FLOOR_Y + NORTH_WING.LINK_HEIGHT && inBox(bx, by, bz, LINK.xMin, LINK.xMax, LINK.zMin, LINK.zMax);
+}
+
 // Recebe a posicao dos olhos do jogador e diz se ela esta num bloco de ar pressurizado.
 export function isInsidePressurizedVolume(x, y, z) {
   const bx = Math.floor(x);
@@ -193,7 +207,8 @@ export function isInsidePressurizedVolume(x, y, z) {
     inGreenhouseDome(bx, by, bz) ||
     inGymCorridor(bx, by, bz) ||
     inGymModule(bx, by, bz) ||
-    inNorthWing(bx, by, bz)
+    inNorthWing(bx, by, bz) ||
+    inEastWing(bx, by, bz)
   );
 }
 

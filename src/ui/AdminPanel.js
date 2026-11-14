@@ -21,6 +21,7 @@ const TELEPORTS = [
   ['Workshop', 8, EYE_INSIDE, -35.5, -Math.PI / 2],
   ['Airlock', 0.5, EYE_INSIDE, 7.5, Math.PI],
   ['Greenhouse', -21.6, EYE_INSIDE, 0.9, 2.66],
+  ['Crew quarters', 19.5, EYE_INSIDE, -7, -Math.PI / 2],
   ['Gym & medbay', -8, EYE_INSIDE, 10, Math.PI],
   ['Outside ramp', 0, EYE_OUTSIDE, 11.5, 0],
   ['MAV pad', MAV_CONFIG.PAD_POSITION.x - 6, DROP, MAV_CONFIG.PAD_POSITION.z, -Math.PI / 2],

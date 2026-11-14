@@ -1,7 +1,7 @@
 import { isGreenhouseBed } from './greenhouseLayout.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { WORLD_CONFIG } from '../config/constants.js';
-import { HABITAT_LAYOUT, NORTH_WING, domeFloorCell, mainHabCell, northLinkBox } from './habitatLayout.js';
+import { EAST_WING, HABITAT_LAYOUT, NORTH_WING, domeFloorCell, mainHabCell, northLinkBox } from './habitatLayout.js';
 
 function fillBox(world, x1, y1, z1, x2, y2, z2, blockId) {
   for (let x = x1; x <= x2; x++) {
@@ -162,10 +162,10 @@ function buildGreenhouseDome(world, groundY) {
   }
 }
 
-// 3. Foguete / Lander Branco de Ascensão da NASA no Lado Leste (x = 22, z = -3)
+// 3. Foguete / Lander Branco de Ascensão da NASA a sudeste da base (x = 21, z = 9)
 function buildNasaAscentLander(world, groundY) {
-  const cx = 22;
-  const cz = -3;
+  const cx = 21;
+  const cz = 9;
 
   // Plataforma de pouso
   fillBox(world, cx - 4, groundY, cz - 4, cx + 4, groundY, cz + 4, BLOCK_IDS.BASALT);
@@ -376,6 +376,62 @@ function buildNorthModule(world, groundY) {
   }
 }
 
+// 6. Ala Leste: dormitorio da tripulacao (EAST_WING), ligado a parede leste do habitat
+function buildDormModule(world, groundY) {
+  const floorY = groundY + 1; // y = 9
+  const ceilY = groundY + 6; // y = 14
+  const { LINK, ROOM } = EAST_WING;
+
+  // Modulo: casco cheio, ar por dentro
+  for (let x = ROOM.xMin - 1; x <= ROOM.xMax + 1; x++) {
+    for (let z = ROOM.zMin - 1; z <= ROOM.zMax + 1; z++) {
+      const inside = x >= ROOM.xMin && x <= ROOM.xMax && z >= ROOM.zMin && z <= ROOM.zMax;
+      for (let y = floorY; y <= ceilY; y++) {
+        world.setBlock(x, y, z, inside && y > floorY && y < ceilY ? BLOCK_IDS.AIR : BLOCK_IDS.NASA_HULL, false);
+      }
+    }
+  }
+
+  // Corredor curto: tubo entre as duas paredes; nas colunas de parede so abre a porta
+  for (let x = LINK.xMin; x <= LINK.xMax; x++) {
+    const isWallColumn = x === LINK.xMin || x === LINK.xMax;
+    for (let z = LINK.zMin - 1; z <= LINK.zMax + 1; z++) {
+      const isSide = z < LINK.zMin || z > LINK.zMax;
+      if (isSide && isWallColumn) continue; // essa parede ja e do habitat ou do modulo
+      for (let y = floorY; y <= ceilY; y++) {
+        if (isSide) {
+          const isWindow = x === LINK.xMin + 2 && (y === floorY + 2 || y === floorY + 3);
+          world.setBlock(x, y, z, isWindow ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL, false);
+        } else if (y === floorY) {
+          world.setBlock(x, y, z, BLOCK_IDS.THRUSTER_METAL, false);
+        } else if (y <= floorY + NORTH_WING.LINK_HEIGHT) {
+          world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
+        } else if (!isWallColumn) {
+          world.setBlock(x, y, z, y === ceilY - 1 && x === LINK.xMin + 2 ? BLOCK_IDS.HAB_LIGHT : BLOCK_IDS.NASA_HULL, false);
+        }
+      }
+    }
+  }
+
+  // Janelas (leste, norte e sul), luzes no teto e a faixa de metal da porta ate o meio
+  const midX = Math.round((ROOM.xMin + ROOM.xMax) / 2);
+  const midZ = Math.round((ROOM.zMin + ROOM.zMax) / 2);
+  for (let y = floorY + 2; y <= floorY + 3; y++) {
+    for (let z = midZ - 2; z <= midZ + 2; z++) world.setBlock(ROOM.xMax + 1, y, z, BLOCK_IDS.HAB_GLASS, false);
+    for (let x = midX - 3; x <= midX + 3; x++) {
+      world.setBlock(x, y, ROOM.zMin - 1, BLOCK_IDS.HAB_GLASS, false);
+      world.setBlock(x, y, ROOM.zMax + 1, BLOCK_IDS.HAB_GLASS, false);
+    }
+  }
+  for (const [dx, dz] of [[-3, -2], [3, -2], [-3, 2], [3, 2]]) {
+    world.setBlock(midX + dx, ceilY, midZ + dz, BLOCK_IDS.HAB_LIGHT, false);
+  }
+  world.setBlock(midX, ceilY, midZ, BLOCK_IDS.HAB_GLASS, false);
+  for (let x = ROOM.xMin; x <= midX; x++) {
+    for (let z = LINK.zMin; z <= LINK.zMax; z++) world.setBlock(x, floorY, z, BLOCK_IDS.THRUSTER_METAL, false);
+  }
+}
+
 export function buildNasaSpaceshipAndBase(world) {
   const groundY = WORLD_CONFIG.GROUND_LEVEL; // 8
   world.recordBaseWindows = true;
@@ -383,5 +439,6 @@ export function buildNasaSpaceshipAndBase(world) {
   buildGreenhouseDome(world, groundY);
   buildGymModule(world, groundY);
   buildNorthModule(world, groundY);
+  buildDormModule(world, groundY);
   world.recordBaseWindows = false;
 }
