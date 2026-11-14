@@ -1,9 +1,11 @@
-import { STATION_CONFIG } from '../config/constants.js';
+import { RADIATION_CONFIG, STATION_CONFIG } from '../config/constants.js';
 
 // Estacoes da base que a tripulacao opera. Sem Three.js nem DOM, para testar com Vitest.
-// `base` e o estoque compartilhado: { battery, water, maxWater, hydration, food, maxFood, graywater }.
+// `base` e o estoque compartilhado: { battery, water, maxWater, hydration, food, maxFood, graywater }
+// mais o estado do comandante para a enfermaria: { playerDoseRate, playerHealth, playerHeal }.
 // Modelo de manutencao: sem operador a estacao estraga devagar (health cai); com operador ela
 // e consertada e produz, mas o trabalho gasta energia da bateria. Nenhuma ordem e de graca.
+// `effort` = soma do esforco de quem trabalha ali (especialista rende CREW_CONFIG.SPECIALIST_EFFORT).
 export class Station {
   constructor({ id, kind, name, workNode }) {
     this.id = id;
@@ -18,15 +20,16 @@ export class Station {
     return base.battery.charge > 0;
   }
 
-  update(hours, workers, base) {
+  update(hours, effort, base) {
     this.operating = false;
-    if (workers > 0 && this.canOperate(base)) {
+    if (effort > 0 && this.canOperate(base)) {
       const need = STATION_CONFIG.WORK_ENERGY_PER_HOUR * hours;
       const share = need > 0 ? base.battery.drain(need) / need : 0;
       if (share > 0) {
         this.operating = true;
-        this.health = Math.min(1, this.health + STATION_CONFIG.REPAIR_PER_HOUR * hours * share);
-        this.produce(hours * share, base);
+        const workHours = hours * share * effort;
+        this.health = Math.min(1, this.health + STATION_CONFIG.REPAIR_PER_HOUR * workHours);
+        this.produce(workHours, base);
         return;
       }
     }
@@ -91,8 +94,27 @@ export class OxygenGenerator extends Station {
   }
 }
 
+export class MedBay extends Station {
+  constructor() {
+    super({ id: 'medbay', kind: 'medbay', name: 'medical bay', workNode: 'medbay' });
+  }
+
+  // Cura que o motor aplica no comandante quando ele esta dentro da base
+  produce(hours, base) {
+    base.playerHeal += STATION_CONFIG.MEDBAY_HEAL_PER_HOUR * this.health * hours;
+  }
+
+  // A medica vigia o comandante: sem ela de plantao, ninguem avisa da radiacao
+  problems(base) {
+    const list = super.problems(base);
+    if (base.playerDoseRate >= RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR) list.unshift('radiation-high');
+    if (base.playerHealth < STATION_CONFIG.MEDBAY_LOW_HEALTH) list.push('health-low');
+    return list;
+  }
+}
+
 export function createStations() {
-  return [new Greenhouse(), new WaterRecycler(), new OxygenGenerator()];
+  return [new Greenhouse(), new WaterRecycler(), new OxygenGenerator(), new MedBay()];
 }
 
 const PROBLEM_TEXT = {
@@ -102,6 +124,8 @@ const PROBLEM_TEXT = {
     : `Commander, the ${s.name} is breaking down. It needs care.`),
   'no-water': () => 'Commander, the plants are dry! The base water tank is empty.',
   'tank-low': () => 'Commander, the water tank is almost empty! Bring ice with the rover.',
+  'radiation-high': () => 'Commander, your radiation dose is too high! Get inside the base or turn on the shield [R].',
+  'health-low': () => 'Commander, you are hurt! Come to the medical bay inside the base.',
 };
 
 export function problemText(station, problem) {

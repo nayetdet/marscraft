@@ -150,6 +150,14 @@ export const CREW_CONFIG = {
   MAX_CREW: 3,
   DEFAULT_CREW: 2,
   NAMES: ['Ana', 'Leo', 'Maya'],
+  // Papeis da issue #48: escolher 1, 2 ou 3 tripulantes leva o engenheiro, depois a botanica,
+  // depois a medica. Cada um comeca na sua estacao e rende mais nela.
+  ROLES: [
+    { title: 'Flight Engineer', specialties: ['oxygen', 'water'] },
+    { title: 'Botanist', specialties: ['greenhouse'] },
+    { title: 'Medical Officer', specialties: ['medbay'] },
+  ],
+  SPECIALIST_EFFORT: 1.5,
   SUIT_COLORS: [0xf97316, 0x22c55e, 0x3b82f6],
   OXYGEN_ENERGY_PER_HOUR: 1.5, // % de bateria por tripulante
   WATER_L_PER_HOUR: 0.5,
@@ -176,4 +184,7 @@ export const STATION_CONFIG = {
   LOW_WATER_L: 5,
   // Filtros de CO2 saturados: o O2 da base chega a custar o dobro de energia
   OXYGEN_MAX_COST_MULTIPLIER: 2,
+  // Enfermaria: a medica cura o jogador dentro da base e avisa da radiacao alta
+  MEDBAY_HEAL_PER_HOUR: 2, // pontos de vida por hora de jogo
+  MEDBAY_LOW_HEALTH: 8,
 };

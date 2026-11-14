@@ -14,6 +14,9 @@ function makeBase(overrides = {}) {
     food: 20,
     maxFood: 40,
     graywater: 0,
+    playerDoseRate: 0,
+    playerHealth: 20,
+    playerHeal: 0,
     ...overrides,
   };
 }
@@ -30,16 +33,35 @@ function sendAndArrive(crew, id, task) {
   crew.updateMovement(60);
 }
 
+// Todos descansando: nenhuma estacao gasta energia, so as necessidades contam
+function restAll(crew) {
+  for (const m of crew.members) crew.assign(m.id, 'rest');
+  crew.updateMovement(60);
+}
+
 describe('CrewManager needs', () => {
-  it('starts with the chosen crew size, resting in the quarters', () => {
+  it('starts with the chosen crew size, each one working at their own station (#48 roles)', () => {
     const { crew } = makeCrew(3);
     expect(crew.members.map((m) => m.name)).toEqual(CREW_CONFIG.NAMES.slice(0, 3));
-    expect(crew.members.every((m) => m.state === 'resting' && m.node === 'quarters')).toBe(true);
+    expect(crew.members.map((m) => m.role)).toEqual(['Flight Engineer', 'Botanist', 'Medical Officer']);
+    expect(crew.members.map((m) => m.task)).toEqual(['oxygen', 'greenhouse', 'medbay']);
+    expect(crew.members.every((m) => m.state === 'working')).toBe(true);
+  });
+
+  it('a specialist puts more effort into their own station', () => {
+    const { crew } = makeCrew(2);
+    const greenhouse = crew.stations.find((s) => s.kind === 'greenhouse');
+    expect(crew.effortAt(greenhouse)).toBe(CREW_CONFIG.SPECIALIST_EFFORT); // Leo, botanico
+    sendAndArrive(crew, 1, 'water');
+    sendAndArrive(crew, 0, 'greenhouse');
+    expect(crew.effortAt(greenhouse)).toBe(1); // Ana, engenheira, fora da especialidade
   });
 
   it('every crew member uses food, water and energy, so more crew uses more', () => {
     const one = makeCrew(1);
     const three = makeCrew(3);
+    restAll(one.crew);
+    restAll(three.crew);
     one.crew.update(1, 0);
     three.crew.update(1, 0);
 
@@ -99,7 +121,7 @@ describe('CrewManager orders and movement', () => {
     const member = crew.members[0];
     expect(member.state).toBe('walking');
 
-    const seconds = routeLength(findRoute('quarters', 'greenhouse')) / CREW_CONFIG.WALK_SPEED;
+    const seconds = routeLength(findRoute('oxygen', 'greenhouse')) / CREW_CONFIG.WALK_SPEED;
     crew.updateMovement(seconds * 0.5);
     expect(member.state).toBe('walking');
     crew.updateMovement(seconds * 0.6);
@@ -109,10 +131,10 @@ describe('CrewManager orders and movement', () => {
 
   it('refuses a station without power and keeps the old task', () => {
     const { crew } = makeCrew(1, { battery: new Battery(0) });
-    const result = crew.assign(0, 'oxygen');
+    const result = crew.assign(0, 'greenhouse');
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/power/i);
-    expect(crew.members[0].task).toBe('rest');
+    expect(crew.members[0].task).toBe('oxygen');
   });
 
   it('cannot give orders to someone who went back to Earth', () => {
@@ -122,7 +144,7 @@ describe('CrewManager orders and movement', () => {
   });
 
   it('only crew members who are working count as operators', () => {
-    const { crew } = makeCrew(2);
+    const { crew } = makeCrew(1);
     const greenhouse = crew.stations.find((s) => s.kind === 'greenhouse');
     crew.assign(0, 'greenhouse');
     expect(crew.workersAt(greenhouse)).toHaveLength(0); // ainda andando
@@ -161,10 +183,31 @@ describe('CrewManager alerts', () => {
   });
 });
 
+describe('CrewManager medical officer', () => {
+  it('without the medical officer on duty nobody warns about radiation', () => {
+    const solo = makeCrew(2, { playerDoseRate: 99 });
+    solo.crew.update(0.1, 0);
+    expect(solo.crew.drainEvents().some((e) => e.problem === 'radiation-high')).toBe(false);
+
+    const withDoctor = makeCrew(3, { playerDoseRate: 99 });
+    withDoctor.crew.update(0.1, 0);
+    const alert = withDoctor.crew.drainEvents().find((e) => e.problem === 'radiation-high');
+    expect(alert.member.name).toBe('Maya');
+  });
+
+  it('the medical officer on duty builds up healing for the commander', () => {
+    const { crew, base } = makeCrew(3);
+    crew.update(1, 0);
+    expect(base.playerHeal).toBeGreaterThan(0);
+  });
+});
+
 describe('CrewManager oxygen', () => {
   it('worn air filters make breathing cost more energy for the crew', () => {
     const fresh = makeCrew(1);
     const worn = makeCrew(1);
+    restAll(fresh.crew);
+    restAll(worn.crew);
     worn.crew.stations.find((s) => s.kind === 'oxygen').health = 0;
     expect(fresh.crew.oxygenCostMultiplier()).toBe(1);
     expect(worn.crew.oxygenCostMultiplier()).toBe(STATION_CONFIG.OXYGEN_MAX_COST_MULTIPLIER);

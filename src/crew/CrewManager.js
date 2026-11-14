@@ -2,19 +2,26 @@ import { CREW_CONFIG } from '../config/constants.js';
 import { TASK_NODE, findRoute, routeLength } from './crewRails.js';
 import { problemText } from './stations.js';
 
-const TASKS = ['greenhouse', 'water', 'oxygen', 'rest'];
+const TASKS = ['greenhouse', 'water', 'oxygen', 'medbay', 'rest'];
 
 export class CrewMember {
-  constructor(id, name) {
+  // role = { title, specialties }: papeis da issue #48. Comeca trabalhando na sua estacao.
+  constructor(id, name, role) {
     this.id = id;
     this.name = name;
-    this.task = 'rest';
-    this.state = 'resting'; // idle | walking | working | resting | weak | evacuated
-    this.node = TASK_NODE.rest;
+    this.role = role.title;
+    this.specialties = role.specialties;
+    this.task = role.specialties[0];
+    this.state = 'working'; // walking | working | resting | weak | evacuated
+    this.node = TASK_NODE[this.task];
     this.route = [this.node];
     this.distance = 0;
     this.routeLength = 0;
     this.hoursStarved = 0;
+  }
+
+  effortAt(kind) {
+    return this.specialties.includes(kind) ? CREW_CONFIG.SPECIALIST_EFFORT : 1;
   }
 
   get isActive() {
@@ -33,7 +40,7 @@ export class CrewMember {
 export class CrewManager {
   constructor({ size, stations, base }) {
     const count = Math.max(1, Math.min(CREW_CONFIG.MAX_CREW, size));
-    this.members = CREW_CONFIG.NAMES.slice(0, count).map((name, i) => new CrewMember(i, name));
+    this.members = CREW_CONFIG.NAMES.slice(0, count).map((name, i) => new CrewMember(i, name, CREW_CONFIG.ROLES[i]));
     this.stations = stations;
     this.base = base;
     this.events = [];
@@ -46,6 +53,10 @@ export class CrewManager {
 
   workersAt(station) {
     return this.members.filter((m) => m.state === 'working' && m.task === station.kind);
+  }
+
+  effortAt(station) {
+    return this.workersAt(station).reduce((sum, m) => sum + m.effortAt(station.kind), 0);
   }
 
   assign(memberId, task) {
@@ -88,7 +99,7 @@ export class CrewManager {
       const step = Math.min(remaining, CREW_CONFIG.MAX_STEP_HOURS);
       remaining -= step;
       this._consume(step);
-      for (const station of this.stations) station.update(step, this.workersAt(station).length, this.base);
+      for (const station of this.stations) station.update(step, this.effortAt(station), this.base);
     }
     this._sendAlerts(nowSeconds);
   }

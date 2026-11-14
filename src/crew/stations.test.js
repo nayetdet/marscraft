@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { STATION_CONFIG } from '../config/constants.js';
+import { RADIATION_CONFIG, STATION_CONFIG } from '../config/constants.js';
 import { Battery } from '../mission/energy.js';
-import { Greenhouse, WaterRecycler, OxygenGenerator, createStations, problemText } from './stations.js';
+import { Greenhouse, WaterRecycler, OxygenGenerator, MedBay, createStations, problemText } from './stations.js';
 
 function makeBase(overrides = {}) {
   return {
@@ -12,6 +12,9 @@ function makeBase(overrides = {}) {
     food: 0,
     maxFood: 40,
     graywater: 0,
+    playerDoseRate: 0,
+    playerHealth: 20,
+    playerHeal: 0,
     ...overrides,
   };
 }
@@ -34,6 +37,20 @@ describe('station maintenance', () => {
     expect(station.health).toBeCloseTo(0.2 + STATION_CONFIG.REPAIR_PER_HOUR);
     expect(station.operating).toBe(true);
     expect(base.battery.charge).toBeCloseTo(100 - STATION_CONFIG.WORK_ENERGY_PER_HOUR);
+  });
+
+  it('a specialist (more effort) repairs and produces faster', () => {
+    const normal = new Greenhouse();
+    const expert = new Greenhouse();
+    normal.health = expert.health = 0.2;
+    const a = makeBase();
+    const b = makeBase();
+    normal.update(0.5, 1, a);
+    expert.update(0.5, 1.5, b);
+    expect(expert.health).toBeGreaterThan(normal.health);
+    expect(b.food).toBeGreaterThan(a.food);
+    // A energia e por estacao, nao por pessoa
+    expect(b.battery.charge).toBeCloseTo(a.battery.charge);
   });
 
   it('cannot work without power and keeps breaking down', () => {
@@ -110,12 +127,33 @@ describe('OxygenGenerator', () => {
   });
 });
 
+describe('MedBay', () => {
+  it('heals the commander while the medical officer is on duty', () => {
+    const medbay = new MedBay();
+    const base = makeBase();
+    medbay.update(1, 1, base);
+    expect(base.playerHeal).toBeCloseTo(STATION_CONFIG.MEDBAY_HEAL_PER_HOUR);
+    const alone = makeBase();
+    medbay.update(1, 0, alone);
+    expect(alone.playerHeal).toBe(0);
+  });
+
+  it('warns about high radiation and low health of the commander', () => {
+    const medbay = new MedBay();
+    const storm = makeBase({ playerDoseRate: RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR });
+    expect(medbay.problems(storm)).toContain('radiation-high');
+    const hurt = makeBase({ playerHealth: STATION_CONFIG.MEDBAY_LOW_HEALTH - 1 });
+    expect(medbay.problems(hurt)).toContain('health-low');
+    expect(medbay.problems(makeBase())).toEqual([]);
+  });
+});
+
 describe('createStations and problemText', () => {
   it('creates one station of each kind with a readable message per problem', () => {
     const stations = createStations();
-    expect(stations.map((s) => s.kind).sort()).toEqual(['greenhouse', 'oxygen', 'water']);
+    expect(stations.map((s) => s.kind).sort()).toEqual(['greenhouse', 'medbay', 'oxygen', 'water']);
     for (const station of stations) {
-      for (const problem of ['no-power', 'needs-care', 'no-water', 'tank-low']) {
+      for (const problem of ['no-power', 'needs-care', 'no-water', 'tank-low', 'radiation-high', 'health-low']) {
         expect(problemText(station, problem)).toMatch(/\w/);
       }
     }
