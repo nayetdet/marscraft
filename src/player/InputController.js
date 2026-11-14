@@ -15,7 +15,6 @@ export class InputController {
     harvestCrop,
     isRoverActive = () => false,
     onInteract = () => {},
-    onStationInteract = () => {},
     onRoverAction = () => {},
     onToggleShield = () => {},
     onToggleCrewPanel = () => {},
@@ -44,7 +43,6 @@ export class InputController {
     this.harvestCrop = harvestCrop;
     this.isRoverActive = isRoverActive;
     this.onInteract = onInteract;
-    this.onStationInteract = onStationInteract;
     this.onRoverAction = onRoverAction;
     this.onRoverLook = onRoverLook;
     this.getInteraction = getInteraction;
@@ -233,11 +231,6 @@ export class InputController {
       if (e.code === 'KeyF') {
         e.preventDefault();
         this.onInteract();
-        return;
-      }
-
-      if (e.code === 'KeyV' && this.isLocked && !e.repeat && this.getInteraction?.()?.type === 'console') {
-        this.onStationInteract();
         return;
       }
 

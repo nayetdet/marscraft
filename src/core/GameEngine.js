@@ -188,7 +188,6 @@ export class GameEngine {
       },
       isRoverActive: () => this.roverController.isActive,
       onInteract: () => this.handlePlayerInteract(),
-      onStationInteract: () => this._interact(),
       onRoverAction: () => this.handleRoverAction(),
       onRoverLook: (dx, dy) => this.roverController.look(dx, dy),
       onToggleShield: () => this._toggleShield(),
@@ -231,7 +230,8 @@ export class GameEngine {
     this.airlock.update(dt, this.player.pos);
     this._growCrops(dt);
     if (this.survival.health <= 0) this.survival.isDead = true;
-    document.getElementById('interaction-hint').textContent = this._getInteraction()?.label ?? '';
+    const hasPriorityInteraction = ['crew', 'water_dispenser', 'rover_terminal', 'mav', 'greenhouse'].includes(this.currentInteraction);
+    document.getElementById('interaction-hint').textContent = hasPriorityInteraction ? '' : (this._getInteraction()?.label ?? '');
     document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
     document.getElementById('mission-objective').textContent = this.expedition.objective;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
@@ -270,17 +270,11 @@ export class GameEngine {
     let best = null, bestDistance = 4;
     const candidates = [
       ...this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' })),
-      { type: 'console', x: 0, y: 11.4, z: -3.6, label: 'Press V: mission console · F: rover' },
       { type: 'power', x: 4.6, y: 11.4, z: -1.5, label: 'Press F: life support' },
-      { type: 'airlock', x: 1.8, y: 11.4, z: 7.5, label: 'Press F: suit cleaning' },
       { type: 'greenhouse', x: -17, y: 11.4, z: 0, label: 'Press F: greenhouse' },
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: exercise bike (muscle & cardio)' },
       { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
-      { type: 'science', x: 4, y: 11.3, z: 2.4, label: 'Press F: science lab' },
-      { type: 'shelter', x: -2.8, y: 11.2, z: 0.5, label: 'Press F: storm shelter' },
-      { type: 'suitport', x: 3, y: 11.2, z: 9, label: 'Press F: suitport' },
-      { type: 'mav', x: 14, y: 11.2, z: 0, label: 'Press F: MAV data terminal' },
     ];
     for (const candidate of candidates) {
       this._interactionPoint.set(candidate.x, candidate.y, candidate.z);
@@ -300,7 +294,7 @@ export class GameEngine {
     if (target.type === 'door') message = this.airlock.request(target.door, this.player.pos);
     else { this.stationPanel.open(target.type); return; }
     this.hud.showToast(message);
-    if (target.type === 'door' && (message.startsWith('Airlock cycling') || message.startsWith('Closing'))) this._playDoorSound();
+    if (target.type === 'door' && (message.startsWith('Opening') || message.startsWith('Closing'))) this._playDoorSound();
   }
 
   _playDoorSound() {
@@ -323,38 +317,11 @@ export class GameEngine {
 
   _buildStationMarkers() {
     const dark = new THREE.MeshLambertMaterial({ color: 0x293b43 });
-    // A bright pixel-block border makes the protected area recognizable in-game.
-    const border = new THREE.MeshLambertMaterial({ color: 0xe2b44c });
-    for (const [x, z, width, depth] of [[-3, 0.5, 0.12, 2.6], [-1, 0.5, 0.12, 2.6], [-2, -0.8, 2, 0.12], [-2, 1.8, 2, 0.12]]) {
-      const strip = new THREE.Mesh(new THREE.BoxGeometry(width, 0.025, depth), border);
-      strip.position.set(x, 10.02, z);
-      this.scene.add(strip);
-    }
-    // Water tanks and regolith canopy identify the storm shelter.
-    const tankMat = new THREE.MeshLambertMaterial({ color: 0x497e9c });
-    const regolithMat = new THREE.MeshLambertMaterial({ color: 0x955c42 });
-    for (const z of [-0.55, 1.55]) {
-      const tank = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.35, 0.45), tankMat);
-      tank.position.set(-3.25, 10.7, z); this.scene.add(tank);
-    }
-    const canopy = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.22, 2.8), regolithMat);
-    canopy.position.set(-2, 13.1, 0.5); this.scene.add(canopy);
     // Voxel hydroponic tray and grow lights.
-    const trayMat = new THREE.MeshLambertMaterial({ color: 0x354958 });
-    const tray = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.22, 0.9), trayMat);
-    tray.position.set(-16.5, 10.25, 0); this.scene.add(tray);
     this.stationCrop = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.7, 0.65), new THREE.MeshLambertMaterial({ color: 0x61b54c }));
     this.stationCrop.position.set(-16.5, 10.7, 0); this.stationCrop.visible = false; this.scene.add(this.stationCrop);
-    const growLight = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.12, 0.35), new THREE.MeshLambertMaterial({ color: 0xdd6cd8, emissive: 0x8b266f }));
-    growLight.position.set(-16.5, 12, 0); this.scene.add(growLight);
-    // External suitport concept: backpack hatch and visor, built from blocks.
-    const suit = new THREE.Group();
-    for (const [w,h,d,x,y,z,color] of [[0.75,1,0.42,0,0.7,0,0xdce5e5],[0.6,0.55,0.46,0,1.48,0,0xc7d6d9],[0.44,0.26,0.08,0,1.5,0.26,0x345963],[0.25,0.85,0.28,-0.5,0.65,0,0x9eafb5],[0.25,0.85,0.28,0.5,0.65,0,0x9eafb5]]) {
-      const block = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshLambertMaterial({ color })); block.position.set(x,y,z); suit.add(block);
-    }
-    suit.position.set(3, 10, 9); this.scene.add(suit);
-    const colors = { treadmill: 0x38bdf8, bike: 0x4ade80, medical: 0xe76b65, science: 0x5ac9e6, shelter: 0xe2b44c, airlock: 0x71def0, greenhouse: 0xd36adf, suitport: 0x81e4ee, mav: 0xf4bd64 };
-    for (const [type, x, z] of [['treadmill', -9.2, 9.2], ['bike', -5.8, 9.5], ['medical', -7.6, 12.4], ['science', 4, 2.4], ['shelter', -2.8, 0.5], ['airlock', 1.8, 7.5], ['greenhouse', -17, 0], ['suitport', 3, 9], ['mav', 14, 0]]) {
+    const colors = { treadmill: 0x38bdf8, bike: 0x4ade80, medical: 0xe76b65 };
+    for (const [type, x, z] of [['treadmill', -9.2, 9.2], ['bike', -5.8, 9.5], ['medical', -7.6, 12.4]]) {
       const frame = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.12), dark);
       const screen = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.14), new THREE.MeshLambertMaterial({ color: colors[type], emissive: colors[type], emissiveIntensity: 0.18 }));
       frame.position.set(x, 11.4, z); screen.position.set(x, 11.4, z + 0.04);
@@ -827,7 +794,7 @@ export class GameEngine {
     }
 
     const station = this._getInteraction();
-    if (station && !['console', 'mav'].includes(station.type)) {
+    if (station && !['water_dispenser', 'rover_terminal', 'greenhouse'].includes(this.currentInteraction) && station.type !== 'mav') {
       this._interact();
       return;
     }
