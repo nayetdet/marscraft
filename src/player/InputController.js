@@ -135,8 +135,12 @@ export class InputController {
 
     document.addEventListener('pointerlockchange', () => {
       this.isLocked = document.pointerLockElement === this.domElement;
-      if (!this.isLocked) this._cancelBreaking();
-      if (!this.isLocked) this.keys = {};
+      if (!this.isLocked) {
+        // Sem pointer lock o jogador para: sem teclas presas e sem animacao de caminhada.
+        this._cancelBreaking();
+        this.keys = {};
+        this.player.isMoving = false;
+      }
       if (!this.survival.isDead && !this.hud.isInventoryOpen) {
         overlay.classList.toggle('hidden', this.isLocked);
       }
