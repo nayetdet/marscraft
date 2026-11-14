@@ -66,7 +66,8 @@ describe('resolveScanTarget: base modules', () => {
     // x = 2 é a parede do airlock; em x = 0 o raio passa pela porta aberta até o habitat.
     ['airlock', { x: 2.5, y: 11.5, z: 15 }],
     ['habitat', { x: 5.5, y: 11.5, z: 15 }],
-    ['tunnel', { x: -9.5, y: 11.5, z: 10 }],
+    // The gym wing now stands between z = 10 and the tunnel.
+    ['tunnel', { x: -9.5, y: 11.5, z: 5 }],
     ['greenhouse', { x: -17.5, y: 11.5, z: 20 }],
     ['cupola', { x: 0.5, y: 16.5, z: 20 }],
     ['lander', { x: 14.5, y: 13.5, z: 20 }],

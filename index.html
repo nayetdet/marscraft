@@ -25,6 +25,7 @@
   </div>
 
   <div id="game-container"></div>
+  <div id="co2-overlay" style="position:fixed;inset:0;background:#070d10;opacity:0;pointer-events:none;z-index:9"></div>
   <div class="rotate-device-overlay" role="dialog" aria-modal="true" aria-labelledby="rotate-device-title">
     <div class="rotate-device-icon" aria-hidden="true"></div>
     <h2 id="rotate-device-title">Rotate your device</h2>
@@ -37,6 +38,9 @@
       <div id="sol-time">Sol 1 - 17:15</div>
       <div id="player-coords">XYZ: 0 / 13 / 19</div>
       <div id="env-status">Environment: Martian Crater (using oxygen)</div>
+      <div id="mission-status"></div>
+      <div id="mission-objective"></div>
+      <div id="station-warning" style="color:#ffcf64"></div>
       <div id="base-water-status">Base Water: 25L · Greenhouse: 100% (Hydrated)</div>
     </div>
 
@@ -70,6 +74,7 @@
 
     <!-- Mira classica em cruz (+) do Minecraft -->
     <div class="mc-crosshair"></div>
+    <div id="interaction-hint" style="position:absolute;top:54%;width:100%;text-align:center;color:white;text-shadow:2px 2px #000;pointer-events:none"></div>
 
     <div id="mobile-controls" class="mobile-controls" aria-label="Touch controls">
       <div id="mobile-joystick" class="mobile-joystick" role="application" aria-label="Movement joystick">
@@ -200,6 +205,15 @@
         </section>
       </div>
     </div>
+  </div>
+
+  <div id="station-overlay" class="station-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="station-title">
+    <section class="station-window">
+      <header><span id="station-title"></span><button id="station-close" aria-label="Close station">X</button></header>
+      <div class="station-screen"><pre id="station-content"></pre><div id="gym-interactive" class="gym-interactive hidden"></div><div id="station-sources" class="station-sources"></div><p id="station-feedback" role="status"></p></div>
+      <div id="station-actions"></div>
+      <p class="station-footer">MISSION SYSTEMS // SIMULATION PAUSED</p>
+    </section>
   </div>
 
   <div id="inventory-overlay" class="inventory-overlay hidden">

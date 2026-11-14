@@ -32,6 +32,16 @@ export const HABITAT_LAYOUT = {
   DOME_RADIUS: 7,
   DOME_SHELL: 0.65,
   DOME_Y_SQUASH: 1.05,
+  // Corredor pressurizado Sudoeste ate o Modulo da Academia: ar em x = -6..-5, z = 5..7, y = 10..13.
+  GYM_CORRIDOR_X_MIN: -6,
+  GYM_CORRIDOR_X_MAX: -5,
+  GYM_CORRIDOR_Z_MIN: 5,
+  GYM_CORRIDOR_Z_MAX: 7,
+  // Modulo da Academia (Gym & MedBay): paredes em x = -12 e -4, z = 7 e 13; ar em x = -11..-5, z = 8..12, y = 10..13.
+  GYM_X_MIN: -11,
+  GYM_X_MAX: -5,
+  GYM_Z_MIN: 8,
+  GYM_Z_MAX: 12,
 };
 
 const L = HABITAT_LAYOUT;
@@ -79,6 +89,28 @@ function inGreenhouseDome(bx, by, bz) {
   return dist < L.DOME_RADIUS - L.DOME_SHELL;
 }
 
+function inGymCorridor(bx, by, bz) {
+  return (
+    bx >= L.GYM_CORRIDOR_X_MIN &&
+    bx <= L.GYM_CORRIDOR_X_MAX &&
+    bz >= L.GYM_CORRIDOR_Z_MIN &&
+    bz <= L.GYM_CORRIDOR_Z_MAX &&
+    by > L.FLOOR_Y &&
+    by < L.CEIL_Y
+  );
+}
+
+function inGymModule(bx, by, bz) {
+  return (
+    bx >= L.GYM_X_MIN &&
+    bx <= L.GYM_X_MAX &&
+    bz >= L.GYM_Z_MIN &&
+    bz <= L.GYM_Z_MAX &&
+    by > L.FLOOR_Y &&
+    by < L.CEIL_Y
+  );
+}
+
 // Recebe a posicao dos olhos do jogador e diz se ela esta num bloco de ar pressurizado.
 export function isInsidePressurizedVolume(x, y, z) {
   const bx = Math.floor(x);
@@ -89,6 +121,8 @@ export function isInsidePressurizedVolume(x, y, z) {
     inAirlock(bx, by, bz) ||
     inCupola(bx, by, bz) ||
     inTunnel(bx, by, bz) ||
-    inGreenhouseDome(bx, by, bz)
+    inGreenhouseDome(bx, by, bz) ||
+    inGymCorridor(bx, by, bz) ||
+    inGymModule(bx, by, bz)
   );
 }

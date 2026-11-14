@@ -21,6 +21,9 @@ export class InputController {
     onSendData = () => {},
     isMissionModalOpen = () => false,
     onRoverLook = () => {},
+    getInteraction,
+    isStationOpen,
+    getWorkSpeed,
     isJournalOpen = () => false,
     onToggleJournal = () => {},
   }) {
@@ -42,6 +45,9 @@ export class InputController {
     this.onInteract = onInteract;
     this.onRoverAction = onRoverAction;
     this.onRoverLook = onRoverLook;
+    this.getInteraction = getInteraction;
+    this.isStationOpen = isStationOpen;
+    this.getWorkSpeed = getWorkSpeed;
     this.isJournalOpen = isJournalOpen;
     this.onToggleJournal = onToggleJournal;
 
@@ -149,7 +155,7 @@ export class InputController {
   }
 
   _handleTouchAction(action, button, pointerId) {
-    if (!this.isTouchMode || !this.isLocked || this.survival.isDead || this.hud.isInventoryOpen) return;
+    if (!this.isTouchMode || !this.isLocked || this.survival.isDead || this.hud.isInventoryOpen || this.isStationOpen?.()) return;
 
     if (action === 'jump' || action === 'mine') {
       this.touchHeldActions.set(pointerId, action);
@@ -216,7 +222,7 @@ export class InputController {
   }
 
   _moveJoystick(event) {
-    if (event.pointerId !== this.joystickPointerId || this.survival.isDead || this.hud.isInventoryOpen) return;
+    if (event.pointerId !== this.joystickPointerId || this.survival.isDead || this.hud.isInventoryOpen || this.isStationOpen?.()) return;
     const rect = document.getElementById('mobile-joystick').getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + 56;
@@ -278,7 +284,7 @@ export class InputController {
       return;
     }
 
-    target.progress = Math.min(1, target.progress + dt / BLOCK_INTERACTION_CONFIG.BREAK_TIME);
+    target.progress = Math.min(1, target.progress + dt * (this.getWorkSpeed?.() ?? 1) / BLOCK_INTERACTION_CONFIG.BREAK_TIME);
     if (target.type === 'crop') this.world.updateCropBreakCracks(target.plant, target.progress);
     else this.world.updateBreakCracks(target.x, target.y, target.z, target.progress);
     this.breakSwingTimer += dt;
@@ -363,7 +369,7 @@ export class InputController {
         this.keys = {};
         this.player.isMoving = false;
       }
-      if (!this.survival.isDead && !this.hud.isInventoryOpen && !this.isMissionModalOpen() && !this.isJournalOpen()) {
+      if (!this.survival.isDead && !this.hud.isInventoryOpen && !this.isMissionModalOpen() && !this.isStationOpen?.() && !this.isJournalOpen()) {
         overlay.classList.toggle('hidden', this.isLocked);
       }
     });
@@ -378,7 +384,7 @@ export class InputController {
     });
 
     window.addEventListener('keydown', (e) => {
-      if (this.survival.isDead) return;
+      if (this.survival.isDead || this.isStationOpen?.()) return;
       // Painel do MAV, da tripulacao ou vitoria abertos: so [F] e [C] (fechar o painel) funcionam
       if (this.isMissionModalOpen()) {
         if (e.code === 'KeyF' && !e.repeat) this.onInteract();
@@ -424,6 +430,11 @@ export class InputController {
       if (e.code === 'KeyE') {
         e.preventDefault();
         this._toggleInventory();
+        return;
+      }
+
+      if (e.code === 'KeyF' && this.isLocked && !e.repeat) {
+        this.onInteract?.();
         return;
       }
 
@@ -476,6 +487,12 @@ export class InputController {
 
     window.addEventListener('mousedown', (e) => {
       if (!this.isLocked || this.survival.isDead || this.isRoverActive()) return;
+
+      const interaction = this.getInteraction?.();
+      if (interaction && ['treadmill', 'bike', 'medical'].includes(interaction.type) && (e.button === 0 || e.button === 2)) {
+        this.onInteract?.();
+        return;
+      }
 
       if (e.button === 0) {
         this.isBreakButtonHeld = true;

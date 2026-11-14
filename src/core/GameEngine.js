@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CAMERA_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
 import { createBaseStock } from '../crew/baseStock.js';
@@ -17,7 +17,7 @@ import { createBlockMaterials } from '../graphics/blockMaterials.js';
 import { MarsSkySystem } from '../sky/MarsSkySystem.js';
 import { VoxelWorld } from '../world/VoxelWorld.js';
 import { buildNasaCustomModels } from '../world/nasaModelsBuilder.js';
-import { targetCrop, removeCrop } from '../world/cropInteraction.js';
+import { targetCrop } from '../world/cropInteraction.js';
 import { PlayerPhysics } from '../player/PlayerPhysics.js';
 import { PlayerHand } from '../player/PlayerHand.js';
 import { SurvivalSystem } from '../player/SurvivalSystem.js';
@@ -25,6 +25,10 @@ import { InputController } from '../player/InputController.js';
 import { HudManager } from '../ui/HudManager.js';
 import { DebugOverlay } from '../ui/DebugOverlay.js';
 import { RoverController } from '../rover/RoverController.js';
+import { MissionSystem as ExpeditionSystem } from './MissionSystem.js';
+import { Airlock } from '../world/Airlock.js';
+import { StationSystem } from './StationSystem.js';
+import { StationPanel } from '../ui/StationPanel.js';
 import { getCategoryLabel } from '../data/scanCatalog.js';
 import { ScanJournal } from '../scanner/scanJournal.js';
 import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js';
@@ -99,6 +103,22 @@ export class GameEngine {
 
     this.player = new PlayerPhysics(this.world, colliders);
     this.survival = new SurvivalSystem();
+    this.mission = new MissionSystem({ cmes: donkiCme.cmes, startHours: this._skyHours() });
+    this.expedition = new ExpeditionSystem();
+    Object.defineProperty(this.expedition, 'energy', {
+      get: () => this.mission.battery.charge,
+      set: (value) => { this.mission.battery.charge = value; },
+    });
+    this.airlock = new Airlock(this.scene, colliders, this.expedition);
+    this.stations = new StationSystem(this.expedition);
+    this.stationPanel = new StationPanel(this);
+    this._buildStationMarkers();
+    this.growingCrops = [];
+    this._interactionDir = new THREE.Vector3();
+    this._interactionOffset = new THREE.Vector3();
+    this._interactionPoint = new THREE.Vector3();
+    this._lastStorm = false;
+    this._lastStormWarning = false;
 
     // Maozinha 3D do jogador em primeira pessoa
     this.playerHand = new PlayerHand(this.camera, materials, carrot.texture);
@@ -120,7 +140,6 @@ export class GameEngine {
     this._initScanner();
 
     // Missao: energia, tempestades solares (CMEs reais do DONKI) e o MAV
-    this.mission = new MissionSystem({ cmes: donkiCme.cmes, startHours: this._skyHours() });
     this.shieldBubble = new ShieldBubble(this.scene, SHIELD_ZONE);
     this.missionHud = new MissionHud({
       donkiFetched: donkiCme.fetched,
@@ -161,12 +180,12 @@ export class GameEngine {
         }
       },
       getTargetedBlock: () => this._getTargetedBlock(),
+      harvestCrop: (plant) => this._harvestCrop(plant),
       isJournalOpen: () => this.scannerHud.isJournalOpen,
       onToggleJournal: (open) => {
         if (open) this.scannerHud.openJournal(this.scanJournal);
         else this.scannerHud.closeJournal();
       },
-      harvestCrop: (plant) => removeCrop(plant, this.plants, this.customColliders),
       isRoverActive: () => this.roverController.isActive,
       onInteract: () => this.handlePlayerInteract(),
       onRoverAction: () => this.handleRoverAction(),
@@ -176,6 +195,9 @@ export class GameEngine {
       onSendData: () => this._sendScienceData(),
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown || this.crewPanel.isOpen,
+      getInteraction: () => this._getInteraction(),
+      isStationOpen: () => this.stationPanel.isOpen,
+      getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || !this.stations.freshFood ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
     });
 
     this._lookDir = new THREE.Vector3();
@@ -189,6 +211,128 @@ export class GameEngine {
     this.lastTime = performance.now();
   }
 
+  _updateExpedition(dt) {
+    const inside = this.survival.isPlayerInsideShip(this.player.pos);
+    const insideCore = inside && !(Math.abs(this.player.pos.x - 0.5) < 1.5 && this.player.pos.z >= 6);
+    const shelter = insideCore && this.player.pos.x > -3 && this.player.pos.x < -1 && Math.abs(this.player.pos.z - 0.5) < 1.3;
+    this.expedition.greenhousePowered = this.expedition.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
+    if (this.expedition.stage === 'outside' && !inside) this.expedition.stage = 'sample';
+    if (this.expedition.stage === 'return' && inside) this.expedition.stage = 'report';
+    const storm = this.mission.storm.phase === 'active';
+    this.stations.update(dt, insideCore, shelter, this.survival, storm, !inside);
+    this.expedition.radiation = Math.min(100, this.mission.totalDoseMsv / RADIATION_CONFIG.CAREER_LIMIT_MSV * 100);
+    const crop = this.stations.crop;
+    this.stationCrop.visible = Boolean(crop);
+    if (crop) {
+      this.stationCrop.scale.y = 0.2 + 0.8 * crop.progress / STATION_CONFIG.CROP_GROWTH_TIME;
+      this.stationCrop.material.color.setHex(({ potato: 0x69a63c, lettuce: 0x77d749, soy: 0x3b8551 })[crop.type]);
+    }
+    this.airlock.update(dt, this.player.pos);
+    this._growCrops(dt);
+    if (this.survival.health <= 0) this.survival.isDead = true;
+    const hasPriorityInteraction = ['crew', 'water_dispenser', 'rover_terminal', 'mav', 'greenhouse'].includes(this.currentInteraction);
+    document.getElementById('interaction-hint').textContent = hasPriorityInteraction ? '' : (this._getInteraction()?.label ?? '');
+    document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
+    document.getElementById('mission-objective').textContent = this.expedition.objective;
+    document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
+    document.getElementById('station-warning').textContent = this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : '';
+  }
+
+  _harvestCrop(plant) {
+    const index = this.plants.indexOf(plant);
+    if (index < 0) return false;
+    this.plants.splice(index, 1);
+    const collider = plant.userData.collider;
+    const colliderIndex = this.customColliders.indexOf(collider);
+    if (colliderIndex >= 0) this.customColliders.splice(colliderIndex, 1);
+    plant.scale.setScalar(0.25);
+    this.growingCrops.push({ plant, collider, elapsed: 0 });
+    return true;
+  }
+
+  _growCrops(dt) {
+    if (!this.expedition.greenhousePowered || this.stations?.contaminated) return;
+    for (let i = this.growingCrops.length - 1; i >= 0; i--) {
+      const crop = this.growingCrops[i];
+      crop.elapsed += dt;
+      const progress = Math.min(1, crop.elapsed / MISSION_CONFIG.CROP_GROWTH_TIME);
+      crop.plant.scale.setScalar(0.25 + progress * 0.75);
+      if (progress === 1) {
+        this.plants.push(crop.plant);
+        if (crop.collider) this.customColliders.push(crop.collider);
+        this.growingCrops.splice(i, 1);
+      }
+    }
+  }
+
+  _getInteraction() {
+    const dir = this.player.getLookDirection(this._interactionDir);
+    let best = null, bestDistance = 4;
+    const candidates = [
+      ...this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' })),
+      { type: 'power', x: 4.6, y: 11.4, z: -1.5, label: 'Press F: life support' },
+      { type: 'greenhouse', x: -17, y: 11.4, z: 0, label: 'Press F: greenhouse' },
+      { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: space treadmill (bone density)' },
+      { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: exercise bike (muscle & cardio)' },
+      { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
+    ];
+    for (const candidate of candidates) {
+      this._interactionPoint.set(candidate.x, candidate.y, candidate.z);
+      this._interactionOffset.copy(this._interactionPoint).sub(this.player.pos);
+      const distance = this._interactionOffset.length();
+      if (distance < bestDistance && distance > 0 && this._interactionOffset.dot(dir) / distance > 0.8) {
+        best = candidate; bestDistance = distance;
+      }
+    }
+    return best;
+  }
+
+  _interact() {
+    const target = this._getInteraction();
+    if (!target) return;
+    let message;
+    if (target.type === 'door') message = this.airlock.request(target.door, this.player.pos);
+    else { this.stationPanel.open(target.type); return; }
+    this.hud.showToast(message);
+    if (target.type === 'door' && (message.startsWith('Opening') || message.startsWith('Closing'))) this._playDoorSound();
+  }
+
+  _playDoorSound() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    this._audioContext ??= new AudioContextClass();
+    const audio = this._audioContext;
+    if (audio.state === 'suspended') audio.resume();
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(110, audio.currentTime);
+    oscillator.frequency.linearRampToValueAtTime(65, audio.currentTime + 0.25);
+    gain.gain.setValueAtTime(0.025, audio.currentTime);
+    gain.gain.linearRampToValueAtTime(0, audio.currentTime + 0.25);
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start();
+    oscillator.stop(audio.currentTime + 0.25);
+  }
+
+  _buildStationMarkers() {
+    const dark = new THREE.MeshLambertMaterial({ color: 0x293b43 });
+    // Voxel hydroponic tray and grow lights.
+    this.stationCrop = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.7, 0.65), new THREE.MeshLambertMaterial({ color: 0x61b54c }));
+    this.stationCrop.position.set(-16.5, 10.7, 0); this.stationCrop.visible = false; this.scene.add(this.stationCrop);
+    const colors = { treadmill: 0x38bdf8, bike: 0x4ade80, medical: 0xe76b65 };
+    for (const [type, x, z] of [['treadmill', -9.2, 9.2], ['bike', -5.8, 9.5], ['medical', -7.6, 12.4]]) {
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.12), dark);
+      const screen = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.14), new THREE.MeshLambertMaterial({ color: colors[type], emissive: colors[type], emissiveIntensity: 0.18 }));
+      frame.position.set(x, 11.4, z); screen.position.set(x, 11.4, z + 0.04);
+      this.scene.add(frame, screen);
+    }
+    // Glowing archway indicator above the Southwest Gym Wing corridor entrance
+    const gymSign = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.22, 0.14), new THREE.MeshLambertMaterial({ color: 0x38bdf8, emissive: 0x0ea5e9, emissiveIntensity: 0.45 }));
+    gymSign.position.set(-5.0, 13.2, 4.9);
+    this.scene.add(gymSign);
+  }
+
   _initBaseLights() {
     // Luz clara dentro do Módulo Hab Branco Principal
     const habLight = new THREE.PointLight(0xffffff, 1.6, 22);
@@ -199,6 +343,11 @@ export class GameEngine {
     const domeLight = new THREE.PointLight(0xf0fdf4, 1.5, 18);
     domeLight.position.set(-18, 13.5, 0);
     this.scene.add(domeLight);
+
+    // Luz clara dentro do Módulo da Academia (Gym & MedBay)
+    const gymLight = new THREE.PointLight(0xe0f2fe, 1.5, 16);
+    gymLight.position.set(-8, 13.0, 10.5);
+    this.scene.add(gymLight);
   }
 
   _initHighlightWireframe() {
@@ -428,7 +577,7 @@ export class GameEngine {
       insideShield: isInsideShieldZone(this.player.pos),
       active,
     });
-    if (active) this.survival.takeDamage(damage);
+    if (active) this.survival.takeDamage(damage * (this.stations.upgraded && !this.survival.insidePressurizedShip ? STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR : 1));
 
     if (this.survival.isDead && !this._wasDead) {
       this.mission.markDeath();
@@ -644,6 +793,11 @@ export class GameEngine {
       return;
     }
 
+    const station = this._getInteraction();
+    if (station && !['water_dispenser', 'rover_terminal', 'greenhouse'].includes(this.currentInteraction) && station.type !== 'mav') {
+      this._interact();
+      return;
+    }
     if (this.currentInteraction === 'rover_terminal') {
       this.toggleRoverMode();
     } else if (this.currentInteraction === 'water_dispenser') {
@@ -684,6 +838,7 @@ export class GameEngine {
         && !this.input.isPortraitRequired
         && !this.survival.isDead
         && !this.hud.isInventoryOpen
+        && !this.stationPanel.isOpen
         && !this.missionHud.isVictoryShown;
       if (isGameRunning) {
         if (this.roverController.isActive) {
@@ -729,6 +884,10 @@ export class GameEngine {
 
       const pickedUpBlocks = this.world.updateDrops(dt, this.player.pos, (id) => id === BLOCK_IDS.HYDRO_PLANT ? this.survival.addHarvestedCrop() : this.survival.addBlockToInventory(id));
       if (pickedUpBlocks.length > 0) {
+        if (pickedUpBlocks.includes(BLOCK_IDS.REGOLITH) && !this.survival.isPlayerInsideShip(this.player.pos)) {
+          this.stations.samples += pickedUpBlocks.filter(id => id === BLOCK_IDS.REGOLITH).length;
+          this.expedition.collectSample(false);
+        }
         this.hud.renderHotbar(this.survival.slots);
         const heldSlot = this.survival.slots[this.hud.selectedSlot];
         this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
@@ -740,6 +899,7 @@ export class GameEngine {
       if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
       this._updateMission(dt);
       this._updateCrew(dt);
+      if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
 
       this.renderer.render(this.scene, this.camera);
       this.debug.frame(frameMs);

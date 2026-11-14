@@ -1,6 +1,5 @@
 import { CREW_CONFIG } from '../config/constants.js';
 import { problemText } from '../crew/stations.js';
-import { dailyCrewNeeds } from '../crew/crewText.js';
 
 const TASKS = [
   { task: 'oxygen', label: 'Oxygen', help: 'Cleans the air filters, so air costs less power.' },
@@ -142,14 +141,8 @@ export class CrewPicker {
 
   render() {
     const sizes = Array.from({ length: CREW_CONFIG.MAX_CREW }, (_, i) => i + 1);
-    const needs = dailyCrewNeeds(this.size);
-    const people = CREW_CONFIG.NAMES.slice(0, this.size)
-      .map((name, i) => `${name} (${CREW_CONFIG.ROLES[i].title})`).join(', ');
     this.el.innerHTML = `
-      <p class="crew-picker-title">Crew size${this.locked ? ' (chosen)' : ''}</p>
-      <div class="crew-picker-buttons">${sizes.map((n) => `<button class="mc-btn${n === this.size ? ' crew-current' : ''}" data-size="${n}" ${this.locked ? 'disabled' : ''}>${n}</button>`).join('')}</div>
-      <p class="crew-picker-text">${people}.</p>
-      <p class="crew-picker-text">Every sol (Mars day) they eat ${Math.round(needs.food)} food, drink ${Math.round(needs.water)} L of water and use ${Math.round(needs.battery)}% of a battery for air. More crew can run more stations, but uses more supplies.</p>
-      <p class="crew-picker-note">NASA plans crew size around life support. Needs based on the NASA Baseline Values and Assumptions Document.</p>`;
+      <p class="crew-picker-title">Crew size</p>
+      <div class="crew-picker-buttons">${sizes.map((n) => `<button class="mc-btn${n === this.size ? ' crew-current' : ''}" data-size="${n}" ${this.locked ? 'disabled' : ''}>${n}</button>`).join('')}</div>`;
   }
 }

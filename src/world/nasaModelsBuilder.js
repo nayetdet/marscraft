@@ -150,6 +150,18 @@ export function buildNasaCustomModels(scene) {
   solidObjects.push(rocket);
   group.add(factory);
   solidObjects.push(factory);
+  // 8. Equipamentos 3D do Módulo da Academia (Esteira Espacial, Bicicleta Ergométrica e Scanner MedBay)
+  const treadmill = createSpaceTreadmillModel(mats, -9.2, floorTopY, 10.2);
+  group.add(treadmill);
+  solidObjects.push(treadmill);
+
+  const exerciseBike = createExerciseBikeModel(mats, -5.8, floorTopY, 10.4);
+  group.add(exerciseBike);
+  solidObjects.push(exerciseBike);
+
+  const gymMedbay = createGymMedbayModel(mats, -7.6, floorTopY, 12.1);
+  group.add(gymMedbay);
+  solidObjects.push(gymMedbay);
 
   group.updateMatrixWorld(true);
 
@@ -503,6 +515,46 @@ function createIceProcessingDepotModel(mats, x, y, z) {
   return g;
 }
 
+function createSpaceTreadmillModel(mats, x, y, z) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+
+  // Base isoladora de vibração (estilo NASA T2 / COLBERT) e plataforma de corrida
+  addBox(g, 1.18, 0.08, 2.1, mats.darkSlate, 0, 0.04, 0);
+  for (const sx of [-0.46, 0.46]) {
+    for (const sz of [-0.78, 0.78]) {
+      addBox(g, 0.14, 0.12, 0.18, mats.goldFoil, sx, 0.12, sz);
+    }
+  }
+  addBox(g, 1.12, 0.14, 2.0, mats.whiteMetal, 0, 0.22, 0);
+  // Lona preta da esteira + faixas de tração
+  addBox(g, 0.82, 0.05, 1.78, mats.charcoal, 0, 0.3, 0.05);
+  for (let i = -3; i <= 3; i++) {
+    addBox(g, 0.74, 0.06, 0.05, mats.lightGray, 0, 0.31, 0.05 + i * 0.24);
+  }
+  // Trilhos laterais antiderrapantes
+  addBox(g, 0.12, 0.08, 1.88, mats.nasaBlue, -0.48, 0.31, 0.02);
+  addBox(g, 0.12, 0.08, 1.88, mats.nasaBlue, 0.48, 0.31, 0.02);
+
+  // Colunas frontais e barras de apoio laterais
+  for (const sx of [-0.48, 0.48]) {
+    addBox(g, 0.1, 1.15, 0.12, mats.lightGray, sx, 0.86, -0.82, -0.12, 0, 0);
+    addBox(g, 0.08, 0.08, 1.15, mats.charcoal, sx, 1.18, -0.32);
+    // Braços tensores do colete de gravidade artificial (bungee harness para densidade óssea)
+    addBox(g, 0.12, 0.12, 0.55, mats.nasaBlue, sx, 0.78, 0.05);
+    addBox(g, 0.08, 0.48, 0.08, mats.cyanGlow, sx, 0.54, 0.18);
+  }
+
+  // Painel digital frontal da esteira
+  addBox(g, 1.08, 0.42, 0.24, mats.darkSlate, 0, 1.38, -0.88, 0.32, 0, 0);
+  addBox(g, 0.78, 0.28, 0.06, mats.screenMat, 0, 1.42, -0.76, 0.32, 0, 0);
+  addBox(g, 0.14, 0.08, 0.08, mats.redBtn, 0, 1.24, -0.74, 0.32, 0, 0);
+  addBox(g, 0.12, 0.08, 0.08, mats.greenGlow, -0.28, 1.24, -0.74, 0.32, 0, 0);
+  addBox(g, 0.12, 0.08, 0.08, mats.yellowBtn, 0.28, 1.24, -0.74, 0.32, 0, 0);
+
+  return g;
+}
+
 // MAV: foguete de subida em blocos (sem logos), plataforma e uma pequena fabrica ISRU ao lado
 function createMavModel(mats, x, y, z) {
   const pad = new THREE.Group();
@@ -560,4 +612,66 @@ function createMavModel(mats, x, y, z) {
   addBox(pad, 2.4, 0.14, 0.14, mats.darkSlate, 2.6, 0.12, -1.2);
 
   return { pad, rocket, factory };
+}
+
+function createExerciseBikeModel(mats, x, y, z) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+
+  // Pés estabilizadores e chassi central (ergômetro espacial CEVIS)
+  addBox(g, 0.78, 0.1, 0.2, mats.darkSlate, 0, 0.05, -0.62);
+  addBox(g, 0.78, 0.1, 0.2, mats.darkSlate, 0, 0.05, 0.62);
+  addBox(g, 0.22, 0.12, 1.36, mats.lightGray, 0, 0.08, 0);
+
+  // Carenagem do volante de inércia magnético (flywheel)
+  addBox(g, 0.32, 0.62, 0.62, mats.whiteMetal, 0, 0.42, -0.18);
+  addBox(g, 0.36, 0.42, 0.42, mats.nasaBlue, 0, 0.42, -0.18);
+  addBox(g, 0.38, 0.18, 0.18, mats.cyanGlow, 0, 0.42, -0.18);
+
+  // Pedivela e pedais com presilhas de pé
+  addBox(g, 0.56, 0.08, 0.08, mats.charcoal, 0, 0.38, 0.08);
+  addBox(g, 0.08, 0.26, 0.08, mats.lightGray, -0.26, 0.48, 0.14, 0.35, 0, 0);
+  addBox(g, 0.18, 0.06, 0.22, mats.charcoal, -0.34, 0.58, 0.2);
+  addBox(g, 0.16, 0.04, 0.14, mats.yellowBtn, -0.34, 0.62, 0.2);
+
+  addBox(g, 0.08, 0.26, 0.08, mats.lightGray, 0.26, 0.28, 0.02, -0.35, 0, 0);
+  addBox(g, 0.18, 0.06, 0.22, mats.charcoal, 0.34, 0.18, -0.04);
+  addBox(g, 0.16, 0.04, 0.14, mats.yellowBtn, 0.34, 0.22, -0.04);
+
+  // Selim ergonômico e encosto lombar
+  addBox(g, 0.12, 0.72, 0.12, mats.lightGray, 0, 0.46, 0.42, 0.18, 0, 0);
+  addBox(g, 0.38, 0.12, 0.42, mats.nasaBlue, 0, 0.84, 0.46);
+  addBox(g, 0.34, 0.32, 0.1, mats.whiteMetal, 0, 1.04, 0.64);
+
+  // Coluna do guidão e monitor cardíaco/cadência
+  addBox(g, 0.12, 1.05, 0.12, mats.lightGray, 0, 0.62, -0.48, -0.16, 0, 0);
+  addBox(g, 0.68, 0.08, 0.08, mats.charcoal, 0, 1.14, -0.52);
+  addBox(g, 0.08, 0.18, 0.24, mats.charcoal, -0.32, 1.2, -0.44);
+  addBox(g, 0.08, 0.18, 0.24, mats.charcoal, 0.32, 1.2, -0.44);
+  addBox(g, 0.52, 0.34, 0.14, mats.darkSlate, 0, 1.32, -0.56, 0.28, 0, 0);
+  addBox(g, 0.42, 0.22, 0.05, mats.screenMat, 0, 1.33, -0.48, 0.28, 0, 0);
+
+  return g;
+}
+
+function createGymMedbayModel(mats, x, y, z) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+
+  // Bancada de avaliação médica / Scanner de Densidade Óssea (DEXA) e Hidratação
+  addBox(g, 1.6, 0.88, 0.75, mats.whiteMetal, 0, 0.44, 0);
+  addBox(g, 1.68, 0.08, 0.82, mats.lightGray, 0, 0.9, 0);
+  // Cruz vermelha médica na frente da bancada
+  addBox(g, 0.28, 0.1, 0.04, mats.redBtn, 0, 0.48, -0.39);
+  addBox(g, 0.1, 0.28, 0.04, mats.redBtn, 0, 0.48, -0.39);
+
+  // Monitor de Densitometria Óssea
+  addBox(g, 0.72, 0.52, 0.12, mats.darkSlate, -0.32, 1.24, 0.12);
+  addBox(g, 0.6, 0.4, 0.05, mats.screenMat, -0.32, 1.24, 0.05);
+
+  // Dispenser de água isotônica + Kit médico
+  addBox(g, 0.32, 0.45, 0.32, mats.waterGlass, 0.42, 1.16, 0.05);
+  addBox(g, 0.36, 0.1, 0.36, mats.cyanGlow, 0.42, 1.42, 0.05);
+
+  return g;
 }

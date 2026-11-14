@@ -219,9 +219,103 @@ function buildNasaAscentLander(world, groundY) {
   world.setBlock(cx, groundY + 12, cz, BLOCK_IDS.RED_BEACON, false);
 }
 
+// 4. Módulo Pressurizado de Academia & MedBay (Sudoeste: x = -12..-4, z = 7..13)
+function buildGymModule(world, groundY) {
+  const floorY = groundY + 1; // y = 9
+  const ceilY = groundY + 6;  // y = 14
+
+  // Sala principal da Academia (x: -12..-4, z: 7..13)
+  for (let x = -12; x <= -4; x++) {
+    for (let z = 7; z <= 13; z++) {
+      const isWall = x === -12 || x === -4 || z === 7 || z === 13;
+      for (let y = floorY; y <= ceilY; y++) {
+        if (y === floorY) {
+          const isWorkoutMat =
+            (x >= -10 && x <= -6 && z >= 9 && z <= 11) ||
+            (x >= -6 && x <= -5 && z === 8);
+          world.setBlock(
+            x,
+            y,
+            z,
+            isWorkoutMat ? BLOCK_IDS.THRUSTER_METAL : BLOCK_IDS.NASA_HULL,
+            false
+          );
+        } else if (y === ceilY) {
+          if (x >= -9 && x <= -7 && z === 10) {
+            world.setBlock(x, y, z, BLOCK_IDS.HAB_GLASS, false);
+          } else if (
+            (x === -10 && z === 10) ||
+            (x === -6 && z === 10) ||
+            (x === -8 && (z === 8 || z === 12))
+          ) {
+            world.setBlock(x, y, z, BLOCK_IDS.HAB_LIGHT, false);
+          } else {
+            world.setBlock(x, y, z, BLOCK_IDS.NASA_HULL, false);
+          }
+        } else if (isWall) {
+          const isWindowHeight = y === floorY + 2 || y === floorY + 3;
+          const isWindowSpan =
+            (x === -12 && z >= 9 && z <= 11) ||
+            (z === 13 && x >= -10 && x <= -6) ||
+            (x === -4 && z >= 9 && z <= 11);
+          world.setBlock(
+            x,
+            y,
+            z,
+            isWindowHeight && isWindowSpan ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL,
+            false
+          );
+        } else {
+          world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
+        }
+      }
+    }
+  }
+
+  // Corredor pressurizado ligando o Sudoeste do Habitat Principal (z = 5) à Academia (z = 7)
+  for (let z = 5; z <= 7; z++) {
+    const xMax = z === 5 ? -5 : -4;
+    for (let x = -7; x <= xMax; x++) {
+      const isSideWall = x === -7 || (z >= 6 && x === -4);
+      for (let y = floorY; y <= ceilY; y++) {
+        if (y === floorY) {
+          world.setBlock(
+            x,
+            y,
+            z,
+            isSideWall ? BLOCK_IDS.NASA_HULL : BLOCK_IDS.THRUSTER_METAL,
+            false
+          );
+        } else if (y === ceilY) {
+          world.setBlock(
+            x,
+            y,
+            z,
+            x === -5 && z === 6 ? BLOCK_IDS.HAB_LIGHT : BLOCK_IDS.NASA_HULL,
+            false
+          );
+        } else if (isSideWall) {
+          const isCorridorWindow =
+            x === -7 && z === 6 && (y === floorY + 2 || y === floorY + 3);
+          world.setBlock(
+            x,
+            y,
+            z,
+            isCorridorWindow ? BLOCK_IDS.HAB_GLASS : BLOCK_IDS.NASA_HULL,
+            false
+          );
+        } else {
+          world.setBlock(x, y, z, BLOCK_IDS.AIR, false);
+        }
+      }
+    }
+  }
+}
+
 export function buildNasaSpaceshipAndBase(world) {
   const groundY = WORLD_CONFIG.GROUND_LEVEL; // 8
   buildMainWhiteHabitat(world, groundY);
   buildGreenhouseDome(world, groundY);
   buildNasaAscentLander(world, groundY);
+  buildGymModule(world, groundY);
 }
