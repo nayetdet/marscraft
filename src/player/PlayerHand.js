@@ -1,10 +1,15 @@
 import * as THREE from 'three';
+import { BLOCK_IDS } from '../config/blockTypes.js';
+import { BLOCK_INTERACTION_CONFIG } from '../config/constants.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
 
 export class PlayerHand {
-  constructor(camera, materials) {
+  constructor(camera, materials, carrotTexture) {
     this.camera = camera;
     this.materials = materials;
+    this.carrotTexture = carrotTexture;
+    this.eatTime = 0;
+    this.pendingHeldBlock = null;
 
     this.handGroup = new THREE.Group();
     this.basePos = new THREE.Vector3(0.56, -0.46, -0.72);
@@ -60,6 +65,15 @@ export class PlayerHand {
     this.heldBlockMesh.rotation.set(0.2, 0.65, 0.1);
     this.heldBlockMesh.renderOrder = 999;
     this.handGroup.add(this.heldBlockMesh);
+    this.heldCarrotMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.42, 0.42),
+      new THREE.MeshLambertMaterial({ map: this.carrotTexture, transparent: true, alphaTest: 0.1, side: THREE.DoubleSide })
+    );
+    this.heldCarrotMesh.position.set(-0.08, 0.14, -0.22);
+    this.heldCarrotMesh.rotation.z = -0.5;
+    this.heldCarrotMesh.renderOrder = 999;
+    this.heldCarrotMesh.visible = false;
+    this.handGroup.add(this.heldCarrotMesh);
   }
 
   // Um clone por tipo de bloco, reaproveitado (antes clonava a cada troca de slot e vazava)
@@ -77,18 +91,34 @@ export class PlayerHand {
   }
 
   setHeldBlock(blockId, count) {
+    if (this.eatTime > 0) {
+      this.pendingHeldBlock = { blockId, count };
+      return;
+    }
+    this.heldCarrotMesh.visible = false;
     if (!blockId || count <= 0) {
       this.heldBlockMesh.visible = false;
       this.armMesh.position.set(0, 0, 0);
       return;
     }
 
+    if (blockId === BLOCK_IDS.HYDRO_PLANT) {
+      this.heldBlockMesh.visible = false;
+      this.heldCarrotMesh.visible = true;
+      this.armMesh.position.set(0.08, -0.06, 0.08);
+      return;
+    }
     const handMat = this._getHandMaterial(blockId);
     if (handMat) {
       this.heldBlockMesh.material = handMat;
       this.heldBlockMesh.visible = true;
       this.armMesh.position.set(0.08, -0.06, 0.08);
     }
+  }
+
+  triggerEat() {
+    this.eatTime = BLOCK_INTERACTION_CONFIG.EAT_ANIMATION_DURATION;
+    this.isSwinging = false;
   }
 
   triggerSwing() {
@@ -124,6 +154,21 @@ export class PlayerHand {
         swingRotZ = s * 0.35;
         swingOffsetZ = -s * 0.18;
         swingOffsetY = -s * 0.08;
+      }
+    }
+
+    if (this.eatTime > 0) {
+      this.eatTime = Math.max(0, this.eatTime - dt);
+      const progress = 1 - this.eatTime / BLOCK_INTERACTION_CONFIG.EAT_ANIMATION_DURATION;
+      const bite = Math.sin(progress * Math.PI) * (0.7 + 0.3 * Math.sin(progress * Math.PI * 6));
+      swingOffsetY += bite * 0.28;
+      swingOffsetZ += bite * 0.12;
+      swingRotX -= bite * 0.65;
+      swingRotZ += bite * 0.35;
+      if (this.eatTime === 0 && this.pendingHeldBlock) {
+        const { blockId, count } = this.pendingHeldBlock;
+        this.pendingHeldBlock = null;
+        this.setHeldBlock(blockId, count);
       }
     }
 

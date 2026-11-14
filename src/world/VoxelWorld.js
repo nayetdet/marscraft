@@ -54,7 +54,7 @@ class FaceBuffer {
 const FULL_UV = { u0: 0, u1: 1, v0: 0, v1: 1 };
 
 export class VoxelWorld {
-  constructor(scene, materials, atlas) {
+  constructor(scene, materials, atlas, carrotTexture) {
     this.scene = scene;
     this.materials = materials;
     this.atlas = atlas;
@@ -77,6 +77,8 @@ export class VoxelWorld {
       BLOCK_INTERACTION_CONFIG.DROP_SIZE,
       BLOCK_INTERACTION_CONFIG.DROP_SIZE
     );
+    this.carrotGeometry = new THREE.PlaneGeometry(0.5, 0.5);
+    this.carrotMaterial = carrotTexture && new THREE.MeshLambertMaterial({ map: carrotTexture, transparent: true, alphaTest: 0.1, side: THREE.DoubleSide });
     this.particleGeometry = new THREE.BoxGeometry(0.13, 0.13, 0.13);
     this.breakOverlay = this._createBreakOverlay();
     this.scene.add(this.breakOverlay);
@@ -242,12 +244,36 @@ export class VoxelWorld {
     });
   }
 
+  spawnCropDrop(position) {
+    const mesh = new THREE.Mesh(this.carrotGeometry, this.carrotMaterial.clone());
+    mesh.position.copy(position);
+    mesh.position.y += 0.35;
+    this.dropGroup.add(mesh);
+    this.drops.push({
+      blockId: BLOCK_IDS.HYDRO_PLANT, mesh,
+      velocity: new THREE.Vector3(0, 1.5, 0), age: 0, grounded: false,
+      bobOffset: Math.random() * Math.PI * 2, groundY: 0,
+      pickupDelay: BLOCK_INTERACTION_CONFIG.CROP_PICKUP_DELAY,
+    });
+  }
+
+  spawnPlayerDrop(position, yaw, blockId) {
+    if (blockId === BLOCK_IDS.HYDRO_PLANT) {
+      this.spawnCropDrop(position);
+    } else {
+      this._spawnDrop(position.x - 0.5, position.y - 0.65, position.z - 0.5, blockId);
+    }
+    const drop = this.drops[this.drops.length - 1];
+    drop.pickupDelay = BLOCK_INTERACTION_CONFIG.PLAYER_DROP_PICKUP_DELAY;
+    drop.velocity.set(-Math.sin(yaw) * 3, 1.5, -Math.cos(yaw) * 3);
+  }
+
   _removeEffect(mesh) {
     this.dropGroup.remove(mesh);
     mesh.material.dispose();
   }
 
-  updateDrops(dt, playerPos) {
+  updateDrops(dt, playerPos, collect = () => true) {
     const collected = [];
 
     for (let i = this.breakParticles.length - 1; i >= 0; i--) {
@@ -269,6 +295,7 @@ export class VoxelWorld {
       drop.age += dt;
       const { position } = drop.mesh;
 
+      const halfSize = drop.blockId === BLOCK_IDS.HYDRO_PLANT && drop.pickupDelay ? 0.25 : BLOCK_INTERACTION_CONFIG.DROP_SIZE / 2;
       if (!drop.grounded) {
         drop.velocity.y -= BLOCK_INTERACTION_CONFIG.DROP_GRAVITY * dt;
         position.addScaledVector(drop.velocity, dt);
@@ -276,12 +303,12 @@ export class VoxelWorld {
         drop.velocity.z *= 0.9;
         const groundBlock = this.getBlock(
           Math.floor(position.x),
-          Math.floor(position.y - BLOCK_INTERACTION_CONFIG.DROP_SIZE / 2),
+          Math.floor(position.y - halfSize),
           Math.floor(position.z)
         );
         if (groundBlock !== BLOCK_IDS.AIR && drop.velocity.y <= 0) {
           drop.grounded = true;
-          drop.groundY = Math.floor(position.y - BLOCK_INTERACTION_CONFIG.DROP_SIZE / 2) + 1 + BLOCK_INTERACTION_CONFIG.DROP_SIZE / 2;
+          drop.groundY = Math.floor(position.y - halfSize) + 1 + halfSize;
           position.y = drop.groundY;
           drop.velocity.set(0, 0, 0);
         }
@@ -294,8 +321,9 @@ export class VoxelWorld {
       const dy = position.y - (playerPos.y - 1.05);
       const dz = position.z - playerPos.z;
       const isClose = dx * dx + dy * dy + dz * dz < BLOCK_INTERACTION_CONFIG.DROP_PICKUP_RADIUS ** 2;
-      if (isClose || drop.age >= BLOCK_INTERACTION_CONFIG.DROP_LIFETIME) {
-        if (isClose) collected.push(drop.blockId);
+      const pickedUp = isClose && drop.age >= (drop.pickupDelay || 0) && collect(drop.blockId);
+      if (pickedUp || drop.age >= BLOCK_INTERACTION_CONFIG.DROP_LIFETIME) {
+        if (pickedUp) collected.push(drop.blockId);
         this._removeEffect(drop.mesh);
         this.drops.splice(i, 1);
       }

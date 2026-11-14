@@ -27,7 +27,7 @@ function createWorld() {
   // breakBlock clona o material do bloco para o drop e as particulas
   const materials = {};
   for (const id of Object.values(BLOCK_IDS)) materials[id] = new THREE.MeshBasicMaterial();
-  return new VoxelWorld(new THREE.Scene(), materials, atlas);
+  return new VoxelWorld(new THREE.Scene(), materials, atlas, new THREE.Texture());
 }
 
 function chunkOf(world, x, z) {
@@ -163,6 +163,19 @@ describe('VoxelWorld meshing', () => {
 
     world.rebuildMeshes();
     expect(partial).toBe(geometrySnapshot(world));
+  });
+
+  it('leaves a carrot on the ground until pickup is allowed and inventory accepts it', () => {
+    const position = new THREE.Vector3(0, SKY_Y, 20);
+    world.spawnCropDrop(position);
+    const player = new THREE.Vector3(0, SKY_Y + 1.05, 20);
+    expect(world.updateDrops(0.1, player, () => true)).toEqual([]);
+    expect(world.drops).toHaveLength(1);
+    world.drops[0].age = 1;
+    expect(world.updateDrops(0, player, () => false)).toEqual([]);
+    expect(world.drops).toHaveLength(1);
+    expect(world.updateDrops(0, player, () => true)).toEqual([BLOCK_IDS.HYDRO_PLANT]);
+    expect(world.drops).toHaveLength(0);
   });
 
   it('breakBlock reconstroi so o chunk do bloco, sem refazer o mundo inteiro', () => {
