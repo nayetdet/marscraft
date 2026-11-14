@@ -129,14 +129,17 @@ export function buildNasaCustomModels(scene) {
   // 7. Painéis Solares Inclinados 3D e Antena Parabólica Externa
   const { solarArrays, dish } = createExteriorSolarAndDish(mats, 0, groundTopY, 0);
   for (const arr of solarArrays) {
+    arr.userData.scanId = 'solar-panels';
     group.add(arr);
     solidObjects.push(arr);
   }
+  dish.userData.scanId = 'antenna';
   group.add(dish);
   solidObjects.push(dish);
 
   // 8. Doca e Usina Externa de Recepção de Gelo e Conversão em Água
   const iceDepot = createIceProcessingDepotModel(mats, 5.5, groundTopY, 9.5);
+  iceDepot.userData.scanId = 'ice-depot';
   group.add(iceDepot);
   solidObjects.push(iceDepot);
 
@@ -163,6 +166,9 @@ export function buildNasaCustomModels(scene) {
         minZ: fullBox.min.z - 0.06,
         maxZ: fullBox.max.z + 0.06,
       };
+      // Usado pelo scanner da luneta (scanTargeting); sem scanId, o alvo vem do módulo da base.
+      if (plants.includes(obj)) collider.scanId = 'greenhouse';
+      else if (obj.userData.scanId) collider.scanId = obj.userData.scanId;
       colliders.push(collider);
       if (plants.includes(obj)) obj.userData.collider = collider;
     }

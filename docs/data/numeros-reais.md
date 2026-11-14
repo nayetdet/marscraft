@@ -75,7 +75,7 @@ Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG
 
 Escala de jogo (não é dado real): capacidade da bateria, custos de energia em %, duração da tempestade (3 h de jogo), dano por mSv e o limite de 3 mSv/h a partir do qual a radiação machuca.
 
-Simplificação a explicar: a "blindagem ligada" (tecla R) é um escudo ativo que gasta energia. Escudos magnéticos ativos ainda são pesquisa; nas bases reais, o abrigo de tempestade usa massa (água, regolito).
+Simplificação a explicar: a "blindagem ligada" (tecla R) é um escudo ativo que gasta energia e só protege dentro da bolha em volta da base. Escudos magnéticos ativos ainda são pesquisa; nas bases reais, o abrigo de tempestade usa massa (água, regolito). Detalhes e fontes em [`protecao-radiacao.md`](protecao-radiacao.md).
 
 ## Calibração atual do jogo vs. realidade
 

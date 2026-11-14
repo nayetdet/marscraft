@@ -9,6 +9,7 @@ Contexto geral do **MineMars**, nossa resposta ao desafio *Build a Junior Astron
 | [`challenge/julgamento-e-submissao.md`](challenge/julgamento-e-submissao.md) | **Prazo**, requisitos de submissão, regras de uso de IA e critérios de julgamento |
 | [`data/apis-nasa.md`](data/apis-nasa.md) | Guia técnico de cada API (endpoint, sintaxe, CORS, o que está quebrado) |
 | [`data/numeros-reais.md`](data/numeros-reais.md) | Valores reais para calibrar mecânicas (radiação, clima, constantes) |
+| [`data/protecao-radiacao.md`](data/protecao-radiacao.md) | Como a NASA protege astronautas da radiação (passiva × escudo magnético ativo) e como o escudo `R` do jogo usa isso |
 | [`data/samples/`](data/samples/) | Amostras JSON reais e reduzidas, coletadas em 2026-11-14 |
 | [`game/estado-atual-e-gaps.md`](game/estado-atual-e-gaps.md) | O que o jogo já faz, o que falta para o desafio e a proposta de trade-off |
 
