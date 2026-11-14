@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import { WORLD_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 
 export class RoverController {
-  constructor({ roverGroup, wheels = [], world, camera }) {
+  constructor({ roverGroup, wheels = [], world, camera, colliders = [] }) {
     this.roverGroup = roverGroup;
     this.wheels = wheels;
     this.world = world;
     this.camera = camera;
+    this.colliders = colliders;
 
     this.isActive = false;
     this.cameraMode = 'third_person'; // 'third_person' | 'mastcam'
@@ -23,12 +24,15 @@ export class RoverController {
 
     this.pitch = 0;
     this.roll = 0;
+    this.cameraYaw = this.yaw;
+    this.cameraPitch = -0.22;
     this.speed = 0;
-    this.maxForwardSpeed = 5.8;
-    this.maxReverseSpeed = 3.0;
-    this.acceleration = 6.0;
-    this.deceleration = 4.5;
-    this.turnSpeed = 1.45;
+    this.maxForwardSpeed = 6.2;
+    this.maxReverseSpeed = 2.8;
+    this.acceleration = 7.2;
+    this.deceleration = 3.8;
+    this.brakeDeceleration = 9.0;
+    this.turnSpeed = 1.55;
 
     this.battery = 98.5;
     this.distanceTraveled = 0;
@@ -42,6 +46,7 @@ export class RoverController {
     this._forward = new THREE.Vector3();
     this._camTargetPos = new THREE.Vector3();
     this._camLookAt = new THREE.Vector3();
+    this._camLookDir = new THREE.Vector3();
     this._wheelBase = 2.7; // distância entre eixos dianteiro e traseiro
     this._trackWidth = 2.4; // largura entre rodas
   }
@@ -92,6 +97,26 @@ export class RoverController {
       return true;
     }
 
+    // Use the same static construction colliders as the astronaut. The rover has
+    // a wider footprint, so expand each AABB by its half-width on the ground.
+    const roverRadius = 1.15;
+    for (const collider of this.colliders) {
+      const insideCurrent =
+        this.pos.x >= collider.minX - roverRadius &&
+        this.pos.x <= collider.maxX + roverRadius &&
+        this.pos.z >= collider.minZ - roverRadius &&
+        this.pos.z <= collider.maxZ + roverRadius;
+      const insideNext =
+        nextX >= collider.minX - roverRadius &&
+        nextX <= collider.maxX + roverRadius &&
+        nextZ >= collider.minZ - roverRadius &&
+        nextZ <= collider.maxZ + roverRadius;
+
+      // The rover begins next to the unloading dock. Let it drive out if its
+      // spawn footprint overlaps a collider, but never let it enter from outside.
+      if (!insideCurrent && insideNext) return true;
+    }
+
     return false;
   }
 
@@ -99,9 +124,17 @@ export class RoverController {
     this.cameraMode = this.cameraMode === 'third_person' ? 'mastcam' : 'third_person';
   }
 
+  look(dx, dy, sensitivity = 0.0021) {
+    this.cameraYaw -= dx * sensitivity;
+    this.cameraPitch = THREE.MathUtils.clamp(this.cameraPitch - dy * sensitivity, -1.15, 1.15);
+  }
+
   activate() {
     this.isActive = true;
     this.speed = 0;
+    // Enter with the chase camera aligned to the rover, then let mouse look offset it.
+    this.cameraYaw = this.yaw;
+    this.cameraPitch = -0.22;
   }
 
   deactivate() {
@@ -208,12 +241,14 @@ export class RoverController {
       if (keys['KeyA'] || keys['ArrowLeft']) steer += 1;
       if (keys['KeyD'] || keys['ArrowRight']) steer -= 1;
 
-      // Aceleração / Desaceleração
+      // Acceleration and braking are kept separate so direction changes feel deliberate.
       if (throttle > 0) {
-        this.speed = Math.min(this.maxForwardSpeed, this.speed + this.acceleration * dt);
+        const rate = this.speed < 0 ? this.brakeDeceleration : this.acceleration;
+        this.speed = Math.min(this.maxForwardSpeed, this.speed + rate * dt);
         this.battery = Math.max(5, this.battery - dt * 0.04);
       } else if (throttle < 0) {
-        this.speed = Math.max(-this.maxReverseSpeed, this.speed - this.acceleration * dt);
+        const rate = this.speed > 0 ? this.brakeDeceleration : this.acceleration;
+        this.speed = Math.max(-this.maxReverseSpeed, this.speed - rate * dt);
         this.battery = Math.max(5, this.battery - dt * 0.04);
       } else {
         // Atrito / freio na areia
@@ -224,12 +259,13 @@ export class RoverController {
         }
       }
 
-      // Direção: Rovers podem esterçar rodas e girar mesmo em baixa velocidade
+      // Steering scales with speed: responsive while moving, without spinning in place.
       if (steer !== 0) {
         const turnDir = steer;
-        // Inverte sentido ao dar ré para controle intuitivo
         const reverseFactor = this.speed < -0.1 ? -1 : 1;
-        this.yaw += turnDir * this.turnSpeed * dt * reverseFactor;
+        const speedRatio = Math.min(1, Math.abs(this.speed) / this.maxForwardSpeed);
+        const steeringGrip = 0.18 + speedRatio * 0.82;
+        this.yaw += turnDir * this.turnSpeed * steeringGrip * dt * reverseFactor;
       }
 
       // Recarga lenta de bateria por painéis solares
@@ -250,18 +286,30 @@ export class RoverController {
         const nextX = this.pos.x + dx;
         const nextZ = this.pos.z + dz;
 
-        if (!this.isPositionBlocked(nextX, nextZ, this.pos.y)) {
+        // Sweep the path instead of testing just the destination. This prevents clipping
+        // through narrow terrain edges when a frame takes longer than usual.
+        const steps = Math.max(1, Math.ceil(Math.abs(moveDist) / 0.2));
+        let isBlocked = false;
+        for (let step = 1; step <= steps; step += 1) {
+          const progress = step / steps;
+          if (this.isPositionBlocked(this.pos.x + dx * progress, this.pos.z + dz * progress, this.pos.y)) {
+            isBlocked = true;
+            break;
+          }
+        }
+
+        if (!isBlocked) {
           this.pos.x = nextX;
           this.pos.z = nextZ;
           this.distanceTraveled += Math.abs(moveDist);
+
+          // Rotate wheels only for movement that actually happened.
+          const wheelRotDelta = moveDist / 0.325;
+          for (const wheel of this.wheels) {
+            wheel.rotation.x += wheelRotDelta;
+          }
         } else {
           this.speed = 0;
-        }
-
-        // Animação de rotação das 6 rodas
-        const wheelRotDelta = moveDist / 0.325;
-        for (const wheel of this.wheels) {
-          wheel.rotation.x += wheelRotDelta;
         }
       }
     }
@@ -294,8 +342,12 @@ export class RoverController {
     // Suavização da suspensão
     this.pos.y += (targetY - this.pos.y) * Math.min(1.0, dt * 10);
 
-    const targetPitch = Math.atan2(hRear - hFront, this._wheelBase);
-    const targetRoll = Math.atan2(hLeft - hRight, this._trackWidth);
+    // In Three.js, a positive X rotation lifts the rover's visible front (-Z).
+    // Use the front-to-rear height difference so it tilts uphill, not downhill.
+    const targetPitch = Math.atan2(hFront - hRear, this._wheelBase);
+    // Three.js positive Z rotation lowers the rover's local left side (+X maps up
+    // for positive roll). Invert the terrain delta so the higher side rises.
+    const targetRoll = Math.atan2(hRight - hLeft, this._trackWidth);
 
     this.pitch += (targetPitch - this.pitch) * Math.min(1.0, dt * 8);
     this.roll += (targetRoll - this.roll) * Math.min(1.0, dt * 8);
@@ -314,8 +366,14 @@ export class RoverController {
   }
 
   _updateCamera(dt) {
-    const sinYaw = Math.sin(this.yaw);
-    const cosYaw = Math.cos(this.yaw);
+    const sinYaw = Math.sin(this.cameraYaw);
+    const cosYaw = Math.cos(this.cameraYaw);
+    const cosPitch = Math.cos(this.cameraPitch);
+    const lookDir = this._camLookDir.set(
+      -sinYaw * cosPitch,
+      Math.sin(this.cameraPitch),
+      -cosYaw * cosPitch
+    );
 
     if (this.cameraMode === 'mastcam') {
       // Visão em 1ª pessoa no mastro da Mastcam do Rover
@@ -325,33 +383,17 @@ export class RoverController {
       const eyePos = this.pos.clone().add(mastOffsetLocal);
       this.camera.position.copy(eyePos);
 
-      // Olha para a frente na direção do rover
       const lookDist = 12.0;
-      this._camLookAt.set(
-        this.pos.x - sinYaw * lookDist,
-        this.pos.y + 1.2 - Math.sin(this.pitch) * lookDist,
-        this.pos.z - cosYaw * lookDist
-      );
+      this._camLookAt.copy(eyePos).addScaledVector(lookDir, lookDist);
       this.camera.lookAt(this._camLookAt);
     } else {
       // Visão em 3ª pessoa tática atrás e acima do rover
       const distBehind = 5.2;
-      const heightAbove = 2.4;
-
-      this._camTargetPos.set(
-        this.pos.x + sinYaw * distBehind,
-        this.pos.y + heightAbove,
-        this.pos.z + cosYaw * distBehind
-      );
+      this._camLookAt.set(this.pos.x, this.pos.y + 1.0, this.pos.z);
+      this._camTargetPos.copy(this._camLookAt).addScaledVector(lookDir, -distBehind);
 
       // Suaviza a posição da câmera
       this.camera.position.lerp(this._camTargetPos, Math.min(1.0, dt * 12));
-
-      this._camLookAt.set(
-        this.pos.x - sinYaw * 2.0,
-        this.pos.y + 0.9,
-        this.pos.z - cosYaw * 2.0
-      );
       this.camera.lookAt(this._camLookAt);
     }
   }
