@@ -7,7 +7,7 @@ import {
 } from '../config/constants.js';
 import { Battery, solarChargePerHour } from './energy.js';
 import { doseRateMsvPerHour, radiationDamage } from './radiation.js';
-import { buildStormSchedule, stormStateAt } from './solarStorms.js';
+import { buildStormSchedule, rescheduleStorms, stormStateAt } from './solarStorms.js';
 
 const PROPELLANT_PER_ICE = 100 / MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
 
@@ -189,6 +189,13 @@ export class MissionSystem {
     if (points <= 0) return;
     this.battery.drain(points * ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier);
     this.oxygenProducedPoints += points;
+  }
+
+  // Painel de admin: forca o aviso, a tempestade ou o fim dela agora
+  forceStorm(target) {
+    this.schedule = rescheduleStorms(this.schedule, this.lastHours, target);
+    this._updateStormPhase();
+    return this.storm.phase;
   }
 
   // Morrer durante a tempestade nao conta como ter sobrevivido a ela

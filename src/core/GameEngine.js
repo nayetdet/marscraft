@@ -30,6 +30,7 @@ import { MissionSystem as ExpeditionSystem } from './MissionSystem.js';
 import { Airlock } from '../world/Airlock.js';
 import { StationSystem } from './StationSystem.js';
 import { StationPanel } from '../ui/StationPanel.js';
+import { AdminPanel } from '../ui/AdminPanel.js';
 import { getCategoryLabel } from '../data/scanCatalog.js';
 import { ScanJournal } from '../scanner/scanJournal.js';
 import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js';
@@ -119,6 +120,7 @@ export class GameEngine {
     this.airlock.stations = this.stations;
     this.airlock.onEvent = (type) => this._onAirlockEvent(type);
     this.stationPanel = new StationPanel(this);
+    this.adminPanel = new AdminPanel(this); // F8 no dev ou ?admin: testes (tempestade, agua, teleporte)
     this._buildStationMarkers();
     this.growingCrops = [];
     this._interactionDir = new THREE.Vector3();
@@ -220,7 +222,7 @@ export class GameEngine {
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown || this.crewPanel.isOpen,
       getInteraction: () => this._getInteraction(),
-      isStationOpen: () => this.stationPanel.isOpen,
+      isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen,
       getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || !this.stations.freshFood ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
     });
 
