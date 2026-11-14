@@ -137,14 +137,6 @@ export class GameEngine {
       onInteract: () => this.handlePlayerInteract(),
       onRoverAction: () => this.handleRoverAction(),
       onRoverLook: (dx, dy) => this.roverController.look(dx, dy),
-      onToggleRoverCamera: () => {
-        this.roverController.toggleCameraMode();
-        const modeName =
-          this.roverController.cameraMode === 'mastcam'
-            ? 'Mastcam (1st-person)'
-            : 'Tactical 3rd-person';
-        this.hud.showToast(`Camera: ${modeName}`);
-      },
       onToggleShield: () => this._toggleShield(),
       onToggleCrewPanel: () => this._toggleCrewPanel(),
       onSendData: () => this._sendScienceData(),
@@ -479,7 +471,7 @@ export class GameEngine {
     const dyGreenhouse = Math.abs(this.player.pos.y - 11.0);
     if (distGreenhouse < 5.8 && dyGreenhouse < 2.2) {
       this.currentInteraction = 'greenhouse';
-      this.hud.setInteractionPrompt(true, '[F] Harvest Potato (Irrigated Greenhouse)');
+      this.hud.setInteractionPrompt(true, '[F] Harvest Carrot (Irrigated Greenhouse)');
       return;
     }
 
