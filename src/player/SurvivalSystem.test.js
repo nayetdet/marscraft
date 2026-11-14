@@ -24,7 +24,7 @@ describe('SurvivalSystem', () => {
     const survival = new SurvivalSystem();
     survival.update(2, { x: 35, y: 11, z: 35 }, 100, true);
     expect(survival.baseOxygen).toBe(90);
-    expect(survival.oxygen).toBeCloseTo(20 - 2 * 0.32);
+    expect(survival.oxygen).toBeCloseTo(20 - 2 * (20 / 360));
   });
 
   it('keeps the scanner and greenhouse crops as distinct items', () => {
