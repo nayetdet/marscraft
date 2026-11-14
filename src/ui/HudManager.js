@@ -27,6 +27,7 @@ export class HudManager {
     this.skyLabelsEl = document.getElementById('sky-labels');
     this.zoomOverlayEl = document.getElementById('zoom-overlay');
     this.toastEl = document.getElementById('toast');
+    this.dangerVignetteEl = document.getElementById('danger-vignette');
     this.deathOverlayEl = document.getElementById('death-overlay');
     this.inventoryOverlayEl = document.getElementById('inventory-overlay');
     this.inventoryGridEl = document.getElementById('inventory-grid');
@@ -333,6 +334,7 @@ export class HudManager {
   }
 
   update({ player, survival, sky, camera, isScopeOpen = false, isRoverActive = false, roverTelemetry = null, mission, airlock = null }) {
+    this.dangerVignetteEl?.classList.toggle('hidden', !survival.isInDanger || survival.isDead);
     if (survival.isDead) {
       this.showDeathScreen();
       return;

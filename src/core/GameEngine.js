@@ -33,6 +33,7 @@ import { StationPanel } from '../ui/StationPanel.js';
 import { AdminPanel } from '../ui/AdminPanel.js';
 import { UtilityModule } from './UtilityModule.js';
 import { CommsLink } from '../mission/commsLink.js';
+import { AudioManager } from '../audio/AudioManager.js';
 import { getCategoryLabel } from '../data/scanCatalog.js';
 import { ScanJournal } from '../scanner/scanJournal.js';
 import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js';
@@ -147,6 +148,7 @@ export class GameEngine {
     this._interactionPoint = new THREE.Vector3();
     this._lastStorm = false;
     this._lastStormWarning = false;
+    this.audio = new AudioManager();
 
     // Maozinha 3D do jogador em primeira pessoa
     this.playerHand = new PlayerHand(this.camera, materials, carrot.texture);
@@ -1298,6 +1300,15 @@ export class GameEngine {
         else this._updateCamera();
         this.sky.update(dt, this.player.pos);
       }
+
+      this.audio.update({
+        player: this.player,
+        survival: this.survival,
+        isGameRunning,
+        isRoverActive: this.roverController.isActive,
+        roverSpeed: this.roverController.speed,
+        sprinting: Boolean(this.input.keys['Sprint']),
+      });
 
       const pickedUpBlocks = this.world.updateDrops(dt, this.player.pos, (id) => id === BLOCK_IDS.HYDRO_PLANT ? this.survival.addHarvestedCrop() : this.survival.addBlockToInventory(id));
       if (pickedUpBlocks.length > 0) {
