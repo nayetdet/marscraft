@@ -890,3 +890,202 @@
   .rover-action-banner { bottom: 190px; max-width: calc(100vw - 32px); }
 }
 
+.mobile-controls {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 28;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.touch-mode .mobile-controls {
+  display: block;
+}
+
+.touch-mode.game-paused .mobile-controls,
+.touch-mode.inventory-open .mobile-controls {
+  display: none;
+}
+
+.touch-mode.rover-active [data-touch-action="jump"],
+.touch-mode.rover-active [data-touch-action="use"],
+.touch-mode.rover-active [data-touch-action="zoom"] {
+  display: none;
+}
+
+.mobile-joystick {
+  position: absolute;
+  left: max(14px, env(safe-area-inset-left));
+  bottom: calc(124px + env(safe-area-inset-bottom));
+  width: 116px;
+  height: 136px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.joystick-ring {
+  width: 112px;
+  height: 112px;
+  border: 3px solid rgba(255, 255, 255, .72);
+  border-radius: 50%;
+  background: rgba(20, 20, 20, .42);
+  box-shadow: inset 0 0 0 3px rgba(0, 0, 0, .35), 0 2px 6px rgba(0, 0, 0, .45);
+  display: grid;
+  place-items: center;
+}
+
+.joystick-thumb {
+  width: 46px;
+  height: 46px;
+  border: 3px solid #d6d6d6;
+  border-radius: 50%;
+  background: rgba(110, 110, 110, .9);
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, .24), 2px 2px 0 #292929;
+  transform: translate(0, 0);
+}
+
+.touch-control-caption {
+  display: block;
+  width: 112px;
+  padding-top: 3px;
+  color: rgba(255, 255, 255, .85);
+  font-size: 10px;
+  text-align: center;
+  text-shadow: 1px 1px #000;
+}
+
+.mobile-sprint-button {
+  position: absolute;
+  left: max(14px, env(safe-area-inset-left));
+  bottom: calc(270px + env(safe-area-inset-bottom));
+  width: 54px;
+  pointer-events: auto;
+}
+
+.mobile-action-buttons {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: calc(124px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(2, 54px);
+  gap: 7px;
+  pointer-events: auto;
+}
+
+.touch-button {
+  min-width: 54px;
+  min-height: 48px;
+  border: 2px solid #222;
+  border-top-color: #bdbdbd;
+  border-left-color: #bdbdbd;
+  border-radius: 3px;
+  background: rgba(83, 83, 83, .86);
+  color: #fff;
+  font: 700 10px 'Courier New', Courier, monospace;
+  text-shadow: 1px 1px #222;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .45);
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-button:active,
+.touch-button.is-active {
+  border-color: #222 #bdbdbd #bdbdbd #222;
+  background: rgba(145, 145, 145, .92);
+}
+
+.touch-mode #game-container canvas {
+  touch-action: none;
+}
+
+.touch-mode .mc-top-info {
+  max-width: 66vw;
+  font-size: 11px;
+}
+
+.touch-mode .mc-top-info div {
+  overflow: hidden;
+  max-width: 100%;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.touch-mode .mc-help-line {
+  display: none;
+}
+
+.touch-mode .mc-status-container {
+  width: min(390px, 96vw);
+}
+
+.touch-mode .mc-icon-row {
+  gap: 1px;
+}
+
+.touch-mode .mc-stat-icon {
+  width: 10px;
+  height: 10px;
+}
+
+.touch-mode .mc-bar-label {
+  min-width: 34px;
+  font-size: 9px;
+}
+
+.touch-mode .mc-slot {
+  width: clamp(29px, 9.5vw, 36px);
+  height: clamp(29px, 9.5vw, 36px);
+}
+
+.touch-mode .mc-slot-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.touch-mode #hotbar {
+  pointer-events: auto;
+}
+
+.touch-mode.inventory-open .inventory-window {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .touch-mode .mobile-joystick,
+  .touch-mode .mobile-action-buttons {
+    bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .touch-mode .mobile-action-buttons {
+    grid-template-columns: repeat(3, 48px);
+    gap: 5px;
+  }
+
+  .touch-mode .mobile-sprint-button {
+    left: max(14px, env(safe-area-inset-left));
+    bottom: calc(134px + env(safe-area-inset-bottom));
+    width: 48px;
+  }
+
+  .touch-mode .touch-button {
+    min-width: 48px;
+    min-height: 44px;
+  }
+
+  .touch-mode .joystick-ring {
+    width: 96px;
+    height: 96px;
+  }
+
+  .touch-mode .mobile-joystick {
+    width: 100px;
+    height: 116px;
+  }
+
+  .touch-mode .touch-control-caption {
+    width: 96px;
+  }
+}
+

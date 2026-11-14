@@ -30,6 +30,7 @@ export class HudManager {
     this.inventoryOverlayEl = document.getElementById('inventory-overlay');
     this.inventoryGridEl = document.getElementById('inventory-grid');
     this.inventoryHotbarEl = document.getElementById('inventory-hotbar');
+    this.inventoryCloseBtn = document.getElementById('inventory-close-btn');
     this.isInventoryOpen = false;
 
     this.healthBarEl = document.getElementById('health-bar');
@@ -74,6 +75,7 @@ export class HudManager {
 
     this.renderHotbar(initialSlots);
     this._initSkyLabels();
+    this.inventoryCloseBtn?.addEventListener('click', () => this.closeInventory());
   }
 
   setInteractionPrompt(visible, text = '[F] Operate Rover Remote Terminal') {
@@ -87,9 +89,16 @@ export class HudManager {
   }
 
   setRoverMode(active) {
+    document.body.classList.toggle('rover-active', active);
     if (this.roverOverlayEl) {
       this.roverOverlayEl.classList.toggle('hidden', !active);
     }
+    const useLabel = document.getElementById('touch-use-label');
+    const mineLabel = document.getElementById('touch-mine-label');
+    const sprintLabel = document.getElementById('touch-sprint-label');
+    if (useLabel) useLabel.textContent = 'USE';
+    if (mineLabel) mineLabel.textContent = active ? 'DRILL' : 'MINE';
+    if (sprintLabel) sprintLabel.textContent = active ? 'CAM' : 'RUN';
     if (this.bottomAreaEl) this.bottomAreaEl.style.display = '';
     if (this.crosshairEl) {
       this.crosshairEl.style.display = active ? 'none' : '';
@@ -106,6 +115,7 @@ export class HudManager {
     slots.forEach((slotData, idx) => {
       const slot = document.createElement('div');
       slot.className = `mc-slot ${idx === this.selectedSlot ? 'active' : ''}`;
+      slot.dataset.slotIndex = idx;
 
       const hasItems = (slotData?.count ?? 0) > 0;
       const swatchStyle = hasItems
@@ -154,6 +164,7 @@ export class HudManager {
 
   openInventory(inventorySlots) {
     this.isInventoryOpen = true;
+    document.body.classList.add('inventory-open');
     this.inventorySelection = null;
     this.renderInventory(inventorySlots);
     this.inventoryOverlayEl.classList.remove('hidden');
@@ -161,6 +172,7 @@ export class HudManager {
 
   closeInventory() {
     this.isInventoryOpen = false;
+    document.body.classList.remove('inventory-open');
     this.inventorySelection = null;
     this.inventoryOverlayEl.classList.add('hidden');
   }
@@ -221,6 +233,7 @@ export class HudManager {
   }
 
   showDeathScreen() {
+    document.body.classList.add('game-paused');
     this.deathOverlayEl.classList.remove('hidden');
     if (document.pointerLockElement) {
       document.exitPointerLock();
@@ -228,6 +241,7 @@ export class HudManager {
   }
 
   hideDeathScreen() {
+    document.body.classList.remove('game-paused');
     this.deathOverlayEl.classList.add('hidden');
   }
 

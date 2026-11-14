@@ -56,7 +56,7 @@ src/world/
   voxelRaycaster.js        DDA para mirar blocos
 src/player/
   PlayerPhysics.js         movimento, gravidade, colisão AABB × voxels
-  InputController.js       teclado/mouse/pointer lock (WASD, Espaço, cliques, 1-9, E inventário, Z luneta, T avança tempo, R escudo, G dados, C tripulação)
+  InputController.js       teclado/mouse/pointer lock e controles touch em paisagem (joystick, câmera por arrasto, ações, hotbar e atalhos de missão/tripulação)
   SurvivalSystem.js        barras O2/vida/água/comida, áreas pressurizadas, inventário (9 slots de hotbar + 27 de mochila)
   PlayerHand.js            mão/bloco em 1ª pessoa
 src/sky/                   céu marciano: shader de atmosfera, Sol, Terra+Lua, Fobos/Deimos, ciclo de sols
@@ -66,6 +66,16 @@ src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades
 src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu), CrewPanel + CSS
 docs/                      contexto do desafio, APIs e dados reais
 ```
+
+## Requisitos para mobile
+
+- **A experiência mobile é em paisagem (landscape).** Em retrato, mostre a orientação para girar o aparelho e pause a jogabilidade; não tente forçar a rotação via API do navegador.
+- **Preserve paridade de ações:** toda ação relevante disponível no teclado/mouse deve ter um controle touch equivalente, salvo quando for explicitamente exclusiva do desktop.
+- **Controles atuais:** joystick virtual à esquerda; RUN acima do joystick; arrasto na metade direita da tela para olhar; ações à direita (pular, minerar/perfurar, usar/colocar, interagir, luneta e inventário); hotbar selecionável por toque.
+- **Rover:** mantenha os controles contextuais touch (joystick para dirigir, DRILL para ação, CAM para câmera e interação para sair). Não deixe botões sem função visíveis nesse modo.
+- **Alvos touch:** mantenha botões confortáveis para toque (mínimo aproximado de 44 px), respeite `safe-area-inset-*` e evite sobrepor joystick, hotbar, HUD ou controles de ação.
+- **Implementação:** reutilize `InputController.js`, os elementos em `index.html` e os estilos existentes em `src/ui/styles/`. Mantenha teclado/mouse funcionando e pause corretamente durante inventário e orientação retrato.
+- **Validação visual:** confira ao menos um viewport mobile horizontal (por exemplo, 844×390) e um vertical (390×844, que deve exibir a orientação). Verifique interação real dos botões/gestos; não considere apenas o build como validação de layout.
 
 ### Onde encaixar as mecânicas novas
 

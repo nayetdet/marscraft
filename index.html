@@ -25,6 +25,11 @@
   </div>
 
   <div id="game-container"></div>
+  <div class="rotate-device-overlay" role="dialog" aria-modal="true" aria-labelledby="rotate-device-title">
+    <div class="rotate-device-icon" aria-hidden="true"></div>
+    <h2 id="rotate-device-title">Rotate your device</h2>
+    <p>MineMars is best played in landscape.</p>
+  </div>
 
   <!-- HUD Estilo Minecraft Survival -->
   <div id="hud" class="hud">
@@ -65,6 +70,22 @@
 
     <!-- Mira classica em cruz (+) do Minecraft -->
     <div class="mc-crosshair"></div>
+
+    <div id="mobile-controls" class="mobile-controls" aria-label="Touch controls">
+      <div id="mobile-joystick" class="mobile-joystick" role="application" aria-label="Movement joystick">
+        <div class="joystick-ring"><div id="joystick-thumb" class="joystick-thumb"></div></div>
+        <span class="touch-control-caption">MOVE</span>
+      </div>
+      <button class="touch-button mobile-sprint-button" type="button" data-touch-action="sprint" aria-label="Sprint or toggle rover camera"><span id="touch-sprint-label">RUN</span></button>
+      <div class="mobile-action-buttons">
+        <button class="touch-button" type="button" data-touch-action="jump" aria-label="Jump">JUMP</button>
+        <button class="touch-button" type="button" data-touch-action="mine" aria-label="Mine or drill"><span id="touch-mine-label">MINE</span></button>
+        <button class="touch-button" type="button" data-touch-action="use" aria-label="Use or place block"><span id="touch-use-label">USE</span></button>
+        <button class="touch-button" type="button" data-touch-action="interact" aria-label="Interact">TALK</button>
+        <button class="touch-button" type="button" data-touch-action="zoom" aria-label="Toggle telescope zoom">SCOPE</button>
+        <button class="touch-button" type="button" data-touch-action="inventory" aria-label="Open inventory">BAG</button>
+      </div>
+    </div>
 
     <!-- Prompt de Interacao com Objetos (Ex: Terminal do Rover) -->
     <div id="interaction-prompt" class="interaction-prompt hidden">
@@ -183,7 +204,11 @@
 
   <div id="inventory-overlay" class="inventory-overlay hidden">
     <section class="inventory-window" aria-label="Inventory">
-      <header><h2>Inventory</h2><span>Click an item, then a slot</span></header>
+      <header>
+        <h2>Inventory</h2>
+        <span>Click an item, then a slot</span>
+        <button id="inventory-close-btn" class="inventory-close" type="button" aria-label="Close inventory">Close</button>
+      </header>
       <div id="inventory-grid" class="inventory-grid"></div>
       <p class="inventory-hotbar-label">Hotbar</p>
       <div id="inventory-hotbar" class="inventory-hotbar"></div>

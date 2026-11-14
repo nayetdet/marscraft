@@ -680,7 +680,11 @@ export class GameEngine {
       const dt = Math.min(frameMs / 1000, 0.05);
       this.lastTime = now;
 
-      const isGameRunning = this.input.isLocked && !this.survival.isDead && !this.missionHud.isVictoryShown;
+      const isGameRunning = this.input.isLocked
+        && !this.input.isPortraitRequired
+        && !this.survival.isDead
+        && !this.hud.isInventoryOpen
+        && !this.missionHud.isVictoryShown;
       if (isGameRunning) {
         if (this.roverController.isActive) {
           if (this.scanHighlight.mesh) this.scanHighlight.clear();
