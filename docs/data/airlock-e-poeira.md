@@ -36,4 +36,4 @@
   - Sem energia, a etapa avisa e a poeira entra na base: `stations.contaminated` passa a ser verdadeiro, o O2 da base cai e a vida também.
   - O trade-off é **energia e tempo contra o ar da base**.
 - **A barra no centro da tela** (`src/ui/airlockProgress.js`) mostra a etapa atual em palavras simples. Na primeira limpeza aparece o fato do Apollo.
-- **Simplificação:** no jogo a limpeza tira toda a poeira. Na vida real ela ainda não limpa bem o tecido. Os tempos (3 s de ar e 2,5 s de limpeza) são escalados para o jogo; na ISS o processo leva horas.
+- **Simplificação:** no jogo a limpeza tira toda a poeira. Na vida real ela ainda não limpa bem o tecido. Os tempos (3 s de ar e 0,8 s de limpeza) são escalados para o jogo; na ISS o processo leva horas.

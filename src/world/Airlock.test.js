@@ -48,7 +48,7 @@ describe('airlock', () => {
     stations.dirtySuit = true;
 
     airlock.request(inner, inChamber);
-    run(airlock, inChamber, 4);
+    run(airlock, inChamber, 3.5);
     expect(airlock.status().step).toBe('clean');
     expect(inner.openness).toBe(0);
     run(airlock, inChamber, 3);
