@@ -48,6 +48,18 @@ export const HABITAT_LAYOUT = {
   SHELTER_X_MAX: 5.75,
   SHELTER_Z_MIN: 3.85,
   SHELTER_Z_MAX: 5.8,
+  // Corredor norte (issue #56): sai da parede norte do habitat entre os beliches e o console.
+  // Ar em x = -3..-2, z = -10..-6 (atravessa as paredes z = -6 do habitat e z = -10 do modulo).
+  NORTH_CORRIDOR_X_MIN: -3,
+  NORTH_CORRIDOR_X_MAX: -2,
+  NORTH_CORRIDOR_Z_MIN: -10,
+  NORTH_CORRIDOR_Z_MAX: -6,
+  // Modulo norte (energia, cozinha, banheiro, oficina): paredes em x = -12 e 8, z = -21 e -10;
+  // ar em x = -11..7, z = -20..-11.
+  NORTH_X_MIN: -11,
+  NORTH_X_MAX: 7,
+  NORTH_Z_MIN: -20,
+  NORTH_Z_MAX: -11,
 };
 
 const L = HABITAT_LAYOUT;
@@ -117,6 +129,18 @@ function inGymModule(bx, by, bz) {
   );
 }
 
+function inBox(bx, by, bz, xMin, xMax, zMin, zMax) {
+  return bx >= xMin && bx <= xMax && bz >= zMin && bz <= zMax && by > L.FLOOR_Y && by < L.CEIL_Y;
+}
+
+function inNorthCorridor(bx, by, bz) {
+  return inBox(bx, by, bz, L.NORTH_CORRIDOR_X_MIN, L.NORTH_CORRIDOR_X_MAX, L.NORTH_CORRIDOR_Z_MIN, L.NORTH_CORRIDOR_Z_MAX);
+}
+
+function inNorthModule(bx, by, bz) {
+  return inBox(bx, by, bz, L.NORTH_X_MIN, L.NORTH_X_MAX, L.NORTH_Z_MIN, L.NORTH_Z_MAX);
+}
+
 // Recebe a posicao dos olhos do jogador e diz se ela esta num bloco de ar pressurizado.
 export function isInsidePressurizedVolume(x, y, z) {
   const bx = Math.floor(x);
@@ -129,7 +153,9 @@ export function isInsidePressurizedVolume(x, y, z) {
     inTunnel(bx, by, bz) ||
     inGreenhouseDome(bx, by, bz) ||
     inGymCorridor(bx, by, bz) ||
-    inGymModule(bx, by, bz)
+    inGymModule(bx, by, bz) ||
+    inNorthCorridor(bx, by, bz) ||
+    inNorthModule(bx, by, bz)
   );
 }
 

@@ -31,6 +31,7 @@ import { Airlock } from '../world/Airlock.js';
 import { StationSystem } from './StationSystem.js';
 import { StationPanel } from '../ui/StationPanel.js';
 import { AdminPanel } from '../ui/AdminPanel.js';
+import { UtilityModule } from './UtilityModule.js';
 import { getCategoryLabel } from '../data/scanCatalog.js';
 import { ScanJournal } from '../scanner/scanJournal.js';
 import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js';
@@ -175,6 +176,9 @@ export class GameEngine {
 
     // Tripulacao NPC (issues #47 e #48): o tamanho e escolhido no menu antes do primeiro Play
     this.crewStock = createBaseStock({ survival: this.survival, mission: this.mission });
+    // Modulo norte (issue #56, parte B): energia/aquecimento, cozinha, banheiro e oficina
+    this.utility = new UtilityModule({ mission: this.mission, survival: this.survival, stations: this.stations, base: this.crewStock });
+    this._utilityHours = null;
     this.crewAvatars = [];
     this._buildCrew(CREW_CONFIG.DEFAULT_CREW);
     this.crewPanel = new CrewPanel({
@@ -240,7 +244,9 @@ export class GameEngine {
   _updateExpedition(dt) {
     const inside = this.survival.isPlayerInsideShip(this.player.pos);
     const insideCore = inside && !(Math.abs(this.player.pos.x - 0.5) < 1.5 && this.player.pos.z >= 6);
-    this.expedition.greenhousePowered = this.expedition.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
+    this._updateUtility();
+    const greenhouseLit = this.utility.greenhouseLightsOn && !this.utility.cold;
+    this.expedition.greenhousePowered = greenhouseLit && this.expedition.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
     if (this.expedition.stage === 'outside' && !inside) this.expedition.stage = 'sample';
     if (this.expedition.stage === 'return' && inside) this.expedition.stage = 'report';
     this.stations.update(dt, insideCore, this.survival, !inside);
@@ -261,6 +267,17 @@ export class GameEngine {
     document.getElementById('mission-objective').textContent = this.expedition.objective;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
     document.getElementById('station-warning').textContent = this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : '';
+  }
+
+  // Avanca o modulo norte no relogio do ceu e repassa o estado para a tripulacao
+  _updateUtility() {
+    const hours = this._skyHours();
+    const delta = this._utilityHours === null ? 0 : Math.max(0, hours - this._utilityHours);
+    this._utilityHours = hours;
+    this.utility.update(delta);
+    this.crewStock.frozen = this.utility.cold;
+    this.crewStock.greenhouseDark = !this.utility.greenhouseLightsOn;
+    this.crewStock.waterRecovery = this.utility.waterRecovery;
   }
 
   _harvestCrop(plant) {
@@ -299,6 +316,13 @@ export class GameEngine {
       { type: 'console', x: 3.0, y: 11.5, z: -4.8, label: 'Press F: mission computer' },
       { type: 'science', x: 4.5, y: 11.5, z: -4.8, label: 'Press F: science & radio to Earth' },
       { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
+      { type: 'powerroom', x: -7.2, y: 11.5, z: -10.5, label: 'Press F: power & heat control' },
+      { type: 'powerroom', x: -5.2, y: 10.8, z: -13.0, label: 'Press F: power & heat control' },
+      { type: 'galley', x: 5.6, y: 11.35, z: -10.2, label: 'Press F: kitchen' },
+      { type: 'galley', x: 7.1, y: 11.3, z: -12.4, label: 'Press F: pantry & kitchen' },
+      { type: 'hygiene', x: -7.5, y: 11.1, z: -19.3, label: 'Press F: bathroom & water recycler' },
+      { type: 'hygiene', x: -9.85, y: 11.6, z: -18.2, label: 'Press F: bathroom & water recycler' },
+      { type: 'workshop', x: 3.0, y: 11.5, z: -19.1, label: 'Press F: 3D printer workshop' },
       { type: 'greenhouse', x: -17, y: 11.4, z: 0, label: 'Press F: harvest carrot' },
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
@@ -457,6 +481,11 @@ export class GameEngine {
     const domeLight = new THREE.PointLight(0xf0fdf4, 1.5, 18);
     domeLight.position.set(-18, 13.5, 0);
     this.scene.add(domeLight);
+
+    // Luz do Modulo Norte (issue #56)
+    const northLight = new THREE.PointLight(0xf8fafc, 1.6, 24);
+    northLight.position.set(-2, 13.0, -15);
+    this.scene.add(northLight);
 
     // Luz clara dentro do Módulo da Academia (Gym & MedBay)
     const gymLight = new THREE.PointLight(0xe0f2fe, 1.5, 16);

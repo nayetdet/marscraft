@@ -1,5 +1,5 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { RADIATION_CONFIG, STATION_CONFIG as C } from '../config/constants.js';
+import { MISSION_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
 import { RESEARCH_DATA as DATA } from '../data/missionResearch.js';
@@ -457,6 +457,13 @@ export class StationPanel {
     if (action === 'mission') return mission.console();
     if (action === 'filter') return stations.replaceFilter();
     if (action === 'cleanSuit') return stations.cleanSuit();
+    const { utility } = this.engine;
+    if (action.startsWith('toggle:')) return utility.toggle(action.slice(7));
+    if (action === 'eatRation') return utility.eatRation();
+    if (action === 'cookMeal') { const msg = utility.cookMeal(); hud.renderHotbar(survival.slots); return msg; }
+    if (action === 'washUp') return utility.washUp();
+    if (action === 'serviceFilter') return utility.serviceFilter();
+    if (action === 'printPart') { const msg = utility.printPart(this.engine.crew?.stations ?? []); hud.renderHotbar(survival.slots); return msg; }
     if (action === 'fillWall') return this.engine.mission.fillShelterWall(survival);
     if (action === 'drainWall') return this.engine.mission.drainShelterWall(survival);
     if (action === 'cleanBase') return stations.cleanBase();
@@ -488,6 +495,70 @@ export class StationPanel {
       return `Sample analyzed: +${C.SCIENCE_PER_SAMPLE} science points.`;
     }
     return '';
+  }
+
+  _powerText() {
+    const { utility, mission, crew } = this.engine;
+    const loads = utility.loads({
+      crewSize: crew?.members.length ?? 0,
+      operatingStations: crew?.stations.filter((st) => st.operating).length ?? 0,
+      greenhouseRatePerSecond: MISSION_CONFIG.GREENHOUSE_RATE,
+    });
+    const lines = loads.map(([name, rate, on]) => `  ${name.padEnd(18)} ${!on ? 'OFF' : rate > 0 ? `-${rate.toFixed(1)}%/h` : 'idle'}`);
+    const used = loads.reduce((sum, [, rate, on]) => sum + (on ? rate : 0), 0);
+    return `BATTERY: ${Math.round(mission.battery.percent)}%\n` +
+      `SOLAR PANELS NOW: +${mission.chargeRate.toFixed(1)}%/h ${utility.isNight ? '(night: no sun)' : ''}\n` +
+      `USING ABOUT: -${used.toFixed(1)}%/h (plus your own oxygen)\n\n` +
+      `WHERE THE POWER GOES:\n${lines.join('\n')}\n\n` +
+      `HEATER: ${utility.heaterOn ? 'ON' : 'OFF'}${utility.cold ? '   FREEZING! Pipes and plants stopped.' : ''}\n\n` +
+      'Mars nights get down to about -98 C (NASA InSight). At night the panels make nothing and the heater needs more power. ' +
+      'Turning systems off saves power, but each one stops doing its job.\n' +
+      'Real case: the InSight lander shut down in 2022 when dust covered its solar panels.';
+  }
+
+  _powerButtons() {
+    const { utility, mission } = this.engine;
+    const label = (on, name) => `${name}: ${on ? 'ON' : 'OFF'}`;
+    return [
+      ['toggle:heater', label(utility.heaterOn, 'Heater')],
+      ['toggle:lights', label(utility.greenhouseLightsOn, 'Greenhouse lights')],
+      ['toggle:factory', label(mission.factoryOn, 'Fuel factory')],
+      ['toggle:shield', label(mission.shieldOn, 'Radiation shield')],
+    ];
+  }
+
+  _galleyText(survival) {
+    const { crewStock, stations, utility } = this.engine;
+    return `PANTRY: ${Math.floor(crewStock.food)} / ${crewStock.maxFood} packaged rations (shared with the crew)\n` +
+      `YOUR FOOD: ${Math.round(survival.food)} / ${survival.maxStat}\n` +
+      `CARROTS IN YOUR BAG: ${survival.countItem(BLOCK_IDS.HYDRO_PLANT)}\n` +
+      `FRESH FOOD BONUS: ${stations.freshFood > 0 ? 'ACTIVE (you work faster)' : 'none'}\n` +
+      `BASE WATER TANK: ${Math.round(survival.baseWater)} L${utility.cold ? '   (FROZEN)' : ''}\n\n` +
+      'Rations are ready to eat and cost nothing now, but every ration you eat is one less for your crew. ' +
+      'A fresh meal from the greenhouse costs water and power, but fills you up and gives you energy to work.\n' +
+      'Real case: on the Space Station the galley warms up packaged food. An astronaut eats about 1.8 kg of food a day (NASA).';
+  }
+
+  _hygieneText(survival) {
+    const { crewStock, utility } = this.engine;
+    return `CLEAN WATER TANK: ${Math.round(survival.baseWater)} / ${survival.maxBaseWater} L\n` +
+      `GRAY WATER (used, waiting to clean): ${crewStock.graywater.toFixed(1)} L\n` +
+      `WATER FILTER: ${Math.round(utility.waterFilter)}%\n` +
+      `WATER WE GET BACK: ${Math.round(utility.waterRecovery * 100)}%${utility.cold ? '   (PIPES FROZEN)' : ''}\n\n` +
+      'Drink -> use -> recycle -> drink again. The recycler cleans used water, even sweat and urine, so the crew can drink it again. ' +
+      'A dirty filter gets back less water.\n' +
+      "Real case: the Space Station gets back 98% of its water. Yesterday's coffee becomes tomorrow's coffee!";
+  }
+
+  _workshopText(survival) {
+    const { crew, stations } = this.engine;
+    const parts = (crew?.stations ?? []).map((st) => `  ${st.name.padEnd(18)} ${Math.round(st.health * 100)}%`);
+    return `REGOLITH IN YOUR BAG: ${survival.countItem(BLOCK_IDS.REGOLITH)}\n` +
+      `CO2 FILTER: ${Math.round(stations.filter)}%\n` +
+      `CREW STATIONS:\n${parts.join('\n') || '  (no crew)'}\n\n` +
+      'Spare parts from Earth take months to arrive. The 3D printer melts Mars dirt (regolith) into a new part and fixes the most worn machine right away. ' +
+      'But you must go outside to dig the regolith, under radiation, and printing uses a lot of power.\n' +
+      'Real case: the first 3D print in space was made on the Space Station in 2014.';
   }
 
   _shelterText(mission, survival) {
@@ -532,6 +603,10 @@ Clean your suit before entering the habitat. Use the doors to cycle the airlock.
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\nRADIATION: ${Math.round(m.radiation)}%\n\nIn Mars's 0.38g gravity, astronauts lose bone mineral density and muscle mass. Use the treadmill and bike in the Gym Wing!`, [['treat', 'Use medical station']]],
       science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   SAMPLES: ${s.samples}\nRADIO: ${s.message}\n\nAnalyze one regolith block to earn science.\nA radio message needs 3 to 22 minutes to travel between Mars and Earth, one way, so Mission Control cannot help you right away. In the game the wait is shorter.`, [['analyze', 'Analyze regolith'], ['send', 'Send data to Earth'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
       mav: ['MAV DATA TERMINAL', `ANALYZED SAMPLES: ${s.analyzedSamples}/${C.MAV_REQUIRED_SAMPLES}\nPACKAGE: ${s.mavSent ? 'RECEIVED' : s.message}\n\nAnalyze samples at the science station, then send the package from the MAV.`, [['sendMav', 'Send MAV science package']]],
+      powerroom: ['POWER & HEAT ROOM', this._powerText(), this._powerButtons()],
+      galley: ['KITCHEN & PANTRY', this._galleyText(v), [['eatRation', 'Eat a ration (pantry)'], ['cookMeal', `Cook fresh meal (1 carrot, ${U.MEAL_WATER_L} L, ${U.MEAL_POWER}% power)`]]],
+      hygiene: ['BATHROOM & WATER RECYCLER', this._hygieneText(v), [['washUp', `Wash up (${U.WASH_WATER_L} L of water)`], ['serviceFilter', `Clean water filter (${U.FILTER_SERVICE_POWER}% power)`]]],
+      workshop: ['WORKSHOP & 3D PRINTER', this._workshopText(v), [['printPart', `Print spare part (${U.PRINT_REGOLITH} regolith, ${U.PRINT_POWER}% power)`]]],
       shelter: ['STORM SHELTER', this._shelterText(mission, v), [['fillWall', `Fill wall (+${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`], ['drainWall', `Drain wall (-${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`]]],
     };
     const [title, text, buttons] = pages[this.type];

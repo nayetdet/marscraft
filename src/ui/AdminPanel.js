@@ -1,6 +1,7 @@
 import { HABITAT_LAYOUT } from '../world/habitatLayout.js';
 import { MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
+import { BLOCK_IDS } from '../config/blockTypes.js';
 import './styles/admin.css';
 
 // Painel de admin para testar a base sem esperar o jogo: forcar tempestade, mexer na bateria,
@@ -14,6 +15,10 @@ const TELEPORTS = [
   ['Storm shelter', 4.3, EYE_INSIDE, 4.8, -Math.PI / 2],
   ['Comms terminal', 3.75, EYE_INSIDE, -2.6, 0],
   ['Habitat center', 0.5, EYE_INSIDE, 1, 0],
+  ['Power & heat room', -6.5, EYE_INSIDE, -12, Math.PI / 2],
+  ['Kitchen', 2.5, EYE_INSIDE, -12, -Math.PI / 2],
+  ['Bathroom', -6.5, EYE_INSIDE, -17.5, Math.PI / 2],
+  ['Workshop', 2.5, EYE_INSIDE, -17.5, 0],
   ['Airlock', 0.5, EYE_INSIDE, 7.5, Math.PI],
   ['Greenhouse', -15, EYE_INSIDE, 2, Math.PI / 2],
   ['Gym & medbay', -8, EYE_INSIDE, 10, Math.PI],
@@ -105,6 +110,7 @@ export class AdminPanel {
       ${group('Water', [['water:add', 'Base tank +20 L'], ['water:empty', 'Base tank 0 L'], ['wall:full', 'Shelter wall full'], ['wall:empty', 'Shelter wall empty']])}
       ${group('Astronaut', [['me:refill', 'Refill astronaut'], ['me:dose', 'Reset radiation dose'], ['me:hurt', 'Health to 25%']])}
       ${group('Base', [['base:dirtySuit', 'Dusty suit'], ['base:contaminate', 'Dust in habitat'], ['base:clean', 'Clean suit + habitat'], ['base:filter', 'CO2 filter 0%']])}
+      ${group('North module', [['north:waterFilter', 'Water filter 10%'], ['north:pantry', 'Pantry +10 rations'], ['north:wear', 'Crew stations 30%'], ['north:regolith', '+6 regolith'], ['north:carrot', '+3 carrots']])}
       ${group('Time', [['time:1', '+1 hour'], ['time:day', 'Skip to 08:00'], ['time:night', 'Skip to 21:00']])}
       ${group('Teleport', TELEPORTS.map(([name], i) => [`tp:${i}`, name]))}
     `;
@@ -140,6 +146,22 @@ export class AdminPanel {
         else if (arg === 'filter') stations.filter = 0;
         else { stations.dirtySuit = false; stations.contaminated = false; }
         return 'Base state changed.';
+      case 'north': {
+        const { utility, crewStock, crew } = this.engine;
+        if (arg === 'waterFilter') utility.waterFilter = 10;
+        else if (arg === 'pantry') crewStock.food = Math.min(crewStock.maxFood, crewStock.food + 10);
+        else if (arg === 'wear') for (const st of crew?.stations ?? []) st.health = 0.3;
+        else {
+          const id = arg === 'regolith' ? BLOCK_IDS.REGOLITH : BLOCK_IDS.HYDRO_PLANT;
+          const count = arg === 'regolith' ? 6 : 3;
+          for (let i = 0; i < count; i++) {
+            if (arg === 'carrot') survival.addHarvestedCrop();
+            else survival.addBlockToInventory(id);
+          }
+          this.engine.hud.renderHotbar(survival.slots);
+        }
+        return 'North module state changed.';
+      }
       case 'time': {
         const target = arg === 'day' ? 8 : arg === 'night' ? 21 : null;
         const delta = target === null ? 1 : ((target - sky.timeOfDay) % 24 + 24) % 24;
@@ -174,6 +196,7 @@ export class AdminPanel {
       `Inside habitat: ${survival.insidePressurizedShip ? 'yes' : 'no'}   In shelter: ${mission.insideShelter ? 'yes' : 'no'}   Shield: ${mission.shieldOn ? 'on' : 'off'}`,
       `Battery: ${mission.battery.percent.toFixed(0)}%   Base tank: ${Math.round(survival.baseWater)} L   Wall: ${Math.round(mission.shelterWaterL)} L`,
       `Health: ${Math.round(survival.health)}/${survival.maxStat}   O2: ${Math.round(survival.oxygen)}`,
+      `Heater: ${this.engine.utility.heaterOn ? 'on' : 'off'}${this.engine.utility.cold ? ' (FREEZING)' : ''}   Water filter: ${Math.round(this.engine.utility.waterFilter)}%   Pantry: ${Math.floor(this.engine.crewStock.food)}`,
       `Position: ${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)}, ${player.pos.z.toFixed(1)}`,
     ].join('\n');
   }

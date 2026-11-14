@@ -190,6 +190,33 @@ export const CREW_CONFIG = {
   MAX_STEP_HOURS: 0.05,
 };
 
+// Modulo norte (issue #56, parte B): energia/aquecimento, cozinha, banheiro e oficina.
+// Custos em % de bateria; "por hora" = hora de jogo (50 s reais). Fontes em docs/data/numeros-reais.md.
+export const UTILITY_CONFIG = {
+  // B2 aquecedor: gasta mais a noite, quando faz mais frio la fora e os paineis nao geram.
+  // [Ref] InSight: media ~-62 C, minima -97,7 C (Elysium Planitia). Potencia em escala de jogo.
+  HEATER_DAY_PER_HOUR: 1,
+  HEATER_NIGHT_PER_HOUR: 4,
+  // B3 cozinha: racao da despensa (compartilhada com a tripulacao) x refeicao fresca da estufa
+  RATION_FOOD: 6,
+  MEAL_WATER_L: 1,
+  MEAL_POWER: 2,
+  MEAL_HEAL: 2,
+  // B4 banheiro: lavar gasta agua limpa, que vira agua cinza para o reciclador.
+  // [Ref] ISS recupera ~98 % da agua (STATION_CONFIG.WATER_RECOVERY); filtro gasto recupera menos.
+  WASH_WATER_L: 2,
+  WASH_HEAL: 1,
+  FILTER_WEAR_PER_HOUR: 2, // % do filtro do processador de agua por hora de jogo
+  WORN_FILTER: 25, // abaixo disso a recuperacao cai
+  WORN_RECOVERY: 0.7,
+  FILTER_SERVICE_POWER: 3,
+  // B5 oficina: impressora 3D transforma regolito em peca de reposicao
+  PRINT_REGOLITH: 3,
+  PRINT_POWER: 6,
+  // Consumo exibido no painel de distribuicao (estimado a partir das regras do jogo)
+  GAME_SECONDS_PER_HOUR: 50,
+};
+
 export const STATION_CONFIG = {
   WORK_ENERGY_PER_HOUR: 2, // % de bateria por estacao operada
   DEGRADE_PER_HOUR: 0.08, // sem operador a estacao estraga devagar
