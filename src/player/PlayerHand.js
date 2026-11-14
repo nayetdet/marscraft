@@ -41,8 +41,10 @@ export class PlayerHand {
     const armGeo = new THREE.BoxGeometry(0.24, 0.68, 0.24);
     const armMat = new THREE.MeshLambertMaterial({
       map: texture,
-      depthTest: false,
-      depthWrite: false,
+      transparent: false,
+      opacity: 1,
+      depthTest: true,
+      depthWrite: true,
     });
 
     this.armMesh = new THREE.Mesh(armGeo, armMat);
@@ -70,8 +72,9 @@ export class PlayerHand {
     const baseMat = this.materials[blockId];
     if (baseMat) {
       const cloned = baseMat.clone();
-      cloned.depthTest = false;
-      cloned.depthWrite = false;
+      // Keep opaque held items solid; preserve transparency for glass blocks.
+      cloned.depthTest = true;
+      cloned.depthWrite = !cloned.transparent;
       this.heldBlockMesh.material = cloned;
       this.heldBlockMesh.visible = true;
       this.armMesh.position.set(0.08, -0.06, 0.08);
