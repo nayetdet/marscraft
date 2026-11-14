@@ -1,4 +1,5 @@
 import { BLOCK_INTERACTION_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { applyMouseLook, requestRawPointerLock } from './mouseLook.js';
 
 export class InputController {
   constructor({
@@ -119,7 +120,7 @@ export class InputController {
     }, true);
 
     startBtn.addEventListener('click', () => {
-      this.domElement.requestPointerLock();
+      requestRawPointerLock(this.domElement);
     });
 
     resetBtn.addEventListener('click', () => window.location.reload());
@@ -129,7 +130,7 @@ export class InputController {
         this.survival.resetStats();
         this.player.resetToShipRamp();
         this.hud.hideDeathScreen();
-        this.domElement.requestPointerLock();
+        requestRawPointerLock(this.domElement);
       });
     }
 
@@ -144,11 +145,7 @@ export class InputController {
 
     document.addEventListener('mousemove', (e) => {
       if (!this.isLocked || this.survival.isDead) return;
-      const sensitivity = this.isZoomed ? 0.00055 : 0.0021;
-      this.player.yaw -= e.movementX * sensitivity;
-      this.player.pitch -= e.movementY * sensitivity;
-      const maxPitch = Math.PI / 2 - 0.02;
-      this.player.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.player.pitch));
+      applyMouseLook(this.player, e.movementX, e.movementY, this.isZoomed);
     });
 
     window.addEventListener('keydown', (e) => {
@@ -174,7 +171,7 @@ export class InputController {
         e.preventDefault();
         if (this.hud.isInventoryOpen) {
           this.hud.closeInventory();
-          this.domElement.requestPointerLock();
+          requestRawPointerLock(this.domElement);
         } else if (this.isLocked) {
           this.hud.openInventory(this.survival.inventorySlots);
           document.exitPointerLock();

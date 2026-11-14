@@ -28,6 +28,13 @@ export const CAMERA_CONFIG = {
   REACH_DISTANCE: 6.5,
 };
 
+export const INPUT_CONFIG = {
+  MOUSE_SENSITIVITY: 0.0021, // radianos por pixel
+  ZOOM_SENSITIVITY: 0.00055, // mais fina com a luneta (Z)
+  // Deltas acima disso num unico mousemove sao picos falsos do pointer lock (~60 graus de giro).
+  MAX_MOUSE_DELTA: 500,
+};
+
 export const BLOCK_INTERACTION_CONFIG = {
   BREAK_TIME: 0.6,
   BREAK_PARTICLE_COUNT: 12,
