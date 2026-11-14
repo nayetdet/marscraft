@@ -280,3 +280,10 @@ export const CUTSCENE_CONFIG = {
   // Aceleracao do MAV na decolagem, em blocos/s^2 (escala de jogo)
   LAUNCH_ACCEL: 2.2,
 };
+
+// Design choices, not NASA agronomic measurements. Seconds are accelerated.
+export const CROP_CONFIG = Object.freeze({
+  lettuce: { water: 1, energy: 2, seconds: 7, nutrition: 3, strategy: 'Quick snack, small harvest' },
+  potato: { water: 2, energy: 3, seconds: 12, nutrition: 6, strategy: 'Balanced meal, longer wait' },
+  soy: { water: 3, energy: 5, seconds: 17, nutrition: 10, strategy: 'Big harvest, thirsty plants' },
+});

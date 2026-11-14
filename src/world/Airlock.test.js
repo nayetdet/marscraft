@@ -82,3 +82,27 @@ describe('airlock', () => {
     expect(airlock.request(airlock.doors[0], away)).toMatch(/energy/);
   });
 });
+
+it('clips sliding leaves to the opening while leaving the frame intact', () => {
+  const airlock = new Airlock(new THREE.Scene(), [], new MissionSystem());
+  for (const door of airlock.doors) {
+    const panel = door.left.children[0];
+    const planes = panel.material.clippingPlanes;
+    expect(planes).toHaveLength(2);
+    expect(planes.every(plane => plane.distanceToPoint(new THREE.Vector3(.5, 11, door.z)) >= 0)).toBe(true);
+    expect(planes.some(plane => plane.distanceToPoint(new THREE.Vector3(-2, 11, door.z)) < 0)).toBe(true);
+    expect(planes.some(plane => plane.distanceToPoint(new THREE.Vector3(3, 11, door.z)) < 0)).toBe(true);
+    expect(door.group.children[2].material.clippingPlanes).toBeNull();
+    door.target = 1;
+    run(airlock, away, 2);
+    expect(door.openness).toBe(1);
+    door.group.updateMatrixWorld(true);
+    for (const leaf of [door.left, door.right]) {
+      const vertices = leaf.children[0].geometry.attributes.position;
+      for (let i = 0; i < vertices.count; i++) {
+        const point = new THREE.Vector3().fromBufferAttribute(vertices, i).applyMatrix4(leaf.children[0].matrixWorld);
+        expect(planes.some(plane => plane.distanceToPoint(point) < 0)).toBe(true);
+      }
+    }
+  }
+});

@@ -104,4 +104,27 @@ describe('RoverController', () => {
     expect(unloadResult.amount).toBe(10);
     expect(controller.iceCargo).toBe(0);
   });
+
+  it('animates the drill and reports collection progress to the HUD', () => {
+    const roverGroup = new THREE.Group();
+    const controller = new RoverController({ roverGroup, wheels: [] });
+    controller.pos.set(22, 9, -22);
+    controller.activate();
+
+    expect(controller.rig).toBeDefined();
+
+    controller.collectIce();
+    // Avança a animação até a fase de perfuração e extração térmica
+    controller.update(0.45, {});
+
+    expect(controller.armDeploy).toBeGreaterThan(0.5);
+    expect(controller.rig.armPivot.rotation.x).toBeLessThan(0);
+    expect(controller.rig.drillBit.rotation.y).toBeGreaterThan(0);
+    expect(controller.rig.iceCuttings.some((p) => p.visible)).toBe(true);
+    expect(controller.getTelemetry().waterFillRatio).toBeGreaterThan(0);
+
+    // Conclui o ciclo de perfuração e recolhimento do braço
+    controller.update(1.5, {});
+    expect(controller.getTelemetry().waterFillRatio).toBeCloseTo(0.2, 1);
+  });
 });

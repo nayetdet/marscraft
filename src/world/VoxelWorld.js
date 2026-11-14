@@ -1,5 +1,6 @@
+import { createCropItemModel } from '../graphics/cropModels.js';
 import * as THREE from 'three';
-import { BLOCK_IDS } from '../config/blockTypes.js';
+import { BLOCK_IDS, CROP_TYPES_BY_ID } from '../config/blockTypes.js';
 import { BLOCK_INTERACTION_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { generateMartianTerrain } from './terrainGenerator.js';
 import { buildNasaSpaceshipAndBase } from './nasaSpaceshipBuilder.js';
@@ -103,9 +104,14 @@ export class VoxelWorld {
       }
     }
     this.dirtyChunks = new Set();
+    this.baseWindows = new Set();
+    this.brokenBaseWindows = new Set();
 
     generateMartianTerrain(this);
     buildNasaSpaceshipAndBase(this);
+    for (const idx of this.baseWindows) {
+      if (this.data[idx] !== BLOCK_IDS.HAB_GLASS) this.baseWindows.delete(idx);
+    }
     this.rebuildMeshes();
   }
 
@@ -134,6 +140,13 @@ export class VoxelWorld {
     const idx = this._index(x, y, z);
     if (idx === -1) return false;
     this.data[idx] = id;
+    if (this.recordBaseWindows) {
+      if (id === BLOCK_IDS.HAB_GLASS) this.baseWindows.add(idx);
+      else this.baseWindows.delete(idx);
+    } else if (this.baseWindows.has(idx)) {
+      if (id === BLOCK_IDS.AIR) this.brokenBaseWindows.add(idx);
+      else this.brokenBaseWindows.delete(idx);
+    }
     if (rebuild) {
       this._markDirtyAround(Math.floor(x) + this.halfX, Math.floor(z) + this.halfZ);
       this._rebuildDirtyChunks();
@@ -250,13 +263,15 @@ export class VoxelWorld {
     });
   }
 
-  spawnCropDrop(position) {
-    const mesh = new THREE.Mesh(this.carrotGeometry, this.carrotMaterial.clone());
+  spawnCropDrop(position, blockId = BLOCK_IDS.HYDRO_PLANT) {
+    const type = CROP_TYPES_BY_ID[blockId];
+    const mesh = type ? createCropItemModel(type) : new THREE.Mesh(this.carrotGeometry, this.carrotMaterial.clone());
+    if (type) { mesh.scale.setScalar(.65); mesh.userData.sharedCropModel = true; }
     mesh.position.copy(position);
     mesh.position.y += 0.35;
     this.dropGroup.add(mesh);
     this.drops.push({
-      blockId: BLOCK_IDS.HYDRO_PLANT, mesh,
+      blockId, mesh,
       velocity: new THREE.Vector3(0, 1.5, 0), age: 0, grounded: false,
       bobOffset: Math.random() * Math.PI * 2, groundY: 0,
       pickupDelay: BLOCK_INTERACTION_CONFIG.CROP_PICKUP_DELAY,
@@ -264,8 +279,8 @@ export class VoxelWorld {
   }
 
   spawnPlayerDrop(position, yaw, blockId) {
-    if (blockId === BLOCK_IDS.HYDRO_PLANT) {
-      this.spawnCropDrop(position);
+    if (blockId === BLOCK_IDS.HYDRO_PLANT || CROP_TYPES_BY_ID[blockId]) {
+      this.spawnCropDrop(position, blockId);
     } else {
       this._spawnDrop(position.x - 0.5, position.y - 0.65, position.z - 0.5, blockId);
     }
@@ -276,7 +291,7 @@ export class VoxelWorld {
 
   _removeEffect(mesh) {
     this.dropGroup.remove(mesh);
-    mesh.material.dispose();
+    if (!mesh.userData.sharedCropModel) mesh.material.dispose();
   }
 
   updateDrops(dt, playerPos, collect = () => true) {
@@ -301,7 +316,7 @@ export class VoxelWorld {
       drop.age += dt;
       const { position } = drop.mesh;
 
-      const halfSize = drop.blockId === BLOCK_IDS.HYDRO_PLANT && drop.pickupDelay ? 0.25 : BLOCK_INTERACTION_CONFIG.DROP_SIZE / 2;
+      const halfSize = (drop.blockId === BLOCK_IDS.HYDRO_PLANT || CROP_TYPES_BY_ID[drop.blockId]) && drop.pickupDelay ? 0.25 : BLOCK_INTERACTION_CONFIG.DROP_SIZE / 2;
       if (!drop.grounded) {
         drop.velocity.y -= BLOCK_INTERACTION_CONFIG.DROP_GRAVITY * dt;
         position.addScaledVector(drop.velocity, dt);

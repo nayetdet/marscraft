@@ -1,3 +1,5 @@
+import { CROP_CONFIG } from './constants.js';
+
 export const BLOCK_IDS = {
   AIR: 0,
   REGOLITH: 1,
@@ -13,6 +15,9 @@ export const BLOCK_IDS = {
   CONSOLE_SCREEN: 11,
   HYDRO_PLANT: 12,
   RED_BEACON: 13,
+  POTATO: 14,
+  LETTUCE: 15,
+  SOY: 16,
 };
 
 export const HOTBAR_BLOCKS = [
@@ -71,3 +76,11 @@ export const HOTBAR_BLOCKS = [
     consumable: null,
   },
 ];
+
+export const CROP_ITEM_IDS = Object.freeze({ potato: BLOCK_IDS.POTATO, lettuce: BLOCK_IDS.LETTUCE, soy: BLOCK_IDS.SOY });
+export const CROP_TYPES_BY_ID = Object.freeze(Object.fromEntries(Object.entries(CROP_ITEM_IDS).map(([type, id]) => [id, type])));
+// Item registry is independent of the nine initial hotbar slots.
+export const ITEM_DEFINITIONS = [...HOTBAR_BLOCKS, ...Object.entries(CROP_ITEM_IDS).map(([type, id]) => ({
+  id, name: 'Mars ' + type + ' (Use to eat)', initialCount: 0,
+  consumable: { type: 'food', amount: CROP_CONFIG[type].nutrition, heal: 0 },
+}))];

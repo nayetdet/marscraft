@@ -418,7 +418,7 @@
 .station-window header button { background: #9d4641; color: white; border: 2px solid #ddd; font: inherit; cursor: pointer; }
 .station-screen { padding: 16px; background: #152b30; border: 4px inset #899b9a; color: #a7f9ca; min-height: 180px; }
 .station-screen pre { margin: 0; white-space: pre-wrap; line-height: 1.6; font: inherit; }
-.station-screen pre.hidden, .gym-interactive.hidden { display: none; }
+.station-screen pre.hidden, .gym-interactive.hidden, .gh-monitor.hidden { display: none; }
 .station-screen p { color: #ffdf75; }
 #station-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 #station-actions .mc-btn { width: auto; flex: 1 1 180px; font-size: 13px; }
@@ -590,5 +590,211 @@
   .touch-device .mobile-controls,
   .touch-device #hud {
     visibility: hidden;
+  }
+}
+
+/* Garden choices remain reachable with touch and keyboard. */
+#station-actions .mc-btn { min-height: 44px; }
+.station-sources a { padding: 8px 0; overflow-wrap: anywhere; }
+
+/* Monitor visual de alimentos da estufa (7-12 anos: pixel art, pouco texto, claro) */
+.station-overlay.is-greenhouse .station-window {
+  width: min(520px, 96vw);
+}
+.station-overlay.is-greenhouse .station-footer,
+.station-overlay.is-greenhouse #station-sources,
+.station-overlay.is-greenhouse #station-actions,
+.station-overlay.is-greenhouse #station-feedback {
+  display: none;
+}
+
+.gh-monitor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #edf8f4;
+}
+
+.gh-mini-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: -2px;
+  flex-shrink: 0;
+}
+.gh-mini-icon.water { color: #38bdf8; }
+.gh-mini-icon.power { color: #facc15; }
+.gh-mini-icon.food { color: #fb923c; }
+
+.gh-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gh-res-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #0e2227;
+  border: 2px solid #35565b;
+}
+.gh-res-pill strong {
+  color: #ffffff;
+  font-size: 16px;
+}
+.gh-res-pill.water { border-color: #0284c7; }
+.gh-res-pill.power { border-color: #ca8a04; }
+
+.gh-clean-btn {
+  width: auto;
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 13px;
+  background: #b91c1c;
+  border-color: #fca5a5 #7f1d1d #7f1d1d #fca5a5;
+}
+
+.gh-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.gh-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 14px 10px;
+  background: #0e2329;
+  border: 3px solid #35565b;
+  box-shadow: inset 0 0 0 2px #09171b;
+}
+.gh-card.can-plant,
+.gh-card.ready {
+  cursor: pointer;
+  border-color: #4ade80;
+}
+.gh-card.can-plant:hover {
+  background: #133038;
+}
+.gh-card.ready {
+  background: #113624;
+}
+.gh-card.growing {
+  border-color: #38bdf8;
+  background: #102a30;
+}
+
+.gh-crop-art {
+  width: 72px;
+  height: 72px;
+  padding: 6px;
+  box-sizing: border-box;
+  background: radial-gradient(circle at 50% 40%, #1e4638, #0d211b);
+  border: 3px solid #4d7c6b;
+  image-rendering: pixelated;
+}
+
+.gh-card h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.gh-food-gain {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 15px;
+  font-weight: bold;
+  color: #fde047;
+}
+
+.gh-can-buy {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 6px;
+  font-size: 13px;
+  background: #112a24;
+  border: 2px solid #2d5a4c;
+  color: #a7f3d0;
+}
+.gh-can-buy strong {
+  color: #4ade80;
+  font-size: 16px;
+}
+.gh-can-buy.zero {
+  background: #2b1d1c;
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+.gh-can-buy.zero strong {
+  color: #f87171;
+}
+
+.gh-plant-btn,
+.gh-harvest-btn {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 15px;
+  background: #256f46;
+  border-color: #74d69d #143d26 #143d26 #74d69d;
+}
+.gh-harvest-btn {
+  background: #16a34a;
+  color: #ffffa0;
+}
+.gh-plant-btn:hover:not(:disabled),
+.gh-harvest-btn:hover {
+  background: #2f8c58;
+  color: #ffffa0;
+}
+
+.gh-progress-track {
+  position: relative;
+  width: 100%;
+  height: 44px;
+  box-sizing: border-box;
+  background: #071310;
+  border: 3px solid #4ade80;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.gh-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  background: repeating-linear-gradient(90deg, #22c55e 0 12px, #16a34a 12px 14px);
+  transition: width 0.15s linear;
+}
+.gh-progress-label {
+  position: relative;
+  z-index: 1;
+  font-size: 15px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 2px 2px 0 #000;
+}
+
+@media (max-width: 620px), (max-height: 480px) {
+  .gh-cards {
+    gap: 8px;
+  }
+  .gh-card {
+    padding: 8px 6px;
+    gap: 6px;
+  }
+  .gh-crop-art {
+    width: 52px;
+    height: 52px;
+  }
+  .gh-card h3 {
+    font-size: 13px;
   }
 }

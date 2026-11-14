@@ -1,14 +1,23 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { COMMS_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U } from '../config/constants.js';
+import { COMMS_CONFIG, CROP_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
 import { formatDateDMY, formatHours } from '../mission/missionText.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
 import { RESEARCH_DATA as DATA } from '../data/missionResearch.js';
+import plantResearch from '../data/osdrPlants.json';
+import { plantDiscovery } from '../data/plantDiscoveries.js';
+import { createCropTexture } from '../graphics/cropTextures.js';
 import { GymWorkout } from './gymWorkout.js';
 
 const SHELTER_SOURCES = {
   prediccs: 'https://posters.unh.edu/private_media/4209/',
   nasa: 'https://ntrs.nasa.gov/citations/20210009760',
+};
+
+const GH_ICONS = {
+  water: '<svg class="gh-mini-icon water" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M3 0h2v1h1v1h1v1h1v3H7v1H6v1H2V7H1V6H0V3h1V2h1V1h1Z"/></svg>',
+  power: '<svg class="gh-mini-icon power" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M4 0h3v1H6v2h2v1H7v1H6v1H5v1H4v1H3V6h1V5H1V4h1V3h1V2h1Z"/></svg>',
+  food: '<svg class="gh-mini-icon food" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M1 0h3v1h1v1h1v2H5v2H4v1H2V5H1V3H0V1h1Z M6 5h2v3H6Z"/></svg>',
 };
 
 export class StationPanel {
@@ -18,10 +27,14 @@ export class StationPanel {
     this.title = document.getElementById('station-title');
     this.content = document.getElementById('station-content');
     this.gymContainer = document.getElementById('gym-interactive');
+    this.greenhouseContainer = document.getElementById('greenhouse-monitor');
     this.actions = document.getElementById('station-actions');
     this.sources = document.getElementById('station-sources');
     this.feedback = document.getElementById('station-feedback');
     this.isOpen = false;
+    this.cropIcons = Object.fromEntries(
+      Object.keys(CROP_CONFIG).map(type => [type, createCropTexture(type).dataUrl])
+    );
 
     this.gymMode = 'treadmill';
     this.workoutProgress = 0;
@@ -34,15 +47,26 @@ export class StationPanel {
     this.lastHitQuality = 'ready';
     this._gymRaf = null;
     this._lastGymTick = 0;
+    this._ghRaf = null;
+    this._lastGhTick = 0;
 
     document.getElementById('station-close').addEventListener('click', () => this.close());
-    this.actions.addEventListener('click', event => {
-      const action = event.target.closest('button')?.dataset.action;
-      if (action) {
-        this.feedback.textContent = this.perform(action);
+    const handleActionClick = event => {
+      const target = event.target.closest('[data-action]');
+      const action = target?.dataset.action;
+      if (action && !target.hasAttribute('disabled')) {
+        const msg = this.perform(action);
+        this.feedback.textContent = this.type === 'greenhouse' ? '' : msg;
+        if (this.type === 'greenhouse') {
+          this._playGymSound(action === 'harvest' ? 520 : 420, 0.09, action === 'harvest' ? 680 : 540);
+        }
         this.render();
       }
-    });
+    };
+    this.actions.addEventListener('click', handleActionClick);
+    if (this.greenhouseContainer) {
+      this.greenhouseContainer.addEventListener('click', handleActionClick);
+    }
 
     if (this.gymContainer) {
       this.gymContainer.addEventListener('click', event => {
@@ -86,6 +110,10 @@ export class StationPanel {
     return ['treadmill', 'bike'].includes(this.type);
   }
 
+  _isGreenhouseStation() {
+    return this.type === 'greenhouse';
+  }
+
   open(type) {
     this.type = type;
     this.isOpen = true;
@@ -105,14 +133,67 @@ export class StationPanel {
     this.element.classList.remove('hidden');
     if (this.engine.input?.isTouchMode) this.engine.input.keys = {};
     if (this._isGymStation()) this._startGymLoop();
+    if (this._isGreenhouseStation()) this._startGreenhouseLoop();
     if (document.pointerLockElement) document.exitPointerLock();
   }
 
   close() {
     this.isOpen = false;
     this._stopGymLoop();
+    this._stopGreenhouseLoop();
     this.element.classList.add('hidden');
     if (!this.engine.input?.isTouchMode) requestRawPointerLock(this.engine.renderer.domElement);
+  }
+
+  _startGreenhouseLoop() {
+    this._stopGreenhouseLoop();
+    this._lastGhTick = performance.now();
+    const tick = (now) => {
+      if (!this.isOpen || !this._isGreenhouseStation()) return;
+      const dt = Math.min(0.05, (now - this._lastGhTick) / 1000);
+      this._lastGhTick = now;
+
+      const { expedition: m, stations: s, utility } = this.engine;
+      if (s.crop) {
+        const total = CROP_CONFIG[s.crop.type].seconds;
+        if (s.crop.progress < total) {
+          const lit = utility ? (utility.greenhouseLightsOn && !utility.cold) : true;
+          m.greenhousePowered = lit && m.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
+          if (m.greenhousePowered && !s.contaminated) {
+            s.crop.progress = Math.min(total, s.crop.progress + dt);
+            if (this.engine.stationCrop) {
+              this.engine.stationCrop.visible = true;
+              this.engine.stationCrop.scale.y = 0.2 + 0.8 * s.crop.progress / total;
+              for (const [t, model] of Object.entries(this.engine.stationCropModels ?? {})) {
+                model.visible = t === s.crop.type;
+              }
+            }
+          }
+          const pct = Math.floor(s.crop.progress / total * 100);
+          if (pct >= 100) {
+            this._playGymSound(440, 0.14, 660);
+            this.render();
+          } else {
+            const fillEl = this.greenhouseContainer?.querySelector('#gh-progress-fill');
+            if (fillEl) fillEl.style.width = `${pct}%`;
+            const pctEl = this.greenhouseContainer?.querySelector('#gh-progress-pct');
+            if (pctEl) pctEl.textContent = `${pct}%`;
+            const powerEl = this.greenhouseContainer?.querySelector('#gh-res-power');
+            if (powerEl) powerEl.textContent = `${Math.round(m.energy)}%`;
+          }
+        }
+      }
+
+      this._ghRaf = requestAnimationFrame(tick);
+    };
+    this._ghRaf = requestAnimationFrame(tick);
+  }
+
+  _stopGreenhouseLoop() {
+    if (this._ghRaf) {
+      cancelAnimationFrame(this._ghRaf);
+      this._ghRaf = null;
+    }
   }
 
   _startGymLoop() {
@@ -482,7 +563,9 @@ export class StationPanel {
     if (action === 'upgrade') return stations.upgrade();
     if (action === 'upgradeTool') return stations.upgradeTool();
     if (action === 'sendMav') return stations.sendMav(this.engine.radioOptions());
-    if (action === 'harvest') return stations.harvest(survival);
+    if (action === 'harvest') return stations.harvest(survival, id => {
+      this.engine.world.spawnCropDrop(this.engine.stationCrop.position, id);
+    });
     if (action.startsWith('plant:')) return stations.plant(action.slice(6), survival);
     if (action === 'analyze') {
       if (stations.samples < 1) return 'Collect a new regolith sample outside first.';
@@ -591,14 +674,116 @@ export class StationPanel {
       'Real model: a 10 cm layer of water (10 g/cm2) blocks about 83% of a storm dose. Game-scaled.';
   }
 
+  gardenText(s, m, v) {
+    const crop = s.crop;
+    const recipe = crop ? CROP_CONFIG[crop.type] : null;
+    const pct = crop ? Math.floor(crop.progress / recipe.seconds * 100) : 0;
+    const bar = '[' + '#'.repeat(Math.floor(pct / 10)) + '.'.repeat(10 - Math.floor(pct / 10)) + ']';
+    const study = plantDiscovery(s.discoveryIndex);
+    const state = !crop ? 'Pick your next crop!' : pct === 100 ? 'READY! Harvest your meal and open a science discovery.' : s.contaminated ? 'PAUSED: clean the habitat first.' : !m.greenhousePowered ? 'PAUSED: waiting for power.' : 'Growing! Close this panel to keep the garden running.';
+    return [
+      'GARDEN CHALLENGE: harvest all 3 crops! ' + s.cropCollection.size + '/3',
+      'Collected: ' + ([...s.cropCollection].join(', ') || 'none yet') + ' | Harvests: ' + s.harvestCount,
+      '', 'WATER: ' + v.water.toFixed(1) + ' | POWER: ' + Math.round(m.energy) + '%',
+      crop ? crop.type.toUpperCase() + ' ' + bar + ' ' + pct + '%' : 'BED: EMPTY', state,
+      '', ...Object.entries(CROP_CONFIG).map(([name, r]) => name.toUpperCase() + ': ' + r.strategy + '.'),
+      '', 'Planting uses water and shared power. Harvest drops a food item: pick it up and use it to eat.',
+      'Times, yields and costs below are game rules, not measured crop requirements.',
+      '', 'FIELD NOTEBOOK — Real NASA data from ' + formatDateDMY(plantResearch.retrieved.slice(0, 10)),
+      study ? study.id + ': ' + study.title : 'Harvest a crop to discover a real space-biology study!',
+      study ? study.explanation : '',
+      study ? 'Mission: ' + study.mission : '',
+      'These studies were conducted in space; they do not measure crop yields on Mars.',
+    ].join('\n');
+  }
+
+  _renderGreenhouseMonitor() {
+    const { expedition: m, stations: s, survival: v } = this.engine;
+    const crop = s.crop;
+    const recipe = crop ? CROP_CONFIG[crop.type] : null;
+    const pct = crop ? Math.floor(crop.progress / recipe.seconds * 100) : 0;
+    const isReady = Boolean(crop && pct >= 100);
+    const study = plantDiscovery(s.discoveryIndex);
+
+    const cardsHtml = Object.entries(CROP_CONFIG).map(([type, r]) => {
+      const byWater = Math.floor(v.water / r.water);
+      const byPower = Math.floor(m.energy / r.energy);
+      const canBuy = Math.max(0, Math.min(byWater, byPower));
+      const isThisCrop = crop?.type === type;
+      const canPlant = !crop && canBuy > 0;
+
+      let bottomHtml = '';
+      let cardAction = '';
+      let cardStateClass = 'locked';
+
+      if (isThisCrop && isReady) {
+        cardStateClass = 'ready';
+        cardAction = 'data-action="harvest"';
+        bottomHtml = `<button type="button" class="mc-btn gh-harvest-btn" data-action="harvest">GET!</button>`;
+      } else if (isThisCrop) {
+        cardStateClass = 'growing';
+        bottomHtml = `
+          <div class="gh-progress-track">
+            <div id="gh-progress-fill" class="gh-progress-fill" style="width:${pct}%"></div>
+            <span id="gh-progress-pct" class="gh-progress-label">${pct}%</span>
+          </div>`;
+      } else {
+        if (canPlant) {
+          cardStateClass = 'can-plant';
+          cardAction = `data-action="plant:${type}"`;
+        }
+        bottomHtml = `<button type="button" class="mc-btn gh-plant-btn" data-action="plant:${type}" ${canPlant ? '' : 'disabled'}>PLANT</button>`;
+      }
+
+      return `
+        <article class="gh-card ${cardStateClass}" ${cardAction}>
+          <img class="gh-crop-art" src="${this.cropIcons[type]}" alt="${type}" />
+          <h3>${type.toUpperCase()}</h3>
+          <span class="gh-food-gain">${GH_ICONS.food} +${r.nutrition}</span>
+          <div class="gh-can-buy ${canBuy > 0 ? 'ok' : 'zero'}">
+            Can buy: <strong>${canBuy}</strong>
+          </div>
+          ${bottomHtml}
+        </article>`;
+    }).join('');
+
+    const ghLinks = [
+      ['CSA: food production', 'https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/'],
+      ...plantResearch.studies.map(st => [st.id + ': NASA study', st.url]),
+    ].map(([label, url]) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`).join(' · ');
+
+    this.greenhouseContainer.innerHTML = `
+      <div class="gh-top-bar">
+        <div class="gh-res-pill water" title="Water">${GH_ICONS.water} <strong>${Math.floor(v.water)}</strong></div>
+        <div class="gh-res-pill power" title="Power">${GH_ICONS.power} <strong id="gh-res-power">${Math.round(m.energy)}%</strong></div>
+        ${s.contaminated ? `<button type="button" class="mc-btn gh-clean-btn" data-action="cleanBase">CLEAN</button>` : ''}
+        <details class="gym-learn"><summary aria-label="NASA info" title="NASA info">i</summary><p>${study ? `${study.id}: ${study.explanation}` : `Real NASA OSDR data (${formatDateDMY(plantResearch.retrieved.slice(0, 10))}).`}<br/>${ghLinks}</p></details>
+      </div>
+      <div class="gh-cards">${cardsHtml}</div>
+    `;
+  }
+
   render() {
     const { expedition: m, stations: s, survival: v, mission } = this.engine;
+    this.element.classList.toggle('is-greenhouse', this._isGreenhouseStation());
 
     if (this._isGymStation() && this.gymContainer) {
       this.title.textContent = 'MARS GYM';
       this.content.classList.add('hidden');
       this.gymContainer.classList.remove('hidden');
+      if (this.greenhouseContainer) this.greenhouseContainer.classList.add('hidden');
       this._renderGymInteractive();
+      this.sources.replaceChildren();
+      this.actions.replaceChildren();
+      return;
+    }
+
+    if (this._isGreenhouseStation() && this.greenhouseContainer) {
+      this.title.textContent = 'PLANT FOOD';
+      this.content.classList.add('hidden');
+      if (this.gymContainer) this.gymContainer.classList.add('hidden');
+      this.greenhouseContainer.classList.remove('hidden');
+      this._renderGreenhouseMonitor();
       this.sources.replaceChildren();
       this.actions.replaceChildren();
       return;
@@ -606,6 +791,7 @@ export class StationPanel {
 
     this.content.classList.remove('hidden');
     if (this.gymContainer) this.gymContainer.classList.add('hidden');
+    if (this.greenhouseContainer) this.greenhouseContainer.classList.add('hidden');
 
     const pages = {
       console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nRADIATION: ${Math.round(m.radiation)}%   FILTER: ${Math.round(s.filter)}%\nSCIENCE POINTS: ${s.science}\n\nNASA DONKI historical CME: ${DATA.cme.observed}, ${DATA.cme.speedKmS} km/s.\nNASA RadLab Curiosity MSL-RAD: ${DATA.radiation.start} to ${DATA.radiation.end}; median ${DATA.radiation.median} (raw, unit unconfirmed).\nNASA data retrieved ${DATA.cme.retrieved}; archived, not live. The storm and its effects are simulated and game-scaled.`, [['mission', 'Show mission objective'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
@@ -614,7 +800,10 @@ HABITAT: ${s.contaminated ? 'CONTAMINATED' : 'CLEAN'}
 
 Clean your suit before entering the habitat. Use the doors to cycle the airlock.`, [['cleanSuit', 'Clean suit'], ['cleanBase', 'Clean habitat']]],
       power: ['LIFE SUPPORT / ECLSS', `BATTERY: ${Math.round(m.energy)}%\nCO2 FILTER: ${Math.round(s.filter)}%\nCO2: ${Math.round(s.co2)}%\n\nThe oxygen system and greenhouse need power. A worn filter lets CO2 build up.`, [['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
-      greenhouse: ['HYDROPONIC GREENHOUSE', `POWER: ${m.greenhousePowered ? 'ON' : 'OFF'}\nHABITAT: ${s.contaminated ? 'CONTAMINATED' : 'CLEAN'}\nCARROTS REGROWING: ${this.engine.growingCrops.length}\nCROP: ${s.crop ? `${s.crop.type.toUpperCase()} ${Math.round(s.crop.progress / C.CROP_GROWTH_TIME * 100)}%` : 'EMPTY'}\nFRESH FOOD: ${s.freshFood > 0 ? 'AVAILABLE' : 'LOW'}\n\nPlanting costs water and power. Growth pauses without power or in a contaminated habitat.`, [['plant:potato', 'Plant potato'], ['plant:lettuce', 'Plant lettuce'], ['plant:soy', 'Plant soy'], ['harvest', 'Harvest fresh food'], ['cleanBase', 'Clean habitat']]],
+      greenhouse: ['MARS GARDEN / FIELD NOTEBOOK', this.gardenText(s, m, v), [
+        ...Object.entries(CROP_CONFIG).map(([type, r]) => ['plant:' + type, type.toUpperCase() + ' | ' + r.water + ' water / ' + r.energy + '% power / ' + r.seconds + 's / +' + r.nutrition + ' food']),
+        ['harvest', 'Harvest & discover NASA research'], ['cleanBase', 'Clean habitat'],
+      ]],
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\nRADIATION: ${Math.round(m.radiation)}%\n\nIn Mars's 0.38g gravity, astronauts lose bone mineral density and muscle mass. Use the treadmill and bike in the Gym Wing!`, [['treat', 'Use medical station']]],
       science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   SAMPLES: ${s.samples}\n\n${this._radioText(s)}`, [['analyze', 'Analyze regolith'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
       mav: ['MAV DATA TERMINAL', `ANALYZED SAMPLES: ${s.analyzedSamples}/${C.MAV_REQUIRED_SAMPLES}\nPACKAGE: ${s.mavSent ? 'RECEIVED' : s.message}\n\nAnalyze samples at the science station, then send the package from the MAV.`, [['sendMav', 'Send MAV science package']]],
@@ -631,7 +820,7 @@ Clean your suit before entering the habitat. Use the doors to cycle the airlock.
       ? [['NASA DONKI: historical event', DATA.cme.url], ['NASA RadLab: radiation data', DATA.radiation.url]]
       : this.type === 'shelter'
         ? [['PREDICCS: water shielding (UNH, MSL/RAD data)', SHELTER_SOURCES.prediccs], ['NASA: storm shelters and water walls', SHELTER_SOURCES.nasa]]
-        : [];
+        : this.type === 'greenhouse' ? [['CSA: food production', 'https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/'], ...plantResearch.studies.map(study => [study.id + ': NASA study', study.url])] : [];
     this.sources.replaceChildren(...links.map(([label, url]) => {
       const link = document.createElement('a');
       link.textContent = label;
@@ -641,7 +830,15 @@ Clean your suit before entering the habitat. Use the doors to cycle the airlock.
       return link;
     }));
     this.actions.replaceChildren(...buttons.map(([action, label]) => {
-      const button = document.createElement('button'); button.className = 'mc-btn'; button.dataset.action = action; button.textContent = label; return button;
+      const button = document.createElement('button'); button.className = 'mc-btn'; button.dataset.action = action; button.textContent = label;
+      if (this.type === 'greenhouse') {
+        if (action.startsWith('plant:')) {
+          const recipe = CROP_CONFIG[action.slice(6)];
+          button.disabled = !!s.crop || v.water < recipe.water || m.energy < recipe.energy;
+        }
+        if (action === 'harvest') button.disabled = !s.crop || s.crop.progress < CROP_CONFIG[s.crop.type].seconds;
+      }
+      return button;
     }));
   }
 }

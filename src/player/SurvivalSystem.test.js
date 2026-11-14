@@ -1,3 +1,4 @@
+import { CROP_ITEM_IDS, ITEM_DEFINITIONS } from '../config/blockTypes.js';
 import { describe, it, expect } from 'vitest';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { SurvivalSystem } from './SurvivalSystem.js';
@@ -140,5 +141,22 @@ describe('mission hooks', () => {
     expect(survival.removeItems(iceId, 7)).toBe(7);
     expect(survival.countItem(iceId)).toBe(2);
     expect(survival.removeItems(iceId, 10)).toBe(2);
+  });
+});
+
+describe('distinct crop inventory items', () => {
+  it.each(Object.entries(CROP_ITEM_IDS))('collects, stacks and eats %s without turning into hull or carrot', (type, id) => {
+    const survival = new SurvivalSystem();
+    expect(survival.slots).toHaveLength(9);
+    survival.addBlockToInventory(id); survival.addBlockToInventory(id);
+    const index = survival.slots.findIndex(slot => slot?.id === id);
+    expect(survival.countItem(id)).toBe(2);
+    survival.food = 0;
+    expect(survival.consumeSlotItem(index)).toContain(type);
+    expect(survival.food).toBe(ITEM_DEFINITIONS.find(item => item.id === id).consumable.amount);
+    expect(survival.countItem(id)).toBe(1);
+    survival.food = survival.maxStat;
+    expect(survival.consumeSlotItem(index)).toContain('already full');
+    expect(survival.countItem(id)).toBe(1);
   });
 });

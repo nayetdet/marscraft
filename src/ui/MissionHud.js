@@ -115,13 +115,14 @@ export class MissionHud {
   }
 
   // `survival` traz a agua da base e `stations` o ar do habitat (CO2, poeira)
-  update(mission, { survival, stations } = {}) {
+  update(mission, { survival, stations, world } = {}) {
     const view = missionStatus(mission, this.donkiFetched, {
       water: survival?.baseWater,
       maxWater: survival?.maxBaseWater,
       hydration: survival?.greenhouseHydration,
       co2: stations?.co2,
       contaminated: stations?.contaminated,
+      brokenWindows: world?.brokenBaseWindows.size ?? 0,
     });
     const { power, water, air, radiation, rocket } = this.rows;
 

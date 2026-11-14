@@ -1,3 +1,6 @@
+import { GREENHOUSE_MONITOR_POS, initialGreenhouseCrop } from './greenhouseLayout.js';
+import { createCropPlantModel } from '../graphics/cropModels.js';
+import { BLOCK_IDS } from '../config/blockTypes.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
@@ -89,6 +92,52 @@ export function buildNasaCustomModels(scene) {
     emissiveIntensity: 0.35,
   });
 
+  const { texture: greenhouseScreenTex } = makeCanvasTexture((ctx) => {
+    ctx.fillStyle = '#052e16';
+    ctx.fillRect(0, 0, 32, 24);
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(0, 0, 32, 1);
+    ctx.fillRect(0, 23, 32, 1);
+    ctx.fillRect(0, 0, 1, 24);
+    ctx.fillRect(31, 0, 1, 24);
+    // 3 crop cards on the 3D monitor screen (lettuce, potato, soy)
+    ctx.fillStyle = '#14532d';
+    ctx.fillRect(2, 3, 8, 13);
+    ctx.fillRect(12, 3, 8, 13);
+    ctx.fillRect(22, 3, 8, 13);
+    // Lettuce icon
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(4, 5, 4, 4);
+    ctx.fillStyle = '#86efac';
+    ctx.fillRect(5, 6, 2, 2);
+    // Potato icon
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(14, 5, 4, 4);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(15, 6, 2, 2);
+    // Soy icon
+    ctx.fillStyle = '#84cc16';
+    ctx.fillRect(24, 5, 4, 4);
+    ctx.fillStyle = '#bef264';
+    ctx.fillRect(25, 6, 2, 2);
+    // Mini buy buttons
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(3, 12, 6, 3);
+    ctx.fillRect(13, 12, 6, 3);
+    ctx.fillRect(23, 12, 6, 3);
+    // Bottom resource bars (water & power)
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(2, 18, 13, 3);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(17, 18, 13, 3);
+  }, 32, 24);
+
+  mats.greenhouseScreenMat = new THREE.MeshLambertMaterial({
+    map: greenhouseScreenTex,
+    emissive: new THREE.Color('#22c55e'),
+    emissiveIntensity: 0.42,
+  });
+
   const solidObjects = [];
 
   // 1. Painel de Controle Principal NASA + Cadeiras
@@ -115,12 +164,21 @@ export function buildNasaCustomModels(scene) {
   group.add(crewQuarters);
   solidObjects.push(crewQuarters);
 
-  // 5. Plantações 3D e Lâmpadas de Cultivo dentro da Redoma de Estufa (x = -18, z = 0)
+  // 5. Plantações 3D, Lâmpadas de Cultivo e Monitor da Estufa dentro da Redoma (x = -18, z = 0)
   const { cropsGroup, plants } = createGreenhouseCropsModel(mats, -18, floorTopY, 0);
   group.add(cropsGroup);
   for (const plant of plants) {
     solidObjects.push(plant);
   }
+  const greenhouseMonitor = createGreenhouseMonitorModel(
+    mats,
+    GREENHOUSE_MONITOR_POS.x,
+    floorTopY,
+    GREENHOUSE_MONITOR_POS.z
+  );
+  greenhouseMonitor.userData.scanId = 'greenhouse';
+  group.add(greenhouseMonitor);
+  solidObjects.push(greenhouseMonitor);
 
   // 6. Rover Marciano NASA 3D detalhado (Estacionado na frente da base: x = 7.5, z = 10.5)
   const { roverGroup: rover, wheels: roverWheels } = createMarsRoverModel(mats, 7.5, groundTopY, 10.5);
@@ -416,23 +474,19 @@ function createGreenhouseCropsModel(mats, centerX, floorTopY, centerZ) {
 
   for (let dx = -4; dx <= 4; dx++) {
     for (let dz = -4; dz <= 4; dz++) {
-      const isWalkway = Math.abs(dz) <= 1 || Math.abs(dx) <= 1;
-      const dist = Math.hypot(dx, dz);
-      if (isWalkway || dist > 5.2) continue;
-
-      if (Math.abs(dz) >= 2 && Math.abs(dz) <= 4) {
-        const plant = new THREE.Group();
-        plant.position.set(dx + 0.5, 0, dz + 0.5);
-
+      const type = initialGreenhouseCrop(dx, dz);
+      if (!type) continue;
+      const plant = type === 'potato' ? createCropPlantModel('potato') : new THREE.Group();
+      plant.position.set(dx + 0.5, 0, dz + 0.5);
+      plant.userData.cropItemId = type === 'potato' ? BLOCK_IDS.POTATO : BLOCK_IDS.HYDRO_PLANT;
+      if (type === 'carrot') {
         addBox(plant, 0.14, 0.48, 0.14, mats.plantStem, 0, 0.24, 0);
         addBox(plant, 0.52, 0.22, 0.22, mats.plantLeaf, 0, 0.36, 0);
         addBox(plant, 0.22, 0.22, 0.52, mats.plantLeaf, 0, 0.42, 0);
         addBox(plant, 0.18, 0.14, 0.18, mats.potato, 0.16, 0.07, 0.14);
-        addBox(plant, 0.16, 0.12, 0.16, mats.potato, -0.15, 0.06, -0.12);
-
-        cropsGroup.add(plant);
-        plants.push(plant);
       }
+      cropsGroup.add(plant);
+      plants.push(plant);
     }
   }
 
@@ -440,6 +494,33 @@ function createGreenhouseCropsModel(mats, centerX, floorTopY, centerZ) {
   addBox(cropsGroup, 7.5, 0.12, 0.24, mats.cyanGlow, 0, 3.2, 3.0);
 
   return { cropsGroup, plants };
+}
+
+function createGreenhouseMonitorModel(mats, x, y, z) {
+  const g = new THREE.Group();
+  g.position.set(x, y, z);
+  // Aponta para o corredor e a entrada do tunel da estufa
+  g.rotation.y = Math.PI - 0.38;
+
+  // Base e pedestal branco
+  addBox(g, 0.56, 0.08, 0.46, mats.darkSlate, 0, 0.04, 0);
+  addBox(g, 0.18, 0.92, 0.18, mats.whiteMetal, 0, 0.5, -0.04);
+  addBox(g, 0.06, 0.56, 0.04, mats.greenGlow, 0, 0.52, 0.06);
+
+  // Bandeja de botoes coloridos (1 para cada planta)
+  addBox(g, 0.72, 0.08, 0.36, mats.lightGray, 0, 0.96, 0.08, 0.22, 0, 0);
+  addBox(g, 0.14, 0.06, 0.12, mats.greenGlow, -0.2, 1.01, 0.14, 0.22, 0, 0);
+  addBox(g, 0.14, 0.06, 0.12, mats.yellowBtn, 0, 1.01, 0.14, 0.22, 0, 0);
+  addBox(g, 0.14, 0.06, 0.12, mats.cyanGlow, 0.2, 1.01, 0.14, 0.22, 0, 0);
+
+  // Moldura e tela do monitorzinho da estufa
+  addBox(g, 0.84, 0.62, 0.1, mats.whiteMetal, 0, 1.32, -0.03, -0.14, 0, 0);
+  addBox(g, 0.78, 0.56, 0.1, mats.charcoal, 0, 1.32, 0.0, -0.14, 0, 0);
+  addBox(g, 0.68, 0.46, 0.04, mats.greenhouseScreenMat, 0, 1.32, 0.05, -0.14, 0, 0);
+  // Luzinha verde no topo do monitor
+  addBox(g, 0.24, 0.06, 0.08, mats.greenGlow, 0, 1.65, -0.06, -0.14, 0, 0);
+
+  return g;
 }
 
 function createMarsRoverModel(mats, x, y, z) {
@@ -461,14 +542,14 @@ function createMarsRoverModel(mats, x, y, z) {
   addBox(r, 2.06, 0.28, 2.86, mats.goldFoil, 0, 0.82, 0);
   addBox(r, 1.7, 0.08, 2.2, mats.solarPanel, 0, 1.3, 0.1);
 
+  // Mastro óptico (Mastcam / SuperCam) na direita dianteira
   addBox(r, 0.18, 1.15, 0.18, mats.whiteMetal, 0.45, 1.8, -1.05);
   addBox(r, 0.62, 0.32, 0.36, mats.whiteMetal, 0.45, 2.42, -1.05);
   addBox(r, 0.16, 0.16, 0.08, mats.cyanGlow, 0.3, 2.42, -1.24);
   addBox(r, 0.16, 0.16, 0.08, mats.cyanGlow, 0.6, 2.42, -1.24);
 
-  addBox(r, 0.16, 0.16, 1.1, mats.lightGray, -0.45, 0.85, -1.75, 0.25, 0, 0);
-  addBox(r, 0.28, 0.28, 0.32, mats.darkSlate, -0.45, 0.68, -2.28);
-
+  // O sistema articulado de extração de água ISRU (braço robótico + broca + câmara térmica)
+  // é montado pelo RoverController sobre roverGroup para animar cada etapa em tempo real.
   return { roverGroup: r, wheels };
 }
 

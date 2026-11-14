@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.js';
+import { WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { airlockProgress } from './airlockProgress.js';
 
 const ICONS_PER_BAR = 10;
@@ -64,6 +65,9 @@ export class HudManager {
     // Elementos de interação e controle do Rover
     this.interactionPromptEl = document.getElementById('interaction-prompt');
     this.roverOverlayEl = document.getElementById('rover-overlay');
+    this.roverGpsIceEl = document.getElementById('rover-gps-ice');
+    this.roverGpsPlayerEl = document.getElementById('rover-gps-player');
+    this.roverGpsDistanceEl = document.getElementById('rover-gps-distance');
     this.astronautInfoEl = document.getElementById('astronaut-info');
     this.roverInfoEl = document.getElementById('rover-info');
     this.roverSpeedEl = document.getElementById('rover-speed');
@@ -71,6 +75,8 @@ export class HudManager {
     this.roverCoordsEl = document.getElementById('rover-coords');
     this.roverBatteryEl = document.getElementById('rover-battery');
     this.roverIceEl = document.getElementById('rover-ice');
+    this.roverBucketEl = document.getElementById('rover-bucket');
+    this.roverBucketFillEl = document.getElementById('rover-bucket-fill');
     this.roverActionBannerEl = document.getElementById('rover-action-banner');
     this.roverActionTextEl = document.getElementById('rover-action-text');
     this.bottomAreaEl = document.querySelector('.mc-bottom-area');
@@ -366,6 +372,30 @@ export class HudManager {
       if (this.roverCoordsEl) this.roverCoordsEl.textContent = `Rover: X ${roverTelemetry.x} / Y ${roverTelemetry.y} / Z ${roverTelemetry.z}`;
       if (this.roverBatteryEl) this.roverBatteryEl.textContent = `Battery: ${roverTelemetry.battery}%`;
       if (this.roverIceEl) this.roverIceEl.textContent = `Ice cargo: ${roverTelemetry.iceCargo} / ${roverTelemetry.maxIceCargo} kg`;
+
+      if (this.roverBucketEl && this.roverBucketFillEl) {
+        const ratio = roverTelemetry.waterFillRatio ?? (
+          roverTelemetry.maxIceCargo > 0 ? roverTelemetry.iceCargo / roverTelemetry.maxIceCargo : 0
+        );
+        const pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+        this.roverBucketFillEl.style.height = `${pct}%`;
+        this.roverBucketEl.setAttribute('aria-valuenow', String(pct));
+        this.roverBucketEl.classList.toggle('is-filling', Boolean(roverTelemetry.isDrilling));
+        this.roverBucketEl.classList.toggle('is-unloading', Boolean(roverTelemetry.isUnloading));
+        this.roverBucketEl.classList.toggle('is-full', pct >= 100);
+      }
+
+      const dx = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER.x - Number(roverTelemetry.x);
+      const dz = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER.z - Number(roverTelemetry.z);
+      const distance = Math.hypot(dx, dz);
+      // Keep the destination on the map edge when it is outside its local range.
+      const scale = distance > 0 ? Math.min(1 / 40, 0.42 / distance) : 0;
+      if (this.roverGpsIceEl) {
+        this.roverGpsIceEl.style.left = `${50 + dx * scale * 100}%`;
+        this.roverGpsIceEl.style.top = `${50 + dz * scale * 100}%`;
+      }
+      if (this.roverGpsPlayerEl) this.roverGpsPlayerEl.style.transform = `translate(-50%, -50%) rotate(${roverTelemetry.headingDeg}deg)`;
+      if (this.roverGpsDistanceEl) this.roverGpsDistanceEl.textContent = `ICE ${Math.round(distance)} blocks`;
 
       // Banner de acao contextual do Rover (Perfurar ou Descarregar)
       if (this.roverActionBannerEl && this.roverActionTextEl) {

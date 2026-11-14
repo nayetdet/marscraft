@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest';
 import * as THREE from 'three';
 import { VoxelWorld } from './VoxelWorld.js';
-import { BLOCK_IDS } from '../config/blockTypes.js';
+import { BLOCK_IDS, CROP_ITEM_IDS } from '../config/blockTypes.js';
 
 // O construtor desenha as texturas de rachadura num canvas; no Node basta um canvas que nao faz nada
 beforeAll(() => {
@@ -73,6 +73,27 @@ describe('VoxelWorld meshing', () => {
 
   beforeEach(() => {
     world = createWorld();
+  });
+
+  it('tracks broken base windows until every opening is sealed', () => {
+    const indices = [...world.baseWindows].slice(0, 2);
+    expect(indices).toHaveLength(2);
+    const coords = (idx) => {
+      const y = Math.floor(idx / (world.sizeX * world.sizeZ));
+      const remainder = idx % (world.sizeX * world.sizeZ);
+      return [remainder % world.sizeX - world.halfX, y, Math.floor(remainder / world.sizeX) - world.halfZ];
+    };
+    const [first, second] = indices.map(coords);
+    world.breakBlock(...first);
+    world.breakBlock(...second);
+    expect(world.brokenBaseWindows.size).toBe(2);
+    world.setBlock(...first, BLOCK_IDS.HAB_GLASS);
+    expect(world.brokenBaseWindows.size).toBe(1);
+    world.setBlock(...second, BLOCK_IDS.BASALT);
+    expect(world.brokenBaseWindows.size).toBe(0);
+    world.setBlock(40, SKY_Y, 40, BLOCK_IDS.HAB_GLASS);
+    world.setBlock(40, SKY_Y, 40, BLOCK_IDS.AIR);
+    expect(world.brokenBaseWindows.size).toBe(0);
   });
 
   it('nao gera faces voltadas para baixo no fundo do mundo', () => {
@@ -173,6 +194,24 @@ describe('VoxelWorld meshing', () => {
     expect(world.drops).toHaveLength(1);
     expect(world.updateDrops(0, player, () => true)).toEqual([BLOCK_IDS.HYDRO_PLANT]);
     expect(world.drops).toHaveLength(0);
+  });
+
+  it.each(Object.entries(CROP_ITEM_IDS))('preserves %s identity through dropping, failed pickup and successful pickup', (type, id) => {
+    const position = new THREE.Vector3(0, SKY_Y, 20);
+    world.spawnPlayerDrop(position, 0, id);
+    const drop = world.drops.at(-1);
+    expect(drop.blockId).toBe(id);
+    expect(drop.mesh.name).toBe(type + '-food');
+    const material = drop.mesh.children[0].material;
+    const disposed = vi.fn(); material.addEventListener('dispose', disposed);
+    const player = drop.mesh.position.clone(); player.y += 1.05;
+    drop.age = 10;
+    expect(world.updateDrops(0, player, () => false)).toEqual([]);
+    expect(world.drops).toHaveLength(1);
+    expect(world.updateDrops(0, player, () => true)).toEqual([id]);
+    expect(world.drops).toHaveLength(0);
+    expect(disposed).not.toHaveBeenCalled();
+    material.removeEventListener('dispose', disposed);
   });
 
   it('breakBlock reconstroi so o chunk do bloco, sem refazer o mundo inteiro', () => {
