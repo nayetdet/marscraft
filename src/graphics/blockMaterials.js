@@ -84,20 +84,16 @@ export function createBlockMaterials() {
     ctx.fillRect(5, 12, 5, 1);
   });
 
-  // 5. Casco Branco da Base NASA (Branco fosco limpo estilo módulos da NASA)
+  // 5. Casco Branco da Base NASA: painel branco levemente quente. A emenda fica so em duas
+  // bordas (embaixo e a direita), entao a parede vira uma grade fina em vez de azulejo.
   register(BLOCK_IDS.NASA_HULL, (ctx) => {
-    ctx.fillStyle = '#f8fafc';
+    ctx.fillStyle = '#f7f7f5';
     ctx.fillRect(0, 0, 16, 16);
-    ctx.strokeStyle = '#dce3ec';
-    ctx.strokeRect(0.5, 0.5, 15, 15);
-    ctx.fillStyle = '#f1f5f9';
-    ctx.fillRect(2, 2, 12, 12);
-    // Detalhe sutil de rebite cinza claro
-    ctx.fillStyle = '#cbd5e1';
-    ctx.fillRect(2, 2, 1, 1);
-    ctx.fillRect(13, 2, 1, 1);
-    ctx.fillRect(2, 13, 1, 1);
-    ctx.fillRect(13, 13, 1, 1);
+    ctx.fillStyle = '#fdfdfc';
+    ctx.fillRect(0, 0, 15, 1);
+    ctx.fillStyle = '#d7d8d6';
+    ctx.fillRect(0, 15, 16, 1);
+    ctx.fillRect(15, 0, 1, 16);
   });
 
   // 6. Bloco Termico Dourado / Detalhe NASA
@@ -111,10 +107,10 @@ export function createBlockMaterials() {
   register(
     BLOCK_IDS.HAB_GLASS,
     (ctx) => {
-      ctx.fillStyle = 'rgba(210, 245, 255, 0.22)';
+      ctx.fillStyle = 'rgba(150, 205, 255, 0.30)';
       ctx.fillRect(0, 0, 16, 16);
-      // Moldura branca limpa da redoma
-      ctx.fillStyle = 'rgba(248, 250, 252, 0.85)';
+      // Moldura cinza-azulada da redoma e das janelas
+      ctx.fillStyle = 'rgba(196, 214, 230, 0.9)';
       ctx.fillRect(0, 0, 16, 1);
       ctx.fillRect(0, 15, 16, 1);
       ctx.fillRect(0, 0, 1, 16);
@@ -123,7 +119,7 @@ export function createBlockMaterials() {
       ctx.fillRect(3, 3, 2, 1);
       ctx.fillRect(4, 4, 2, 1);
     },
-    { transparent: true, opacity: 0.48 }
+    { transparent: true, opacity: 0.55 }
   );
 
   // 8. Painel Solar Fotovoltaico
