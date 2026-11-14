@@ -1,0 +1,62 @@
+{
+  "source": "https://api.nasa.gov/DONKI/notifications?startDate=2026-11-07&endDate=2026-11-13&type=all&api_key=DEMO_KEY",
+  "fetched": "2026-11-14",
+  "items": [
+    {
+      "messageType": "RBE",
+      "messageID": "20261108-AL-001",
+      "messageURL": "https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/49463/1",
+      "messageIssueTime": "2026-11-08T21:18Z",
+      "messageBody": "## Community Coordinated Modeling Center Database Of Notifications, Knowledge, Information ( CCMC DONKI )\n## Message Type: Auto-generated Space Weather Notification - Radiation Belt Enhancement\n##\n## Message Issue Date: 2026-11-08T21:18:08Z\n## Message ID: 20261108-AL-001\n##\n## Disclaimer: NOAA's Space Weather Prediction Center is the United States Government official source for space weather forecasts. This \"Experimental Research Information\" consists of preliminary NASA research products and should be interpreted and used accordingly.\n\n\n## Summary:\n\nSignificantly elevated energetic electron fluxes in the Earth's outer radiation belt. GOES \"greater than 2.0 MeV\" integral electron flux is above 1000 pfu starting at 2026-11-08T21:10Z. \n\n\nNASA spacecraft at GEO, MEO and other orbits passing through or in the vicinity of the Earth's outer radiation belt can be impacted.\n\nActivity ID: 2026-11-08T21:10:00-RBE-001. \n\n## Notes: \n\n\n\nCommunity Coordinated Modeling Center Database Of Notifications, Knowledge, Information (CCMC DONKI) Disclaimer\n\nData and/or information stored within the CCMC DONKI is provided \"as is\" without any warranty of any kind, either expressed, implied, or statutory, i..."
+    },
+    {
+      "messageType": "RBE",
+      "messageID": "20261108-AL-002",
+      "messageURL": "https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/49464/1",
+      "messageIssueTime": "2026-11-08T21:28Z",
+      "messageBody": "## Community Coordinated Modeling Center Database Of Notifications, Knowledge, Information ( CCMC DONKI )\n## Message Type: Space Weather Notification - Radiation Belt Enhancement\n##\n## Message Issue Date: 2026-11-08T21:28:30Z\n## Message ID: 20261108-AL-002\n##\n## Disclaimer: NOAA's Space Weather Prediction Center is the United States Government official source for space weather forecasts. This \"Experimental Research Information\" consists of preliminary NASA research products and should be interpreted and used accordingly.\n\n\n## Summary:\n\nSignificantly elevated energetic electron fluxes in the Earth's outer radiation belt. GOES \"greater than 2.0 MeV\" integral electron flux is above 1000 pfu starting at 2026-11-08T21:10Z. \n\nThe elevated energetic electron flux levels are caused by coronal hole high speed stream starting at 2026-11-06, reaching maximum sustained speeds of approximately 780 km/s. The solar wind speed observed at L1 is currently around 700 km/s.\n\nNASA spacecraft at GEO, MEO and other orbits passing through or in the vicinity of the Earth's outer radiation belt can be impacted.\n\nActivity ID: 2026-11-08T21:10:00-RBE-001. \n\n## Notes: \n\n\nCommunity Coordinated Modeling Center ..."
+    },
+    {
+      "messageType": "CME",
+      "messageID": "20261110-AL-001",
+      "messageURL": "https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/49474/1",
+      "messageIssueTime": "2026-11-10T13:06Z",
+      "messageBody": "## Community Coordinated Modeling Center Database Of Notifications, Knowledge, Information ( CCMC DONKI )\n## Message Type: Space Weather Notification - CME (STEREO A, Mars, Psyche)\n##\n## Message Issue Date: 2026-11-10T13:06:50Z\n## Message ID: 20261110-AL-001\n##\n## Disclaimer: NOAA's Space Weather Prediction Center is the United States Government official source for space weather forecasts. This \"Experimental Research Information\" consists of preliminary NASA research products and should be interpreted and used accordingly.\n\n\n## Summary:\n\nC-type CME detected by GOES. \n\nStart time of the event: 2026-11-09T18:15Z.\n\nEstimated speed: ~726 km/s.\n\nEstimated opening half-angle: 10 deg.\n\nDirection (lon./lat.): 65/-2 in Heliocentric Earth Equatorial coordinates.\n\nActivity ID: 2026-11-09T18:15:00-CME-001\n\nBased on preliminary analysis by the Moon to Mars Space Weather Analysis Office and heliospheric modeling carried out at NASA Community Coordinated Modeling Center, it is estimated that the CME may impact STEREO A (minor impact), Mars (glancing blow), and Psyche (glancing blow).  The leading edge of the CME may reach STEREO A at 2026-11-12T01:00Z and the flank of the CME may reach Mars at 20..."
+    },
+    {
+      "messageType": "CME",
+      "messageID": "20261110-AL-002",
+      "messageURL": "https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/49483/1",
+      "messageIssueTime": "2026-11-10T16:29Z",
+      "messageBody": "## Community Coordinated Modeling Center Database Of Notifications, Knowledge, Information ( CCMC DONKI )\n## Message Type: Space Weather Notification - CME (STEREO A)\n##\n## Message Issue Date: 2026-11-10T16:29:00Z\n## Message ID: 20261110-AL-002\n##\n## Disclaimer: NOAA's Space Weather Prediction Center is the United States Government official source for space weather forecasts. This \"Experimental Research Information\" consists of preliminary NASA research products and should be interpreted and used accordingly.\n\n\n## Summary:\n\nC-type CME detected by GOES / STEREO A / SOHO. \n\nStart time of the event: 2026-11-10T05:30Z.\n\nEstimated speed: ~974 km/s.\n\nEstimated opening half-angle: 11 deg.\n\nDirection (lon./lat.): 93/2 in Heliocentric Earth Equatorial coordinates.\n\nActivity ID: 2026-11-10T05:30:00-CME-001\n\nBased on preliminary analysis by the Moon to Mars Space Weather Analysis Office and heliospheric modeling carried out at NASA Community Coordinated Modeling Center, it is estimated that the CME may impact STEREO A (glancing blow). The flank of the CME will reach STEREO A at 2026-11-12T14:00Z (plus minus 7 hours). \n\nLinks to the movies of the modeled event (includes CME: 2026-11-10T05:30:0..."
+    },
+    {
+      "messageType": "RBE",
+      "messageID": "20261110-AL-003",
+      "messageURL": "https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/49486/1",
+      "messageIssueTime": "2026-11-10T21:31Z",
+      "messageBody": "## Community Coordinated Modeling Center Database Of Notifications, Knowledge, Information ( CCMC DONKI )\n## Message Type: Space Weather Notification - Continued Radiation Belt Enhancement\n##\n## Message Issue Date: 2026-11-10T21:31:58Z\n## Message ID: 20261110-AL-003\n##\n## Disclaimer: NOAA's Space Weather Prediction Center is the United States Government official source for space weather forecasts. This \"Experimental Research Information\" consists of preliminary NASA research products and should be interpreted and used accordingly.\n\n\n## Summary:\n \nSignificantly elevated energetic electron fluxes in the Earth's outer radiation belt. GOES \"greater than 2.0 MeV\" integral electron flux remains elevated, recently crossing the threshold of 1000 pfu at 2026-11-10T06:10Z.\n \nThe elevated energetic electron flux levels observed since 2026-11-08T21:10Z are caused by a coronal hole high speed stream starting on 2026-11-06, reaching maximum sustained speeds of approximately 780 km/s (see notification 20261108-AL-002). The solar wind speed observed at L1 is currently around 600 km/s.\n \nNASA spacecraft at GEO, MEO and other orbits passing through or in the vicinity of the Earth's outer radiation b..."
+    },
+    {
+      "messageType": "Report",
+      "messageID": "20261111-7D-001",
+      "messageURL": "https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/49503/1",
+      "messageIssueTime": "2026-11-11T21:02Z",
+      "messageBody": "## Community Coordinated Modeling Center Database Of Notifications, Knowledge, Information (CCMC DONKI)\n## Message Type: Weekly Space Weather Summary Report for November 04, 2026 - November 10, 2026\n##\n## Message Issue Date: 2026-11-11T21:02:09Z\n## Report Coverage Begin Date: 2026-11-04T00:00Z\n## Report Coverage End Date: 2026-11-10T23:59Z\n## Message ID: 20261111-7D-001\n##\n## Disclaimer: NOAA's Space Weather Prediction Center is the United States Government official source for space weather forecasts. This \"Experimental Research Information\" consists of preliminary NASA research products and should be interpreted and used accordingly.\n\n\n## Summary:\n\nSolar activity was at moderate level during this reporting period, with 7 M-class flares and 7 C-type CMEs (see details below).   \n\nBased on preliminary analysis by the Moon to Mars Space Weather Analysis Office and heliospheric modeling carried out at NASA Community Coordinated Modeling Center, it was estimated that the following CMEs were predicted to impact the listed locations:\n\nCME Starting time  | Predicted Impacts (plus minus 7 hours)\n----------------------------------------------------------------------------- \n2026-11-05T20:00Z..."
+    },
+    {
+      "messageType": "RBE",
+      "messageID": "20261112-AL-001",
+      "messageURL": "https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/49522/1",
+      "messageIssueTime": "2026-11-12T21:30Z",
+      "messageBody": "## Community Coordinated Modeling Center Database Of Notifications, Knowledge, Information ( CCMC DONKI )\n## Message Type: Space Weather Notification - Continued Radiation Belt Enhancement\n##\n## Message Issue Date: 2026-11-12T21:30:51Z\n## Message ID: 20261112-AL-001\n##\n## Disclaimer: NOAA's Space Weather Prediction Center is the United States Government official source for space weather forecasts. This \"Experimental Research Information\" consists of preliminary NASA research products and should be interpreted and used accordingly.\n\n\n## Summary:\n\nSignificantly elevated energetic electron fluxes in the Earth's outer radiation belt. GOES \"greater than 2.0 MeV\" integral electron flux remains elevated, recently crossing the threshold of 1000 pfu at 2026-11-12T07:35Z.\n\nThe elevated energetic electron flux levels observed since 2026-11-08T21:10Z are caused by a coronal hole high speed stream starting on 2026-11-06, reaching maximum sustained speeds of approximately 780 km/s (see notifications 20261108-AL-002, 20261110-AL-003). The solar wind speed observed at L1 is currently around 430 km/s.\n\nNASA spacecraft at GEO, MEO and other orbits passing through or in the vicinity of the Earth's ou..."
+    },
+    {
+      "messageType": "CME",
+      "messageID": "20261113-AL-001",
+      "messageURL": "https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/49532/1",
+      "messageIssueTime": "2026-11-13T16:25Z",
+      "messageBody": "## Community Coordinated Modeling Center Database Of Notifications, Knowledge, Information ( CCMC DONKI )\n## Message Type: Space Weather Notification - CME (OSIRIS-APEX, Europa Clipper, Parker Solar Probe)\n##\n## Message Issue Date: 2026-11-13T16:25:57Z\n## Message ID: 20261113-AL-001\n##\n## Disclaimer: NOAA's Space Weather Prediction Center is the United States Government official source for space weather forecasts. This \"Experimental Research Information\" consists of preliminary NASA research products and should be interpreted and used accordingly.\n\n\n## Summary:\n\nC-type CME detected by STEREO A / SOHO. \n\nStart time of the event: 2026-11-13T03:24Z.\n\nEstimated speed: ~525 km/s.\n\nEstimated opening half-angle: 17 deg.\n\nDirection (lon./lat.): -46/13 in Heliocentric Earth Equatorial coordinates.\n\nActivity ID: 2026-11-13T03:24:00-CME-001\n\nBased on preliminary analysis by the Moon to Mars Space Weather Analysis Office and heliospheric modeling carried out at NASA Community Coordinated Modeling Center, it is estimated that the CME may impact OSIRIS-APEX (minor impact), Europa Clipper (glancing blow), and Parker Solar Probe (glancing blow). The leading edge of the CME will reach OSIRIS-APEX a..."
+    }
+  ]
+}
