@@ -1,7 +1,19 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest';
 import * as THREE from 'three';
 import { VoxelWorld } from './VoxelWorld.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
+
+// O construtor desenha as texturas de rachadura num canvas; no Node basta um canvas que nao faz nada
+beforeAll(() => {
+  const ctx = new Proxy({}, { get: () => () => {} });
+  vi.stubGlobal('document', {
+    createElement: () => ({ getContext: () => ctx, toDataURL: () => '' }),
+  });
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+});
 
 // Atlas e materiais falsos: o meshing so precisa dos retangulos de UV, nao de canvas/WebGL
 function createWorld() {
@@ -12,7 +24,9 @@ function createWorld() {
     }
   }
   const atlas = { material: new THREE.MeshBasicMaterial(), uvRects };
-  const materials = { [BLOCK_IDS.HAB_GLASS]: new THREE.MeshBasicMaterial() };
+  // breakBlock clona o material do bloco para o drop e as particulas
+  const materials = {};
+  for (const id of Object.values(BLOCK_IDS)) materials[id] = new THREE.MeshBasicMaterial();
   return new VoxelWorld(new THREE.Scene(), materials, atlas);
 }
 
@@ -149,6 +163,20 @@ describe('VoxelWorld meshing', () => {
 
     world.rebuildMeshes();
     expect(partial).toBe(geometrySnapshot(world));
+  });
+
+  it('breakBlock reconstroi so o chunk do bloco, sem refazer o mundo inteiro', () => {
+    // x = 0 e z = 20 ficam no meio de um chunk (longe das bordas)
+    world.setBlock(0, SKY_Y, 20, BLOCK_IDS.BASALT, true);
+    const target = chunkOf(world, 0, 20);
+    const geometriesBefore = new Map(world.chunks.map((c) => [c, c.opaqueMesh?.geometry]));
+
+    expect(world.breakBlock(0, SKY_Y, 20)).toBe(BLOCK_IDS.BASALT);
+
+    const rebuilt = world.chunks.filter((c) => c.opaqueMesh?.geometry !== geometriesBefore.get(c));
+    expect(rebuilt).toEqual([target]);
+    expect(world.getBlock(0, SKY_Y, 20)).toBe(BLOCK_IDS.AIR);
+    expect(world.drops).toHaveLength(1);
   });
 
   it('quebrar o ultimo bloco de um chunk remove a malha em vez de deixar geometria vazia', () => {
