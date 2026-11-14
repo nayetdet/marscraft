@@ -241,7 +241,6 @@ export class GameEngine {
     this.expedition.greenhousePowered = this.expedition.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
     if (this.expedition.stage === 'outside' && !inside) this.expedition.stage = 'sample';
     if (this.expedition.stage === 'return' && inside) this.expedition.stage = 'report';
-    const storm = this.mission.storm.phase === 'active';
     this.stations.update(dt, insideCore, this.survival, !inside);
     this._updateShelterWater();
     this.expedition.radiation = Math.min(100, this.mission.totalDoseMsv / RADIATION_CONFIG.CAREER_LIMIT_MSV * 100);
@@ -259,12 +258,7 @@ export class GameEngine {
     document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
     document.getElementById('mission-objective').textContent = this.expedition.objective;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
-    const inAirlock = inside && !insideCore;
-    const inShelter = this.mission.insideShelter;
-    document.getElementById('station-warning').textContent = inAirlock && this.stations.dirtySuit ? 'DUSTY SUIT: clean it at the airlock panel before going in'
-      : storm && inShelter ? `IN STORM SHELTER: ${Math.round(this.mission.shelterWaterL)} L of water in the wall`
-      : storm && insideCore ? 'SOLAR STORM: hide in the storm shelter (water wall)'
-      : this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : '';
+    document.getElementById('station-warning').textContent = this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : '';
   }
 
   _harvestCrop(plant) {
@@ -303,7 +297,6 @@ export class GameEngine {
       { type: 'console', x: 3.0, y: 11.5, z: -4.8, label: 'Press F: mission computer' },
       { type: 'science', x: 4.5, y: 11.5, z: -4.8, label: 'Press F: science & radio to Earth' },
       { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
-      { type: 'airlock', x: 1.85, y: 11.3, z: 7.5, label: 'Press F: clean your suit' },
       { type: 'greenhouse', x: -17, y: 11.4, z: 0, label: 'Press F: harvest carrot' },
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },

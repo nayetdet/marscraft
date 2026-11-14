@@ -163,7 +163,7 @@ export function buildNasaCustomModels(scene) {
   group.add(gymMedbay);
   solidObjects.push(gymMedbay);
 
-  // Issue #56: abrigo de tempestade com parede de agua, terminal de comunicacao e painel do airlock
+  // Issue #56: abrigo de tempestade com parede de agua e terminal de comunicacao
   const shelter = createStormShelterModel(mats, floorTopY);
   for (const wall of shelter.walls) {
     group.add(wall);
@@ -174,8 +174,6 @@ export function buildNasaCustomModels(scene) {
   const commsTerminal = createCommsTerminalModel(mats, 3.75, floorTopY, -4.65);
   group.add(commsTerminal);
   solidObjects.push(commsTerminal);
-
-  group.add(createAirlockSuitPanelModel(mats, 1.92, floorTopY, 7.5));
 
   group.updateMatrixWorld(true);
 
@@ -735,16 +733,5 @@ function createCommsTerminalModel(mats, x, y, z) {
   // Cabo ate a antena do teto
   addBox(g, 0.1, 3.0, 0.1, mats.darkSlate, 1.45, 2.4, -0.22);
   addBox(g, 0.12, 0.12, 0.12, mats.redBtn, 1.45, 1.2, -0.12);
-  return g;
-}
-
-// Painel de limpeza do traje dentro do airlock (issue #56, A3), na parede leste.
-function createAirlockSuitPanelModel(mats, x, y, z) {
-  const g = new THREE.Group();
-  g.position.set(x, y, z);
-  addBox(g, 0.1, 0.8, 1.0, mats.lightGray, 0, 1.3, 0);
-  addBox(g, 0.04, 0.42, 0.6, mats.cyanGlow, -0.06, 1.38, 0);
-  for (const nz of [-0.35, 0, 0.35]) addBox(g, 0.14, 0.1, 0.1, mats.darkSlate, -0.05, 2.1, nz);
-  addBox(g, 0.05, 0.1, 0.1, mats.greenGlow, -0.06, 1.0, 0);
   return g;
 }
