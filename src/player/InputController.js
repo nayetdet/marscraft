@@ -176,10 +176,9 @@ export class InputController {
         button.classList.toggle('is-active', this.keys.Sprint);
       }
     } else if (action === 'zoom' && !this.isRoverActive()) {
-      this.isZoomed = !this.isZoomed;
-      this.onToggleZoom(this.isZoomed);
-      this.hud.updateZoomState(this.isZoomed);
-      button.classList.toggle('is-active', this.isZoomed);
+      const open = !this.isScannerOpen || !this.isZoomed;
+      this._setScope(open, open);
+      button.classList.toggle('is-active', open);
     } else if (action === 'inventory') {
       this._toggleInventory();
     }
