@@ -39,6 +39,8 @@
       <strong>Return to base</strong>
       <span>Dust storm ahead</span>
     </div>
+    <!-- Textos antigos do canto superior esquerdo: escondidos via CSS, mas mantidos porque o
+         GameEngine e o HudManager ainda escrevem neles -->
     <div id="astronaut-info" class="mc-top-info">
       <div id="sol-time">Sol 1 - 17:15</div>
       <div id="player-coords">XYZ: 0 / 13 / 19</div>
@@ -46,19 +48,52 @@
       <div id="mission-status"></div>
       <div id="mission-objective"></div>
       <div id="station-warning" style="color:#ffcf64"></div>
-      <div id="base-water-status">Base Water: 25L · Greenhouse: 100% (Hydrated)</div>
     </div>
 
     <!-- Coluna da direita: caixa da missao em cima e, abaixo, o scanner (toast + ficha) -->
     <div class="hud-right">
-    <!-- Missao: energia, radiacao, tempestade solar e progresso do MAV -->
+    <!-- Painel da base (estilo jogos de gestao): recurso = icone + nome + barra + valor + tendencia.
+         Os alertas (#mission-alerts) so aparecem quando a crianca precisa agir. -->
     <div id="mission-box" class="mission-box">
-      <div id="mission-power">Power: 80%</div>
-      <div id="mission-radiation">Radiation: 0.02 mSv/h</div>
-      <div id="mission-shield">Shield [R]: OFF</div>
-      <div id="mission-storm" class="mission-storm">Space weather: calm</div>
-      <div id="mission-mav">Rocket home (MAV): 0% ready</div>
-      <div id="mission-source" class="mission-source"></div>
+      <section class="base-panel" aria-label="Base status">
+        <div id="res-power" class="res-row" data-icon="bolt">
+          <span class="res-icon"></span>
+          <span class="res-name">POWER</span>
+          <span class="res-meter"><i class="res-fill"></i></span>
+          <b class="res-value">80%</b>
+          <span class="res-trend" title="Sun charging or night"></span>
+        </div>
+        <div id="res-water" class="res-row" data-icon="drop">
+          <span class="res-icon"></span>
+          <span class="res-name">WATER</span>
+          <span class="res-meter"><i class="res-fill"></i></span>
+          <b class="res-value">25 L</b>
+          <span class="res-trend" title="Greenhouse plants need water"></span>
+          <span class="res-delta"></span>
+        </div>
+        <div id="res-air" class="res-row" data-icon="air">
+          <span class="res-icon"></span>
+          <span class="res-name">BASE O2</span>
+          <span class="res-meter"><i class="res-fill"></i></span>
+          <b class="res-value">100%</b>
+          <span class="res-trend"></span>
+        </div>
+        <div id="res-radiation" class="res-row" data-icon="radiation">
+          <span class="res-icon"></span>
+          <span class="res-name">RADIATION</span>
+          <span class="res-levels"><i></i><i></i><i></i></span>
+          <b class="res-value">LOW</b>
+          <span class="res-key" title="Press R for the radiation shield">R</span>
+        </div>
+        <div id="res-rocket" class="res-row" data-icon="rocket">
+          <span class="res-icon"></span>
+          <span class="res-name">ROCKET</span>
+          <span class="res-meter"><i class="res-fill"></i></span>
+          <b class="res-value">0%</b>
+          <span class="res-trend"></span>
+        </div>
+      </section>
+      <div id="mission-alerts" class="mission-alerts"></div>
     </div>
     <!-- Ficha do alvo escaneado e aviso de descoberta (nao pausam o jogo) -->
     <div class="scan-side">
@@ -76,6 +111,13 @@
 
     <!-- Rotulos simples no ceu (sem emojis) -->
     <div id="sky-labels" class="sky-labels"></div>
+
+    <!-- Barra do ciclo do airlock (centro da tela, so enquanto o vapor roda) -->
+    <div id="airlock-progress" class="airlock-progress hidden" role="status">
+      <div class="airlock-progress-title"></div>
+      <div class="airlock-progress-track"><i></i></div>
+      <div class="airlock-progress-text"></div>
+    </div>
 
     <!-- Mira classica em cruz (+) do Minecraft -->
     <div class="mc-crosshair"></div>
@@ -138,10 +180,6 @@
       <div class="mc-status-container">
         <div class="mc-status-col left">
           <div class="mc-bar-row">
-            <span class="mc-bar-label">ENERGY</span>
-            <div id="energy-bar" class="mc-icon-row"></div>
-          </div>
-          <div class="mc-bar-row">
             <span class="mc-bar-label">OXYGEN</span>
             <div id="oxygen-bar" class="mc-icon-row"></div>
           </div>
@@ -187,9 +225,9 @@
             <h3>Astronaut</h3>
             <div class="control-row"><kbd>W A S D</kbd><span>Move</span></div>
             <div class="control-row"><kbd>W</kbd><span>Tap twice to sprint</span></div>
+            <div class="control-row"><kbd>Shift</kbd><span>Hold to sprint</span></div>
             <div class="control-row"><kbd>Mouse</kbd><span>Look around</span></div>
             <div class="control-row"><kbd>Space</kbd><span>Jump</span></div>
-            <div class="control-row"><kbd>Shift</kbd><span>Crouch</span></div>
             <div class="control-row"><kbd>Hold LMB</kbd><span>Break blocks</span></div>
             <div class="control-row"><kbd>RMB</kbd><span>Place or use item</span></div>
             <div class="control-row"><kbd>Wheel</kbd><span>Select hotbar item (zoom while scanning)</span></div>

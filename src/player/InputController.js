@@ -599,7 +599,7 @@ export class InputController {
 
   _isBrowserShortcut(e) {
     // Suppress browser accelerators while the game owns the pointer. Keep the
-    // key event itself flowing so movement, crouch, and debug controls still work.
+    // key event itself flowing so movement, sprint, and debug controls still work.
     if (e.ctrlKey || e.metaKey || e.altKey) return true;
     if (e.shiftKey) return true;
 

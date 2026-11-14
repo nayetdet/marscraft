@@ -14,37 +14,20 @@ function createMockWorld(blocks = {}) {
 }
 
 describe('PlayerPhysics', () => {
-  it('applies crouch and sprint speeds, with crouch taking precedence', () => {
+  it('sprints with the sprint flag or Shift, and walks otherwise', () => {
     const player = new PlayerPhysics(createMockWorld());
     player.yaw = 0;
     player.update(0, { KeyW: true, Sprint: true });
     expect(player.vel.z).toBeCloseTo(-PHYSICS_CONFIG.SPRINT_SPEED);
 
-    const feetY = player.pos.y - player.height;
     player.update(0, { KeyW: true, Sprint: true, ShiftLeft: true });
-    expect(player.vel.z).toBeCloseTo(-PHYSICS_CONFIG.CROUCH_SPEED);
-    expect(player.pos.y - player.height).toBeCloseTo(feetY);
-    expect(player.isCrouching).toBe(true);
+    expect(player.vel.z).toBeCloseTo(-PHYSICS_CONFIG.SPRINT_SPEED);
+
+    player.update(0, { KeyW: true, ShiftRight: true });
+    expect(player.vel.z).toBeCloseTo(-PHYSICS_CONFIG.SPRINT_SPEED);
 
     player.update(0, { KeyW: true });
-    expect(player.height).toBe(PHYSICS_CONFIG.PLAYER_HEIGHT);
-    expect(player.pos.y - player.height).toBeCloseTo(feetY);
     expect(player.vel.z).toBeCloseTo(-PHYSICS_CONFIG.WALK_SPEED);
-  });
-
-  it('stays crouched under a low ceiling until there is room to stand', () => {
-    const ceiling = { minX: -1, maxX: 1, minY: 11.3, maxY: 12, minZ: -1, maxZ: 1 };
-    const player = new PlayerPhysics(createMockWorld(), [ceiling]);
-    player.pos.set(0, 11.7, 0);
-    player.update(0, { ShiftRight: true });
-    player.update(0, {});
-    expect(player.isCrouching).toBe(true);
-    expect(player.height).toBe(PHYSICS_CONFIG.CROUCH_HEIGHT);
-
-    player.customColliders = [];
-    player.update(0, {});
-    expect(player.isCrouching).toBe(false);
-    expect(player.pos.y).toBeCloseTo(11.7);
   });
 
   it('blocks horizontal movement into custom 3D object colliders without auto-stepping over them', () => {
