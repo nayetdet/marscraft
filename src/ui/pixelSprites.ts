@@ -44,6 +44,24 @@ export const PIXEL_SPRITES: Record<string, PixelSprite> = {
       '....NNNN....',
     ],
   },
+  // Bolhas de ar (o ar do traje)
+  air: {
+    colors: { W: '#ffffff', L: '#bfeaff', B: '#6fc3ee', D: '#2f7fb8' },
+    rows: [
+      '............',
+      '...BBBB.....',
+      '..BLLLLB....',
+      '.BLWWLLLB...',
+      '.BLWLLLLB...',
+      '.BLLLLLLB...',
+      '.BLLLLLDB.BB',
+      '..BLLLDB.BLB',
+      '...BBBB..BBD',
+      '......BB....',
+      '.....BLLB...',
+      '......BB....',
+    ],
+  },
   // Bloco de gelo
   ice: {
     colors: { W: '#eaf9ff', L: '#9fe3f5', B: '#5cc3e6', D: '#2f8fbf' },

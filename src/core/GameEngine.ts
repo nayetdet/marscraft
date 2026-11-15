@@ -67,6 +67,7 @@ import { SuitportStation } from '../base/SuitportStation.ts';
 import { buildGreenhouseFields } from '../base/greenhouseFields.ts';
 import { EarthFacts, earthFactLogText, earthFactView, plantsStalled } from '../base/greenhouseCare.ts';
 import { FirstTimeHud } from '../ui/FirstTimeHud.ts';
+import { MissionBriefingHud } from '../ui/MissionBriefingHud.ts';
 import { FirstTimeMoments, momentLogText } from '../story/firstTimeMoments.ts';
 import { MenuScreens } from '../ui/MenuScreens.ts';
 import { StoryDirector } from '../story/StoryDirector.ts';
@@ -337,6 +338,7 @@ export class GameEngine {
       onGymLook: (dx, dy) => this.gymController.look(dx, dy),
       onInteract: () => this.handlePlayerInteract(),
       onSaveGame: () => this._saveGame(),
+      onBeforeFirstPlay: (start) => this._openBriefing(start),
       onRoverAction: () => this.handleRoverAction(),
       onRoverLook: (dx, dy) => this.roverController.look(dx, dy),
       onToggleShield: () => this._toggleShield(),
@@ -1481,6 +1483,15 @@ export class GameEngine {
       greenhouse: { x: GREENHOUSE_MONITOR_POS.x, y: ground + 3, z: GREENHOUSE_MONITOR_POS.z, label: WAYPOINT_LABELS.greenhouse },
       gym: { x: -7.5, y: ground + 3, z: 10.2, label: WAYPOINT_LABELS.gym },
     };
+  }
+
+  // Briefing dos trade-offs: so na missao nova (antes da animacao de chegada). Devolve true
+  // se abriu; `start` comeca o jogo quando a crianca termina ou pula.
+  _openBriefing(start) {
+    if (this._arrivalPlayed) return false;
+    this.missionBriefing ??= new MissionBriefingHud();
+    this.missionBriefing.open(start);
+    return true;
   }
 
   _playArrival() {
