@@ -175,7 +175,7 @@ describe('guided tutorial', () => {
 
   it('runs a simulated radiation pulse on the shielding certificate', () => {
     const shelter = CERTIFICATES.find((c) => c.id === 'cert-shelter');
-    expect(certificateBadge(shelter, { shelterWaterL: 10 }).line).toMatch(/10 L wall blocks 48%/);
+    expect(certificateBadge(shelter, { shelterWaterL: 100 }).line).toMatch(/100 L wall blocks 48%/);
   });
 });
 

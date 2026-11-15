@@ -3,7 +3,7 @@ import { BLOCK_IDS } from '../config/blockTypes.ts';
 import { GREENHOUSE_CENTER, PLOT_PLANT_CELLS } from '../world/greenhouseLayout.ts';
 import { greenhouseMapSvg, plotMapLabel, plotRingDash, plotStatus } from './greenhouseMap.ts';
 import { hideModal, showModal } from './modalTransition.ts';
-import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, SCIENCE_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.ts';
+import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, SCIENCE_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WATER_SYSTEM_CONFIG, WORLD_CONFIG } from '../config/constants.ts';
 import { shelterDoseFactor } from '../mission/radiation.ts';
 import { STORM_SKIP_PANEL_LINE, stormSkipButtonLabel } from '../mission/stormSkip.ts';
 import { doseHistoryText } from '../mission/doseBudget.ts';
@@ -156,7 +156,7 @@ export class StationPanel {
       }
       const tankBar = this.content.querySelector('#shelter-preview-tank-bar');
       if (tankBar) {
-        const maxTank = this.engine.survival.maxBaseWater || 100;
+        const maxTank = this.engine.survival.maxBaseWater || WATER_SYSTEM_CONFIG.MAX_BASE_WATER;
         tankBar.style.width = `${Math.max(0, Math.min(100, Math.round((tank / maxTank) * 100)))}%`;
       }
       const wallBar = this.content.querySelector('#shelter-preview-wall-bar');

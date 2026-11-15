@@ -180,6 +180,32 @@ describe('base energy pacing (issue #81)', () => {
   });
 });
 
+// Agua vezes 10 (15/11/2026, spec do ato 1): os volumes da base sobem 10 vezes com os gastos
+// junto; o que uma pessoa usa de uma vez fica no valor real e a energia por hora nao muda.
+describe('base water times 10 (act 1 spec)', () => {
+  it('the tank holds 1000 L and starts a quarter full', () => {
+    expect(WATER_SYSTEM_CONFIG.MAX_BASE_WATER).toBe(1000);
+    expect(WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER).toBe(250);
+  });
+
+  it('the full shelter wall takes hundreds of liters, like a real one', () => {
+    expect(RADIATION_CONFIG.SHELTER_WALL_MAX_L).toBe(600);
+  });
+
+  it('a full rover load fills half of the tank', () => {
+    expect(WATER_SYSTEM_CONFIG.ICE_CARGO_MAX * WATER_SYSTEM_CONFIG.LITERS_PER_KG_ICE).toBe(WATER_SYSTEM_CONFIG.MAX_BASE_WATER / 2);
+  });
+
+  it('the recycler still costs 0.6% of battery per hour', () => {
+    expect(STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR * UTILITY_CONFIG.RECYCLER_POWER_PER_L).toBeCloseTo(0.6);
+  });
+
+  it('what one person uses at a time keeps its real size', () => {
+    expect(WATER_SYSTEM_CONFIG.DRINK_AMOUNT_FROM_DISPENSER).toBe(2);
+    expect(UTILITY_CONFIG.MEAL_WATER_L).toBe(1);
+  });
+});
+
 describe('base water pacing (issue #81)', () => {
   // Meio sol = 20 minutos reais: cabe o ato 1 inteiro e a primeira viagem do rover ate o gelo
   const HOURS_WITHOUT_HELP = 12;

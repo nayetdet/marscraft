@@ -117,7 +117,7 @@ export class AdminPanel {
       ${group('Dust storm (weather)', [['dust:warning', 'Warning now'], ['dust:storm', 'Dust storm now'], ['dust:end', 'End dust storm'], ['dust:dirty', 'Panels 90% dusty'], ['dust:clean', 'Panels clean']])}
       ${group('Radio to Earth', [['radio:on', 'Solar conjunction now'], ['radio:off', 'End conjunction']])}
       ${group('Power', [['power:100', 'Battery 100%'], ['power:15', 'Battery 15%'], ['power:0', 'Battery 0%']])}
-      ${group('Water', [['water:add', 'Base tank +20 L'], ['water:empty', 'Base tank 0 L'], ['wall:full', 'Shelter wall full'], ['wall:empty', 'Shelter wall empty']])}
+      ${group('Water', [['water:add', `Base tank +${WATER_SYSTEM_CONFIG.ADMIN_ADD_WATER_L} L`], ['water:empty', 'Base tank 0 L'], ['wall:full', 'Shelter wall full'], ['wall:empty', 'Shelter wall empty']])}
       ${group('Astronaut', [['me:refill', 'Refill astronaut'], ['me:dose', 'Reset radiation dose'], ['me:doseLimit', 'Dose over the limit'], ['me:hurt', 'Health to 25%']])}
       ${group('Base', [['base:dirtySuit', 'Dusty suit'], ['base:contaminate', 'Dust in habitat'], ['base:clean', 'Clean suit + habitat'], ['base:filter', 'CO2 filter 0%']])}
       ${group('North module', [['north:pantry', 'Pantry +10 rations'], ['north:wear', 'Crew stations 30%'], ['north:regolith', '+6 regolith'], ['north:carrot', '+3 carrots']])}
@@ -146,7 +146,7 @@ export class AdminPanel {
         mission.battery.charge = mission.battery.capacity * Number(arg) / 100;
         return `Battery set to ${arg}%.`;
       case 'water':
-        survival.baseWater = arg === 'add' ? Math.min(survival.maxBaseWater, survival.baseWater + 20) : 0;
+        survival.baseWater = arg === 'add' ? Math.min(survival.maxBaseWater, survival.baseWater + WATER_SYSTEM_CONFIG.ADMIN_ADD_WATER_L) : 0;
         return `Base tank: ${Math.round(survival.baseWater)} L.`;
       case 'wall':
         mission.shelterWaterL = arg === 'full' ? RADIATION_CONFIG.SHELTER_WALL_MAX_L : 0;

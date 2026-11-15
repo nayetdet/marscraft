@@ -544,7 +544,7 @@ export class GameEngine {
     if (m.dustWeather.phase === 'warning' || m.dustWeather.phase === 'storm') return 'A dust storm will hide the Sun for hours. Turn off the fuel factory and the greenhouse lights, and keep the heater on.';
     if (m.dustWeather.panelDust >= 0.5) return 'Your solar panels are dusty. Clean them at the solar field, west of the power room.';
     if (m.battery.percent < 30) return 'Your battery is low. Turn off the fuel factory or the greenhouse lights until the Sun is back, but keep the heater on at night.';
-    if (m.shelterWaterL < 20 && this.survival.baseWater > 30) return 'Put some water in the storm shelter wall before the next storm.';
+    if (m.shelterWaterL < RADIATION_CONFIG.SHELTER_HINT_WALL_L && this.survival.baseWater > RADIATION_CONFIG.SHELTER_HINT_TANK_L) return 'Put some water in the storm shelter wall before the next storm.';
     if (this.comms.hoursUntilConjunction < 12) return 'Solar conjunction is coming: the radio will go silent for a while. Plan ahead!';
     return 'Everything looks good from here. Keep collecting ice and science samples.';
   }

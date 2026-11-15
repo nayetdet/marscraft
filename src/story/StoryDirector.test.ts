@@ -459,7 +459,7 @@ describe('StoryDirector: tutorial resource detours', () => {
     // O tanque seca no meio do passo da parede de agua
     director.update({ ...s, baseWaterL: 0 });
     expect(director.objectiveId).toBe('need-water');
-    director.update({ ...s, baseWaterL: 20 });
+    director.update({ ...s, baseWaterL: 200 });
     expect(director.objectiveId).toBe('cert-shelter');
     director.drainEvents();
     director.update({ ...s, baseWaterL: 10, shelterWaterL: 10 });

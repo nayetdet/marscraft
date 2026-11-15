@@ -48,8 +48,8 @@ describe('greenhouse map', () => {
   });
 
   it('marks empty plots as locked when water or power is not enough for the selected crop', () => {
-    const svg = greenhouseMapSvg(emptyPlots(), -1, { selectedCrop: 'soy', water: 4, energy: 80 });
-    // Garden (1x) needs 3 L -> affordable; inner (2x) needs 6 L and outer (3x) needs 9 L -> locked
+    const svg = greenhouseMapSvg(emptyPlots(), -1, { selectedCrop: 'soy', water: 40, energy: 80 });
+    // Garden (1x) needs 30 L -> affordable; inner (2x) needs 60 L and outer (3x) needs 90 L -> locked
     expect(svg).toMatch(/class="gh-plot is-empty" data-action="plot:0"/);
     expect(svg).toMatch(/class="gh-plot is-empty is-locked" data-action="plot:1"/);
     expect(svg).toMatch(/class="gh-plot is-empty is-locked" data-action="plot:5"/);

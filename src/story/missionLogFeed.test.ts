@@ -8,7 +8,7 @@ import { StudyReveals } from './studyReveals.ts';
 
 function setup(startHours = 30) {
   const mission = new MissionSystem({ cmes: [], startHours, stormsStarted: false });
-  const survival = { baseWater: 25, maxBaseWater: 100 };
+  const survival = { baseWater: 250, maxBaseWater: 1000 };
   const stations = { workoutCount: 0, treatmentCount: 0, harvestCount: 0, plots: [{ crop: null }, { crop: null }] };
   const utility = new UtilityModule({ mission, survival, stations, base: {} });
   const comms = { blackout: false };
@@ -57,14 +57,14 @@ describe('MissionLogFeed', () => {
     t.advance(0.01);
     const decisions = t.log.entries.filter((e) => e.kind === 'decision');
     expect(decisions).toHaveLength(1);
-    expect(decisions[0].text).toMatch(/now 20 L/);
+    expect(decisions[0].text).toMatch(/now 200 L/);
 
     t.feed.onMissionEvent({ type: 'storm-start' }, t.now());
     t.mission.totalDoseMsv += 0.4;
     t.feed.onMissionEvent({ type: 'storm-survived' }, t.now());
     const result = t.log.entries.find((e) => e.kind === 'consequence');
     expect(result.causeId).toBe(decisions[0].id);
-    expect(result.text).toMatch(/20 L in the shelter wall.*0\.40 mSv/);
+    expect(result.text).toMatch(/200 L in the shelter wall.*0\.40 mSv/);
     // Sobreviver a tempestade revela um estudo de radiacao
     expect(t.log.entries.some((e) => e.kind === 'study')).toBe(true);
     expect(t.feed.drainCards().map((c) => c.type)).toEqual(['study']);
@@ -83,9 +83,9 @@ describe('MissionLogFeed', () => {
 
   it('closes the sol with energy, water and dose numbers', () => {
     const t = setup(20);
-    t.survival.baseWater = 20; // 5 L saiu
+    t.survival.baseWater = 245; // 5 L saiu
     t.advance(1);
-    t.survival.baseWater = 23; // 3 L entrou
+    t.survival.baseWater = 248; // 3 L entrou
     t.advance(4); // passa da meia-noite
     const summary = t.log.entries.find((e) => e.kind === 'summary');
     expect(summary.sol).toBe(1);
