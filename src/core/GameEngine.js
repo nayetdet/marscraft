@@ -1,7 +1,7 @@
 import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS } from '../world/greenhouseLayout.js';
 import { createCropPlantModel } from '../graphics/cropModels.js';
 import * as THREE from 'three';
-import { CAMERA_CONFIG, CROP_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, CROP_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { separateCrew } from '../crew/separateCrew.js';
 import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
@@ -149,8 +149,10 @@ export class GameEngine {
     this.expedition = new ExpeditionState(this.mission.battery);
     this.airlock = new Airlock(this.scene, colliders, this.expedition);
     this.stations = new StationSystem(this.expedition);
-    // Campos da estufa: plantas 3D por campo; um campo de dentro ja comeca com alface crescendo
+    // Campos da estufa: plantas 3D por campo. O jardim ja comeca com uma batata pronta para colher
+    // e um campo de dentro com alface crescendo.
     this.greenhouseFields = buildGreenhouseFields(this.scene);
+    this.stations.plots[0].crop = { type: 'potato', progress: CROP_CONFIG.potato.seconds };
     this.stations.plots[1].crop = { type: 'lettuce', progress: CROP_CONFIG.lettuce.seconds / 2 };
     this.airlock.stations = this.stations;
     this.airlock.onEvent = (type) => this._onAirlockEvent(type);
@@ -675,6 +677,16 @@ export class GameEngine {
     }
   }
 
+  _applyDamageScreenShake(now) {
+    const s = this.survival;
+    if (s.isDead || s.damageFeedbackTime <= 0) return;
+    const strength = SURVIVAL_CONFIG.DAMAGE_SHAKE_AMPLITUDE
+      * (s.damageFeedbackTime / SURVIVAL_CONFIG.DAMAGE_FEEDBACK_SECONDS);
+    const phase = now * 0.001 * SURVIVAL_CONFIG.DAMAGE_SHAKE_RATE;
+    this.camera.position.x += Math.sin(phase) * strength;
+    this.camera.position.y += Math.cos(phase * 1.27) * strength * 0.6;
+  }
+
   // Horas de jogo desde o inicio do sol 1
   _skyHours() {
     return (this.sky.solCount - 1) * 24 + this.sky.timeOfDay;
@@ -809,12 +821,16 @@ export class GameEngine {
       insideShelter: this.survival.insidePressurizedShip && isInsideShelter(this.player.pos.x, this.player.pos.z),
       active,
     });
-    if (active) this.survival.takeDamage(damage * (this.stations.upgraded && !this.survival.insidePressurizedShip ? STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR : 1));
+    if (active) this.survival.takeDamage(
+      damage * (this.stations.upgraded && !this.survival.insidePressurizedShip ? STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR : 1),
+      'RADIATION_OVERDOSE',
+      'solar-radiation',
+    );
 
     if (this.survival.isDead && !this._wasDead) {
       this.mission.markDeath();
       this.missionHud.closeMavPanel(); // a tela de morte precisa aparecer por cima
-      this.hud.showDeathScreen(); // a radiacao pode matar depois do hud.update deste frame
+      this.hud.showDeathScreen(this.survival); // a radiacao pode matar depois do hud.update deste frame
     }
     this._wasDead = this.survival.isDead;
 
@@ -1374,6 +1390,8 @@ export class GameEngine {
         else this._updateCamera();
         this.sky.update(dt, this.player.pos);
       }
+
+      if (isGameRunning) this._applyDamageScreenShake(now);
 
       this.audio.update({
         dt,

@@ -22,16 +22,6 @@ export function isGreenhouseBed(dx, dz) {
   return dx >= PLOT.dxMin && dx <= PLOT.dxMax && dz >= PLOT.dzMin && dz <= PLOT.dzMax;
 }
 
-export function initialGreenhouseCrop(dx, dz) {
-  if (dx === 4 && dz === 4) return 'carrot';
-  if (dx === 3 && dz === 4) return 'potato';
-  return null;
-}
-
-export function startsWithGreenhousePlant(dx, dz) {
-  return initialGreenhouseCrop(dx, dz) !== null;
-}
-
 // Every part of the plantation can be planted. Plot 0 is the garden bed next to the monitor;
 // then come four inner fields (A1..A4) and four outer fields (B1..B4), one per quadrant,
 // clockwise from the north-east. `yield` multiplies both the planting cost and the harvest.
@@ -64,3 +54,21 @@ export function plotIndexAt(dx, dz) {
   const quadrant = QUADRANTS.findIndex((q) => Math.sign(dx) === q.sx && Math.sign(dz) === q.sz);
   return 1 + ring * QUADRANTS.length + quadrant;
 }
+
+// Trays where a plot's crop shows a plant: one plant per item the harvest gives, so what the
+// player sees growing is what they collect. Field plants are spread evenly around the dome.
+export const PLOT_PLANT_CELLS = Object.freeze(GREENHOUSE_PLOTS.map((plot, index) => {
+  if (index === 0) return Object.freeze([Object.freeze({ dx: GARDEN_CROP_BED.dx, dz: GARDEN_CROP_BED.dz })]);
+  const cells = [];
+  const R = HABITAT_LAYOUT.DOME_RADIUS;
+  for (let dx = -R; dx <= R; dx++) {
+    for (let dz = -R; dz <= R; dz++) {
+      if (plotIndexAt(dx, dz) === index) cells.push({ dx, dz, angle: Math.atan2(dz + 0.5, dx + 0.5) });
+    }
+  }
+  cells.sort((a, b) => a.angle - b.angle);
+  return Object.freeze(Array.from({ length: plot.yield }, (_, i) => {
+    const { dx, dz } = cells[Math.floor(((i + 0.5) * cells.length) / plot.yield)];
+    return Object.freeze({ dx, dz });
+  }));
+}));

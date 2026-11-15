@@ -1,6 +1,7 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
+import { GREENHOUSE_CENTER, PLOT_PLANT_CELLS } from '../world/greenhouseLayout.js';
 import { greenhouseMapSvg, plotMapLabel, plotStatus } from './greenhouseMap.js';
-import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U } from '../config/constants.js';
+import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
 import { formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
@@ -248,9 +249,8 @@ export class StationPanel {
   _harvestPlot(plotIndex) {
     const { stations, survival } = this.engine;
     const message = stations.harvest(survival, (id, i) => {
-      const position = this.engine.stationCrop.position.clone();
-      position.x += (i % 2) * 0.5;
-      position.z += Math.floor(i / 2) * 0.5;
+      const { dx, dz } = PLOT_PLANT_CELLS[plotIndex][i];
+      const position = { x: GREENHOUSE_CENTER.x + dx + 0.5, y: WORLD_CONFIG.GROUND_LEVEL + 2, z: GREENHOUSE_CENTER.z + dz + 0.5 };
       this.engine.world.spawnCropDrop(position, id);
     }, plotIndex);
     this.engine.updateCropVisuals?.();
@@ -1011,6 +1011,7 @@ export class StationPanel {
         </div>
         <div class="gh-side">
           <div class="gh-step-bar">DRAG OR TAP CROP → BED</div>
+          <p>Big fields grow more food, but use more water and power. Each plant gives 1 food.</p>
           <div class="gh-seed-list">${seedCardsHtml}</div>
           ${readyCount > 0 ? `<button type="button" class="mc-btn gh-harvest-all-btn" data-action="harvestAll">HARVEST READY (${readyCount})</button>` : ''}
           ${noticeText ? `<div id="gh-notice" class="gh-notice is-${noticeKind}" data-kind="${noticeKind}" role="status">${noticeText}</div>` : ''}

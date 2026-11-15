@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { modelKey } from './baseDisplayText.js';
 
 // Texturas em canvas das placas, posteres e telas da base (arte gerada em codigo, sem logos).
-const FONT = '"Courier New", Courier, monospace';
+const FONT = '"Monocraft", monospace';
 const INK = '#0d1420';
 
 function createCanvas(width, height) {

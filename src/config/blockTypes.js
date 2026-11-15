@@ -103,8 +103,16 @@ export const HOTBAR_BLOCKS = [
 
 export const CROP_ITEM_IDS = Object.freeze({ potato: BLOCK_IDS.POTATO, lettuce: BLOCK_IDS.LETTUCE, soy: BLOCK_IDS.SOY });
 export const CROP_TYPES_BY_ID = Object.freeze(Object.fromEntries(Object.entries(CROP_ITEM_IDS).map(([type, id]) => [id, type])));
+// Base blocks the player can break: each one drops as itself, never as a different block.
+const BASE_BLOCK_ITEMS = [
+  { id: BLOCK_IDS.SOLAR_PANEL, name: 'Solar Panel Block' },
+  { id: BLOCK_IDS.THRUSTER_METAL, name: 'Metal Floor Plate' },
+  { id: BLOCK_IDS.CONSOLE_SCREEN, name: 'Console Block' },
+  { id: BLOCK_IDS.RED_BEACON, name: 'Orange Beacon' },
+].map((item) => ({ ...item, initialCount: 0, consumable: null }));
+
 // Item registry is independent of the nine initial hotbar slots.
-export const ITEM_DEFINITIONS = [...HOTBAR_BLOCKS, ...Object.entries(CROP_ITEM_IDS).map(([type, id]) => ({
+export const ITEM_DEFINITIONS = [...HOTBAR_BLOCKS, ...BASE_BLOCK_ITEMS, ...Object.entries(CROP_ITEM_IDS).map(([type, id]) => ({
   id, name: 'Mars ' + type + ' (Use to eat)', initialCount: 0,
   consumable: { type: 'food', amount: CROP_CONFIG[type].nutrition, heal: 0 },
 }))];

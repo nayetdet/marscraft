@@ -225,7 +225,7 @@
   width: min(440px, calc(100vw - 32px));
   padding: 6px 10px;
   color: #7fe3ff;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'Monocraft', monospace;
   font-size: 12px;
   background: #0e161e;
   border: 3px solid #1b2a36;
@@ -262,7 +262,7 @@
   width: min(440px, calc(100vw - 32px));
   padding: 10px 12px 12px;
   color: #ffffff;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'Monocraft', monospace;
   font-size: 14px;
   line-height: 1.35;
   background: #0e161e;
@@ -448,7 +448,7 @@ body.cutscene-active .story-signal { visibility: hidden; }
   inset: 0;
   z-index: 40;
   pointer-events: none;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'Monocraft', monospace;
   color: #ffffff;
 }
 

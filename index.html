@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <style>
     html, body { margin: 0; width: 100%; height: 100%; background: #140d09; }
-    #loading-overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; overflow: hidden; background: #6c4a33 url('%BASE_URL%mars-dirt.svg') repeat; background-size: 64px 64px; color: #fff; font-family: 'Courier New', Courier, monospace; font-weight: 700; text-align: center; image-rendering: pixelated; transition: opacity .35s ease; }
+    #loading-overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; overflow: hidden; background: #6c4a33 url('%BASE_URL%mars-dirt.svg') repeat; background-size: 64px 64px; color: #fff; font-family: 'Monocraft', monospace; font-weight: 700; text-align: center; image-rendering: pixelated; transition: opacity .35s ease; }
     #overlay {
       background:
         radial-gradient(ellipse at 50% 38%, rgba(177, 91, 55, .28), transparent 44%),
@@ -38,6 +38,7 @@
     <p>MineMars is best played in landscape.</p>
   </div>
   <div id="danger-vignette" class="danger-vignette hidden" aria-hidden="true"></div>
+  <div id="damage-source" class="damage-source" role="status" aria-live="polite"></div>
 
   <!-- HUD Estilo Minecraft Survival -->
   <div id="hud" class="hud">
@@ -411,9 +412,14 @@
 
   <!-- Tela de Morte Estilo Minecraft ("Voce Morreu!") -->
   <div id="death-overlay" class="mc-death-overlay hidden">
-    <div class="mc-menu">
-      <h1 class="mc-death-title">You Died!</h1>
-      <p class="mc-death-sub">You ran out of oxygen, water, or food, or got too much radiation on Mars.</p>
+    <div class="mc-menu death-report">
+      <h1 id="death-title" class="mc-death-title">MISSION ENDED</h1>
+      <p id="death-diagnosis" class="mc-death-sub"></p>
+      <p id="death-science" class="death-report-science"></p>
+      <div class="death-protocol">
+        <h2>NEXT MISSION</h2>
+        <p id="death-protocol"></p>
+      </div>
       <button id="respawn-btn" class="mc-btn">Respawn</button>
     </div>
   </div>

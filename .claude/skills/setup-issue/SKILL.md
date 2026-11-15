@@ -18,10 +18,10 @@ Argumento opcional (`$ARGUMENTS`): se vier texto, trate-o como o primeiro pedido
 
 ## Regra de conta do GitHub (obrigatória)
 
-O repo é **privado** e só a conta pessoal `DerickBessa` tem acesso. **Não** troque a conta ativa (`gh auth switch` proibido). Todo comando `gh` leva o token no mesmo comando:
+Use a identidade GitHub configurada no ambiente. Confira `gh auth status` se a autenticação falhar; não busque tokens vinculados a contas específicas nem troque a conta ativa automaticamente.
 
 ```bash
-export GH_TOKEN=$(gh auth token --user DerickBessa) && gh ... -R nayetdet/nasa-space-apps
+gh ... -R nayetdet/nasa-space-apps
 ```
 
 ## Para cada pedido
@@ -29,7 +29,7 @@ export GH_TOKEN=$(gh auth token --user DerickBessa) && gh ... -R nayetdet/nasa-s
 ### 1. Procurar duplicata
 
 ```bash
-export GH_TOKEN=$(gh auth token --user DerickBessa) && gh issue list -R nayetdet/nasa-space-apps --state all --limit 100 --json number,title,state,labels
+gh issue list -R nayetdet/nasa-space-apps --state all --limit 100 --json number,title,state,labels
 ```
 
 - Leia os títulos (abertas **e** fechadas). Se algum for parecido, abra com `gh issue view N` para confirmar.
@@ -69,7 +69,7 @@ Título em Conventional Commits, em português: `bug: ...`, `feat: ...`, `fix: .
 Escreva o corpo num arquivo no scratchpad e use `--body-file` (evita problemas de aspas/acentos):
 
 ```bash
-export GH_TOKEN=$(gh auth token --user DerickBessa) && gh issue create -R nayetdet/nasa-space-apps --title "<título>" --label <label> --body-file "<scratchpad>/issue.md"
+gh issue create -R nayetdet/nasa-space-apps --title "<título>" --label <label> --body-file "<scratchpad>/issue.md"
 ```
 
 Estrutura do corpo (seções sem conteúdo real ficam de fora):

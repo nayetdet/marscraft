@@ -4,9 +4,11 @@ import './ui/styles/modal.css';
 import './ui/styles/story.css';
 import { GameEngine } from './core/GameEngine.js';
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   const container = document.getElementById('game-container');
   const loadingOverlay = document.getElementById('loading-overlay');
+
+  await document.fonts.load('16px "Monocraft"');
 
   // Let the browser paint the loading screen before building the world.
   requestAnimationFrame(() => {

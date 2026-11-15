@@ -20,6 +20,28 @@
 
 .damage-overlay.hidden { display: none; }
 
+.damage-source {
+  position: fixed;
+  z-index: 31;
+  top: max(76px, calc(env(safe-area-inset-top) + 56px));
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  padding: 8px 12px;
+  transform: translate(-50%, -8px);
+  opacity: 0;
+  pointer-events: none;
+  color: #fff;
+  background: rgba(82, 12, 12, .94);
+  border: 2px solid #ff7777;
+  box-shadow: 3px 3px 0 #160707;
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: center;
+  transition: opacity .12s ease, transform .12s ease;
+}
+.damage-source.visible { transform: translate(-50%, 0); opacity: 1; }
+
 .breach-overlay {
   position: fixed;
   inset: 0;
@@ -1455,7 +1477,7 @@
   border-radius: 3px;
   background: rgba(83, 83, 83, .86);
   color: #fff;
-  font: 700 10px 'Courier New', Courier, monospace;
+  font: 700 10px 'Monocraft', monospace;
   text-shadow: 1px 1px #222;
   box-shadow: 0 2px 4px rgba(0, 0, 0, .45);
   touch-action: none;
@@ -1573,7 +1595,7 @@
   background: rgba(20, 20, 20, .86);
   border: 2px solid #777;
   box-shadow: inset 2px 2px #333, 3px 3px rgba(0, 0, 0, .5);
-  font: 700 10px 'Courier New', monospace;
+  font: 700 10px 'Monocraft', monospace;
 }
 .rover-gps-title { display: flex; justify-content: space-between; color: #f5cf4d; }
 .rover-gps-title span { color: #fff; }
@@ -1627,6 +1649,6 @@
   position: absolute;
   bottom: -12px;
   color: #b4f187;
-  font: bold 10px 'Courier New', monospace;
+  font: bold 10px 'Monocraft', monospace;
   text-shadow: 1px 1px #000;
 }
