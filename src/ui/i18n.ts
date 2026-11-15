@@ -603,6 +603,19 @@ const DYNAMIC_PATTERNS: Array<{
     format: ([, value], language) => language === 'pt-BR' ? `+${value} mensagens a mais` : `+${value} mensajes más`,
   },
   {
+    // Boletim: ciencia que ficou em Marte x traje melhorado (#417)
+    match: /^Science kept on Mars: (\d+) pts\. Suit: (\d+)% less radiation outside$/,
+    format: ([, points, cut], language) => language === 'pt-BR'
+      ? `Ciência que ficou em Marte: ${points} pts. Traje: ${cut}% menos radiação lá fora`
+      : `Ciencia que se quedó en Marte: ${points} pts. Traje: ${cut}% menos radiación afuera`,
+  },
+  {
+    match: /^Science kept on Mars: (\d+) pts\. No suit upgrade$/,
+    format: ([, points], language) => language === 'pt-BR'
+      ? `Ciência que ficou em Marte: ${points} pts. Traje sem melhoria`
+      : `Ciencia que se quedó en Marte: ${points} pts. Traje sin mejora`,
+  },
+  {
     match: /^Total radiation: (.+) mSv$/,
     format: ([, value], language) => language === 'pt-BR' ? `Radiação total: ${value} mSv` : `Radiación total: ${value} mSv`,
   },

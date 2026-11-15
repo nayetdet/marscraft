@@ -1481,6 +1481,9 @@ export class GameEngine {
       sampleTypes: new Set(this.stations.analyzed.map((sample) => sample.typeId)).size,
       sciencePointsSent: status.sentPoints,
       sciencePointsGoal: SCIENCE_CONFIG.POINTS_TO_LAUNCH,
+      // Ciencia gasta em Marte x traje melhorado (issue #417)
+      sciencePointsUsed: status.usedPoints,
+      suitUpgraded: this.stations.upgraded,
       // Ciencia que viaja nos tubos de amostra (issue #422): so conta aqui, no boletim
       scienceTubePoints: this.mission.tubePoints,
       sampleTubes: this.mission.sampleTubes,
