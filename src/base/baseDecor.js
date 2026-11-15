@@ -144,6 +144,7 @@ export function buildBaseDecor(scene, colliders) {
   box(0.3, 0.3, 0.04, mats.charcoal, -1.57, F + 1.1, 5.445);
   box(0.06, 0.5, 0.04, mats.silver, -1.3, F + 0.9, 5.445);
   solid(-2.0, -1.14, 5.4, 6.0, 2.0);
+  // Suitport 3D station in the airlock is built by SuitportStation.js.
 
   // ---------- Estufa (GRN-1): tudo na praca central da redoma ----------
   const gx = HABITAT_LAYOUT.DOME_X + 0.5; // centro da redoma

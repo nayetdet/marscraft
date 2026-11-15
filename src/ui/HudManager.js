@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { airlockProgress } from './airlockProgress.js';
 import { roverBatteryText } from '../rover/roverText.js';
 import { getDamageFeedback, getDeathReport } from '../player/deathReport.js';
+import { getSuitTelemetryView } from '../player/suitTelemetry.js';
+import { InventorySuitPreview } from './InventorySuitPreview.js';
 import { DOSE_LIMIT_MSV, dosePercent, doseTone } from '../mission/doseBudget.js';
 
 const ICONS_PER_BAR = 10;
@@ -18,10 +20,22 @@ const STAT_ICON_PATHS = {
 };
 
 export class HudManager {
-  constructor(previews, initialSlots, { onInventorySwap, onOpenJournal } = {}) {
+  constructor(previews, initialSlots, {
+    onInventorySwap,
+    onOpenJournal,
+    getSuitState,
+    onSuitportEquip,
+    onSuitportRepair,
+    onSuitportClean,
+  } = {}) {
     this.previews = previews;
     this.onInventorySwap = onInventorySwap;
     this.onOpenJournal = onOpenJournal;
+    this.getSuitState = getSuitState;
+    this.onSuitportEquip = onSuitportEquip;
+    this.onSuitportRepair = onSuitportRepair;
+    this.onSuitportClean = onSuitportClean;
+    this._lastSuitContext = null;
     this.selectedSlot = 0;
     this.inventorySelection = null;
 
@@ -58,6 +72,7 @@ export class HudManager {
     this.healthBarEl = document.getElementById('health-bar');
     this.radiationBarEl = document.getElementById('radiation-bar');
     this.oxygenBarEl = document.getElementById('oxygen-bar');
+    this.suitThermalEl = document.getElementById('suit-thermal');
     this.waterBarEl = document.getElementById('water-bar');
     this.foodBarEl = document.getElementById('food-bar');
 
@@ -72,6 +87,24 @@ export class HudManager {
     this.airlockTitleEl = this.airlockEl.querySelector('.airlock-progress-title');
     this.airlockFillEl = this.airlockEl.querySelector('.airlock-progress-track i');
     this.airlockTextEl = this.airlockEl.querySelector('.airlock-progress-text');
+
+    this.evaVisorEl = document.getElementById('eva-visor-frame');
+    this.suitEquipEl = document.getElementById('suit-equip-hud');
+    this.suitEquipTitleEl = this.suitEquipEl?.querySelector('.suit-equip-title');
+    this.suitEquipFillEl = this.suitEquipEl?.querySelector('.suit-equip-track i');
+    this.suitEquipTextEl = this.suitEquipEl?.querySelector('.suit-equip-text');
+    this._suitSeq = null; // { mode: 'equip'|'dock', startMs, durationMs }
+
+    // Suitport Holo-Display ("EVA SUIT DIAGNOSTICS")
+    this.suitportHoloEl = document.getElementById('suitport-holo');
+    this.suitportEquipBtn = document.getElementById('suitport-equip-btn');
+    this.suitportRepairBtn = document.getElementById('suitport-repair-btn');
+    this.suitportCleanBtn = document.getElementById('suitport-clean-btn');
+
+    // Inventory parallel vertical suit panel + 3D preview
+    this.invSuitStatusEl = document.getElementById('inv-suit-status');
+    const invCanvas = document.getElementById('inventory-suit-canvas');
+    this.suitPreview = invCanvas ? new InventorySuitPreview(invCanvas, document.getElementById('inventory-suit-panel')) : null;
 
     // Ultimos valores escritos no DOM: so reescreve quando algo muda
     this._lastClockText = '';
@@ -110,7 +143,9 @@ export class HudManager {
 
     this.renderHotbar(initialSlots);
     this._initSkyLabels();
-    this.inventoryCloseBtn?.addEventListener('click', () => this.closeInventory());
+    this.suitportEquipBtn?.addEventListener('click', () => this.onSuitportEquip?.());
+    this.suitportRepairBtn?.addEventListener('click', () => this.onSuitportRepair?.());
+    this.suitportCleanBtn?.addEventListener('click', () => this.onSuitportClean?.());
   }
 
   setInteractionPrompt(visible, text = '[F] Operate Rover Remote Terminal') {
@@ -140,6 +175,9 @@ export class HudManager {
     if (this.roverInfoEl) this.roverInfoEl.classList.toggle('hidden', !active);
     if (this.interactionPromptEl && active) {
       this.interactionPromptEl.classList.add('hidden');
+    }
+    if (active) {
+      this.suitportHoloEl?.classList.add('hidden');
     }
   }
 
@@ -217,6 +255,8 @@ export class HudManager {
     document.body.classList.add('inventory-open');
     this.inventorySelection = null;
     this.renderInventory(inventorySlots);
+    this._renderInventorySuitPanel();
+    this.suitPreview?.start();
     this.inventoryOverlayEl.classList.remove('hidden');
   }
 
@@ -224,7 +264,70 @@ export class HudManager {
     this.isInventoryOpen = false;
     document.body.classList.remove('inventory-open');
     this.inventorySelection = null;
+    this.suitPreview?.stop();
     this.inventoryOverlayEl.classList.add('hidden');
+  }
+
+  _setElText(el, text) {
+    if (el && el.textContent !== text) el.textContent = text;
+  }
+
+  _setElClass(el, cls) {
+    if (el && el._cls !== cls) {
+      el._cls = cls;
+      el.className = cls;
+    }
+  }
+
+  _renderInventorySuitPanel() {
+    const ctx = this.getSuitState?.() ?? this._lastSuitContext;
+    if (!ctx?.survival) return;
+    const view = getSuitTelemetryView(ctx.survival, ctx);
+
+    const statusText = !view.equipped ? 'NO SUIT' : view.integrityPct <= 0 ? 'SUIT BROKEN' : 'EVA SUIT';
+    this._setElText(this.invSuitStatusEl, statusText);
+
+    this.suitPreview?.setState({
+      equipped: view.equipped,
+      upgraded: view.upgraded,
+      dustPct: view.dustPct,
+      integrityTone: view.integrityTone,
+    });
+  }
+
+  updateSuitportHolo(visible, suitCtx = null) {
+    if (!this.suitportHoloEl) return;
+    if (!visible || !suitCtx?.survival) {
+      this._setElClass(this.suitportHoloEl, 'suitport-holo hidden');
+      return;
+    }
+    this._setElClass(this.suitportHoloEl, 'suitport-holo');
+    const view = getSuitTelemetryView(suitCtx.survival, suitCtx);
+
+    if (this.suitportEquipBtn) {
+      this._setElText(this.suitportEquipBtn, view.equipPromptLabel);
+      const locked = !suitCtx.airlockPressurized || suitCtx.airlockDoorOpen;
+      const canPress = !locked && (view.equipped || view.canEquipAtSuitport);
+      this.suitportEquipBtn.disabled = !canPress;
+      this._setElClass(
+        this.suitportEquipBtn,
+        `suitport-holo-btn primary${!view.equipped && canPress ? ' ready' : ''}`
+      );
+    }
+    if (this.suitportRepairBtn) {
+      const showRepair = !view.equipped && view.wearPct > 0;
+      this.suitportRepairBtn.classList.toggle('hidden', !showRepair);
+      this._setElText(
+        this.suitportRepairBtn,
+        suitCtx.batteryPercent >= SURVIVAL_CONFIG.SUIT_REPAIR_POWER_COST
+          ? `[R] REPAIR SUIT (-${SURVIVAL_CONFIG.SUIT_REPAIR_POWER_COST}% PWR)`
+          : '[R] EMERGENCY PATCH'
+      );
+    }
+    if (this.suitportCleanBtn) {
+      const showClean = !view.equipped && view.isDusty;
+      this.suitportCleanBtn.classList.toggle('hidden', !showClean);
+    }
   }
 
   _selectInventorySlot(index) {
@@ -441,6 +544,66 @@ export class HudManager {
     if (this.airlockFillEl.style.width !== width) this.airlockFillEl.style.width = width;
   }
 
+  triggerSuitSequence(mode = 'equip') {
+    this._suitSeq = {
+      mode,
+      startMs: performance.now(),
+      durationMs: mode === 'equip' ? 1150 : 850,
+    };
+  }
+
+  _updateSuitHud(survival, airlock, isRoverActive, isScopeOpen) {
+    if (this.evaVisorEl) {
+      const visorVisible = Boolean(survival?.suitEquipped) && !isRoverActive && !isScopeOpen;
+      const sealing = Boolean(this._suitSeq && this._suitSeq.mode === 'equip');
+      const visorCls = visorVisible
+        ? `eva-visor-frame${sealing ? ' is-sealing' : ''}`
+        : 'eva-visor-frame hidden';
+      if (this.evaVisorEl._cls !== visorCls) {
+        this.evaVisorEl._cls = visorCls;
+        this.evaVisorEl.className = visorCls;
+      }
+    }
+
+    if (!this.suitEquipEl) return;
+    if (!this._suitSeq || airlock?.pending) {
+      if (this._suitSeq && airlock?.pending) this._suitSeq = null;
+      if (!this.suitEquipEl.classList.contains('hidden')) this.suitEquipEl.className = 'suit-equip-hud hidden';
+      return;
+    }
+
+    const elapsed = performance.now() - this._suitSeq.startMs;
+    const progress = Math.min(1, elapsed / this._suitSeq.durationMs);
+    if (progress >= 1) {
+      this._suitSeq = null;
+      this.suitEquipEl.className = 'suit-equip-hud hidden';
+      return;
+    }
+
+    const isDock = this._suitSeq.mode === 'dock';
+    const cls = isDock ? 'suit-equip-hud dock' : 'suit-equip-hud';
+    if (this.suitEquipEl._cls !== cls) {
+      this.suitEquipEl._cls = cls;
+      this.suitEquipEl.className = cls;
+    }
+    const title = isDock ? 'DOCKING EVA SUIT' : 'EQUIPPING EVA SUIT';
+    if (this.suitEquipTitleEl.textContent !== title) this.suitEquipTitleEl.textContent = title;
+
+    let stepText;
+    if (isDock) {
+      stepText = progress < 0.5 ? 'RELEASING HELMET SEAL' : 'LOCKING SUIT IN BAY';
+    } else if (progress < 0.35) {
+      stepText = 'UNLATCHING SUITPORT';
+    } else if (progress < 0.72) {
+      stepText = 'SEALING HELMET & GLOVES';
+    } else {
+      stepText = 'O2 & THERMAL CHECK OK';
+    }
+    if (this.suitEquipTextEl.textContent !== stepText) this.suitEquipTextEl.textContent = stepText;
+    const width = `${Math.round(progress * 100)}%`;
+    if (this.suitEquipFillEl.style.width !== width) this.suitEquipFillEl.style.width = width;
+  }
+
   _setLabelVisible(label, visible) {
     if (label.visible === visible) return;
     label.visible = visible;
@@ -472,7 +635,26 @@ export class HudManager {
     }
   }
 
-  update({ player, survival, sky, camera, isScopeOpen = false, isRoverActive = false, roverTelemetry = null, mission, airlock = null }) {
+  update({ player, survival, sky, camera, isScopeOpen = false, isRoverActive = false, roverTelemetry = null, mission, airlock = null, outsideTempC = -60, suitUpgraded = false, dirtySuit = false }) {
+    this._lastSuitContext = {
+      survival,
+      outsideTempC,
+      batteryPercent: mission?.battery?.percent ?? 100,
+      suitUpgraded,
+      dirtySuit,
+      airlockPressurized: airlock?.pressurized ?? true,
+      airlockDoorOpen: Boolean(airlock?.doors?.[1]?.openness > 0),
+    };
+    if (survival.suitEquipped && !survival.insidePressurizedShip) {
+      if (survival.suitOxygen <= SURVIVAL_CONFIG.SUIT_OXYGEN_WARN_THRESHOLD && !survival.suitO2Warned30) {
+        survival.suitO2Warned30 = true;
+        this.showSystemNotice('SUIT O2 AT 30%: Return to Base Airlock to recharge.', 'SUIT O2', 6500);
+      }
+      if (survival.suitIntegrity <= 0 && !survival.suitWornWarned) {
+        survival.suitWornWarned = true;
+        this.showSystemNotice('EVA SUIT WORN OUT: Seal breached! Losing personal O2. Return to Suitport.', 'SUIT WEAR', 6500);
+      }
+    }
     this._updateDamageSource(survival);
     this.dangerVignetteEl?.classList.toggle('hidden', !survival.isInDanger || survival.isDead);
     if (survival.isDead) {
@@ -585,9 +767,15 @@ export class HudManager {
     this._updateIconBar(healthBar, survival.health);
     this._updateRadiationDoseBar(mission);
     this._updateIconBar(oxygenBar, survival.oxygen);
+    const thermalText = survival.suitEquipped
+      ? `SUIT HEAT ${Math.ceil(survival.suitThermal)}%`
+      : 'NO EVA SUIT (DOCKED)';
+    if (this.suitThermalEl.textContent !== thermalText) this.suitThermalEl.textContent = thermalText;
+    this.suitThermalEl.classList.toggle('low', survival.suitEquipped && survival.suitThermal <= 25);
     this._updateIconBar(waterBar, survival.water);
     this._updateIconBar(foodBar, survival.food);
     this._updateAirlock(airlock);
+    this._updateSuitHud(survival, airlock, isRoverActive, isScopeOpen);
 
     // Os nomes no céu só aparecem com a luneta aberta, como parte do modo telescópio.
     if (!isScopeOpen) {

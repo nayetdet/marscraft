@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { STATION_CONFIG as C } from '../config/constants.js';
-import { CrewAvatar } from '../crew/CrewAvatar.js';
+import { buildIvaAstronautRig, buildSpacesuitRig } from '../graphics/spacesuitModel.js';
 
 const EQUIPMENT_SPECS = {
   treadmill: {
@@ -28,12 +28,13 @@ const EQUIPMENT_SPECS = {
 };
 
 export class GymEquipmentController {
-  constructor({ scene, camera, player, stations, expedition, hud, onPlaySound, onDismount }) {
+  constructor({ scene, camera, player, stations, expedition, survival = null, hud, onPlaySound, onDismount }) {
     this.scene = scene;
     this.camera = camera;
     this.player = player;
     this.stations = stations;
     this.expedition = expedition;
+    this.survival = survival;
     this.hud = hud;
     this.onPlaySound = onPlaySound;
     this.onDismount = onDismount;
@@ -50,16 +51,32 @@ export class GymEquipmentController {
     this._camTargetPos = new THREE.Vector3();
     this._camLookAt = new THREE.Vector3();
 
-    // Avatar 3D do proprio jogador que aparece em cima da esteira ou bicicleta
-    this.avatar = new CrewAvatar(
-      this.scene,
-      { name: 'YOU', state: 'working', route: ['medbay'], distance: 0, node: 'medbay' },
-      0xea580c
-    );
-    this.avatar.label.visible = false;
-    this.avatar.group.visible = false;
+    // Avatar 3D do proprio jogador: usa traje interno azul (IVA) dentro da base ou EVA se equipado
+    const group = new THREE.Group();
+    group.visible = false;
+    this.scene.add(group);
+    this.evaRig = buildSpacesuitRig({ accentColor: 0xea580c, includeUpgradeTrim: true });
+    this.ivaRig = buildIvaAstronautRig({ accentColor: 0xea580c });
+    group.add(this.evaRig.bodyGroup, this.ivaRig.bodyGroup);
+
+    this.avatar = {
+      group,
+      ...this.ivaRig,
+    };
+    this._syncAvatarAppearance();
 
     this._buildHudOverlay();
+  }
+
+  _syncAvatarAppearance() {
+    const suited = Boolean(this.survival?.suitEquipped);
+    this.evaRig.bodyGroup.visible = suited;
+    this.ivaRig.bodyGroup.visible = !suited;
+    const active = suited ? this.evaRig : this.ivaRig;
+    Object.assign(this.avatar, active);
+    for (const mesh of this.evaRig.upgradeTrimMeshes) {
+      mesh.visible = suited && Boolean(this.stations?.upgraded);
+    }
   }
 
   _buildHudOverlay() {
@@ -109,6 +126,7 @@ export class GymEquipmentController {
     this.cameraYaw = spec.camOffsetYaw;
     this.cameraPitch = spec.camPitch;
 
+    this._syncAvatarAppearance();
     this.avatar.group.visible = true;
     this.avatar.group.position.copy(spec.pos);
     this.avatar.group.rotation.set(0, spec.yaw, 0);

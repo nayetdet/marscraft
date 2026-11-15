@@ -476,6 +476,92 @@
 .airlock-progress.clean .airlock-progress-track i { background: var(--hud-blue); }
 .airlock-progress.clean .airlock-progress-text { color: #9fe3ff; }
 
+/* Subtle EVA helmet visor frame + brief suit-up progress card */
+.eva-visor-frame {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  transition: opacity 0.25s ease;
+}
+.eva-visor-frame.hidden { display: none; }
+.eva-visor-frame .visor-corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-color: rgba(125, 211, 252, 0.28);
+  border-style: solid;
+  border-width: 0;
+}
+.eva-visor-frame.is-sealing .visor-corner {
+  border-color: rgba(74, 222, 128, 0.72);
+}
+.eva-visor-frame .visor-corner.tl { top: 8px; left: 8px; border-top-width: 2px; border-left-width: 2px; }
+.eva-visor-frame .visor-corner.tr { top: 8px; right: 8px; border-top-width: 2px; border-right-width: 2px; }
+.eva-visor-frame .visor-corner.bl { bottom: 8px; left: 8px; border-bottom-width: 2px; border-left-width: 2px; }
+.eva-visor-frame .visor-corner.br { bottom: 8px; right: 8px; border-bottom-width: 2px; border-right-width: 2px; }
+
+.suit-equip-hud {
+  position: fixed;
+  top: 62%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(320px, calc(100vw - 180px));
+  padding: 8px 12px 9px;
+  text-align: center;
+  background: var(--hud-panel);
+  border: 2px solid #11171b;
+  box-shadow: inset 0 0 0 2px #2f8fd8, 3px 3px 0 rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  z-index: 14;
+}
+.suit-equip-hud.hidden { display: none; }
+.suit-equip-hud.dock { box-shadow: inset 0 0 0 2px #c9a227, 3px 3px 0 rgba(0, 0, 0, 0.45); }
+.suit-equip-title { font-size: 13px; color: #9fe3ff; letter-spacing: 1px; text-shadow: 1px 1px 0 #000; }
+.suit-equip-hud.dock .suit-equip-title { color: var(--hud-warn); }
+.suit-equip-track { height: 12px; margin: 6px 0; background: #2a2a2a; border: 2px solid #000; position: relative; }
+.suit-equip-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(20% - 2px), #000 calc(20% - 2px) 20%);
+}
+.suit-equip-track i { display: block; height: 100%; width: 0; background: var(--hud-good); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
+.suit-equip-hud.dock .suit-equip-track i { background: var(--hud-warn); }
+.suit-equip-text { font-size: 12px; line-height: 1.3; color: #ececec; text-shadow: 1px 1px 0 #000; }
+.touch-mode .suit-equip-hud { top: 56%; width: min(260px, calc(100vw - 210px)); padding: 6px 8px; }
+.touch-mode .suit-equip-title, .touch-mode .suit-equip-text { font-size: 10px; }
+
+/* Contextual suitport actions for touch controls. */
+.suitport-holo { display: none; }
+.touch-mode .suitport-holo:not(.hidden) {
+  display: block;
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(290px, calc(100vw - 24px));
+  z-index: 16;
+  pointer-events: auto;
+}
+.suitport-holo-actions { display: flex; flex-direction: column; gap: 5px; }
+.suitport-holo-subactions { display: flex; gap: 5px; }
+.suitport-holo-btn {
+  width: 100%;
+  padding: 6px 8px;
+  background: #1e3a5f;
+  border: 2px solid #38bdf8;
+  color: #f8fafc;
+  font: 700 11px 'Monocraft', monospace;
+  cursor: pointer;
+  text-shadow: 1px 1px #000;
+}
+.suitport-holo-btn.primary { background: #0369a1; border-color: #7dd3fc; }
+.suitport-holo-btn.ready { background: #15803d; border-color: #4ade80; }
+.suitport-holo-btn:disabled { background: #334155; border-color: #64748b; color: #cbd5e1; cursor: not-allowed; }
+.suitport-holo-btn.hidden { display: none; }
+.touch-mode .suitport-holo-btn { font-size: 10px; min-height: 44px; }
+
 /* Parte Inferior da HUD (Estilo Minecraft Survival). margin-top: auto prende a area no rodape
    mesmo quando os blocos de cima estao escondidos (senao o space-between a joga para o topo). */
 .mc-bottom-area {
@@ -569,13 +655,21 @@
   margin-bottom: 2px;
 }
 
-/* Barras de Vida, Oxigênio, Água e Comida acima da Hotbar */
+/* Barras de Vida, Oxigênio, Água e Comida acima da Hotbar + Suit Telemetry Widget */
+.mc-status-band {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  margin-bottom: 2px;
+}
+
 .mc-status-container {
   width: 454px;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 2px;
+  margin-bottom: 0;
 }
 
 .mc-status-col {
@@ -583,6 +677,10 @@
   flex-direction: column;
   gap: 4px;
 }
+
+.suit-thermal { font-size: 12px; color: #e0e0e0; text-shadow: 1px 1px #000; }
+.suit-thermal.low { color: #ff7777; }
+.touch-mode .suit-thermal { font-size: 9px; }
 
 .mc-bar-row {
   display: flex;

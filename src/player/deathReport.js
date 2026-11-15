@@ -26,6 +26,11 @@ const REPORTS = {
 };
 
 const BIOLOGICAL_DETAILS = {
+  'suit-cold': {
+    diagnosis: 'The suit heater ran out of battery outside.',
+    science: 'Spacesuits need thermal control to protect astronauts from extreme temperatures.',
+    protocol: 'Return to the airlock and dock your suit to recharge its heater.',
+  },
   'water-depleted': {
     diagnosis: 'Your body ran out of water.',
     protocol: 'Drink from the base dispenser or bring ice with the rover before the tank is empty.',
@@ -69,6 +74,7 @@ const DAMAGE_FEEDBACK = {
 };
 
 const BIOLOGICAL_DAMAGE_FEEDBACK = {
+  'suit-cold': { source: 'SUIT HEATER', message: 'Suit heater empty. Return to the airlock and recharge.' },
   'water-depleted': { source: 'WATER', message: 'Your water is empty. Drink at the base or bring ice with the rover.' },
   'food-depleted': { source: 'FOOD', message: 'Your food is empty. Eat before leaving the base.' },
   'contaminated-air': { source: 'DUST IN BASE AIR', message: 'Clean your suit and the habitat at life support.' },

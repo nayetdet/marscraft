@@ -13,6 +13,17 @@ const run = (airlock, player, seconds) => {
 };
 
 describe('airlock', () => {
+  it('docks on entry and blocks an unsuited departure without blocking a return', () => {
+    const airlock = new Airlock(new THREE.Scene(), [], new ExpeditionState());
+    airlock.survival = { suitEquipped: true };
+    const [inner, outer] = airlock.doors;
+    airlock.update(0, { x: 0.5, z: 7 });
+    airlock.update(0, { x: 0.5, z: inner.z - 0.1 });
+    expect(airlock.survival.suitEquipped).toBe(false);
+    expect(airlock.request(outer, { x: 0.5, z: 7 })).toContain('Equip EVA Suit');
+    expect(airlock.pending).toBeNull();
+    expect(airlock.request(outer, { x: 0.5, z: 10 })).not.toContain('Equip EVA Suit');
+  });
   it('only opens a door after the cycle ends and interlocks the doors', () => {
     const colliders = [];
     const airlock = new Airlock(new THREE.Scene(), colliders, new ExpeditionState());

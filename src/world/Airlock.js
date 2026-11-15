@@ -23,6 +23,8 @@ export class Airlock {
     // () => texto ou null, ligado pelo GameEngine: com texto, a porta externa nao abre para quem
     // esta do lado da base (dose acima do limite, issue #104). Quem esta la fora sempre entra.
     this.exitBlock = null;
+    this.survival = null;
+    this.previousPlayerZ = null;
     this.doors = [this.makeDoor(scene, 6.15, 'inner'), this.makeDoor(scene, 8.85, 'outer')];
     this.vapor = new THREE.Group();
     const vaporMaterial = new THREE.MeshBasicMaterial({ color: 0xbfe2ed, transparent: true, opacity: 0.5, depthWrite: false });
@@ -80,6 +82,7 @@ export class Airlock {
       return 'Closing airlock door.';
     }
     if (door.name === 'outer' && player.z < door.z) {
+      if (this.survival && !this.survival.suitEquipped) return 'Equip EVA Suit at Suitport [F] before exiting.';
       const blocked = this.exitBlock?.();
       if (blocked) return blocked;
     }
@@ -146,6 +149,7 @@ export class Airlock {
     if (step === 'clean' && this.cleanNeeded) {
       // cleanSuit() gasta a energia e limpa; devolve outro texto se faltar energia no ultimo instante
       const cleaned = this.cleanPossible && Boolean(this.stations?.dirtySuit) && this.stations.cleanSuit().startsWith('Electrostatic');
+      if (cleaned && this.survival) this.survival.suitDust = 0;
       this.onEvent?.(cleaned ? 'suit-cleaned' : 'clean-skipped');
     }
   }
@@ -172,6 +176,10 @@ export class Airlock {
   }
 
   update(dt, player) {
+    if (this.survival && this.previousPlayerZ !== null && this.previousPlayerZ >= this.doors[0].z && player.z < this.doors[0].z && player.x > -1 && player.x < 2 && this.pressurized) {
+      this.survival.suitEquipped = false;
+    }
+    this.previousPlayerZ = player.z;
     if (this.pending) this._advance(dt);
     const step = this.pending ? this.steps[this.stepIndex] : null;
     this.vapor.visible = step === 'pressurize' || step === 'depressurize' || (step === 'clean' && this.cleanNeeded);

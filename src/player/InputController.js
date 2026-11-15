@@ -22,6 +22,7 @@ export class InputController {
     onRoverAction = () => {},
     onToggleShield = () => {},
     onSendData = () => {},
+    onSuitportAction = () => {},
     isMissionModalOpen = () => false,
     isInputBlocked = () => false,
     onRoverLook = () => {},
@@ -33,6 +34,7 @@ export class InputController {
   }) {
     this.onToggleShield = onToggleShield;
     this.onSendData = onSendData;
+    this.onSuitportAction = onSuitportAction;
     this.isMissionModalOpen = isMissionModalOpen;
     // Animacao (cutscene) rodando: teclado, mouse e toque nao controlam o jogador
     this.isInputBlocked = isInputBlocked;
@@ -114,8 +116,7 @@ export class InputController {
 
   _toggleInventory() {
     if (this.hud.isInventoryOpen) {
-      this.hud.closeInventory();
-      if (!this.isTouchMode) requestRawPointerLock(this.domElement);
+      this._closeInventory();
       return;
     }
 
@@ -132,6 +133,13 @@ export class InputController {
       this._setJoystick(0, 0);
       this.hud.openInventory(this.survival.inventorySlots);
       if (!this.isTouchMode) document.exitPointerLock();
+    }
+  }
+
+  _closeInventory() {
+    this.hud.closeInventory();
+    if (!this.isTouchMode) {
+      requestRawPointerLock(this.domElement, () => this._showPauseMenu?.());
     }
   }
 
@@ -368,6 +376,9 @@ export class InputController {
       document.body.classList.add('pause-menu-open');
     };
 
+    this._showPauseMenu = showPauseMenu;
+    this.hud.inventoryCloseBtn?.addEventListener('click', () => this._closeInventory());
+
     controlsBtn.addEventListener('click', () => {
       menuMain.classList.add('hidden');
       controlsScreen.classList.remove('hidden');
@@ -523,6 +534,13 @@ export class InputController {
         return;
       }
       if (e.code === 'KeyG' && this.isLocked && !e.repeat) this.onSendData();
+      if ((e.code === 'KeyR' || e.code === 'KeyC') && this.isLocked && !e.repeat) {
+        if (this.getInteraction?.()?.type === 'suitport') {
+          e.preventDefault();
+          this.onSuitportAction(e.code === 'KeyR' ? 'repair' : 'clean');
+          return;
+        }
+      }
       if (this.isLocked && this._isBrowserShortcut(e)) e.preventDefault();
       if (e.code === 'KeyW' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const now = performance.now();

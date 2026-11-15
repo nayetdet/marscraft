@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { pointAlong } from './crewRails.js';
+import { buildSpacesuitRig } from '../graphics/spacesuitModel.js';
 import { CrewInstances } from './crewInstances.js';
 
 const FLOOR_Y = 10; // topo do piso da base (nasaModelsBuilder: floorTopY)
@@ -48,75 +49,6 @@ function sampleSmoothRoute(route, distance, routeLen) {
   return { x, z, heading };
 }
 
-function createVisorTexture() {
-  if (typeof document === 'undefined') return null;
-  const canvas = document.createElement('canvas');
-  canvas.width = 32;
-  canvas.height = 16;
-  const ctx = canvas.getContext('2d');
-
-  // Gradiente metalico dourado do visor reflexivo da NASA
-  const grad = ctx.createLinearGradient(0, 0, 32, 16);
-  grad.addColorStop(0, '#92400e');
-  grad.addColorStop(0.35, '#d97706');
-  grad.addColorStop(0.7, '#f59e0b');
-  grad.addColorStop(1, '#b45309');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 32, 16);
-
-  // Moldura escura ao redor da viseira
-  ctx.strokeStyle = '#1e293b';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(1, 1, 30, 14);
-
-  // Brilho especular diagonal no visor
-  ctx.fillStyle = 'rgba(254, 243, 199, 0.75)';
-  ctx.fillRect(5, 3, 7, 2);
-  ctx.fillRect(4, 5, 4, 2);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-  ctx.fillRect(21, 10, 6, 2);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.magFilter = THREE.NearestFilter;
-  texture.minFilter = THREE.NearestFilter;
-  return texture;
-}
-
-function createChestDcmTexture() {
-  if (typeof document === 'undefined') return null;
-  const canvas = document.createElement('canvas');
-  canvas.width = 32;
-  canvas.height = 32;
-  const ctx = canvas.getContext('2d');
-
-  // Carcaca cinza tecnica do modulo peitoral DCM
-  ctx.fillStyle = '#cbd5e1';
-  ctx.fillRect(0, 0, 32, 32);
-  ctx.strokeStyle = '#475569';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(1, 1, 30, 30);
-
-  // Visor digital de telemetria no topo
-  ctx.fillStyle = '#0f172a';
-  ctx.fillRect(4, 4, 24, 10);
-  ctx.fillStyle = '#38bdf8';
-  ctx.fillRect(6, 6, 12, 2);
-  ctx.fillRect(6, 10, 18, 2);
-
-  // Conectores de O2 (azul) e refrigeracao (vermelho) + botoes
-  ctx.fillStyle = '#0284c7';
-  ctx.fillRect(5, 18, 7, 7);
-  ctx.fillStyle = '#dc2626';
-  ctx.fillRect(20, 18, 7, 7);
-  ctx.fillStyle = '#334155';
-  ctx.fillRect(14, 18, 4, 10);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.magFilter = THREE.NearestFilter;
-  texture.minFilter = THREE.NearestFilter;
-  return texture;
-}
-
 function makeNameLabel(text, accentColor) {
   if (typeof document === 'undefined') {
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ depthWrite: false }));
@@ -157,153 +89,21 @@ export class CrewAvatar {
   constructor(scene, member, accentColor) {
     this.member = member;
     this.group = new THREE.Group();
-    this.bodyGroup = new THREE.Group();
+    const rig = buildSpacesuitRig({ accentColor, suitColor: SUIT_COLOR.clone(), instanced: true });
+    this.bodyGroup = rig.bodyGroup;
+    this.suitMat = rig.suitMat;
+    this.statusLightMat = rig.statusLightMat;
+    this.legL = rig.legL;
+    this.legR = rig.legR;
+    this.kneeL = rig.kneeL;
+    this.kneeR = rig.kneeR;
+    this.upperBody = rig.upperBody;
+    this.armL = rig.armL;
+    this.armR = rig.armR;
+    this.elbowL = rig.elbowL;
+    this.elbowR = rig.elbowR;
+    this.headGroup = rig.headGroup;
     this.group.add(this.bodyGroup);
-
-    this.suitMat = new THREE.MeshLambertMaterial({ color: SUIT_COLOR.clone() });
-    const accent = new THREE.MeshLambertMaterial({ color: accentColor });
-    const darkJoint = new THREE.MeshLambertMaterial({ color: 0x334155 });
-    const charcoal = new THREE.MeshLambertMaterial({ color: 0x1e293b });
-    const silver = new THREE.MeshLambertMaterial({ color: 0xcbd5e1 });
-    const lampMat = new THREE.MeshLambertMaterial({
-      color: 0x7dd3fc,
-      emissive: 0x0284c7,
-      emissiveIntensity: 0.55,
-    });
-    this.statusLightMat = new THREE.MeshLambertMaterial({
-      color: 0x4ade80,
-      emissive: 0x16a34a,
-      emissiveIntensity: 0.65,
-    });
-    const visorMat = new THREE.MeshLambertMaterial({
-      map: createVisorTexture(),
-      emissive: 0x451a03,
-      emissiveIntensity: 0.35,
-    });
-    const dcmMat = new THREE.MeshLambertMaterial({
-      map: createChestDcmTexture(),
-    });
-
-    // Caixas de cor lisa e as lampadas do traje nao sao Mesh: sao nos vazios (a escala guarda o
-    // tamanho da caixa) desenhados todos juntos por CrewInstances. So as pecas com textura ou com
-    // cor que muda por tripulante (visor, painel do peito, luz de estado) continuam Mesh.
-    const instanced = new Set([this.suitMat, accent, darkJoint, charcoal, silver, lampMat]);
-    const parts = [];
-    const addPart = (parent, w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
-      let part;
-      if (instanced.has(mat)) {
-        part = new THREE.Object3D();
-        part.scale.set(w, h, d);
-        parts.push({ node: part, material: mat, lamp: mat === lampMat });
-      } else {
-        part = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-      }
-      part.position.set(x, y, z);
-      if (rx || ry || rz) part.rotation.set(rx, ry, rz);
-      parent.add(part);
-      return part;
-    };
-
-    // Pernas articuladas no quadril (y = 0.72) e no joelho (y = -0.32 relativo ao quadril)
-    const createLeg = (x) => {
-      const hip = new THREE.Group();
-      hip.position.set(x, 0.72, 0);
-      addPart(hip, 0.21, 0.3, 0.22, this.suitMat, 0, -0.15, 0);
-      addPart(hip, 0.225, 0.04, 0.235, accent, 0, -0.27, 0);
-
-      const knee = new THREE.Group();
-      knee.position.set(0, -0.32, 0);
-      hip.add(knee);
-
-      addPart(knee, 0.22, 0.07, 0.23, darkJoint, 0, -0.01, 0.005);
-      addPart(knee, 0.2, 0.22, 0.21, this.suitMat, 0, -0.15, 0);
-      addPart(knee, 0.21, 0.09, 0.27, silver, 0, -0.30, 0.025);
-      addPart(knee, 0.22, 0.06, 0.29, charcoal, 0, -0.37, 0.03);
-
-      this.bodyGroup.add(hip);
-      return { hip, knee };
-    };
-
-    const leftLeg = createLeg(-0.13);
-    const rightLeg = createLeg(0.13);
-    this.legL = leftLeg.hip;
-    this.legR = rightLeg.hip;
-    this.kneeL = leftLeg.knee;
-    this.kneeR = rightLeg.knee;
-
-    // Tronco superior articulado na cintura (y = 0.72)
-    this.upperBody = new THREE.Group();
-    this.upperBody.position.set(0, 0.72, 0);
-    this.bodyGroup.add(this.upperBody);
-
-    addPart(this.upperBody, 0.5, 0.09, 0.3, darkJoint, 0, 0.045, 0);
-    addPart(this.upperBody, 0.14, 0.07, 0.32, silver, 0, 0.045, 0);
-    addPart(this.upperBody, 0.52, 0.52, 0.3, this.suitMat, 0, 0.34, 0);
-    addPart(this.upperBody, 0.58, 0.1, 0.32, this.suitMat, 0, 0.55, 0);
-    addPart(this.upperBody, 0.54, 0.08, 0.315, accent, 0, 0.44, 0);
-    addPart(this.upperBody, 0.12, 0.5, 0.31, accent, -0.18, 0.34, 0);
-    addPart(this.upperBody, 0.12, 0.5, 0.31, accent, 0.18, 0.34, 0);
-    addPart(this.upperBody, 0.34, 0.05, 0.34, darkJoint, 0, 0.62, 0);
-
-    // Modulo Peitoral de Controle e Display (DCM) na frente (+Z)
-    addPart(this.upperBody, 0.28, 0.25, 0.08, dcmMat, 0, 0.34, 0.18);
-    addPart(this.upperBody, 0.06, 0.06, 0.03, this.statusLightMat, 0, 0.43, 0.225);
-
-    // Mochila de Suporte de Vida (PLSS) nas costas (-Z)
-    addPart(this.upperBody, 0.44, 0.54, 0.18, this.suitMat, 0, 0.35, -0.23);
-    addPart(this.upperBody, 0.4, 0.1, 0.2, accent, 0, 0.56, -0.23);
-    addPart(this.upperBody, 0.14, 0.42, 0.08, silver, -0.11, 0.33, -0.32);
-    addPart(this.upperBody, 0.14, 0.42, 0.08, silver, 0.11, 0.33, -0.32);
-    addPart(this.upperBody, 0.42, 0.1, 0.2, darkJoint, 0, 0.12, -0.23);
-    addPart(this.upperBody, 0.08, 0.05, 0.06, this.statusLightMat, 0, 0.63, -0.23);
-
-    // Bracos articulados no ombro e no cotovelo (y = -0.23 relativo ao ombro)
-    const createArm = (x, isLeft) => {
-      const shoulder = new THREE.Group();
-      shoulder.position.set(x, 0.54, 0);
-      addPart(shoulder, 0.17, 0.22, 0.19, this.suitMat, 0, -0.1, 0);
-      addPart(shoulder, 0.18, 0.06, 0.2, accent, 0, -0.12, 0);
-
-      const elbow = new THREE.Group();
-      elbow.position.set(0, -0.23, 0);
-      shoulder.add(elbow);
-
-      addPart(elbow, 0.16, 0.06, 0.18, darkJoint, 0, -0.01, 0);
-      addPart(elbow, 0.16, 0.19, 0.18, this.suitMat, 0, -0.13, 0);
-      if (isLeft) {
-        addPart(elbow, 0.04, 0.09, 0.1, lampMat, -0.085, -0.14, 0.02);
-      }
-      addPart(elbow, 0.165, 0.04, 0.185, darkJoint, 0, -0.24, 0);
-      addPart(elbow, 0.16, 0.13, 0.19, silver, 0, -0.32, 0.01);
-      addPart(elbow, 0.05, 0.07, 0.07, charcoal, isLeft ? 0.07 : -0.07, -0.31, 0.06);
-
-      this.upperBody.add(shoulder);
-      return { shoulder, elbow };
-    };
-
-    const leftArm = createArm(-0.35, true);
-    const rightArm = createArm(0.35, false);
-    this.armL = leftArm.shoulder;
-    this.armR = rightArm.shoulder;
-    this.elbowL = leftArm.elbow;
-    this.elbowR = rightArm.elbow;
-
-    // Capacete articulado no pescoco (y = 0.64 relativo a cintura)
-    this.headGroup = new THREE.Group();
-    this.headGroup.position.set(0, 0.64, 0);
-    this.upperBody.add(this.headGroup);
-
-    addPart(this.headGroup, 0.44, 0.42, 0.44, this.suitMat, 0, 0.21, 0);
-    addPart(this.headGroup, 0.46, 0.07, 0.46, this.suitMat, 0, 0.4, 0.01);
-    addPart(this.headGroup, 0.14, 0.05, 0.38, accent, 0, 0.435, 0);
-    addPart(this.headGroup, 0.38, 0.25, 0.05, charcoal, 0, 0.22, 0.21);
-    addPart(this.headGroup, 0.35, 0.22, 0.06, visorMat, 0, 0.22, 0.22);
-    for (const sx of [-0.23, 0.23]) {
-      addPart(this.headGroup, 0.05, 0.16, 0.16, darkJoint, sx, 0.21, 0);
-      addPart(this.headGroup, 0.05, 0.07, 0.1, lampMat, sx, 0.28, 0.12);
-    }
-    addPart(this.headGroup, 0.03, 0.18, 0.03, silver, 0.22, 0.46, -0.08);
-    addPart(this.headGroup, 0.05, 0.05, 0.05, lampMat, 0.22, 0.56, -0.08);
 
     this.label = makeNameLabel(member.name, accentColor);
     this.label.position.y = 2.08;
@@ -324,7 +124,7 @@ export class CrewAvatar {
 
     scene.add(this.group);
     this._instances = CrewInstances.for(scene);
-    this._suit = { group: this.group, parts };
+    this._suit = { group: this.group, parts: rig.parts };
     this._instances.add(this._suit);
     this._time = (member.id * 1.37) % 10;
     this._walkPhase = (member.id * 1.9) % (Math.PI * 2);

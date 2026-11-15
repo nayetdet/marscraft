@@ -19,17 +19,21 @@ export function applyMouseLook(player, dx, dy, isZoomed) {
 
 // Pede o pointer lock sem a aceleracao do mouse do sistema (movimento cru), com fallback
 // para navegadores que nao suportam a opcao.
-export function requestRawPointerLock(element) {
-  let request;
+export function requestRawPointerLock(element, onFailure = () => {}) {
+  const requestStandard = () => {
+    try {
+      element.requestPointerLock()?.catch?.(onFailure);
+    } catch (err) {
+      onFailure(err);
+    }
+  };
   try {
-    request = element.requestPointerLock({ unadjustedMovement: true });
-  } catch {
-    request = element.requestPointerLock();
-  }
-  if (request && typeof request.catch === 'function') {
-    request.catch((err) => {
-      if (err?.name !== 'NotSupportedError') return;
-      element.requestPointerLock()?.catch?.(() => {});
+    const request = element.requestPointerLock({ unadjustedMovement: true });
+    request?.catch?.((err) => {
+      if (err?.name === 'NotSupportedError') requestStandard();
+      else onFailure(err);
     });
+  } catch {
+    requestStandard();
   }
 }
