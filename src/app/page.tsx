@@ -42,8 +42,8 @@ export default function GamePage() {
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return;
 
-    // Next does not hot reload files fetched from public/. HEAD checks avoid downloading the art.
-    const paths = ['/game.html', '/images/mars-menu-space.webp'];
+    // Next does not hot reload files fetched from public/. HEAD checks detect game shell changes.
+    const paths = ['/game.html'];
     const versions = new Map<string, string>();
     let active = true;
     let checking = false;

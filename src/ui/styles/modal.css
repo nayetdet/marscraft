@@ -43,7 +43,7 @@ body.pause-menu-open .participants-panel { display: none; }
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: url('/images/mars-menu-space.webp') left bottom / cover no-repeat;
+  background: url('../../assets/images/mars-menu-space.webp') left bottom / cover no-repeat;
 }
 
 #overlay .menu-scene::before {
