@@ -29,17 +29,10 @@ const TOUR_STOPS = [
 // A frase da rotina fica no foguete, com a camera subindo devagar
 const ROUTINE_SHOT = { place: 'rocket', cam: [9, 6.5, 11], camEnd: [7, 10, 9], look: 6 };
 
-// Previa da missao: a tripulacao anda ate o foguete, o motor acende e ele sobe rumo a Terra
-const BOARD_SECONDS = 3.2;
-const IGNITE_SECONDS = 0.7;
-const TURN_SECONDS = 2.6; // tempo para o foguete sair da vertical e apontar para a Terra
-const FINALE_CAM = [6.5, 2.4, 9.5]; // camera baixa, com a Terra no ceu atras do foguete
-const CREW_SIDE = [-0.825, 0.565]; // direcao (x, z) de onde a tripulacao chega: a esquerda da tela
-const CREW_HEADING = Math.atan2(-CREW_SIDE[0], -CREW_SIDE[1]); // andando para o foguete
-const CREW_FIRST = 7; // distancia do primeiro tripulante ate o foguete, em blocos
-const CREW_GAP = 1.4; // distancia entre um tripulante e o seguinte
-const CREW_DOOR = 1.3; // a esta distancia (no casco) o tripulante entrou no foguete
-const CREW_SPEED = 2.6; // blocos por segundo
+// Plano da missao: camera baixa no foguete parado, com a frase da missao. A previa da decolagem
+// (a tripulacao embarcando e o foguete subindo) saiu: entregava o final antes da hora.
+const FINALE_CAM = [6.5, 2.4, 9.5];
+const FINALE_LOOK = [-1.65, 3.4, 1.13]; // um pouco a esquerda do foguete, na altura do meio dele
 
 const _lander = [0, 0, 0];
 const _cam = [0, 0, 0];
@@ -59,12 +52,10 @@ function buildTour(places) {
 // `millionKm`: distancia Terra-Marte de hoje, em milhoes de km (CommsLink).
 // `places`: ponto do mundo de cada lugar do passeio ({ base, solar, greenhouse, ice, rocket }).
 // `rocket`: o foguete da base (objeto com `position` e `rotation`); `rocketFlame`: a chama dele.
-// `crew`: tripulantes que embarcam, cada um com `poseWalking(x, y, z, heading, dt)` e `hide()`.
-// `earthDir`: direcao unitaria do foguete ate a Terra no ceu, ou null se ela estiver abaixo do
-// horizonte (o foguete sobe reto).
+// O foguete fica parado na plataforma, apagado, a animacao inteira.
 // `onTouchdown`: chamado uma vez quando a capsula toca o chao (o som do motor para ali).
 export function createArrivalCutscene({
-  camera, lander, flame, dust, site, groundY, millionKm, places, rocket, rocketFlame, crew = [], earthDir = null,
+  camera, lander, flame, dust, site, groundY, millionKm, places, rocket, rocketFlame,
   onTouchdown, onEnd,
 }) {
   const landerKeys = [
@@ -85,13 +76,9 @@ export function createArrivalCutscene({
   const solAt = finaleEnd + END_FADE;
   const duration = solAt + SOL_TITLE_SECONDS;
 
-  // Onde o foguete descansa, e para onde ele voa
+  // Onde o foguete descansa
   const home = { x: rocket.position.x, y: rocket.position.y, z: rocket.position.z };
-  const toEarth = earthDir ?? { x: 0, y: 1, z: 0 };
   const pad = places.rocket;
-  // O ultimo da fila precisa entrar antes de o motor acender
-  const lastWalk = CREW_FIRST + CREW_GAP * Math.max(0, crew.length - 1) - CREW_DOOR;
-  const crewSpeed = Math.max(CREW_SPEED, lastWalk / (BOARD_SECONDS - 0.3));
 
   // Tela: abre do preto, escurece no corte para o passeio, pisca rapido a cada plano e fecha no fim
   const fade = [
@@ -117,62 +104,17 @@ export function createArrivalCutscene({
   }
   captions.push(
     { from: routineShot.from + 0.1, to: finaleAt - 0.1, place: true, text: 'EVERY TRIP', sub: 'Get ice. Load the rocket. Back to base.' },
-    { from: finaleAt + 0.1, to: finaleEnd, place: true, text: 'YOUR MISSION', sub: 'Study Mars. Fill the rocket. Fly home.' },
+    { from: finaleAt + 0.1, to: finaleEnd, place: true, text: 'YOUR MISSION', sub: 'Find 3 clues. Fill the rocket. Fly home.' },
     { from: solAt, to: duration, big: true, text: 'SOL 1', sub: '1 sol = 1 Mars day (24 h 39 min)' },
   );
 
   let touchedDown = false;
   let shotIndex = 0;
 
-  // Previa da missao. `local` conta os segundos desde o comeco dela.
-  function updateFinale(t, dt) {
-    const local = t - finaleAt;
-
-    // A fila anda ate o foguete; quem chega na porta entra (some)
-    for (let i = 0; i < crew.length; i++) {
-      const distance = CREW_FIRST + i * CREW_GAP - local * crewSpeed;
-      if (distance <= CREW_DOOR) crew[i].hide();
-      else crew[i].poseWalking(pad.x + CREW_SIDE[0] * distance, groundY, pad.z + CREW_SIDE[1] * distance, CREW_HEADING, dt);
-    }
-
-    const ignite = local - BOARD_SECONDS;
-    const flight = Math.max(0, ignite - IGNITE_SECONDS);
-    rocketFlame.setPower(ignite <= 0 ? 0 : flight > 0 ? 1 : (0.6 * ignite) / IGNITE_SECONDS, t);
-
-    // Sobe na vertical e vai virando para a Terra
-    const turn = 0.9 * EASE.inOut(Math.min(1, flight / TURN_SECONDS));
-    const vx = toEarth.x * turn;
-    const vy = 1 - turn + toEarth.y * turn;
-    const vz = toEarth.z * turn;
-    const distance = 0.5 * CUTSCENE_CONFIG.PREVIEW_LAUNCH_ACCEL * flight * flight;
-    const rumble = ignite > 0 && flight === 0 ? 0.03 : 0;
-    rocket.position.set(
-      home.x + vx * distance + Math.sin(t * 61) * rumble,
-      home.y + vy * distance,
-      home.z + vz * distance + Math.sin(t * 47) * rumble,
-    );
-    // Inclina o foguete na direcao do voo (rotacao que leva o eixo Y ate o vetor v)
-    rocket.rotation.set(Math.atan2(vz, vy), 0, -Math.asin(vx / Math.hypot(vx, vy, vz)));
-
-    // Pouca poeira e so no comeco, para nao tapar o foguete subindo
-    if (ignite > 0 && distance < 5) dust.emit(dt, 16, home.x, home.y + 0.3, home.z, 4, 1.2);
-
-    // Camera baixa: primeiro a fila e o foguete, depois ela sobe atras dele ate a Terra
-    const follow = EASE.inOut(Math.min(1, flight / 1.2));
-    const shake = ignite > 0 ? Math.max(0, 0.12 - flight * 0.05) : 0;
-    camera.position.set(
-      pad.x + FINALE_CAM[0] + Math.sin(t * 39) * shake,
-      groundY + FINALE_CAM[1] + Math.sin(t * 57 + 1) * shake,
-      pad.z + FINALE_CAM[2],
-    );
-    const restX = pad.x + CREW_SIDE[0] * 2;
-    const restY = groundY + 3.4;
-    const restZ = pad.z + CREW_SIDE[1] * 2;
-    camera.lookAt(
-      restX + (rocket.position.x - restX) * follow,
-      restY + (rocket.position.y + 3 - restY) * follow,
-      restZ + (rocket.position.z - restZ) * follow,
-    );
+  // Plano da missao: camera parada, baixa, olhando o foguete na plataforma
+  function updateFinale() {
+    camera.position.set(pad.x + FINALE_CAM[0], groundY + FINALE_CAM[1], pad.z + FINALE_CAM[2]);
+    camera.lookAt(pad.x + FINALE_LOOK[0], groundY + FINALE_LOOK[1], pad.z + FINALE_LOOK[2]);
   }
 
   return {
@@ -204,17 +146,17 @@ export function createArrivalCutscene({
         onTouchdown?.();
       }
 
-      if (t >= finaleAt) {
-        updateFinale(t, dt);
-        dust.update(dt);
-        return;
-      }
       dust.update(dt);
 
-      // Ate a previa da missao, o foguete fica parado na plataforma
+      // O foguete fica parado na plataforma, apagado: ele so decola no fim do jogo
       rocket.position.set(home.x, home.y, home.z);
       rocket.rotation.set(0, 0, 0);
       rocketFlame.setPower(0, t);
+
+      if (t >= finaleAt) {
+        updateFinale();
+        return;
+      }
 
       if (t >= TOUR_START) {
         // Passeio: um plano por lugar, com a camera deslizando devagar

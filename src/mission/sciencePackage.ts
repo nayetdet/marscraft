@@ -1,4 +1,5 @@
 import { SCIENCE_CONFIG } from '../config/constants.ts';
+import { allCluesSent, clueStates, cluesUnsentText, isClueItem, type ClueState } from './clues.ts';
 
 // Ciencia para a Terra em UMA moeda so: pontos de ciencia (issues #105 e #269). Logica pura, sem
 // DOM. Cada coisa que a crianca acha e um item com nome e pontos:
@@ -35,7 +36,10 @@ export interface ScienceStatus {
   sentPoints: number;
   usedPoints: number;
   goal: number;
-  met: boolean; // a Terra ja tem os pontos que o foguete pede
+  // Pistas da missao (issue #344), na ordem de CLUES: 'todo' | 'found' (espera o envio) | 'sent'
+  clues: ClueState[];
+  cluesSent: boolean;
+  met: boolean; // a Terra ja tem os pontos E as 3 pistas que o foguete pede
 }
 
 export interface SciencePackage {
@@ -51,7 +55,7 @@ export interface SciencePackage {
   metAfter: boolean;
 }
 
-export type ScienceStep = null | 'send' | 'analyze' | 'scan';
+export type ScienceStep = null | 'send' | 'analyze' | 'scan' | 'clue';
 
 type Config = typeof SCIENCE_CONFIG;
 const EMPTY_LEDGER: ScienceLedger = { sentIds: new Set(), usedIds: new Set() };
@@ -93,13 +97,17 @@ export function scienceStatus(items: readonly ScienceItem[], ledger: ScienceLedg
     else pending.push(item);
   }
   const sentPoints = pointsOf(sent);
+  const clues = clueStates({ pending, sent });
+  const cluesSent = allCluesSent(clues);
   return {
     pending, sent, used,
     pendingPoints: pointsOf(pending),
     sentPoints,
     usedPoints: pointsOf(used),
     goal: config.POINTS_TO_LAUNCH,
-    met: sentPoints >= config.POINTS_TO_LAUNCH,
+    clues,
+    cluesSent,
+    met: sentPoints >= config.POINTS_TO_LAUNCH && cluesSent,
   };
 }
 
@@ -118,17 +126,20 @@ export function sciencePackage(items: readonly ScienceItem[], ledger: ScienceLed
     sentPoints: status.sentPoints,
     goal: status.goal,
     metNow: status.met,
-    metAfter: status.sentPoints + points >= config.POINTS_TO_LAUNCH,
+    metAfter: status.sentPoints + points >= config.POINTS_TO_LAUNCH
+      && allCluesSent(clueStates({ sent: [...status.sent, ...upload] })),
   };
 }
 
 // Itens que pagam uma melhoria de `cost` pontos, ou null se os pontos que esperam nao bastam.
 // Gasta primeiro os itens que valem menos e nao leva item que nao precisa.
 export function pickForSpend(pending: readonly ScienceItem[], cost: number): ScienceItem[] | null {
-  if (pointsOf(pending) < cost) return null;
+  // A amostra de uma pista nunca e gasta: sem ela na Terra o foguete nao decola (issue #344)
+  const spendable = pending.filter((item) => !isClueItem(item));
+  if (pointsOf(spendable) < cost) return null;
   const picked: ScienceItem[] = [];
   let total = 0;
-  for (const item of [...pending].sort((a, b) => a.points - b.points)) {
+  for (const item of [...spendable].sort((a, b) => a.points - b.points)) {
     if (total >= cost) break;
     picked.push(item);
     total += item.points;
@@ -148,8 +159,16 @@ export function pickForSpend(pending: readonly ScienceItem[], cost: number): Sci
 // Proximo passo da ciencia para o objetivo e a seta: null (meta ja enviada) | 'send' (o que esta
 // na mao ja fecha a meta) | 'analyze' (tem amostra coletada esperando a analise) | 'scan'.
 // `rawSamples` = amostras coletadas la fora e ainda nao analisadas.
-export function scienceStep({ pendingPoints = 0, sentPoints = 0, rawSamples = 0 } = {}, config: Config = SCIENCE_CONFIG): ScienceStep {
-  if (sentPoints >= config.POINTS_TO_LAUNCH) return null;
+// Pistas (issue #344): `cluesToFind` = ainda la fora; `cluesInBag` = coletadas, sem analise;
+// `cluesUnsent` = a Terra ainda nao tem. Sem elas (0), vale so a conta dos pontos.
+export function scienceStep(
+  { pendingPoints = 0, sentPoints = 0, rawSamples = 0, cluesToFind = 0, cluesInBag = 0, cluesUnsent = 0 } = {},
+  config: Config = SCIENCE_CONFIG,
+): ScienceStep {
+  const pointsMet = sentPoints >= config.POINTS_TO_LAUNCH;
+  if (pointsMet && cluesUnsent === 0) return null;
+  if (cluesToFind > 0) return 'clue';
+  if (cluesInBag > 0) return 'analyze';
   if (sentPoints + pendingPoints >= config.POINTS_TO_LAUNCH) return 'send';
   if (rawSamples > 0) return 'analyze';
   return 'scan';
@@ -166,12 +185,22 @@ export function scienceGoalText(sentPoints: number, config: Config = SCIENCE_CON
 }
 
 // Texto curto do que falta para a meta (painel de ciencia e painel do MAV)
-export function scienceMissingText({ pendingPoints = 0, sentPoints = 0 } = {}, config: Config = SCIENCE_CONFIG): string {
-  if (sentPoints >= config.POINTS_TO_LAUNCH) return 'Enough science is home. Extra uploads still count for your report.';
+// `clues`: estado das pistas (ScienceStatus.clues); sem ele, vale so a conta dos pontos.
+export function scienceMissingText(
+  { pendingPoints = 0, sentPoints = 0, clues = null as readonly ClueState[] | null } = {},
+  config: Config = SCIENCE_CONFIG,
+): string {
+  const cluesLeft = clues && !allCluesSent(clues) ? cluesUnsentText(clues) : '';
+  const cluesNote = cluesLeft ? ` Earth also needs the 3 clues. Still missing: ${cluesLeft}.` : '';
+  if (sentPoints >= config.POINTS_TO_LAUNCH) {
+    return cluesLeft
+      ? `Enough points are home, but Earth still needs these clues: ${cluesLeft}. Find the glowing samples, analyze them and send them.`
+      : 'Enough science is home. Extra uploads still count for your report.';
+  }
   const goal = `The rocket needs ${pointsWord(config.POINTS_TO_LAUNCH)} of science sent to Earth.`;
-  if (sentPoints + pendingPoints >= config.POINTS_TO_LAUNCH) return `${goal} You have enough: send it.`;
+  if (sentPoints + pendingPoints >= config.POINTS_TO_LAUNCH) return `${goal} You have enough: send it.${cluesNote}`;
   const missing = pointsStillNeeded({ pendingPoints, sentPoints }, config);
-  return `${goal} Still missing: ${pointsWord(missing)}. Scan new things with the scope or analyze samples from the map.`;
+  return `${goal} Still missing: ${pointsWord(missing)}. Scan new things with the scope or analyze samples from the map.${cluesNote}`;
 }
 
 // Frase do botao de envio: o custo muda com o tamanho do pacote

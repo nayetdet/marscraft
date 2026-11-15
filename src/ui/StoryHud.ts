@@ -102,6 +102,8 @@ export class StoryHud {
     this.goalsEl = $('story-goals');
     this.stormsGoalEl = $('story-goal-storms');
     this.dataGoalEl = $('story-goal-data');
+    this.cluesGoalEl = $('story-goal-clues');
+    this.cluePipEls = Array.from(this.cluesGoalEl.querySelectorAll('.story-clue-pips i'));
     this.dataPointsEl = $('story-goal-points');
     this.timerEl = $('story-timer');
     this.timerIconEl = $('story-timer-icon');
@@ -190,6 +192,10 @@ export class StoryHud {
       this.pipEls.forEach((node, i) => setClass(node, i < storms ? 'on' : ''));
       setClass(this.stormsGoalEl, storms >= stormsNeeded ? 'story-goal done' : 'story-goal');
       setClass(this.dataGoalEl, dataSent ? 'story-goal done' : 'story-goal');
+      // Pistas da missao (issue #344): azul = analisada (ou na mochila), verde = a Terra ja tem
+      const clues = view.goals.clues;
+      setClass(this.cluesGoalEl, !clues ? 'story-goal hidden' : clues.every((state) => state === 'sent') ? 'story-goal done' : 'story-goal');
+      if (clues) this.cluePipEls.forEach((node, i) => setClass(node, clues[i] === 'sent' ? 'on' : clues[i] === 'found' ? 'found' : clues[i] === 'bag' ? 'bag' : ''));
     }
 
     setClass(this.timerEl, view.timer ? `story-timer ${view.timer.tone}` : 'story-timer hidden');

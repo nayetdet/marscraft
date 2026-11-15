@@ -40,9 +40,14 @@ describe('SCIENCE FOR EARTH panel', () => {
     expect(html).toMatch(/1 sample in your bag/);
   });
 
-  it('fills the goal bar and marks the goal when enough points are home', () => {
+  it('fills the goal bar and marks the goal when enough points and the 3 clues are home', () => {
     const all = { sentIds: new Set(items.map((i) => i.id)), usedIds: new Set<string>() };
-    const big = Array.from({ length: SCIENCE_CONFIG.POINTS_TO_LAUNCH }, (_, i) => discoveryItem({ id: `t${i}`, title: `T${i}`, category: 'base' }));
+    const big = [
+      ...Array.from({ length: SCIENCE_CONFIG.POINTS_TO_LAUNCH }, (_, i) => discoveryItem({ id: `t${i}`, title: `T${i}`, category: 'base' })),
+      sampleItem(100, { typeId: 'sample-ice-core', name: 'Ice', points: 2 }),
+      sampleItem(101, { typeId: 'sample-mudstone', name: 'Mudstone', points: 3 }),
+      sampleItem(102, { typeId: 'sample-sulfur', name: 'Sulfur', points: 4 }),
+    ];
     const done = { sentIds: new Set(big.map((i) => i.id)), usedIds: new Set<string>() };
     expect(sciencePanelModel(scienceStatus(items, all), sciencePackage(items, all)).met).toBe(false);
     const m = sciencePanelModel(scienceStatus(big, done), sciencePackage(big, done));

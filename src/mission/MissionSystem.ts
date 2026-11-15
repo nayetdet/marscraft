@@ -521,7 +521,8 @@ export class MissionSystem {
     }
     this.sentPoints += pkg.points;
     this.uploads++;
-    this.dataSent = this.sentPoints >= SCIENCE_CONFIG.POINTS_TO_LAUNCH;
+    // O foguete pede os pontos E as 3 pistas da missao na Terra (issue #344)
+    this.dataSent = this.scienceStatus(items).met;
     result.sentPoints = this.sentPoints;
     result.dataSent = this.dataSent;
     return result;

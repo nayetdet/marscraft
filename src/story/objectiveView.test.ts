@@ -78,7 +78,7 @@ describe('objectiveView', () => {
     expect(view.steps).toBeNull();
     expect(view.loop).toBe(false);
     // A meta e o foguete vazio aparecem desde o primeiro passo
-    expect(view.goal).toBe('GOAL: FLY HOME');
+    expect(view.goal).toBe('GOAL: 3 CLUES, FLY HOME');
     expect(view.rocket).toEqual({ total: 6, loaded: 0, fuel: 0 });
     expect(view.goals).toBeNull();
     expect(view.timer).toBeNull();
@@ -125,7 +125,7 @@ describe('objectiveView', () => {
       { icon: 'rocket', state: 'now' },
       { icon: 'home', state: 'todo' },
     ]);
-    expect(view.goals).toEqual({ storms: 0, stormsNeeded: 1, dataSent: false, sciencePoints: 0, scienceGoal: SCIENCE_CONFIG.POINTS_TO_LAUNCH });
+    expect(view.goals).toMatchObject({ storms: 0, stormsNeeded: 1, dataSent: false, clues: null });
     expect(view.progress).toBeNull(); // o numero do passo so existe no tutorial
 
     // Entregou o gelo: o degrau acende e o passo seguinte e voltar a base

@@ -100,6 +100,7 @@ import { WeatherHud } from '../ui/WeatherHud.ts';
 import { LANDER_NOZZLE_Y, createLander, landerCollider } from '../story/cutscene/landerModel.ts';
 import { createArrivalCutscene } from '../story/cutscene/arrivalCutscene.ts';
 import { earthFarewell } from '../story/storyChapters.ts';
+import { CLUES, allCluesSent, clueDue, clueStates, countClues, nextClueIndex } from '../mission/clues.ts';
 import { MAV_NOZZLE_Y, createLaunchCutscene } from '../story/cutscene/launchCutscene.ts';
 import { createRationDeliveryCutscene } from '../story/cutscene/rationDeliveryCutscene.ts';
 import { EventDirector, inWindow, seedFromSearch } from '../mission/eventDirector.ts';
@@ -1280,6 +1281,7 @@ export class GameEngine {
       discoveries: m.sentDiscoveries,
       samples: m.sentSamples,
       oneWayMinutes: Math.round(this.comms.lightMinutes),
+      cluesSent: allCluesSent(this.scienceStatus().clues),
     }));
     renderReportCard(document.getElementById('victory-report'), missionReport(this._reportStats()));
     document.exitPointerLock();
@@ -1780,7 +1782,11 @@ export class GameEngine {
       // Recursos da base, para os desvios do tutorial (issue #237, tutorialDetours.ts)
       baseWaterL: 0, batteryCharge: 0, foodStock: 0, roverBattery: 0, roverActive: false,
     };
-    this._scienceState = { pendingPoints: 0, sentPoints: 0, rawSamples: 0 };
+    this._scienceState = { pendingPoints: 0, sentPoints: 0, rawSamples: 0, cluesToFind: 0, cluesInBag: 0, cluesUnsent: 0 };
+    // Pistas da missao (issue #344): estado de cada uma e o lugar da proxima, reaproveitados a cada frame
+    this._clueStates = [];
+    this._clueInBag = (typeId) => this.survival.countItem(sampleTypeById(typeId)?.itemId) > 0;
+    this._clueWaypoint = { x: 0, y: 0, z: 0, label: WAYPOINT_LABELS.clue };
 
     // Setas do objetivo: uma flutua no mundo e a outra fica na tela (aponta mesmo atraves das paredes)
     this.waypoints = this._buildWaypoints();
@@ -1805,6 +1811,26 @@ export class GameEngine {
   }
 
   // Posicao no mundo de cada lugar para onde a seta do objetivo pode apontar
+  // Local la fora da proxima pista (issue #344): a amostra daquele tipo mais perto do jogador que
+  // ainda nao foi coletada. null se nao sobrou nenhuma.
+  _clueSiteWaypoint(index) {
+    const clue = CLUES[index];
+    if (!clue) return null;
+    let best = null;
+    let bestDistance = Infinity;
+    for (const site of this.sampleSites.sites) {
+      if (site.typeId !== clue.typeId || this.sampleSites.isCollected(site.id)) continue;
+      const distance = Math.hypot(site.x - this.player.pos.x, site.z - this.player.pos.z);
+      if (distance < bestDistance) { best = site; bestDistance = distance; }
+    }
+    if (!best) return null;
+    this._clueWaypoint.x = best.x + 0.5;
+    this._clueWaypoint.y = best.y + 2.2;
+    this._clueWaypoint.z = best.z + 0.5;
+    this._clueWaypoint.label = `CLUE: ${clue.label}`;
+    return this._clueWaypoint;
+  }
+
   _buildWaypoints() {
     const ground = WORLD_CONFIG.GROUND_LEVEL + 1;
     const outerDoor = this.airlock.doors.find((door) => door.name === 'outer');
@@ -1849,7 +1875,7 @@ export class GameEngine {
     this.engineFlame.setSize(1.3, 6);
     this.engineFlame.group.position.set(0, LANDER_NOZZLE_Y, 0);
     this.lander.add(this.engineFlame.group);
-    // A animacao termina com o foguete decolando; _endArrival o devolve a plataforma
+    // O foguete fica na plataforma a animacao inteira; _endArrival confirma a posicao dele
     this._mavHome.copy(this.mavRocket.position);
     this.previewFlame.setSize(1.0, 5.5);
     this.previewFlame.group.position.set(0, MAV_NOZZLE_Y, 0);
@@ -1865,17 +1891,9 @@ export class GameEngine {
       places: this._tourPlaces(),
       rocket: this.mavRocket,
       rocketFlame: this.previewFlame,
-      crew: this.crewAvatars,
-      earthDir: this._earthDirection(this._mavHome),
       onTouchdown: () => this.audio.fadeOutRocket(),
       onEnd: () => this._endArrival(),
     }));
-  }
-
-  // Direcao unitaria de `from` ate a Terra no ceu, ou null se ela estiver baixa demais no horizonte
-  _earthDirection(from) {
-    const dir = this.sky.getEarthWorldPosition(new THREE.Vector3()).sub(from).normalize();
-    return dir.y > 0.2 ? { x: dir.x, y: dir.y, z: dir.z } : null;
   }
 
   // Ponto do mundo de cada lugar que a animacao de chegada apresenta
@@ -2168,6 +2186,14 @@ export class GameEngine {
     sci.pendingPoints = science.pendingPoints;
     sci.sentPoints = science.sentPoints;
     sci.rawSamples = this.stations.rawSampleCount(this.survival);
+    // Pistas da missao (issue #344): onde cada uma esta e se a seta deve desviar ate a proxima
+    const clues = clueStates(science, this._clueInBag, this._clueStates);
+    sci.cluesToFind = countClues(clues, 'todo');
+    sci.cluesInBag = countClues(clues, 'bag');
+    sci.cluesUnsent = clues.length - countClues(clues, 'sent');
+    s.clueStates = clues;
+    s.nextClue = nextClueIndex(clues);
+    s.clueDue = clueDue(clues, s.iceForFullTank - s.iceNeeded, s.iceNeeded);
     s.scienceStep = scienceStep(sci);
     s.sciencePointsLeft = pointsStillNeeded(sci);
     s.sciencePointsSent = science.sentPoints;
@@ -2211,7 +2237,7 @@ export class GameEngine {
     const inside = s.insideHabitat && !this.roverController.isActive;
     const alertPlace = routeWaypoint(this.missionHud.activeAlertWaypoint, inside);
     const place = alertPlace ?? (this._finishedStory() ? null : routeWaypoint(objectiveTarget(this.story.objectiveId, s), inside));
-    let target = place ? this.waypoints[place] : null;
+    let target = place === 'clue' ? this._clueSiteWaypoint(s.nextClue) : place ? this.waypoints[place] : null;
     if (place === 'brokenWindow') {
       const windows = this.world.brokenBaseBlocks;
       if (this._brokenWindowIndex === null || !windows.has(this._brokenWindowIndex)) {

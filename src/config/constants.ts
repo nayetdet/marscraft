@@ -715,11 +715,9 @@ export const CUTSCENE_CONFIG = {
   TOUR_STOP_SECONDS: 3,
   // Segundos da frase da rotina (gelo, foguete, base), no fim do passeio
   TOUR_ROUTINE_SECONDS: 4.4,
-  // Segundos da previa da missao: a tripulacao embarca e o foguete parte rumo a Terra
-  TOUR_MISSION_SECONDS: 6.6,
-  // Aceleracao do foguete nessa previa, em blocos/s^2: mais forte que a da decolagem de verdade
-  // (LAUNCH_ACCEL), porque a previa dura poucos segundos
-  PREVIEW_LAUNCH_ACCEL: 7,
+  // Segundos do plano da missao, com o foguete parado na plataforma. A frase tem 8 palavras e a
+  // regra e no maximo 2 por segundo. (Eram 6,6 s com a previa da decolagem, que saiu.)
+  TOUR_MISSION_SECONDS: 4.4,
   LAUNCH_SECONDS: 15.5,
   // Aceleracao do MAV na decolagem, em blocos/s^2 (escala de jogo)
   LAUNCH_ACCEL: 2.2,
@@ -909,6 +907,9 @@ export const SCIENCE_CONFIG = {
   // verdade pesa: regra de jogo, para a escolha "levar mais ciencia x buscar mais gelo" aparecer.
   ICE_PER_SAMPLE_TUBE: 1,
   MAX_SAMPLE_TUBES: 4,
+  // Pistas da missao (issue #344, src/mission/clues.ts): a seta manda buscar uma pista a cada
+  // tantos blocos de gelo entregues, para a ciencia e o combustivel andarem juntos. Regra de jogo.
+  ICE_PER_CLUE_TRIP: 2,
 };
 
 // Amostras espalhadas pelo mapa (issue #270). Posicoes sorteadas com semente fixa: nao sao dado
@@ -923,6 +924,9 @@ export const SAMPLE_SITE_CONFIG = {
   PLACEMENT_TRIES: 600,
   // Amostras de gelo ficam perto da cratera de gelo (anel em volta do centro dela)
   ICE_RING: [13, 18],
+  // Pistas da missao (issue #344): o primeiro local de cada tipo fica num anel proprio em volta
+  // da base, cada vez mais longe (o gelo ja fica perto, na cratera de gelo). Regra de jogo.
+  CLUE_RINGS: { 'sample-mudstone': [40, 48], 'sample-sulfur': [64, 76] } as Record<string, [number, number]>,
   INTERACT_RADIUS: 3.2, // blocos: de perto, olhando para a amostra
   BEACON_HEIGHT: 2.6, // altura do facho de luz que marca o local
 };

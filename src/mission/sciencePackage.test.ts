@@ -23,7 +23,14 @@ const {
 
 // `n` descobertas comuns (1 ponto cada)
 const scans = (n: number, from = 0): ScienceItem[] => Array.from({ length: n }, (_, i) => discoveryItem({ id: `thing-${from + i}`, title: `Thing ${from + i}`, category: 'base' }));
-const rock = (order: number, points: number) => sampleItem(order, { typeId: 'sample-sulfur', name: 'Sulfur', points });
+// Amostra bonus (nao e pista da missao)
+const rock = (order: number, points: number) => sampleItem(order, { typeId: 'sample-meteorite', name: 'Iron Meteorite', points });
+// As 3 amostras que sao as pistas da missao (issue #344): 2 + 3 + 4 = 9 pontos
+const clueRocks = () => [
+  sampleItem(100, { typeId: 'sample-ice-core', name: 'Buried Ice Core', points: 2 }),
+  sampleItem(101, { typeId: 'sample-mudstone', name: 'Layered Mudstone', points: 3 }),
+  sampleItem(102, { typeId: 'sample-sulfur', name: 'Yellow Sulfur Crystals', points: 4 }),
+];
 const ledger = (sent: ScienceItem[] = [], used: ScienceItem[] = []) => ({ sentIds: new Set(sent.map((i) => i.id)), usedIds: new Set(used.map((i) => i.id)) });
 
 describe('science points', () => {
@@ -46,11 +53,18 @@ describe('science points', () => {
     expect(status).toMatchObject({ sentPoints: 1, usedPoints: 1, pendingPoints: 5, goal: POINTS_TO_LAUNCH, met: false });
   });
 
-  it('meets the goal only with enough points SENT', () => {
-    const items = scans(POINTS_TO_LAUNCH);
+  it('meets the goal only with enough points AND the 3 clues SENT (issue #344)', () => {
+    const items = [...scans(POINTS_TO_LAUNCH), ...clueRocks()];
     expect(scienceStatus(items).met).toBe(false);
-    expect(scienceStatus(items, ledger(items.slice(1))).met).toBe(false);
+    // Falta enviar a ultima pista
+    expect(scienceStatus(items, ledger(items.slice(0, -1))).met).toBe(false);
     expect(scienceStatus(items, ledger(items)).met).toBe(true);
+    // Pontos sobrando, mas sem as pistas: o foguete nao decola
+    const onlyScans = scans(POINTS_TO_LAUNCH + 5);
+    expect(scienceStatus(onlyScans, ledger(onlyScans))).toMatchObject({ met: false, cluesSent: false, clues: ['todo', 'todo', 'todo'] });
+    // Uma pista analisada espera o envio; enviada, fica verde
+    const [ice, mud] = clueRocks();
+    expect(scienceStatus([ice, mud], ledger([ice])).clues).toEqual(['sent', 'found', 'todo']);
   });
 });
 
@@ -79,7 +93,9 @@ describe('sciencePackage', () => {
 
   it('tells when this upload closes the goal', () => {
     expect(sciencePackage(scans(POINTS_TO_LAUNCH - 1)).metAfter).toBe(false);
-    expect(sciencePackage([...scans(2), rock(0, 4), rock(1, 4)]).metAfter).toBe(true);
+    expect(sciencePackage([...scans(1), ...clueRocks()]).metAfter).toBe(true);
+    // Pontos bastam, mas falta uma pista neste envio
+    expect(sciencePackage([...scans(6), ...clueRocks().slice(1)]).metAfter).toBe(false);
   });
 });
 
@@ -98,6 +114,31 @@ describe('pickForSpend (lab upgrades)', () => {
     expect(pointsOf(big)).toBe(4);
     expect(big).toHaveLength(2);
     expect(pointsOf(pickForSpend([rock(0, 3), rock(1, 3)], 4)!)).toBe(6);
+  });
+
+  it('never spends a clue sample: without it on Earth the rocket cannot launch (issue #344)', () => {
+    expect(pickForSpend(clueRocks(), 4)).toBeNull();
+    const picked = pickForSpend([...clueRocks(), ...scans(4)], 4)!;
+    expect(picked.every((i) => i.kind === 'discovery')).toBe(true);
+  });
+});
+
+describe('scienceStep with the mission clues (issue #344)', () => {
+  it('goes for the next clue first, then analyzes it, then sends', () => {
+    expect(scienceStep({ cluesToFind: 2, cluesUnsent: 3, rawSamples: 0 })).toBe('clue');
+    expect(scienceStep({ cluesToFind: 0, cluesInBag: 1, cluesUnsent: 3, pendingPoints: POINTS_TO_LAUNCH })).toBe('analyze');
+    expect(scienceStep({ cluesUnsent: 3, pendingPoints: POINTS_TO_LAUNCH })).toBe('send');
+  });
+
+  it('is not done with the points home while a clue is still missing', () => {
+    expect(scienceStep({ sentPoints: POINTS_TO_LAUNCH, cluesUnsent: 1, cluesToFind: 1 })).toBe('clue');
+    expect(scienceStep({ sentPoints: POINTS_TO_LAUNCH, cluesUnsent: 1, pendingPoints: 3 })).toBe('send');
+    expect(scienceStep({ sentPoints: POINTS_TO_LAUNCH, cluesUnsent: 0 })).toBeNull();
+  });
+
+  it('names the clues Earth still needs', () => {
+    expect(scienceMissingText({ sentPoints: POINTS_TO_LAUNCH, clues: ['sent', 'found', 'todo'] })).toMatch(/OLD LAKE and LIFE INGREDIENT/);
+    expect(scienceMissingText({ sentPoints: POINTS_TO_LAUNCH, clues: ['sent', 'sent', 'sent'] })).toMatch(/Enough science is home/);
   });
 });
 

@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { formatDateDMY } from '../mission/missionText.ts';
+import { CLUES_ANSWER } from '../mission/clues.ts';
 import { shelterDoseFactor } from '../mission/radiation.ts';
 import { STORY_CONFIG } from '../config/constants.ts';
 import { SPEAKERS } from './radioSpeakers.ts';
@@ -26,8 +27,8 @@ export const CARDS = {
     lines: [
       { icon: 'ice', text: 'Get ice at the crater' },
       { icon: 'rocket', text: 'Load it into the rocket' },
-      { icon: 'home', text: 'Go back to base for air' },
-      { icon: 'radio', text: 'Send your science to Earth' },
+      { icon: 'rock', text: 'Find 3 clues: was Mars alive?' },
+      { icon: 'radio', text: 'Send the clues to Earth' },
       { icon: 'clock', text: 'Launch before the window closes' },
     ],
   },
@@ -147,7 +148,8 @@ export function replyCard({ oneWayMinutes }) {
 // Epilogo: a ultima mensagem da Terra, na tela de vitoria. Fecha a historia com o mesmo atraso de
 // radio que a abriu (CALL EARTH) e diz o que a ciencia enviada valeu. `sentPoints`, `discoveries` e
 // `samples` sao a ciencia que chegou a Terra nesta partida; `oneWayMinutes` vem do CommsLink.
-export function earthFarewell({ sentPoints = 0, discoveries = 0, samples = 0, oneWayMinutes = 0 } = {}) {
+// `cluesSent`: as 3 pistas da missao chegaram (issue #344): a Terra responde a pergunta da missao.
+export function earthFarewell({ sentPoints = 0, discoveries = 0, samples = 0, oneWayMinutes = 0, cluesSent = false } = {}) {
   const found = [];
   if (discoveries > 0) found.push(`${discoveries} ${discoveries === 1 ? 'discovery' : 'discoveries'}`);
   if (samples > 0) found.push(`${samples} ${samples === 1 ? 'sample' : 'samples'}`);
@@ -157,6 +159,7 @@ export function earthFarewell({ sentPoints = 0, discoveries = 0, samples = 0, on
       { icon: 'radio', text: 'We saw the liftoff. Well done, Commander!' },
       { icon: 'scope', text: `Earth got your science: ${sentPoints} points` },
       ...(found.length > 0 ? [{ icon: 'check', text: found.join(' and ') }] : []),
+      ...(cluesSent ? [{ icon: 'rock', text: `Your 3 clues say: ${CLUES_ANSWER}` }] : []),
       { icon: 'home', text: 'Now the 7-month trip home' },
     ],
     note: `This message left Earth ${oneWayMinutes} min before you read it`,
@@ -170,7 +173,7 @@ export const OBJECTIVES = {
   act2: 'Get the rocket ready to go home',
   'storm-guide': 'Get safe: storm shelter with water in its wall, or the Shield Remote',
   fuel: 'Fill the rocket with ice',
-  'send-data': 'Send your science to Earth from the science & radio terminal',
+  'send-data': 'Find the 3 clues and send your science to Earth from the science & radio terminal',
   ignite: 'Go to the rocket and press IGNITE',
   done: 'Liftoff! You are going home',
   failed: 'The launch window closed',
