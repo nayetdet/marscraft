@@ -14,10 +14,10 @@ export const WAYPOINT_LABELS = {
 const INDOOR = new Set(['console']);
 
 // Lugar de cada trabalho do foguete (nextRocketJob); fabrica trabalhando e tempestades nao tem lugar
-const JOB_PLACES = { ice: 'ice', load: 'mav', data: 'console' };
+const JOB_PLACES = { ice: 'ice', load: 'mav', base: 'airlock', data: 'console' };
 
 // Lugar que o objetivo pede: 'airlock' | 'console' | 'ice' | 'mav' | null (nenhum lugar).
-// `s` e o retrato do jogo ({ iceCount, iceNeeded, propellantPct, dataSent }).
+// `s` e o retrato do jogo ({ iceCount, iceNeeded, propellantPct, dataSent, needsBase }).
 export function objectiveTarget(objectiveId, s = {}) {
   switch (objectiveId) {
     case 'enter-base':

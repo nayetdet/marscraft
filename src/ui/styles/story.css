@@ -21,22 +21,28 @@
 .story-objective svg { display: block; width: 100%; height: 100%; }
 .story-objective .hidden { display: none; }
 
-/* Ato: 3 bolinhas (feito, agora, falta) e o nome curto */
+/* A meta da partida (sempre a vista) e, a direita, tempestades e dados */
 .story-objective header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  margin-bottom: 6px;
+  min-height: 16px;
+  margin-bottom: 5px;
   color: #ffcf3a;
   font-size: 11px;
   letter-spacing: 1px;
   text-shadow: 1px 1px 0 #000;
 }
 
-.story-acts { display: flex; gap: 4px; }
-.story-acts i { width: 9px; height: 9px; background: #3a2a3a; box-shadow: inset 0 0 0 1px #6b5a2a; }
-.story-acts i.done { background: #5dff8f; box-shadow: none; }
-.story-acts i.now { background: #ffcf3a; box-shadow: none; }
+/* O foguete em degraus: vazio, gelo entregue (azul) e combustivel pronto (verde) */
+.story-rocket { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; }
+.story-rocket b { min-width: 34px; text-align: right; text-shadow: 1px 1px 0 #000; }
+.story-rocket.done { color: #5dff8f; }
+.story-segs { flex: 1; display: flex; gap: 2px; }
+.story-segs i { flex: 1; height: 12px; background: #2a1a2a; box-shadow: inset 0 0 0 1px #5a4a5a; }
+.story-segs i.ice { background: #7fe3ff; box-shadow: none; }
+.story-segs i.fuel { background: #5dff8f; box-shadow: none; }
 
 /* O que fazer agora: icone grande e 2 ou 3 palavras */
 .story-task { display: flex; align-items: center; gap: 9px; }
@@ -86,12 +92,35 @@
 .story-steps > i { flex: 1; height: 3px; background: #5a4a5a; }
 .story-step.done + i { background: #5dff8f; }
 
-/* Atos 2 e 3: o que falta para o foguete, lado a lado */
-.story-goals { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-.story-goal { display: flex; align-items: center; gap: 5px; color: #ffffff; font-size: 12px; }
-#story-goal-fuel { flex: 1; }
+/* Volta de trabalho: uma linha por baixo liga o ultimo passo ao primeiro (a rotina se repete) */
+.story-steps.is-loop { position: relative; padding-bottom: 10px; }
+
+.story-steps.is-loop::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 5px;
+  border: 3px solid #9a8f9a;
+  border-top: 0;
+}
+
+/* Ponta da seta, subindo para o primeiro passo */
+.story-steps.is-loop::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  border: 6.5px solid transparent;
+  border-top: 0;
+  border-bottom-color: #9a8f9a;
+}
+
+/* Atos 2 e 3: o que mais o lancamento pede, no canto da linha da meta */
+.story-goals { display: flex; align-items: center; gap: 9px; }
+.story-goal { display: flex; align-items: center; gap: 4px; color: #ffffff; font-size: 12px; }
 .story-goal-icon { flex: none; width: 16px; height: 16px; }
-.story-goal b { min-width: 34px; text-align: right; text-shadow: 1px 1px 0 #000; }
 .story-goal.done { color: #5dff8f; }
 
 .story-bar { flex: 1; height: 8px; background: #2a1a2a; box-shadow: inset 0 0 0 1px #5a4a5a; }
@@ -122,7 +151,7 @@
 .story-timer.danger .story-bar i { background: #ff6b5a; }
 
 /* No modo rover as leituras do rover usam o mesmo canto: elas descem para baixo do painel */
-.hud:has(.story-objective:not(.hidden)) #rover-info { margin-top: 132px; }
+.hud:has(.story-objective:not(.hidden)) #rover-info { margin-top: 152px; }
 
 /* Seta do objetivo na tela. O elemento fica no ponto exato (transform vem do WaypointHud). */
 .waypoint {
@@ -400,10 +429,12 @@ body.touch-device .story-card-ok { min-height: 44px; min-width: 110px; }
   .story-objective header { margin-bottom: 4px; font-size: 10px; }
   .story-task-icon { width: 28px; height: 28px; padding: 4px; }
   .story-task strong { font-size: 14px; }
-  .story-steps, .story-goals { margin-top: 6px; }
+  .story-steps { margin-top: 6px; }
+  .story-rocket { margin-bottom: 5px; }
+  .story-segs i { height: 10px; }
   .story-step { width: 20px; height: 20px; padding: 3px; }
   .story-timer { margin-top: 5px; }
-  .hud:has(.story-objective:not(.hidden)) #rover-info { margin-top: 110px; }
+  .hud:has(.story-objective:not(.hidden)) #rover-info { margin-top: 128px; }
 }
 
 /* ---------- Animacoes (cutscenes) ---------- */
@@ -487,6 +518,24 @@ body.cutscene-active .story-signal { visibility: hidden; }
 .cutscene-title span { font-size: clamp(14px, 2.4vw, 24px); }
 .cutscene-title span:empty { display: none; }
 .cutscene-title.is-popping strong { animation: cutscene-pop 0.3s steps(5, end); }
+
+/* Passeio pela base: etiqueta com o nome do lugar no canto de baixo; a frase vai na barra */
+.cutscene-title.is-place {
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 0 0 max(calc(17vh + 18px), 90px) max(5vw, env(safe-area-inset-left, 0px));
+  text-align: left;
+}
+
+.cutscene-title.is-place strong {
+  padding: 6px 14px;
+  font-size: clamp(24px, 5vw, 54px);
+  text-shadow: 3px 3px #000;
+  /* O "pulso" de entrada cresce a partir do canto, para a etiqueta nao sair da tela */
+  transform-origin: left bottom;
+  background: rgba(16, 4, 16, 0.86);
+  box-shadow: inset 0 0 0 3px #b8860b, 4px 4px 0 rgba(0, 0, 0, 0.45);
+}
 
 @keyframes cutscene-pop {
   from { transform: scale(1.5); opacity: 0.2; }

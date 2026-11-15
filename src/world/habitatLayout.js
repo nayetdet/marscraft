@@ -69,6 +69,13 @@ export const NORTH_WING = {
   LINK_HEIGHT: 3,
 };
 
+// Campo solar a oeste do modulo de energia: uma fileira de paineis ao longo de z (nasaModelsBuilder.js)
+export const SOLAR_FIELD = Object.freeze({ x: -27, zFirst: -17, spacing: 3, count: 5 });
+export const SOLAR_FIELD_CENTER = Object.freeze({
+  x: SOLAR_FIELD.x,
+  z: SOLAR_FIELD.zFirst - (SOLAR_FIELD.spacing * (SOLAR_FIELD.count - 1)) / 2,
+});
+
 // Ala leste: dormitorio da tripulacao, um modulo proprio ligado a parede leste do habitat por um
 // corredor curto. LINK inclui as duas colunas de parede (a do habitat e a do modulo), como em
 // northLinkBox; so tem LINK_HEIGHT blocos de altura.

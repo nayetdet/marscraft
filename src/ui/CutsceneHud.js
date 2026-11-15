@@ -51,15 +51,19 @@ export class CutsceneHud {
     }, FADE_OUT_MS + 50);
   }
 
-  // caption: { text, sub?, big?, side? } ou null. `side` poe o titulo grande na esquerda da tela.
+  // caption: { text, sub?, big?, side?, place? } ou null. `side` poe o titulo grande na esquerda
+  // da tela. `place` e a etiqueta do passeio pela base: o nome do lugar fica sobre a imagem e a
+  // frase (`sub`) vai na barra de baixo.
   setCaption(caption) {
-    const big = Boolean(caption?.big);
-    this.captionEl.textContent = caption && !big ? caption.text : '';
+    const place = Boolean(caption?.place);
+    const big = Boolean(caption?.big) || place;
+    this.captionEl.textContent = !caption ? '' : place ? caption.sub ?? '' : big ? '' : caption.text;
     this.titleEl.classList.toggle('hidden', !big);
     this.titleEl.classList.toggle('is-side', Boolean(caption?.side));
+    this.titleEl.classList.toggle('is-place', place);
     if (big) {
       this.titleMainEl.textContent = caption.text;
-      this.titleSubEl.textContent = caption.sub ?? '';
+      this.titleSubEl.textContent = place ? '' : caption.sub ?? '';
       // Reinicia a animacao de "pulso" a cada numero da contagem
       this.titleEl.classList.remove('is-popping');
       void this.titleEl.offsetWidth;

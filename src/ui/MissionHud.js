@@ -42,7 +42,6 @@ export class MissionHud {
       water: this._row($('res-water')),
       air: this._row($('res-air')),
       radiation: this._row($('res-radiation')),
-      rocket: this._row($('res-rocket')),
     };
     this.levelEls = [...$('res-radiation').querySelectorAll('.res-levels i')];
     this.alerts = [this._alert($('mission-alerts')), this._alert($('mission-alerts'))];
@@ -125,7 +124,7 @@ export class MissionHud {
       contaminated: stations?.contaminated,
       brokenWindows: world?.brokenBaseWindows.size ?? 0,
     });
-    const { power, water, air, radiation, rocket } = this.rows;
+    const { power, water, air, radiation } = this.rows;
 
     setClass(power.root, `res-row ${view.power.tone}`);
     setText(power.value, `${view.power.pct}%`);
@@ -155,10 +154,6 @@ export class MissionHud {
     setText(radiation.value, view.radiation.word);
     this.levelEls.forEach((el, i) => setClass(el, i < view.radiation.level ? `on l${i + 1}` : ''));
     setClass(radiation.key, `res-key ${view.shieldOn ? 'on' : ''}`);
-
-    setClass(rocket.root, `res-row ${view.rocket.tone}`);
-    setText(rocket.value, `${view.rocket.pct}%`);
-    setWidth(rocket.fill, view.rocket.pct);
 
     this.alerts.forEach((alert, i) => {
       const data = view.alerts[i];

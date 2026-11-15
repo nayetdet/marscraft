@@ -60,34 +60,36 @@
 
     <!-- Historia: objetivo atual (canto superior esquerdo) e seta que aponta para onde ir -->
     <section id="story-objective" class="story-objective hidden">
+      <!-- A meta da partida, sempre a vista. A direita, o que mais o lancamento pede (do ato 2
+           em diante): tempestades sobrevividas e dados enviados -->
       <header>
-        <span id="story-acts" class="story-acts" aria-hidden="true"><i></i><i></i><i></i></span>
-        <b id="story-objective-act"></b>
+        <b id="story-goal-title"></b>
+        <span id="story-goals" class="story-goals">
+          <span id="story-goal-storms" class="story-goal" title="Solar storms survived">
+            <span class="story-goal-icon" data-icon="storm"></span>
+            <span class="story-pips"></span>
+          </span>
+          <span id="story-goal-data" class="story-goal" title="Science data sent to Earth">
+            <span class="story-goal-icon" data-icon="radio"></span>
+            <span class="story-tick"></span>
+          </span>
+        </span>
       </header>
+      <!-- O foguete em degraus: cada bloco de gelo entregue acende um (azul) e vira combustivel (verde) -->
+      <div id="story-rocket" class="story-rocket" title="Ice loaded into the rocket">
+        <span class="story-goal-icon" data-icon="rocket"></span>
+        <span id="story-rocket-segs" class="story-segs"></span>
+        <b id="story-rocket-count"></b>
+      </div>
       <div class="story-task">
         <span id="story-task-icon" class="story-task-icon"></span>
         <strong id="story-objective-text" aria-live="polite"></strong>
         <span id="story-task-key" class="story-key story-task-key"></span>
       </div>
-      <!-- Ato 1: os 3 passos do tutorial -->
+      <!-- Ato 1: os 3 passos do tutorial. Atos 2 e 3: a volta de trabalho, que se repete
+           (gelo, foguete, base) -->
       <div id="story-steps" class="story-steps" aria-hidden="true">
         <span class="story-step"></span><i></i><span class="story-step"></span><i></i><span class="story-step"></span>
-      </div>
-      <!-- Atos 2 e 3: o que falta para o foguete (combustivel, tempestades, dados enviados) -->
-      <div id="story-goals" class="story-goals">
-        <div id="story-goal-fuel" class="story-goal" title="Rocket fuel">
-          <span class="story-goal-icon" data-icon="rocket"></span>
-          <span class="story-bar"><i></i></span>
-          <b></b>
-        </div>
-        <div id="story-goal-storms" class="story-goal" title="Solar storms survived">
-          <span class="story-goal-icon" data-icon="storm"></span>
-          <span class="story-pips"></span>
-        </div>
-        <div id="story-goal-data" class="story-goal" title="Science data sent to Earth">
-          <span class="story-goal-icon" data-icon="radio"></span>
-          <span class="story-tick"></span>
-        </div>
       </div>
       <!-- Relogio da janela de lancamento fechando (ato 3) -->
       <div id="story-timer" class="story-timer">
@@ -135,13 +137,6 @@
           <span class="res-levels"><i></i><i></i><i></i></span>
           <b class="res-value">LOW</b>
           <span class="res-key" title="Radiation shield: use the Shield Remote in your hotbar">S</span>
-        </div>
-        <div id="res-rocket" class="res-row" data-icon="rocket">
-          <span class="res-icon"></span>
-          <span class="res-name">ROCKET</span>
-          <span class="res-meter"><i class="res-fill"></i></span>
-          <b class="res-value">0%</b>
-          <span class="res-trend"></span>
         </div>
       </section>
       <div id="mission-alerts" class="mission-alerts"></div>
