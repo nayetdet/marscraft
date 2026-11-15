@@ -30,43 +30,28 @@ function createFootprintTexture(): THREE.CanvasTexture {
   if (!context) throw new Error('Could not create the footprint texture.');
   context.imageSmoothingEnabled = false;
 
-  const paintRows = (color: string, rows: Array<[number, number, number]>) => {
-    context.fillStyle = color;
-    for (const [y, startX, endX] of rows) context.fillRect(startX, y, endX - startX, 1);
-  };
+  // A clear rectangular boot-sole stamp with crisp corners and a simple voxel tread.
+  context.fillStyle = '#43271e';
+  context.fillRect(2, 1, 14, 26);
+  context.fillStyle = '#80563b';
+  context.fillRect(3, 2, 12, 24);
 
-  // Stepped silhouette: broad toe, narrow arch, and square heel.
-  paintRows('#43271e', [
-    [1, 7, 11], [2, 6, 12], [3, 5, 13],
-    [4, 4, 14], [5, 4, 14], [6, 4, 14], [7, 4, 14], [8, 4, 14],
-    [9, 5, 13], [10, 5, 13], [11, 5, 13], [12, 6, 12], [13, 6, 12], [14, 6, 12],
-    [15, 6, 12], [16, 5, 13], [17, 5, 13], [18, 5, 13],
-    [19, 6, 12], [20, 6, 12], [21, 6, 12], [22, 7, 11], [23, 7, 11], [24, 7, 11], [25, 8, 10],
-  ]);
-  paintRows('#80563b', [
-    [2, 7, 11], [3, 6, 12], [4, 5, 13], [5, 5, 13], [6, 5, 13], [7, 5, 13],
-    [8, 5, 13], [9, 6, 12], [10, 6, 12], [11, 6, 12], [12, 7, 11], [13, 7, 11],
-    [14, 7, 11], [15, 7, 11], [16, 6, 12], [17, 6, 12], [18, 6, 12],
-    [19, 7, 11], [20, 7, 11], [21, 7, 11], [22, 8, 10], [23, 8, 10], [24, 8, 10],
-  ]);
-
-  // Blocky tread grooves on the toe and heel make the print read as a boot sole.
+  // Repeating square tread blocks keep the print readable at game distance.
   context.fillStyle = '#533829';
-  context.fillRect(5, 5, 3, 1);
-  context.fillRect(10, 5, 3, 1);
-  context.fillRect(6, 8, 6, 1);
-  context.fillRect(7, 10, 4, 1);
-  context.fillRect(7, 14, 4, 1);
-  context.fillRect(6, 17, 6, 1);
-  context.fillRect(7, 20, 4, 1);
-  context.fillRect(8, 23, 2, 1);
+  for (const y of [5, 10, 15, 20]) {
+    context.fillRect(4, y, 10, 1);
+    context.fillRect(7, y + 1, 1, 3);
+    context.fillRect(10, y + 1, 1, 3);
+  }
+  context.fillRect(4, 3, 10, 1);
+  context.fillRect(4, 24, 10, 1);
+
+  // Small warm pixels catch the light without breaking the straight outline.
   context.fillStyle = '#ad8056';
-  context.fillRect(7, 3, 2, 1);
-  context.fillRect(5, 6, 1, 1);
-  context.fillRect(12, 6, 1, 1);
-  context.fillRect(8, 12, 2, 1);
-  context.fillRect(7, 18, 1, 1);
-  context.fillRect(10, 18, 1, 1);
+  context.fillRect(4, 4, 2, 1);
+  context.fillRect(12, 9, 2, 1);
+  context.fillRect(4, 14, 2, 1);
+  context.fillRect(12, 19, 2, 1);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
