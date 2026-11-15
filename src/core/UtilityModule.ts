@@ -70,7 +70,12 @@ export class UtilityModule {
   // % de bateria por hora de jogo que o aquecedor gasta agora. Cresce com o frio la fora: do
   // HEATER_DAY_PER_HOUR no ar mais quente do InSight ate o HEATER_NIGHT_PER_HOUR no mais frio.
   get heaterRatePerHour() {
-    const temp = this.outsideTempC;
+    return this.heaterRateAt(this.mission.lastHours);
+  }
+
+  // O mesmo gasto na hora `hours` do relogio da missao (previsao da noite, issue #420)
+  heaterRateAt(hours) {
+    const temp = Number.isFinite(hours) ? outsideTemperatureC(hours) : null;
     const rate = temp === null
       ? (this.isNight ? U.HEATER_NIGHT_PER_HOUR : U.HEATER_DAY_PER_HOUR)
       : U.HEATER_DAY_PER_HOUR + (U.HEATER_NIGHT_PER_HOUR - U.HEATER_DAY_PER_HOUR) * coldFraction(temp);
@@ -167,6 +172,21 @@ export class UtilityModule {
       ['Radiation shield', ENERGY_CONFIG.SHIELD_DRAIN_PER_HOUR, m.shieldOn, 'shield'],
       ['Fuel factory', factoryRunning ? ENERGY_CONFIG.ISRU_DRAIN_PER_HOUR : 0, m.factoryOn, 'factory'],
     ];
+  }
+
+  // Previsao da noite (issue #420): % de bateria por hora de jogo que a base gasta com tudo como
+  // esta agora, SEM a luz da estufa e SEM o aquecedor (ele muda com o frio: `heaterRateAt`). O ar
+  // da tripulacao (primeira linha de `loads`) sai primeiro do RTG (issue #85): so o que passar
+  // dele pesa na bateria.
+  steadyDrainPerHour(counts) {
+    const rows = this.loads(counts);
+    let total = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const [, rate, on, id] = rows[i];
+      if (!on || id === 'lights' || id === 'heater') continue;
+      total += i === 0 ? Math.max(0, rate - ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR) : rate;
+    }
+    return total;
   }
 
   eatRation() {

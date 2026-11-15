@@ -1100,6 +1100,9 @@ export const ACT2_CONFIG = {
 // Ato 3 (issue #409): abrigo na tempestade solar, planta, racao e academia.
 // Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
 export const ACT3_CONFIG = {
+  // Trade-off da luz da estufa a noite (issue #420): segundos do card LIGHTS ON x LIGHTS OFF na
+  // tela. Sem resposta, a luz fica como estava.
+  NIGHT_LIGHTS_CARD_SECONDS: 20,
 };
 
 // Ato 4 (issue #410): traje, 3 amostras de cada tipo, analise e envio.

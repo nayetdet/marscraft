@@ -18,6 +18,30 @@ export function solarChargePerHour(timeOfDay, weatherFactor = 1) {
   );
 }
 
+// Previsao da noite (issue #420): carga da bateria no proximo nascer do Sol, saindo de `charge` na
+// hora `timeOfDay`. Soma o Sol que ainda resta (com a poeira de agora, `weatherFactor`) e o que
+// nao depende dele (`chargePerHour`, o reator ligado), e tira o gasto da base. `drainPerHour`:
+// % por hora de jogo, um numero ou uma funcao das horas passadas desde agora. Anda no mesmo passo
+// e na mesma ordem do MissionSystem (carrega, depois gasta), para a conta bater com o jogo.
+export function batteryAtSunrise({
+  charge, timeOfDay, drainPerHour, capacity = ENERGY_CONFIG.BATTERY_CAPACITY, weatherFactor = 1, chargePerHour = 0,
+}) {
+  const sunrise = MISSION_CONFIG.SUNRISE_HOUR;
+  let left = (((sunrise - timeOfDay) % 24) + 24) % 24 || 24;
+  let elapsed = 0;
+  let level = Math.min(capacity, Math.max(0, charge));
+  while (left > 1e-9) {
+    const h = Math.min(left, MISSION_CONFIG.MAX_STEP_HOURS);
+    left -= h;
+    elapsed += h;
+    const hour = (timeOfDay + elapsed) % 24;
+    level = Math.min(capacity, level + (solarChargePerHour(hour, weatherFactor) + chargePerHour) * h);
+    const drain = typeof drainPerHour === 'function' ? drainPerHour(elapsed) : drainPerHour;
+    level = Math.max(0, level - drain * h);
+  }
+  return level;
+}
+
 // Fluxo liquido da bateria (% por hora de jogo) suavizado, para o HUD mostrar "+4/h" sem
 // tremer a cada quadro (issue #85). `windowHours` = quanto tempo de jogo a media cobre.
 // Gastos de uma vez (plantar, enviar dados, o controle de demo) dariam picos de milhares de %/h:

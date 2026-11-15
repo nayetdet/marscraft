@@ -3,6 +3,7 @@ import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS, GREENHOUSE_
 import { createCropItemModel, createCropPlantModel } from '../graphics/cropModels.ts';
 import { createSpaceRationModel } from '../graphics/rationModel.ts';
 import { UTILITY_CONFIG } from '../config/constants.ts';
+import { LIGHTS_OFF_ID, LIGHTS_ON_ID, nightLightsToast } from '../story/acts/act3NightLights.ts';
 import * as THREE from 'three';
 import { CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, STORY_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
 import { separateCrew } from '../crew/separateCrew.ts';
@@ -1217,6 +1218,12 @@ export class GameEngine {
   // Escolha feita num card de radio sem parar o jogo (issue #135). Devolve false para o card
   // continuar aberto. O escudo liga pelo mesmo caminho do Shield Remote: gasta a mesma bateria.
   _onCardChoice(id) {
+    // Ato 3 (#420): luz da estufa a noite, escolhida no card do por do sol (Act3Controller)
+    if (id === LIGHTS_ON_ID || id === LIGHTS_OFF_ID) {
+      this.utility.greenhouseLightsOn = id === LIGHTS_ON_ID;
+      this.hud.showToast(nightLightsToast(this.utility.greenhouseLightsOn), 6000);
+      return true;
+    }
     if (id === 'hide') {
       this.hud.showToast('Follow the arrow to the base. Hide in the storm shelter and fill its water wall!', 6000);
       return true;
