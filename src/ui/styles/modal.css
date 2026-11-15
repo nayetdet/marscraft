@@ -147,7 +147,7 @@ body.pause-menu-open .crew-picker { display: none; }
 
 .mc-title-wrap {
   position: relative;
-  margin-bottom: 12px;
+  margin-bottom: 28px;
 }
 
 .mc-title {
@@ -1061,7 +1061,7 @@ body.pause-menu-open .crew-picker { display: none; }
 @media (max-height: 460px) {
   .mc-menu { gap: 6px; }
   .mc-title { font-size: clamp(44px, 9vw, 60px); letter-spacing: -2px; }
-  .mc-title-wrap { margin-bottom: 0; }
+  .mc-title-wrap { margin-bottom: 12px; }
   .mc-splash { font-size: 12px; margin-left: 100px; }
   .mc-menu-card { padding-top: 4px; gap: 5px; }
   #menu-main { gap: 6px; }
