@@ -5,8 +5,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { GRAPHICS_CONFIG } from '../../config/constants.js';
-import { isInsidePressurizedVolume } from '../../world/habitatLayout.js';
 import { GodRaysPass } from './GodRaysPass.js';
+import { ACCENT_LIGHTS, accentIntensity } from './accentLights.js';
 import { shadowLightDirection, snapShadowCenter } from './shadowRig.js';
 import { FrameBudgetGuard, SHADER_PREF, readShaderPref, resolveShaderMode, writeShaderPref } from './shaderSettings.js';
 
@@ -43,6 +43,16 @@ const FINISH_SHADER = {
   `,
 };
 
+// Luz secundaria de fora: o ceu preenche as sombras por cima (caramelo de dia, azulado no por do
+// sol de Marte, frio a noite) e o chao devolve a luz do Sol por baixo (laranja).
+const SKY_FILL_DAY = new THREE.Color(0xffe2c0);
+const SKY_FILL_TWILIGHT = new THREE.Color(0x9db8e8);
+const SKY_FILL_NIGHT = new THREE.Color(0x56607e);
+const GROUND_BOUNCE_DAY = new THREE.Color(0xe08a52);
+const GROUND_BOUNCE_NIGHT = new THREE.Color(0x3a2a24);
+// Dentro da base o rebote vem do piso claro, nao do chao laranja de Marte
+const FLOOR_BOUNCE_INDOOR = new THREE.Color(0xaeb4bf);
+
 const _lightDir = new THREE.Vector3();
 const _center = new THREE.Vector3();
 const _camPos = new THREE.Vector3();
@@ -58,16 +68,15 @@ function isLit(material) {
     || material.isMeshPhongMaterial || material.isMeshToonMaterial);
 }
 
-// Modo "Shaders": sombra do Sol em tempo real, luz mais contrastada, bloom, raios de luz e tone
-// mapping. Desligado, o jogo desenha exatamente como antes (direto na tela, sem pos-processamento).
+// Modo "Shaders": sombra do Sol em tempo real, lampadas da base com sombra propria, luzes
+// secundarias coloridas, bloom, raios de luz e tone mapping. Desligado, o jogo desenha exatamente
+// como antes (direto na tela, sem pos-processamento).
 export class ShaderMode {
-  constructor({ renderer, scene, camera, sky, worldGroup = null, glowMaterials = [], gpuName = '', storage = null, coarsePointer = false, onChange = () => {} }) {
+  constructor({ renderer, scene, camera, sky, glowMaterials = [], gpuName = '', storage = null, coarsePointer = false, onChange = () => {} }) {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;
     this.sky = sky;
-    // Grupo dos chunks de blocos: sempre fazem sombra (o teto da base e feito deles)
-    this.worldGroup = worldGroup;
     this.glowMaterials = glowMaterials;
     this.storage = storage;
     this.onChange = onChange;
@@ -79,7 +88,14 @@ export class ShaderMode {
     this.guard = new FrameBudgetGuard();
     this.exposure = GRAPHICS_CONFIG.EXPOSURE_OUTSIDE;
     this._sweepTimer = 0;
-    this._interiorLights = [];
+    this._time = 0;
+    this._frame = 0;
+    // 0 = camera fora da base, 1 = dentro (suavizado)
+    this._indoor = 0;
+    this._roomLights = [];
+    this._roomCursor = 0;
+    this._accents = null;
+    this._hemisphereBase = { sky: sky.ambientLight.color.clone(), ground: sky.ambientLight.groundColor.clone() };
     this._composer = null;
     this._godRays = null;
 
@@ -129,12 +145,8 @@ export class ShaderMode {
       this._ensureComposer();
       this._markShadows();
       this._sweepTimer = 0;
-      this._interiorLights = [];
-      this.scene.traverse((obj) => {
-        if (!obj.isPointLight) return;
-        this._interiorLights.push({ light: obj, base: obj.intensity });
-        obj.intensity *= GRAPHICS_CONFIG.INTERIOR_LIGHT_SCALE;
-      });
+      this._enableRoomLights();
+      this._setAccents(true);
       for (const material of this.glowMaterials) {
         material.userData.baseEmissiveIntensity = material.emissiveIntensity;
         material.emissiveIntensity *= GRAPHICS_CONFIG.EMISSIVE_SCALE;
@@ -144,8 +156,15 @@ export class ShaderMode {
       renderer.toneMapping = THREE.NeutralToneMapping;
       this.guard.reset();
     } else {
-      for (const { light, base } of this._interiorLights) light.intensity = base;
-      this._interiorLights = [];
+      for (const { light, intensity, decay } of this._roomLights) {
+        light.intensity = intensity;
+        light.decay = decay;
+        light.castShadow = false;
+      }
+      this._roomLights = [];
+      this._setAccents(false);
+      sky.ambientLight.color.copy(this._hemisphereBase.sky);
+      sky.ambientLight.groundColor.copy(this._hemisphereBase.ground);
       for (const material of this.glowMaterials) {
         material.emissiveIntensity = material.userData.baseEmissiveIntensity ?? material.emissiveIntensity;
       }
@@ -156,6 +175,43 @@ export class ShaderMode {
     }
     sky.sunLight.castShadow = enabled;
     this.onChange(enabled);
+  }
+
+  // Lampadas dos comodos (as PointLights que o jogo ja tem): viram luz primaria com sombra.
+  // O mapa de sombra de cada uma fica guardado e so e refeito de tempos em tempos (ver update).
+  _enableRoomLights() {
+    this._roomLights = [];
+    this.scene.traverse((obj) => {
+      if (!obj.isPointLight) return;
+      this._roomLights.push({ light: obj, intensity: obj.intensity, decay: obj.decay });
+      obj.intensity *= GRAPHICS_CONFIG.ROOM_LIGHT_SCALE;
+      obj.decay = GRAPHICS_CONFIG.ROOM_LIGHT_DECAY;
+      obj.castShadow = true;
+      obj.shadow.mapSize.set(GRAPHICS_CONFIG.ROOM_SHADOW_MAP_SIZE, GRAPHICS_CONFIG.ROOM_SHADOW_MAP_SIZE);
+      obj.shadow.bias = GRAPHICS_CONFIG.ROOM_SHADOW_BIAS;
+      obj.shadow.normalBias = GRAPHICS_CONFIG.ROOM_SHADOW_NORMAL_BIAS;
+      obj.shadow.camera.near = 0.15;
+      obj.shadow.camera.far = obj.distance || 40;
+      obj.shadow.autoUpdate = false;
+      obj.shadow.needsUpdate = true;
+    });
+    this._roomCursor = 0;
+  }
+
+  // Luzes secundarias coloridas (accentLights.js). So existem na cena com o modo ligado, para nao
+  // custarem nada no modo normal.
+  _setAccents(on) {
+    if (!this._accents) {
+      this._accents = ACCENT_LIGHTS.map((spec) => {
+        const light = new THREE.PointLight(spec.color, spec.intensity, spec.distance);
+        light.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
+        return { spec, light };
+      });
+    }
+    for (const { light } of this._accents) {
+      if (on) this.scene.add(light);
+      else this.scene.remove(light);
+    }
   }
 
   _setSunBoost(value) {
@@ -191,7 +247,8 @@ export class ShaderMode {
   }
 
   // Marca quem faz e quem recebe sombra. Materiais sem luz (telas, ceu, efeitos) ficam de fora;
-  // o que e transparente (vidro) recebe mas nao faz sombra, entao o Sol entra pelas janelas.
+  // o que e transparente (vidro) recebe mas nao faz sombra, entao o Sol entra pelas janelas e a
+  // luz das lampadas sai por elas.
   _markShadows() {
     const skip = this.sky.celestialGroup;
     const visit = (obj, inCamera) => {
@@ -201,11 +258,7 @@ export class ShaderMode {
         const lit = materials.some(isLit);
         const transparent = materials.some((m) => m.transparent);
         obj.receiveShadow = lit;
-        // Moveis dentro da base ficam sob o teto: nao precisam entrar no mapa de sombra do Sol
-        const m = obj.matrixWorld.elements;
-        const indoors = !obj.isInstancedMesh && obj.parent !== this.worldGroup
-          && isInsidePressurizedVolume(m[12], m[13], m[14]);
-        obj.castShadow = lit && !transparent && !inCamera && !indoors;
+        obj.castShadow = lit && !transparent && !inCamera;
       }
       const nested = inCamera || obj === this.camera;
       for (const child of obj.children) visit(child, nested);
@@ -246,10 +299,41 @@ export class ShaderMode {
     sun.target.position.copy(_center);
     sun.position.copy(_center).addScaledVector(_lightDir, GRAPHICS_CONFIG.SHADOW_LIGHT_DISTANCE);
 
-    // Luz: Sol mais forte, ambiente mais fraco (o contraste e que faz a sombra aparecer)
+    // Luz primaria de fora: Sol mais forte, ambiente mais fraco (o contraste faz a sombra aparecer).
+    // Dentro da base o ambiente cai mais ainda, e quem ilumina sao as lampadas e o Sol das janelas.
+    this._time += dt;
+    this._indoor += ((inside ? 1 : 0) - this._indoor) * Math.min(1, dt * GRAPHICS_CONFIG.INDOOR_BLEND_SPEED);
+    const indoorScale = THREE.MathUtils.lerp(1, GRAPHICS_CONFIG.INDOOR_AMBIENT_SCALE, this._indoor);
     sun.intensity *= THREE.MathUtils.lerp(GRAPHICS_CONFIG.SUN_SCALE_NIGHT, GRAPHICS_CONFIG.SUN_SCALE_DAY, day);
-    sky.baseAmbient.intensity *= GRAPHICS_CONFIG.AMBIENT_SCALE;
-    sky.ambientLight.intensity *= GRAPHICS_CONFIG.HEMISPHERE_SCALE;
+    sky.baseAmbient.intensity *= GRAPHICS_CONFIG.AMBIENT_SCALE * indoorScale;
+    sky.ambientLight.intensity *= GRAPHICS_CONFIG.HEMISPHERE_SCALE * indoorScale;
+
+    // Luz secundaria de fora: cor do ceu por cima e rebote do chao por baixo, pelo horario
+    const twilight = THREE.MathUtils.smoothstep(sunDir.y, -0.22, 0.05) * (1 - THREE.MathUtils.smoothstep(sunDir.y, 0.05, 0.35));
+    sky.ambientLight.color.copy(SKY_FILL_NIGHT).lerp(SKY_FILL_DAY, day).lerp(SKY_FILL_TWILIGHT, twilight * 0.6);
+    sky.ambientLight.groundColor.copy(GROUND_BOUNCE_NIGHT).lerp(GROUND_BOUNCE_DAY, day).lerp(FLOOR_BOUNCE_INDOOR, this._indoor);
+
+    // Sombra das lampadas: refaz sempre a mais proxima da camera (e onde algo se mexe na frente
+    // do jogador) e as outras em rodizio, devagar
+    this._frame++;
+    const rooms = this._roomLights;
+    if (rooms.length > 0) {
+      if (this._frame % GRAPHICS_CONFIG.ROOM_SHADOW_NEAR_FRAMES === 0) {
+        let nearest = null;
+        let best = Infinity;
+        for (const { light } of rooms) {
+          const d = light.position.distanceToSquared(_camPos);
+          if (d < best) { best = d; nearest = light; }
+        }
+        nearest.shadow.needsUpdate = true;
+      }
+      if (this._frame % GRAPHICS_CONFIG.ROOM_SHADOW_FAR_FRAMES === 0) {
+        this._roomCursor = (this._roomCursor + 1) % rooms.length;
+        rooms[this._roomCursor].light.shadow.needsUpdate = true;
+      }
+    }
+
+    for (const { spec, light } of this._accents) light.intensity = accentIntensity(spec, this._time);
 
     // Exposicao: como o olho, abre no escuro (dentro da base, a noite) e fecha no Sol
     // (dentro a luz e das lampadas, entao a noite nao muda nada)

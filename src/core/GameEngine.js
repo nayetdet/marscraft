@@ -323,7 +323,6 @@ export class GameEngine {
       scene: this.scene,
       camera: this.camera,
       sky: this.sky,
-      worldGroup: this.world.worldGroup,
       glowMaterials: [atlas.material],
       gpuName: this.debug.gpuName,
       storage: getLocalStorage(),

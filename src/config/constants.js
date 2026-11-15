@@ -40,8 +40,9 @@ export const CAMERA_CONFIG = {
   REACH_DISTANCE: 6.5,
 };
 
-// Modo "Shaders" (src/graphics/shaderMode/): sombra do Sol em tempo real, brilho (bloom), raios de
-// luz e tone mapping (comprime o claro sem mudar as cores). Sao escolhas visuais, nao dados da NASA. Fica desligado em GPU por
+// Modo "Shaders" (src/graphics/shaderMode/): sombra do Sol em tempo real, lampadas da base com
+// sombra, brilho (bloom), raios de luz e tone mapping (comprime o claro sem mudar as cores). Sao
+// escolhas visuais, nao dados da NASA. Fica desligado em GPU por
 // software e em telas de toque, e se desliga sozinho se o jogo ficar lento.
 export const GRAPHICS_CONFIG = {
   STORAGE_KEY: 'minemars.shaders',
@@ -63,8 +64,20 @@ export const GRAPHICS_CONFIG = {
   SUN_SCALE_NIGHT: 0.6,
   AMBIENT_SCALE: 0.38,
   HEMISPHERE_SCALE: 0.55,
-  // Lampadas da base: sem o Sol atravessando o teto, elas e que iluminam os comodos
-  INTERIOR_LIGHT_SCALE: 2.8,
+  // Lampadas da base (luz primaria dos interiores): sem o Sol atravessando o teto, elas e que
+  // iluminam os comodos. Fazem sombra propria (moveis, tripulacao) e a luz sai pelas janelas.
+  // DECAY menor que o fisico (2) espalha a luz ate os cantos do comodo.
+  ROOM_LIGHT_SCALE: 3.4,
+  ROOM_LIGHT_DECAY: 1.15,
+  ROOM_SHADOW_MAP_SIZE: 512,
+  ROOM_SHADOW_BIAS: -0.003,
+  ROOM_SHADOW_NORMAL_BIAS: 0.03,
+  // A sombra da lampada mais proxima e refeita a cada N quadros; as outras, uma por vez, a cada M
+  ROOM_SHADOW_NEAR_FRAMES: 3,
+  ROOM_SHADOW_FAR_FRAMES: 20,
+  // Dentro da base a luz ambiente cai (as lampadas e o Sol das janelas passam a mandar)
+  INDOOR_AMBIENT_SCALE: 0.5,
+  INDOOR_BLEND_SPEED: 1.8,
   // Blocos que brilham (luminaria, farol): mais fortes, para passarem do limiar do bloom
   EMISSIVE_SCALE: 2.4,
   // Disco do Sol em HDR: precisa ser mais claro que o ceu em volta para o bloom pegar nele
