@@ -314,12 +314,17 @@ export class SurvivalSystem {
   // Tira ate `count` itens do inventario (hotbar primeiro) e devolve quantos saiu
   removeItems(blockId, count) {
     let removed = 0;
-    for (const item of this.inventorySlots) {
+    for (let index = 0; index < this.inventorySlots.length; index++) {
       if (removed >= count) break;
+      const item = this.inventorySlots[index];
       if (item?.id !== blockId) continue;
       const take = Math.min(item.count, count - removed);
       item.count -= take;
       removed += take;
+      if (item.count <= 0) {
+        this.inventorySlots[index] = null;
+        if (index < this.slots.length) this.slots[index] = null;
+      }
     }
     return removed;
   }
@@ -360,6 +365,7 @@ export class SurvivalSystem {
       if (this.water >= this.maxStat - 0.5) return 'Your water level is already full';
       this.water = Math.min(this.maxStat, this.water + slot.consumable.amount);
       slot.count--;
+      if (slot.count <= 0) this._clearInventorySlot(slotIndex);
       return 'You drank Martian ice water (+Water)';
     }
 
@@ -373,6 +379,7 @@ export class SurvivalSystem {
         this.health = Math.min(this.maxStat, this.health + slot.consumable.heal);
       }
       slot.count--;
+      if (slot.count <= 0) this._clearInventorySlot(slotIndex);
       const foodName = slot.id === BLOCK_IDS.HYDRO_PLANT ? 'Mars carrot' : slot.name.split(' (')[0];
       if (!this.canHeal()) return `You ate a ${foodName} (+Food). No oxygen! Food cannot heal you, go back to the base`;
       return `You ate a ${foodName} (+Food)`;
@@ -385,7 +392,13 @@ export class SurvivalSystem {
     const slot = this.slots[slotIndex];
     if (!slot || slot.count <= 0 || slot.equipment) return false;
     slot.count--;
+    if (slot.count <= 0) this._clearInventorySlot(slotIndex);
     return true;
+  }
+
+  _clearInventorySlot(slotIndex) {
+    this.slots[slotIndex] = null;
+    this.inventorySlots[slotIndex] = null;
   }
 
   addBaseWater(liters) {
