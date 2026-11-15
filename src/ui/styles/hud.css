@@ -678,7 +678,7 @@
   gap: 4px;
 }
 
-.suit-thermal {
+.suit-integrity {
   display: flex;
   align-items: center;
   gap: 3px;
@@ -688,9 +688,9 @@
   text-shadow: 1px 1px #000;
   white-space: nowrap;
 }
-.suit-thermal .mc-stat-icon.fire.full { color: #ff9b32; }
-.suit-thermal.low { color: #ff7777; }
-.suit-thermal.low .mc-stat-icon.fire.full { color: #ff4b4b; }
+.suit-integrity .mc-stat-icon.fire.full { color: #ff9b32; }
+.suit-integrity.low { color: #ff7777; }
+.suit-integrity.low .mc-stat-icon.fire.full { color: #ff4b4b; }
 
 .mc-bar-row {
   display: flex;
@@ -1006,7 +1006,7 @@
   .mc-stat-icon { width: 12px; height: 12px; }
   .mc-bar-label { min-width: 38px; font-size: 10px; }
   .mc-status-col.left .mc-bar-label { flex-basis: 46px; min-width: 46px; }
-  .suit-thermal { gap: 2px; font-size: 9px; }
+  .suit-integrity { gap: 2px; font-size: 9px; }
   .mc-slot { width: 36px; height: 36px; }
   .mc-slot-icon { width: 25px; height: 25px; }
 }
