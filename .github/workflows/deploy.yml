@@ -15,6 +15,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,11 +32,6 @@ jobs:
         run: npm test
       - name: Check TypeScript
         run: npm run typecheck
-      - name: Link Vercel project
-        run: npx vercel@latest link --yes --project marscraft --scope="$VERCEL_SCOPE" --token="${VERCEL_TOKEN}"
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_SCOPE: ${{ secrets.VERCEL_SCOPE }}
       - name: Pull Vercel environment
         run: npx vercel@latest pull --yes --environment=production --token="${VERCEL_TOKEN}"
         env:
