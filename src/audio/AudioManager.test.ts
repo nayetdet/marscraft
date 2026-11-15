@@ -105,6 +105,20 @@ describe('AudioManager rocket sound', () => {
     expect(decompression.loop).toBe(false);
   });
 
+  it('starts at full volume and scales game sounds with the master volume', () => {
+    const audioInstances = stubAudio();
+    const manager = new AudioManager();
+    const habitatSteps = audioInstances.find((audio) => audio.src.includes('dentro%20da%20nave.wav'));
+
+    expect(manager.masterVolume).toBe(1);
+    expect(habitatSteps.volume).toBeCloseTo(0.45);
+
+    manager.setMasterVolume(0.4);
+    expect(habitatSteps.volume).toBeCloseTo(0.18);
+    manager.playRocket();
+    expect(manager.rocket.volume).toBeCloseTo(0.28);
+  });
+
   it('plays a slow, heavy door sound when the airlock is cranked open by hand (issue #79)', () => {
     const audioInstances = stubAudio();
     const manager = new AudioManager();
