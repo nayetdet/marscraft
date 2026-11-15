@@ -248,16 +248,19 @@
         <div class="joystick-ring"><div id="joystick-thumb" class="joystick-thumb"></div></div>
         <span class="touch-control-caption">MOVE</span>
       </div>
-      <button class="touch-button mobile-sprint-button" type="button" data-touch-action="sprint" aria-label="Toggle sprint" aria-pressed="false">RUN</button>
       <div class="mobile-action-buttons">
         <button class="touch-button" type="button" data-touch-action="jump" aria-label="Jump">JUMP</button>
         <button class="touch-button" type="button" data-touch-action="mine" aria-label="Mine or drill"><span id="touch-mine-label">MINE</span></button>
         <button class="touch-button" type="button" data-touch-action="use" aria-label="Use or place block"><span id="touch-use-label">USE</span></button>
         <button class="touch-button" type="button" data-touch-action="interact" aria-label="Interact">TALK</button>
         <button class="touch-button" type="button" data-touch-action="inventory" aria-label="Open inventory">BAG</button>
-        <button class="touch-button" type="button" data-touch-action="view" aria-label="Toggle third-person view">VIEW</button>
-        <button class="touch-button" type="button" data-touch-action="drop" aria-label="Drop selected item">DROP</button>
-        <button class="touch-button" type="button" data-touch-action="send" aria-label="Send science data to Earth">SEND</button>
+        <button class="touch-button mobile-more-button" type="button" data-touch-action="more" aria-label="More actions" aria-expanded="false" aria-controls="mobile-more-actions">MORE</button>
+        <div id="mobile-more-actions" class="mobile-more-actions" role="group" aria-label="More actions" hidden>
+          <button class="touch-button" type="button" data-touch-action="sprint" aria-label="Toggle sprint" aria-pressed="false">RUN</button>
+          <button class="touch-button" type="button" data-touch-action="view" aria-label="Toggle third-person view">VIEW</button>
+          <button class="touch-button" type="button" data-touch-action="drop" aria-label="Drop selected item">DROP</button>
+          <button class="touch-button" type="button" data-touch-action="send" aria-label="Send science data to Earth">SEND</button>
+        </div>
       </div>
     </div>
 
@@ -488,10 +491,9 @@
             <h3>Touch controls</h3>
             <div class="control-row"><kbd>Left stick</kbd><span>Move and steer</span></div>
             <div class="control-row"><kbd>Drag right</kbd><span>Look around</span></div>
-            <div class="control-row"><kbd>RUN</kbd><span>Toggle sprint</span></div>
             <div class="control-row"><kbd>JUMP · MINE · USE</kbd><span>Act with the selected item</span></div>
-            <div class="control-row"><kbd>TALK · BAG</kbd><span>Interact and open inventory</span></div>
-            <div class="control-row"><kbd>VIEW · DROP · SEND</kbd><span>Camera, item and science actions</span></div>
+            <div class="control-row"><kbd>TALK · BAG</kbd><span>Interact and open your inventory</span></div>
+            <div class="control-row"><kbd>MORE</kbd><span>Run, change camera, drop an item or send science data</span></div>
             <div class="control-row"><kbd>Hotbar</kbd><span>Tap a slot to select it</span></div>
             <div class="control-row"><kbd>II</kbd><span>Pause the mission</span></div>
             <p>In the rover, steer with the stick, look by dragging, tap DRILL, then TALK to leave.</p>

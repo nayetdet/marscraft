@@ -16,7 +16,7 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Next.js, deploy na Ve
 | Consumíveis | `src/config/blockTypes.ts` | Martian Ice (+água) e as colheitas da estufa (alface, batata, soja e cenoura: +comida, +vida), usados com o botão direito |
 | Céu astronômico | `src/sky/*` | Sol, Terra e Lua vistos de Marte, Fobos e Deimos, ciclo dia/noite em "sols", luneta (tecla Z); o tempo passa mais rápido dormindo no beliche do dormitório (issue #109; a tecla T ficou só no painel de admin) |
 | HUD | `src/ui/HudManager.ts`, `public/game.html` | Barras estilo Minecraft, hotbar de 9 slots, inventário (tecla E, 36 slots), toasts, tela de morte e rótulos no céu. **UI em inglês.** |
-| Mobile/touch | `src/player/InputController.ts`, `public/game.html`, `src/ui/styles/` | Jogo em paisagem com joystick, arrasto à direita para olhar, sprint, ações touch, hotbar por toque e pausa. Ações contextuais cobrem rover e luneta; retrato bloqueia a partida e pede para girar o aparelho. |
+| Mobile/touch | `src/player/InputController.ts`, `public/game.html`, `src/ui/styles/` | Jogo em paisagem com joystick, arrasto à direita para olhar, ações principais compactas e menu MORE para ações ocasionais, hotbar por toque e pausa. Ações contextuais cobrem rover e luneta; retrato bloqueia a partida e pede para girar o aparelho. |
 
 ## Mobile como requisito permanente
 
