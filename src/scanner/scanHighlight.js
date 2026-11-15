@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SRGB_AUTHORED_OUTPUT } from '../graphics/srgbOutput.js';
 
 // Efeito de scan estilo LiDAR: o alvo inteiro ganha uma "pele" verde de pontos que enche de
 // baixo para cima conforme o progresso, com uma faixa brilhante subindo. Ao completar, dá um
@@ -49,6 +50,7 @@ const fragmentShader = /* glsl */ `
     color = mix(color, vec3(0.9, 1.0, 0.9), max(band, uFlash * 0.6));
     float alpha = filled * (0.62 + 0.35 * dotMask * flicker) + band * 0.9 + uFlash * 0.3;
     gl_FragColor = vec4(color, clamp(alpha, 0.0, 1.0) * uOpacity);
+${SRGB_AUTHORED_OUTPUT}
   }
 `;
 

@@ -40,6 +40,82 @@ export const CAMERA_CONFIG = {
   REACH_DISTANCE: 6.5,
 };
 
+// Modo "Shaders" (src/graphics/shaderMode/): sombra do Sol em tempo real, lampadas da base com
+// sombra, brilho (bloom), raios de luz e tone mapping (comprime o claro sem mudar as cores). Sao
+// escolhas visuais, nao dados da NASA. Fica desligado em GPU por
+// software e em telas de toque, e se desliga sozinho se o jogo ficar lento.
+export const GRAPHICS_CONFIG = {
+  STORAGE_KEY: 'minemars.shaders',
+  // Sombra do Sol: mapa quadrado que acompanha a camera
+  SHADOW_MAP_SIZE: 2048,
+  // Meio lado (em blocos) da area que recebe sombra
+  SHADOW_EXTENT: 52,
+  // A area de sombra fica adiantada na direcao do olhar (fracao do meio lado)
+  SHADOW_LOOK_AHEAD: 0.45,
+  // Distancia da luz ate o centro da area (so precisa cobrir o relevo inteiro)
+  SHADOW_LIGHT_DISTANCE: 170,
+  // Altura minima da luz (componente y da direcao): evita sombras infinitas no por do sol.
+  // A noite a luz vem espelhada de cima, como um luar fraco.
+  SHADOW_MIN_ELEVATION: 0.2,
+  // O mapa de sombra do Sol e refeito a cada N quadros (a area so anda junto com ele)
+  SUN_SHADOW_FRAMES: 2,
+  // Raio minimo (em blocos) para um objeto fazer sombra. Pecas menores (bracos da tripulacao,
+  // itens das cestas, botoes) custavam centenas de desenhos por quadro e quase nao apareciam.
+  SHADOW_CASTER_MIN_RADIUS: 0.4,
+  SHADOW_BIAS: -0.0004,
+  SHADOW_NORMAL_BIAS: 0.045,
+  // Com sombra de verdade o Sol pode ser mais forte e a luz ambiente mais fraca (mais contraste)
+  SUN_SCALE_DAY: 2.3,
+  SUN_SCALE_NIGHT: 0.6,
+  AMBIENT_SCALE: 0.5,
+  HEMISPHERE_SCALE: 0.7,
+  // Lampadas da base (luz primaria dos interiores): sem o Sol atravessando o teto, elas e que
+  // iluminam os comodos. Fazem sombra propria (moveis, tripulacao) e a luz sai pelas janelas.
+  // DECAY menor que o fisico (2) espalha a luz ate os cantos do comodo.
+  ROOM_LIGHT_SCALE: 3.8,
+  ROOM_LIGHT_DECAY: 1.15,
+  // Alcance maximo de cada lampada com o modo ligado. Cada pixel dentro do alcance paga a conta
+  // da sombra daquela lampada, entao alcance curto (so o comodo) e o que mais alivia a GPU.
+  ROOM_LIGHT_MAX_DISTANCE: 20,
+  ROOM_SHADOW_MAP_SIZE: 512,
+  ROOM_SHADOW_BIAS: -0.003,
+  ROOM_SHADOW_NORMAL_BIAS: 0.03,
+  // Longe de todas as lampadas (a mais de RANGE vezes o alcance da mais proxima), nenhuma sombra
+  // de lampada e refeita
+  ROOM_SHADOW_RANGE: 2,
+  // Dentro da base a luz ambiente cai (as lampadas e o Sol das janelas passam a mandar)
+  INDOOR_AMBIENT_SCALE: 0.5,
+  INDOOR_BLEND_SPEED: 1.8,
+  // Blocos que brilham (luminaria, farol): mais fortes, para passarem do limiar do bloom
+  EMISSIVE_SCALE: 2.4,
+  // Disco do Sol em HDR: precisa ser mais claro que o ceu em volta para o bloom pegar nele
+  SUN_DISC_BOOST: 5,
+  // Exposicao da "camera": abre dentro da base e a noite, fecha no Sol (por segundo, suavizado)
+  EXPOSURE_OUTSIDE: 0.95,
+  EXPOSURE_INSIDE: 1.3,
+  EXPOSURE_NIGHT_BOOST: 1.45,
+  EXPOSURE_SPEED: 1.6,
+  // Acabamento da imagem ja pronta: cor um pouco mais viva, mais contraste e cantos escurecidos
+  GRADE_SATURATION: 1.14,
+  GRADE_CONTRAST: 1.08,
+  GRADE_VIGNETTE: 0.22,
+  BLOOM_STRENGTH: 0.32,
+  BLOOM_RADIUS: 0.55,
+  BLOOM_THRESHOLD: 0.92,
+  // Raios de luz: amostras por pixel (em meia resolucao), alcance, queda e forca
+  GODRAYS_SAMPLES: 40,
+  GODRAYS_DENSITY: 0.92,
+  GODRAYS_DECAY: 0.955,
+  GODRAYS_STRENGTH: 0.3,
+  // Distancia (em blocos) a partir da qual um pixel conta como ceu aberto
+  GODRAYS_SKY_DISTANCE: 300,
+  // Protecao de desempenho (so no modo automatico): media abaixo de MIN_FPS por
+  // GUARD_SECONDS desliga os shaders. Os primeiros segundos sao ignorados (compilacao).
+  GUARD_MIN_FPS: 26,
+  GUARD_SECONDS: 6,
+  GUARD_WARMUP_SECONDS: 4,
+};
+
 export const INPUT_CONFIG = {
   MOUSE_SENSITIVITY: 0.0021, // radianos por pixel
   ZOOM_SENSITIVITY: 0.00055, // mais fina com a luneta (Z)

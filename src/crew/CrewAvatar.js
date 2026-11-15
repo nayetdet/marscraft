@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { pointAlong } from './crewRails.js';
+import { CrewInstances } from './crewInstances.js';
 
 const FLOOR_Y = 10; // topo do piso da base (nasaModelsBuilder: floorTopY)
 const HALF_PI = Math.PI / 2;
@@ -183,12 +184,24 @@ export class CrewAvatar {
       map: createChestDcmTexture(),
     });
 
+    // Caixas de cor lisa e as lampadas do traje nao sao Mesh: sao nos vazios (a escala guarda o
+    // tamanho da caixa) desenhados todos juntos por CrewInstances. So as pecas com textura ou com
+    // cor que muda por tripulante (visor, painel do peito, luz de estado) continuam Mesh.
+    const instanced = new Set([this.suitMat, accent, darkJoint, charcoal, silver, lampMat]);
+    const parts = [];
     const addPart = (parent, w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-      mesh.position.set(x, y, z);
-      if (rx || ry || rz) mesh.rotation.set(rx, ry, rz);
-      parent.add(mesh);
-      return mesh;
+      let part;
+      if (instanced.has(mat)) {
+        part = new THREE.Object3D();
+        part.scale.set(w, h, d);
+        parts.push({ node: part, material: mat, lamp: mat === lampMat });
+      } else {
+        part = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      }
+      part.position.set(x, y, z);
+      if (rx || ry || rz) part.rotation.set(rx, ry, rz);
+      parent.add(part);
+      return part;
     };
 
     // Pernas articuladas no quadril (y = 0.72) e no joelho (y = -0.32 relativo ao quadril)
@@ -296,7 +309,23 @@ export class CrewAvatar {
     this.label.position.y = 2.08;
     this.group.add(this.label);
 
+    // Sombra do modo Shaders: uma caixa do tamanho do corpo faz a sombra no lugar das dezenas de
+    // pecas do traje. Nao aparece na imagem (so escreve no mapa de sombra) e fica desligada
+    // enquanto o modo Shaders estiver desligado (ShaderMode cuida disso).
+    const shadowProxy = new THREE.Mesh(
+      new THREE.BoxGeometry(0.62, 1.78, 0.44),
+      new THREE.MeshLambertMaterial({ colorWrite: false, depthWrite: false })
+    );
+    shadowProxy.position.y = 0.92;
+    shadowProxy.visible = false;
+    shadowProxy.userData.shadowProxy = true;
+    this.group.userData.hasShadowProxy = true;
+    this.group.add(shadowProxy);
+
     scene.add(this.group);
+    this._instances = CrewInstances.for(scene);
+    this._suit = { group: this.group, parts };
+    this._instances.add(this._suit);
     this._time = (member.id * 1.37) % 10;
     this._walkPhase = (member.id * 1.9) % (Math.PI * 2);
     this._tempo = 0.94 + (member.id % 3) * 0.05;
@@ -495,6 +524,7 @@ export class CrewAvatar {
   }
 
   dispose() {
+    this._instances.remove(this._suit);
     this.group.removeFromParent();
     const materials = new Set();
     this.group.traverse((obj) => {

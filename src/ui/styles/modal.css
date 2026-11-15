@@ -812,11 +812,11 @@ body.pause-menu-open .crew-picker { display: none; }
 .demo-feedback { min-height: 34px; margin-top: 10px; color: #ffffa0; }
 .controls-screen.info-screen > .mc-btn { margin-top: 10px; }
 
-/* Celular em paisagem: Controls e Reset dividem uma linha, para o menu nao crescer */
+/* Celular em paisagem: botoes mais baixos; Controls e Shaders dividem uma linha e Quit (so na pausa) ocupa a sua */
 @media (max-height: 460px) {
   #menu-main { display: grid; grid-template-columns: 1fr 1fr; }
   #menu-main.hidden { display: none; }
-  #menu-main > #start-btn, #menu-main > .menu-row { grid-column: 1 / -1; }
+  #menu-main > #start-btn, #menu-main > #reset-btn, #menu-main > .menu-row { grid-column: 1 / -1; }
   .mc-menu-card .mc-btn { min-height: 44px; padding: 8px 10px; }
   .controls-screen.info-screen { max-height: calc(100dvh - 48px); }
 }

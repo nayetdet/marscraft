@@ -119,6 +119,8 @@ function createSunMaterial() {
   return new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
+      // Brilho extra do disco no modo Shaders (HDR, para o bloom); 1 = visual normal
+      uBoost: { value: 1 },
     },
     vertexShader: /* glsl */ `
       varying vec3 vNormalDir;
@@ -135,6 +137,7 @@ function createSunMaterial() {
     `,
     fragmentShader: /* glsl */ `
       uniform float uTime;
+      uniform float uBoost;
       varying vec3 vNormalDir;
       varying vec3 vViewNormal;
       varying vec3 vViewDir;
@@ -160,7 +163,7 @@ function createSunMaterial() {
         col = mix(col, coreWhite, smoothstep(0.32, 0.95, ndotv));
         col += vec3(0.08, 0.04, 0.0) * plasma * (1.0 - ndotv * 0.4);
 
-        gl_FragColor = vec4(col * 1.15, 1.0);
+        gl_FragColor = vec4(col * 1.15 * uBoost, 1.0);
         #include <colorspace_fragment>
       }
     `,

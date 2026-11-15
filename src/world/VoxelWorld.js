@@ -515,6 +515,10 @@ export class VoxelWorld {
 
     chunk.opaqueMesh = this._swapChunkMesh(chunk.opaqueMesh, opaque.toGeometry(), this.atlas.material);
     chunk.glassMesh = this._swapChunkMesh(chunk.glassMesh, glass.toGeometry(), this.materials[GLASS]);
+    // Sombra do Sol (modo Shaders): os blocos fazem e recebem sombra; o vidro so recebe, entao
+    // a luz entra pelas janelas. Sem uma luz com castShadow, as marcas nao tem efeito.
+    if (chunk.opaqueMesh) chunk.opaqueMesh.castShadow = chunk.opaqueMesh.receiveShadow = true;
+    if (chunk.glassMesh) chunk.glassMesh.receiveShadow = true;
   }
 
   _swapChunkMesh(mesh, geometry, material) {
