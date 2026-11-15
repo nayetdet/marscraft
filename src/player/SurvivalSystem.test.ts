@@ -107,8 +107,8 @@ describe('SurvivalSystem', () => {
   it('starts with the equipment before the carrots', () => {
     const survival = new SurvivalSystem();
     expect(survival.slots[0]?.id).toBe(BLOCK_IDS.SCOPE);
-    expect(survival.slots[1]).toMatchObject({ id: BLOCK_IDS.SHIELD_REMOTE, count: 1, equipment: true });
-    expect(survival.slots[2]?.id).toBe(BLOCK_IDS.JOURNAL);
+    expect(survival.slots[1]).toMatchObject({ id: BLOCK_IDS.JOURNAL, count: 1, equipment: true });
+    expect(survival.slots[2]).toMatchObject({ id: BLOCK_IDS.SHIELD_REMOTE, count: 1, equipment: true });
     expect(survival.slots[3]?.id).toBe(BLOCK_IDS.HYDRO_PLANT);
   });
 

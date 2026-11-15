@@ -270,7 +270,7 @@ export class ScannerHud {
     }
 
     if (!entry) {
-      this._setText(this.statusEl, 'status', 'Aim at an object and hold steady · scroll to zoom');
+      this._setText(this.statusEl, 'status', 'Aim at an object · hold left click to scan');
       this._setText(this.nameEl, 'name', '');
       return;
     }
