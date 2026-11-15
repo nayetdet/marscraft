@@ -16,6 +16,7 @@ const STAT_ICON_PATHS = {
   water: '<path d="M3 0h2v1h1v1h1v1h1v3H7v1H6v1H2V7H1V6H0V3h1V2h1V1h1Z"/>',
   energy: '<path d="M4 0h3v1H6v2h2v1H7v1H6v1H5v1H4v1H3V6h1V5H1V4h1V3h1V2h1Z"/>',
   food: '<path d="M1 0h3v1h1v1h1v2H5v2H4v1H2V5H1V3H0V1h1Z M6 5h2v3H6Z"/>',
+  fire: '<path fill-rule="evenodd" d="M4 0h1v2h1v1h1v2h1v2H6v1H2V7H0V5h1V3h1V1h1v3h1V2h1Z M4 5H3v2h2V6H4Z"/>',
   radiation: '<rect x="1" y="0" width="2" height="1"/><rect x="5" y="0" width="2" height="1"/><rect x="0" y="1" width="3" height="2"/><rect x="5" y="1" width="3" height="2"/><rect x="3" y="3" width="2" height="2"/><rect x="2" y="5" width="4" height="1"/><rect x="1" y="6" width="6" height="1"/><rect x="2" y="7" width="4" height="1"/>',
 };
 
@@ -72,6 +73,7 @@ export class HudManager {
     this.healthBarEl = document.getElementById('health-bar');
     this.radiationBarEl = document.getElementById('radiation-bar');
     this.oxygenBarEl = document.getElementById('oxygen-bar');
+    this.suitThermalRowEl = document.getElementById('suit-thermal-row');
     this.suitThermalEl = document.getElementById('suit-thermal');
     this.waterBarEl = document.getElementById('water-bar');
     this.foodBarEl = document.getElementById('food-bar');
@@ -83,6 +85,7 @@ export class HudManager {
       this._createIconBar(this.foodBarEl, 'food'),
     ];
     this.radiationDoseBar = this._createIconBar(this.radiationBarEl, 'radiation');
+    this.suitThermalBar = this._createIconBar(document.getElementById('suit-thermal-icons'), 'fire');
     this.airlockEl = document.getElementById('airlock-progress');
     this.airlockTitleEl = this.airlockEl.querySelector('.airlock-progress-title');
     this.airlockFillEl = this.airlockEl.querySelector('.airlock-progress-track i');
@@ -483,10 +486,10 @@ export class HudManager {
   }
 
   // Cria os 10 icones (SVG) uma unica vez; depois so troca a classe dos que mudaram
-  _createIconBar(container, type) {
+  _createIconBar(container, type, count = ICONS_PER_BAR) {
     container.innerHTML = '';
     const icons = [];
-    for (let i = 0; i < ICONS_PER_BAR; i++) {
+    for (let i = 0; i < count; i++) {
       const span = document.createElement('span');
       span.className = `mc-stat-icon ${type} empty`;
       span.setAttribute('aria-hidden', 'true');
@@ -498,8 +501,8 @@ export class HudManager {
   }
 
   _updateIconBar(bar, currentVal) {
-    // 10 icones (cada icone = 2 pontos de 20)
-    for (let i = 0; i < ICONS_PER_BAR; i++) {
+    // Cada icone representa 2 pontos; barras menores usam a mesma escala.
+    for (let i = 0; i < bar.icons.length; i++) {
       const thresholdFull = (i + 1) * 2;
       const thresholdHalf = i * 2 + 1;
       let state = 'empty';
@@ -767,11 +770,23 @@ export class HudManager {
     this._updateIconBar(healthBar, survival.health);
     this._updateRadiationDoseBar(mission);
     this._updateIconBar(oxygenBar, survival.oxygen);
-    const thermalText = survival.suitEquipped
-      ? `SUIT HEAT ${Math.ceil(survival.suitThermal)}%`
-      : 'NO EVA SUIT (DOCKED)';
-    if (this.suitThermalEl.textContent !== thermalText) this.suitThermalEl.textContent = thermalText;
-    this.suitThermalEl.classList.toggle('low', survival.suitEquipped && survival.suitThermal <= 25);
+    const suitEquipped = Boolean(survival.suitEquipped);
+    const thermalPct = Math.max(0, Math.min(100, Math.ceil(survival.suitThermal ?? 100)));
+    this.suitThermalRowEl.hidden = !suitEquipped;
+    this._updateIconBar(this.suitThermalBar, suitEquipped ? thermalPct / 5 : 0);
+    this.suitThermalEl.title = suitEquipped ? `Suit heat: ${thermalPct}%` : 'EVA suit docked';
+    this.suitThermalEl.classList.toggle('low', suitEquipped && thermalPct <= 25);
+    if (suitEquipped) {
+      this.suitThermalEl.setAttribute('role', 'meter');
+      this.suitThermalEl.setAttribute('aria-valuenow', String(thermalPct));
+      this.suitThermalEl.setAttribute('aria-valuetext', `${thermalPct}% suit heat`);
+      this.suitThermalEl.setAttribute('aria-label', 'Suit heat');
+    } else {
+      this.suitThermalEl.setAttribute('role', 'status');
+      this.suitThermalEl.setAttribute('aria-label', 'EVA suit docked');
+      this.suitThermalEl.removeAttribute('aria-valuenow');
+      this.suitThermalEl.removeAttribute('aria-valuetext');
+    }
     this._updateIconBar(waterBar, survival.water);
     this._updateIconBar(foodBar, survival.food);
     this._updateAirlock(airlock);

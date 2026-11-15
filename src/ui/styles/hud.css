@@ -678,15 +678,27 @@
   gap: 4px;
 }
 
-.suit-thermal { font-size: 12px; color: #e0e0e0; text-shadow: 1px 1px #000; }
+.suit-thermal {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #e0e0e0;
+  font-size: 10px;
+  line-height: 1;
+  text-shadow: 1px 1px #000;
+  white-space: nowrap;
+}
+.suit-thermal .mc-stat-icon.fire.full { color: #ff9b32; }
 .suit-thermal.low { color: #ff7777; }
-.touch-mode .suit-thermal { font-size: 9px; }
+.suit-thermal.low .mc-stat-icon.fire.full { color: #ff4b4b; }
 
 .mc-bar-row {
   display: flex;
   align-items: center;
   gap: 6px;
 }
+
+.mc-bar-row[hidden] { display: none; }
 
 .mc-bar-row.right-align {
   justify-content: flex-end;
@@ -994,6 +1006,7 @@
   .mc-stat-icon { width: 12px; height: 12px; }
   .mc-bar-label { min-width: 38px; font-size: 10px; }
   .mc-status-col.left .mc-bar-label { flex-basis: 46px; min-width: 46px; }
+  .suit-thermal { gap: 2px; font-size: 9px; }
   .mc-slot { width: 36px; height: 36px; }
   .mc-slot-icon { width: 25px; height: 25px; }
 }
