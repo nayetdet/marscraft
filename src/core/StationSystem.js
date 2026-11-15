@@ -128,6 +128,7 @@ export class StationSystem {
   exercise(mode = 'treadmill') {
     if (!this.mission.spend(C.EXERCISE_COST)) return 'Not enough power.';
     this.workoutCount++;
+    this.lastWorkoutMode = mode; // diario de bordo: esteira revela estudo de osso, bike de musculo
     if (mode === 'bike') {
       this.muscleStrength = Math.min(100, this.muscleStrength + 48);
       this.boneDensity = Math.min(100, this.boneDensity + 26);
@@ -142,6 +143,7 @@ export class StationSystem {
   treat(survival) {
     if (!this.mission.spend(C.TREATMENT_COST)) return 'Not enough power.';
     survival.health = Math.min(survival.maxStat, survival.health + 5);
+    this.treatmentCount = (this.treatmentCount ?? 0) + 1; // diario de bordo (issue #106)
     return 'Treatment restored health. Radiation dose cannot be erased.';
   }
   // Pergunta ao Controle da Missao. `delaySeconds` = ida e volta da luz (CommsLink);

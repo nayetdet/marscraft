@@ -1,3 +1,5 @@
+import { marsSurfaceMedian } from '../data/radlabSummary.js';
+
 export const WORLD_CONFIG = {
   SIZE_X: 224,
   SIZE_Y: 48,
@@ -183,8 +185,9 @@ export const ENERGY_CONFIG = {
 };
 
 export const RADIATION_CONFIG = {
-  // [API, RadLab] Curiosity MSL-RAD, Cratera Gale: mediana 6,93 uGy/h (16/11-10/12/2022)
-  MARS_SURFACE_DOSE_UGY_PER_HOUR: 6.93,
+  // [API, RadLab] Curiosity MSL-RAD, Cratera Gale: mediana ~6,93 uGy/h (16/11-10/12/2022), lida de
+  // src/data/radlabSummary.json (scripts/fetch-radlab-summary.mjs, issue #106)
+  MARS_SURFACE_DOSE_UGY_PER_HOUR: marsSurfaceMedian(),
   // [Ref] Fator de qualidade medio na superficie de Marte ~3,05 (0,21 mGy/dia -> 0,64 mSv/dia),
   // Hassler et al., Science 343 (2014), dados do MSL-RAD
   QUALITY_FACTOR: 3.05,
@@ -571,4 +574,14 @@ export const SCIENCE_CONFIG = {
   // verdade pesa: regra de jogo, para a escolha "levar mais ciencia x buscar mais gelo" aparecer.
   ICE_PER_SAMPLE_TUBE: 1,
   MAX_SAMPLE_TUBES: 4,
+};
+
+// Diario de bordo por sol (issue #106). Escala de jogo, so de interface.
+export const MISSION_LOG_CONFIG = {
+  MAX_ENTRIES: 200, // linhas guardadas na partida (as mais antigas saem)
+  // Cliques seguidos na mesma decisao (encher a parede do abrigo de 10 em 10 L) dentro deste
+  // intervalo, em horas de jogo, viram uma linha so
+  MERGE_HOURS: 1,
+  SUMMARY_CARD_MS: 9000, // resumo do fim do sol na tela
+  STUDY_CARD_MS: 7000, // estudo real da NASA revelado
 };

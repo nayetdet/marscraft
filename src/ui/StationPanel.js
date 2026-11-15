@@ -17,6 +17,8 @@ import { OXYGEN_SOURCES, oxygenPlantButtons, oxygenPlantText } from '../mission/
 import { INSIGHT_MONTH, WEATHER_RANGE, formatTempC } from '../data/marsWeather.js';
 import { solarReason } from '../mission/weatherText.js';
 import { tauSolarFactor } from '../mission/dustWeather.js';
+import { radlabChartHtml } from './missionJournalView.js';
+import { getStudy } from '../data/osdrStudies.js';
 
 const DATA_SOURCES = {
   donki: 'https://ccmc.gsfc.nasa.gov/tools/DONKI/',
@@ -1134,6 +1136,7 @@ export class StationPanel {
         : this.type === 'science' && this.engine.spaceWeather?.bulletin
           ? [['NASA DONKI: read the full space weather bulletin', this.engine.spaceWeather.bulletin.url]]
         : this.type === 'greenhouse' ? [['CSA: food production', 'https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/'], ...plantResearch.studies.map(study => [study.id + ': NASA study', study.url])] : [];
+    this._renderMedbayResearch(links);
     this.sources.replaceChildren(...links.map(([label, url]) => {
       const link = document.createElement('a');
       link.textContent = label;
@@ -1153,5 +1156,23 @@ export class StationPanel {
       }
       return button;
     }));
+  }
+
+  // Enfermaria (issue #106): grafico de 4 barras do RadLab e links dos estudos reais ja revelados
+  _renderMedbayResearch(links) {
+    const show = this.type === 'medical';
+    if (!this._radlabEl && show) {
+      this._radlabEl = document.createElement('div');
+      this._radlabEl.className = 'station-radlab';
+      this._radlabEl.innerHTML = radlabChartHtml();
+      this.content.after(this._radlabEl);
+    }
+    if (this._radlabEl) this._radlabEl.style.display = show ? '' : 'none';
+    if (!show) return;
+    links.push(['NASA RadLab: radiation data', DATA_SOURCES.radlab]);
+    for (const id of this.studyReveals?.revealed ?? []) {
+      const study = getStudy(id);
+      if (study && (study.topic === 'radiation' || study.topic === 'immune')) links.push([`${study.id}: NASA study`, study.url]);
+    }
   }
 }

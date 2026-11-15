@@ -1,0 +1,161 @@
+{
+  "source": "NASA Open Science Data Repository (OSDR)",
+  "retrieved": "2026-11-15T01:49:13.365Z",
+  "topics": {
+    "bone": {
+      "term": "bone loss",
+      "query": "https://osdr.nasa.gov/osdr/data/search?term=bone%20loss&type=cgene&size=3",
+      "total": 36,
+      "studies": [
+        {
+          "id": "OSD-342",
+          "title": "Targeting myostatin/activin A protects against skeletal muscle and bone loss during spaceflight [plasma proteomics]",
+          "organism": "Mus musculus",
+          "flightProgram": "International Space Station (ISS)",
+          "mission": "SpaceX-19",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-342"
+        },
+        {
+          "id": "OSD-18",
+          "title": "Microarray Profile of Gene Expression during Osteoclast Differentiation in Modeled Microgravity",
+          "organism": "Mus musculus",
+          "flightProgram": "",
+          "mission": "",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-18"
+        },
+        {
+          "id": "OSD-417",
+          "title": "Specific Host Metabolite and Gut Microbiome Alterations Are Associated with Bone-loss During Spaceflight",
+          "organism": "Mus musculus Microbiota",
+          "flightProgram": "International Space Station (ISS)",
+          "mission": "SpaceX-11",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-417"
+        }
+      ]
+    },
+    "muscle": {
+      "term": "muscle atrophy",
+      "query": "https://osdr.nasa.gov/osdr/data/search?term=muscle%20atrophy&type=cgene&size=3",
+      "total": 45,
+      "studies": [
+        {
+          "id": "OSD-225",
+          "title": "Expression profiling of soleus muscle under the effect of simulated spaceflight",
+          "organism": "Rattus norvegicus",
+          "flightProgram": "",
+          "mission": "",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-225"
+        },
+        {
+          "id": "OSD-319",
+          "title": "Muscle atrophy, osteoporosis prevention in hibernating mammals",
+          "organism": "Urocitellus parryii",
+          "flightProgram": "",
+          "mission": "",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-319"
+        },
+        {
+          "id": "OSD-949",
+          "title": "Skeletal muscle-specific inducible AMPKa1/a2 knockout mice develop muscle weakness, glycogen depletion, and fibrosis that persists during disuse atrophy.",
+          "organism": "Mus musculus",
+          "flightProgram": "",
+          "mission": "",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-949"
+        }
+      ]
+    },
+    "radiation": {
+      "term": "radiation",
+      "query": "https://osdr.nasa.gov/osdr/data/search?term=radiation&type=cgene&size=3",
+      "total": 232,
+      "studies": [
+        {
+          "id": "OSD-73",
+          "title": "Transcriptome Profiles in Normal Human Bronchial Epithelial Cells after Exposure to gamma-rays and different HZE particles",
+          "organism": "Homo sapiens",
+          "flightProgram": "",
+          "mission": "",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-73"
+        },
+        {
+          "id": "OSD-158",
+          "title": "Exposure to ionizing radiation induced persistent gene expression changes in mouse mammary gland",
+          "organism": "Mus musculus",
+          "flightProgram": "",
+          "mission": "",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-158"
+        },
+        {
+          "id": "OSD-275",
+          "title": "Global DNA methylation profiling of radiation-induced rat mammary carcinomas",
+          "organism": "Rattus norvegicus",
+          "flightProgram": "",
+          "mission": "",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-275"
+        }
+      ]
+    },
+    "sleep": {
+      "term": "sleep",
+      "query": "https://osdr.nasa.gov/osdr/data/search?term=sleep&type=cgene&size=3",
+      "total": 3,
+      "studies": [
+        {
+          "id": "OSD-195",
+          "title": "Effects of 21 days of bedrest on human skeletal muscle gene expression",
+          "organism": "Homo sapiens",
+          "flightProgram": "",
+          "mission": "",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-195"
+        },
+        {
+          "id": "OSD-32",
+          "title": "Effect of microgravity on brain gene expression in mice",
+          "organism": "Mus musculus",
+          "flightProgram": "",
+          "mission": "",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-32"
+        },
+        {
+          "id": "OSD-253",
+          "title": "Transcriptional analysis of kidneys from mice flown on the RR-7 mission",
+          "organism": "Mus musculus",
+          "flightProgram": "International Space Station (ISS)",
+          "mission": "SpaceX-15",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-253"
+        }
+      ]
+    },
+    "immune": {
+      "term": "immune",
+      "query": "https://osdr.nasa.gov/osdr/data/search?term=immune&type=cgene&size=3",
+      "total": 74,
+      "studies": [
+        {
+          "id": "OSD-130",
+          "title": "RAD51 Interconnects Between DNA Replication, DNA Repair and Immunity",
+          "organism": "Homo sapiens",
+          "flightProgram": "",
+          "mission": "",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-130"
+        },
+        {
+          "id": "OSD-54",
+          "title": "Immune responses to the in vitro LPS assault engineered in the spaceflight multi-omics study",
+          "organism": "Homo sapiens",
+          "flightProgram": "Space Transportation System (STS)",
+          "mission": "STS-135",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-54"
+        },
+        {
+          "id": "OSD-278",
+          "title": "Spaceflight and simulated microgravity conditions increase virulence of Serratia marcescens in the Drosophila melanogaster infection model",
+          "organism": "Drosophila melanogaster",
+          "flightProgram": "International Space Station (ISS)",
+          "mission": "SpaceX-5",
+          "url": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-278"
+        }
+      ]
+    }
+  }
+}

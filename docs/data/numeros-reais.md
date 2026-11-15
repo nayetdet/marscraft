@@ -8,6 +8,8 @@ Este arquivo existe para **não inventar números**, o que o próprio desafio pe
 
 Arquivo: [`samples/radlab-dose-rate-summary.json`](samples/radlab-dose-rate-summary.json). Unidade provável: **µGy/h** (ver a nota em `apis-nasa.md`).
 
+No jogo, as mesmas consultas são refeitas por `node scripts/fetch-radlab-summary.mjs` e gravadas em `src/data/radlabSummary.json` (coleta de 15/11/2026 UTC, medianas idênticas às da tabela). A dose normal do jogo (`RADIATION_CONFIG.MARS_SURFACE_DOSE_UGY_PER_HOUR`) lê a mediana do Curiosity desse JSON, e o gráfico de 4 barras do diário e da enfermaria usa as proporções abaixo (issue #106).
+
 | Local | Instrumento | Janela | Mediana | Média | Máx. | Leitura para o jogo |
 |---|---|---|---|---|---|---|
 | **Superfície de Marte** (Cratera Gale) | Curiosity MSL-RAD | 16/11–10/12/2022 | **6,93** | 6,96 | 9,86 | Estável. A atmosfera fina protege um pouco. |
@@ -217,6 +219,8 @@ O tripulante no gerador de O2 avisa quando o modo está gastando o recurso que e
 Com a razão real a água do ar é pouca perto da que se bebe: ~0,14 L por recarga completa do traje do jogador e ~1,9 L por sol para 2 tripulantes. O peso da escolha aparece quando o tanque está baixo (a água também vai para beber, para as plantas e para a parede do abrigo) ou à noite, quando cada ponto de bateria conta.
 
 ## Calibração atual do jogo vs. realidade
+
+A aba **REAL VS GAME** do diário [J] (`src/data/realVsGame.js`, issue #106) mostra para a criança onde o jogo muda a realidade: gravidade, duração do sol, airlock, bateria, tempestade, parede do abrigo, plantas, rádio e conjunção. Os valores do jogo vêm de `constants.js`; os reais, das tabelas deste arquivo.
 
 | Parâmetro no código | Valor atual | Real | Comentário |
 |---|---|---|---|
