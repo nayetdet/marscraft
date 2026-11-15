@@ -38,6 +38,7 @@ import { ShaderMode } from '../graphics/shaderMode/ShaderMode.ts';
 import { RoverController } from '../rover/RoverController.ts';
 import { GymEquipmentController } from '../player/GymEquipmentController.ts';
 import { ExpeditionState } from './ExpeditionState.ts';
+import { isGameSimulationRunning } from './gameSimulation.ts';
 import { Airlock } from '../world/Airlock.ts';
 import { StationSystem } from './StationSystem.ts';
 import { StationPanel } from '../ui/StationPanel.ts';
@@ -1098,9 +1099,9 @@ export class GameEngine {
     };
   }
 
-  _updateMission(dt) {
+  _updateMission(dt, isGameRunning = this.input.isLocked) {
     // Com o painel do MAV aberto o jogador continua la fora: a radiacao conta
-    const playing = this.input.isLocked || this.missionHud.isMavPanelOpen;
+    const playing = isGameRunning || this.missionHud.isMavPanelOpen;
     const active = playing && !this.survival.isDead && !this.missionHud.isVictoryShown
       && !this.cutscenes.isActive && !this.storyHud.isWindowClosedShown;
     const damage = this.mission.update(this._skyHours(), {
@@ -2071,17 +2072,19 @@ export class GameEngine {
       if (!this._arrivalPlayed && this.input.isLocked && !this.input.isPortraitRequired) this._playArrival();
       const cutsceneActive = this.cutscenes.isActive;
 
-      const isGameRunning = this.input.isLocked
-        && !this.input.isPortraitRequired
-        && !this.survival.isDead
-        && !this.hud.isInventoryOpen
-        && !this.scannerHud.isJournalOpen
-        && !this.stationPanel.isOpen
-        && !this.missionHud.isVictoryShown
-        && !cutsceneActive
-        && !this.storyHud.isWindowClosedShown
-        && !this.sleep.isPanelOpen
-        && !this.sleep.isSleeping;
+      const isGameRunning = isGameSimulationRunning({
+        inputLocked: this.input.isLocked,
+        portraitRequired: this.input.isPortraitRequired,
+        isDead: this.survival.isDead,
+        inventoryOpen: this.hud.isInventoryOpen,
+        journalOpen: this.scannerHud.isJournalOpen,
+        stationOpen: this.stationPanel.isOpen,
+        victoryShown: this.missionHud.isVictoryShown,
+        cutsceneActive,
+        storyWindowClosedShown: this.storyHud.isWindowClosedShown,
+        sleepPanelOpen: this.sleep.isPanelOpen,
+        sleeping: this.sleep.isSleeping,
+      });
       if (this._wasGameRunning && !isGameRunning) this.player.stopJumpMomentum();
       this._wasGameRunning = isGameRunning;
       if (isGameRunning) {
@@ -2182,7 +2185,7 @@ export class GameEngine {
         dirtySuit: this.stations.dirtySuit,
       });
       if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
-      this._updateMission(dt);
+      this._updateMission(dt, isGameRunning);
       this._updateCrew(dt);
       this._updateBaseDisplays(dt);
       if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
