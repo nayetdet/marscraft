@@ -9,10 +9,12 @@ function makeElement() {
   return {
     value: '',
     textContent: '',
-    classList: { add: vi.fn(), remove: vi.fn() },
+    tabIndex: -1,
+    classList: { add: vi.fn(), remove: vi.fn(), toggle: vi.fn() },
     closest: vi.fn(() => card),
     addEventListener: vi.fn((type, handler) => listeners.set(type, handler)),
     setAttribute: vi.fn(),
+    focus: vi.fn(),
     fire(type, event = {}) { listeners.get(type)?.(event); },
   };
 }
@@ -23,7 +25,7 @@ function makeDocument() {
     'sources-screen', 'sources-btn', 'sources-back-btn',
     'credits-screen', 'credits-btn', 'credits-back-btn',
     'options-screen', 'options-btn', 'options-back-btn',
-    'language-select',
+    'language-en', 'language-pt-BR', 'language-es',
     'demo-screen', 'demo-btn', 'demo-back-btn',
     'shaders-btn', 'volume-slider', 'volume-value',
   ];
@@ -67,7 +69,7 @@ describe('MenuScreens volume controls', () => {
 describe('MenuScreens language control', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('selects the saved language and applies valid language changes', () => {
+  it('shows one selected radio and changes language on touch or click', () => {
     const { document, elements } = makeDocument();
     vi.stubGlobal('document', document);
     const onLanguageChange = vi.fn();
@@ -77,15 +79,50 @@ describe('MenuScreens language control', () => {
       onLanguageChange,
     });
 
-    const select = elements.get('language-select');
-    expect(select.value).toBe('en');
-    select.value = 'es';
-    select.fire('change');
-    expect(onLanguageChange).toHaveBeenCalledWith('es');
+    const english = elements.get('language-en');
+    const portuguese = elements.get('language-pt-BR');
+    const spanish = elements.get('language-es');
+    expect(english.tabIndex).toBe(0);
+    expect(english.setAttribute).toHaveBeenCalledWith('aria-checked', 'true');
+    expect(portuguese.tabIndex).toBe(-1);
 
-    select.value = 'fr';
-    select.fire('change');
-    expect(onLanguageChange).toHaveBeenCalledOnce();
+    portuguese.fire('click');
+    expect(portuguese.tabIndex).toBe(0);
+    expect(portuguese.setAttribute).toHaveBeenLastCalledWith('aria-checked', 'true');
+    expect(english.setAttribute).toHaveBeenLastCalledWith('aria-checked', 'false');
+    expect(onLanguageChange).toHaveBeenCalledWith('pt-BR');
+
+    spanish.fire('click');
+    expect(spanish.tabIndex).toBe(0);
+    expect(onLanguageChange).toHaveBeenLastCalledWith('es');
+  });
+
+  it('supports arrow keys and Home/End in the radio group', () => {
+    const { document, elements } = makeDocument();
+    vi.stubGlobal('document', document);
+    const onLanguageChange = vi.fn();
+    new MenuScreens({ donkiDate: '15/11/2026', onDemo: vi.fn(), onLanguageChange });
+
+    const english = elements.get('language-en');
+    const portuguese = elements.get('language-pt-BR');
+    const spanish = elements.get('language-es');
+    const right = { key: 'ArrowRight', preventDefault: vi.fn() };
+    english.fire('keydown', right);
+    expect(right.preventDefault).toHaveBeenCalledOnce();
+    expect(portuguese.focus).toHaveBeenCalledOnce();
+    expect(onLanguageChange).toHaveBeenLastCalledWith('pt-BR');
+
+    const end = { key: 'End', preventDefault: vi.fn() };
+    portuguese.fire('keydown', end);
+    expect(spanish.focus).toHaveBeenCalledOnce();
+    expect(spanish.tabIndex).toBe(0);
+    expect(onLanguageChange).toHaveBeenLastCalledWith('es');
+
+    const home = { key: 'Home', preventDefault: vi.fn() };
+    spanish.fire('keydown', home);
+    expect(english.focus).toHaveBeenCalledOnce();
+    expect(english.tabIndex).toBe(0);
+    expect(onLanguageChange).toHaveBeenLastCalledWith('en');
   });
 });
 
