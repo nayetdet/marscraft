@@ -5,6 +5,7 @@ import { CARDS, commsCard, earthFarewell, replyCard } from './storyChapters.ts';
 import { nextRocketJob, objectiveView } from './objectiveView.ts';
 import { pixelIconSvg } from '../ui/pixelIcons.ts';
 import { SCIENCE_CONFIG } from '../config/constants.ts';
+import { playGuidedSteps } from './storyTestKit.ts';
 
 function snap(overrides = {}) {
   return {
@@ -36,6 +37,8 @@ function reachAct2(story) {
   story.update(snap({ suitEquipped: true }));
   story.update(snap({ hours: 16, iceCount: 1 }));
   story.update(snap({ hours: 16, iceNeeded: 5 }));
+  // Os passos dos atos 2, 3 e 4 (src/story/acts/), cada um com o seu `example`
+  playGuidedSteps(story, (extra) => snap({ hours: 16, iceNeeded: 5, ...extra }));
 }
 
 // Avanca o diretor e devolve o que o painel desenha para o mesmo retrato

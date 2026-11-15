@@ -5,7 +5,7 @@ import { StoryDirector } from './StoryDirector.ts';
 import { objectiveView } from './objectiveView.ts';
 import { objectiveTarget, routeWaypoint } from './waypoints.ts';
 import { CERTIFICATES, certificateBadge } from './storyChapters.ts';
-import { CORE_STEPS, STEP_COLORS, TUTORIAL_STEPS, TUTORIAL_STEP_IDS, detourCard, stepCard, tutorialStepById } from './tutorialSteps.ts';
+import { ACT1_STEPS, CORE_STEPS, STEP_COLORS, TUTORIAL_STEPS, TUTORIAL_STEP_IDS, detourCard, stepCard, tutorialStepById } from './tutorialSteps.ts';
 import { PLANT_NEEDS, TUTORIAL_DETOURS, detourById, findDetours } from './tutorialDetours.ts';
 import {
   CREW_CONFIG, CROP_CONFIG, ENERGY_CONFIG, RADIATION_CONFIG, ROVER_CONFIG, STATION_CONFIG, STORY_CONFIG,
@@ -214,7 +214,9 @@ describe('tutorial step texts', () => {
 
   it('has unique ids and keeps the 6 steps of act 1 as the default tutorial', () => {
     expect(new Set(TUTORIAL_STEP_IDS).size).toBe(TUTORIAL_STEPS.length);
-    expect(CORE_STEPS.map((step) => step.id)).toEqual(['report', 'rover-drive', 'rover-ice', 'suit-up', 'collect-ice', 'load-rocket']);
+    expect(ACT1_STEPS.map((step) => step.id)).toEqual(['report', 'rover-drive', 'rover-ice', 'suit-up', 'collect-ice', 'load-rocket']);
+    // Os atos 2, 3 e 4 vem depois, na mesma lista (src/story/acts/)
+    expect(CORE_STEPS.slice(0, ACT1_STEPS.length)).toEqual(ACT1_STEPS);
   });
 });
 

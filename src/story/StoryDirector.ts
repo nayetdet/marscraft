@@ -2,7 +2,7 @@
 import { MAV_CONFIG, MISSION_CONFIG, STORY_CONFIG } from '../config/constants.ts';
 import { CARDS, OBJECTIVES, certificateBadge, certificateById, commsCard, replyCard } from './storyChapters.ts';
 import { findDetours } from './tutorialDetours.ts';
-import { CORE_STEPS, TUTORIAL_STEPS, detourCard, stepCard } from './tutorialSteps.ts';
+import { CORE_STEPS, TUTORIAL_STEPS, detourCard, stepCard, stepNumber } from './tutorialSteps.ts';
 
 // A historia do jogo em 2 atos: chegada (tutorial) e a missao, com a janela de lancamento ja
 // aberta. Antes eram 3 (a janela so abria depois da tempestade); a espera parava o jogo.
@@ -109,6 +109,16 @@ export class StoryDirector {
     return this.steps[this.stepIndex] ?? null;
   }
 
+  // "STEP 2/6" do passo atual, contado dentro do ato dele ({ act, now, total }); null fora dos passos
+  get stepProgress() {
+    return this.step ? stepNumber(this.steps, this.stepIndex) : null;
+  }
+
+  _stepCard(step, index) {
+    const number = stepNumber(this.steps, index);
+    return stepCard(step, number.now - 1, number.total, number.act);
+  }
+
   get inTraining() {
     return this.act === 1 && this.step !== null;
   }
@@ -149,7 +159,7 @@ export class StoryDirector {
     this._updateDetour(step, s);
     if (this.detour) return;
     this._setObjective(step.id, step.objective);
-    this._card(stepCard(step, index, this.steps.length));
+    this._card(this._stepCard(step, index));
   }
 
   _clearDetour() {
@@ -171,7 +181,7 @@ export class StoryDirector {
       this._card(detourCard(next));
     } else {
       this._setObjective(step.id, step.objective);
-      this._card(stepCard(step, this.stepIndex, this.steps.length));
+      this._card(this._stepCard(step, this.stepIndex));
     }
   }
 
