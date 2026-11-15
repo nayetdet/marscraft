@@ -11,6 +11,8 @@ import donkiCme from '../data/donkiCme.json';
 import { MissionSystem, oxygenPointsToKg } from '../mission/MissionSystem.js';
 import { NO_STORM_DATA_TEXT, formatDateDMY, formatDose, formatHours, stormEventMessage } from '../mission/missionText.js';
 import { MissionHud } from '../ui/MissionHud.js';
+import { missionReport } from '../mission/missionReport.js';
+import { renderReportCard } from '../ui/ReportCard.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
 import { createCarrotTexture } from '../graphics/carrotTexture.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
@@ -211,6 +213,8 @@ export class GameEngine {
       onClose: () => this._closeMavPanel(),
     });
     this._wasDead = false;
+    this.deathCount = 0; // para o boletim do cadete (issue #90)
+    this._startHours = this._skyHours();
     this._initStory();
 
     // Tripulacao NPC (issues #47 e #48): o tamanho e escolhido no menu antes do primeiro Play
@@ -808,7 +812,29 @@ export class GameEngine {
       'Radio delay: Earth-Mars distance from NASA/JPL planet orbits; solar conjunction rules from NASA/JPL. ' +
       'Trip time, thin air and launch windows: NASA Mars facts.';
     this.missionHud.showVictory(rows, sources);
+    renderReportCard(document.getElementById('victory-report'), missionReport(this._reportStats()));
     document.exitPointerLock();
+  }
+
+  // O que o boletim do cadete (issue #90) avalia, lido dos sistemas no fim da partida
+  _reportStats() {
+    const m = this.mission;
+    const s = this.stations;
+    return {
+      hoursPlayed: this._skyHours() - (this._startHours ?? 0),
+      sols: this.sky.solCount,
+      deaths: this.deathCount,
+      stormHours: m.stormHours,
+      protectedStormHours: m.protectedStormHours,
+      totalDoseMsv: m.totalDoseMsv,
+      boneDensity: s.boneDensity,
+      muscleStrength: s.muscleStrength,
+      workoutCount: s.workoutCount,
+      harvestCount: s.harvestCount,
+      cropVariety: s.cropCollection.size,
+      iceDelivered: m.iceDelivered,
+      standbyHours: m.standbyHours,
+    };
   }
 
   _updateMission(dt) {
@@ -829,6 +855,7 @@ export class GameEngine {
     );
 
     if (this.survival.isDead && !this._wasDead) {
+      this.deathCount++;
       this.mission.markDeath();
       this.missionHud.closeMavPanel(); // a tela de morte precisa aparecer por cima
       this.hud.showDeathScreen(this.survival); // a radiacao pode matar depois do hud.update deste frame
@@ -1133,6 +1160,7 @@ export class GameEngine {
       }
       else if (event.type === 'window-closed') {
         this.storyHud.showWindowClosed();
+        renderReportCard(document.getElementById('window-report'), missionReport(this._reportStats()));
         this.waypointBeacon.hide();
         document.exitPointerLock();
       }

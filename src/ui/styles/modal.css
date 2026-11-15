@@ -1248,3 +1248,60 @@ body.pause-menu-open .crew-picker { display: none; }
   .gh-check { padding: 3px 5px; }
   .gh-check small { display: none; }
 }
+
+/* Boletim do cadete nas telas de fim (issue #90): 4 notas grandes e coloridas + perfil */
+.victory-overlay { overflow-y: auto; align-items: flex-start; }
+.victory-overlay .mc-menu { max-width: 760px; margin: auto; }
+.report-card { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.report-card:empty { display: none; }
+.report-heading { margin: 0; font-size: 13px; letter-spacing: 2px; color: #ffcf3a; text-shadow: 2px 2px 0 #000; }
+.report-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.report-tile {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  grid-template-rows: auto auto auto auto;
+  column-gap: 6px;
+  align-items: center;
+  padding: 8px;
+  text-align: left;
+  background: rgba(16, 4, 16, 0.88);
+  border: 2px solid #000;
+  box-shadow: inset 0 0 0 2px var(--grade, #888), 3px 3px 0 rgba(0, 0, 0, .45);
+}
+.report-icon { width: 26px; height: 26px; color: var(--grade, #fff); }
+.report-icon svg { display: block; width: 100%; height: 100%; }
+.report-grade { justify-self: end; font-size: 40px; line-height: 1; color: var(--grade, #fff); text-shadow: 3px 3px 0 #000; }
+.report-name { grid-column: 1 / -1; margin-top: 4px; font-size: 12px; color: #fff; }
+.report-detail { grid-column: 1 / -1; font-size: 10px; color: #d6d6d6; }
+.report-data { grid-column: 1 / -1; font-style: normal; font-size: 9px; color: #9a9a9a; }
+.report-tile.grade-s { --grade: #ffcf3a; }
+.report-tile.grade-a { --grade: #5dff8f; }
+.report-tile.grade-b { --grade: #6fc3ff; }
+.report-tile.grade-c { --grade: #ff8a80; }
+.report-profile {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: left;
+  color: #fff;
+  background: rgba(14, 40, 60, .88);
+  border: 2px solid #000;
+}
+.report-profile b { color: #ffcf3a; }
+.victory-details { width: 100%; text-align: left; color: #e8e8e8; font-size: 13px; }
+.victory-details summary { cursor: pointer; color: #ffffa0; }
+@media (max-width: 700px), (max-height: 500px) {
+  .victory-overlay .mc-death-title { font-size: 30px; margin: 0; }
+  .victory-overlay .mc-menu { gap: 8px; }
+  .report-grid { gap: 6px; }
+  .report-tile { padding: 6px; }
+  .report-grade { font-size: 28px; }
+  .report-name { font-size: 10px; }
+  .report-detail { font-size: 9px; }
+  .report-data { display: none; }
+  .report-profile { font-size: 12px; padding: 6px 10px; }
+}
+@media (max-width: 480px) {
+  .report-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
