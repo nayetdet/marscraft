@@ -80,6 +80,7 @@ export function createSurfaceRocks(world) {
     rocksBySupport.set(supportKey, supportedRocks);
   });
   mesh.userData.rocksBySupport = rocksBySupport;
+  mesh.userData.rocks = rocks;
   mesh.userData.rockTransform = dummy;
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
@@ -87,13 +88,14 @@ export function createSurfaceRocks(world) {
   return mesh;
 }
 
-export function removeSurfaceRocksSupportedBy(mesh, x, y, z) {
+export function removeSurfaceRocksSupportedBy(mesh, x, y, z, onRemove = () => {}) {
   const key = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
   const indices = mesh?.userData?.rocksBySupport?.get(key);
   if (!indices) return 0;
 
   const transform = mesh.userData.rockTransform;
   for (const index of indices) {
+    onRemove(mesh.userData.rocks[index]);
     mesh.getMatrixAt(index, transform.matrix);
     transform.matrix.makeScale(0, 0, 0);
     mesh.setMatrixAt(index, transform.matrix);
