@@ -2451,21 +2451,6 @@ export class GameEngine {
     }
 
     const member = this._nearestCrewMember();
-    if (member) {
-      this.currentInteraction = 'crew';
-      this.talkTarget = member;
-      if (member.task === 'kitchen') {
-        const count = Math.floor(this.crewStock.food);
-        const prompt = count >= 1
-          ? `[F] Get space ration from ${member.name} (${count} in pantry)`
-          : `[F] Talk to ${member.name} (pantry empty)`;
-        this.hud.setInteractionPrompt(true, prompt);
-      } else {
-        this.hud.setInteractionPrompt(true, `[F] Talk to ${member.name}`);
-      }
-      return;
-    }
-
     // Poster ou equipamento explicativo na mira: ler vem antes das acoes por proximidade
     const aimed = this._getInteraction();
     if (aimed?.type === 'info') {
@@ -2486,7 +2471,7 @@ export class GameEngine {
       return;
     }
 
-    // 1. Console de Comando do Rover (x: 4, z: -9.6, y: ~11)
+    // A nearby crew member must not take the rover terminal's [F] prompt.
     const distConsole = Math.hypot(this.player.pos.x - 4, this.player.pos.z - (-9.6));
     const dyConsole = Math.abs(this.player.pos.y - 11.0);
     if (distConsole < 2.6 && dyConsole < 2.2) {
@@ -2495,7 +2480,22 @@ export class GameEngine {
       return;
     }
 
-    // 2. Purificador / Dispensador de Água do Laboratório (x: 4.4, z: 2.4, y: ~11)
+    if (member) {
+      this.currentInteraction = 'crew';
+      this.talkTarget = member;
+      if (member.task === 'kitchen') {
+        const count = Math.floor(this.crewStock.food);
+        const prompt = count >= 1
+          ? `[F] Get space ration from ${member.name} (${count} in pantry)`
+          : `[F] Talk to ${member.name} (pantry empty)`;
+        this.hud.setInteractionPrompt(true, prompt);
+      } else {
+        this.hud.setInteractionPrompt(true, `[F] Talk to ${member.name}`);
+      }
+      return;
+    }
+
+    // Purificador / Dispensador de Água do Laboratório (x: 4.4, z: 2.4, y: ~11)
     const distWater = Math.hypot(
       this.player.pos.x - WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.x,
       this.player.pos.z - WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.z
