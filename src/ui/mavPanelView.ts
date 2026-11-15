@@ -172,7 +172,7 @@ export function mavNasaPopoverHtml(): string {
   const fact = `
     <p><strong>Rocket Fuel (ISRU):</strong> Splits Mars ice into hydrogen + oxygen, then mixes with Mars CO2 to make methane fuel.</p>
     <p><strong>Storms:</strong> Wait out ${MAV_CONFIG.STORMS_TO_SURVIVE} solar storms safely inside or under the shield.</p>
-    <p><strong>Sample Tubes:</strong> Extra tubes make the rocket heavier (+${SCIENCE_CONFIG.ICE_PER_SAMPLE_TUBE} ice each).</p>`;
+    <p><strong>Sample Tubes:</strong> NASA's Perseverance rover seals rock samples in tubes for a future trip to Earth. Here a sample in a tube is NOT analyzed: it is worth ${SCIENCE_CONFIG.TUBE_POINTS_FACTOR}x points, but only in your final report. Each tube makes the rocket heavier (+${SCIENCE_CONFIG.ICE_PER_SAMPLE_TUBE} ice). Points and ice are game rules.</p>`;
   return nasaInfoButtonHtml(fact, [
     ['NASA Mars ISRU', 'https://science.nasa.gov/mars/'],
   ]);

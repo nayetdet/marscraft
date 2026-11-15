@@ -1,4 +1,4 @@
-import { SCIENCE_CONFIG } from '../config/constants.ts';
+import { SAMPLE_SITE_CONFIG, SCIENCE_CONFIG } from '../config/constants.ts';
 import type { ScienceItem } from './sciencePackage.ts';
 
 // As 3 pistas da missao (issue #344). A pergunta e a que o Curiosity foi responder em Gale:
@@ -25,8 +25,12 @@ export const CLUES: Clue[] = [
 // O que a Terra conclui com as 3 pistas (tela de vitoria)
 export const CLUES_ANSWER = 'Gale was a lake, good for life';
 
-// Onde a pista esta: 'todo' (ainda la fora) | 'bag' (coletada, esperando a analise) |
-// 'found' (analisada, esperando o envio) | 'sent' (a Terra ja tem)
+// Ato 4 (issue #410): cada pista pede TODAS as amostras do tipo dela (o campo inteiro, regra de jogo)
+export const CLUE_SAMPLES = SAMPLE_SITE_CONFIG.PER_TYPE;
+
+// Onde a pista esta: 'todo' (nada coletado) | 'bag' (alguma amostra coletada ou analisada, mas
+// ainda nao as CLUE_SAMPLES) | 'found' (as CLUE_SAMPLES analisadas, esperando o envio) |
+// 'sent' (a Terra ja tem as CLUE_SAMPLES)
 export type ClueState = 'todo' | 'bag' | 'found' | 'sent';
 
 export const isClueType = (typeId: string) => CLUES.some((clue) => clue.typeId === typeId);
@@ -34,18 +38,37 @@ export const isClueType = (typeId: string) => CLUES.some((clue) => clue.typeId =
 // Item de ciencia que e a amostra de uma pista (o `icon` de uma amostra e o tipo dela)
 export const isClueItem = (item: ScienceItem) => item.kind === 'sample' && isClueType(item.icon);
 
+type ScienceLists = { pending?: readonly ScienceItem[]; sent?: readonly ScienceItem[] };
+
+function countSamples(items: readonly ScienceItem[], typeId: string): number {
+  let total = 0;
+  for (const item of items) if (item.kind === 'sample' && item.icon === typeId) total += 1;
+  return total;
+}
+
 // Estado de cada pista, na ordem de CLUES. `pending` e `sent` vem de scienceStatus();
 // `inBag(typeId)` diz se ha uma amostra daquele tipo na mochila, ainda sem analise.
 // Escreve em `out` (o motor chama a cada frame e reaproveita o vetor).
 export function clueStates(
-  { pending = [], sent = [] }: { pending?: readonly ScienceItem[]; sent?: readonly ScienceItem[] } = {},
+  { pending = [], sent = [] }: ScienceLists = {},
   inBag: (typeId: string) => boolean = () => false,
   out: ClueState[] = [],
+  needed: number = CLUE_SAMPLES,
 ): ClueState[] {
-  CLUES.forEach((clue, i) => {
-    const has = (items: readonly ScienceItem[]) => items.some((item) => item.kind === 'sample' && item.icon === clue.typeId);
-    out[i] = has(sent) ? 'sent' : has(pending) ? 'found' : inBag(clue.typeId) ? 'bag' : 'todo';
-  });
+  for (let i = 0; i < CLUES.length; i += 1) {
+    const typeId = CLUES[i].typeId;
+    const home = countSamples(sent, typeId);
+    const analyzed = home + countSamples(pending, typeId);
+    out[i] = home >= needed ? 'sent' : analyzed >= needed ? 'found' : analyzed > 0 || inBag(typeId) ? 'bag' : 'todo';
+  }
+  out.length = CLUES.length;
+  return out;
+}
+
+// Quantas amostras de cada pista a Terra ja tem (0 a CLUE_SAMPLES), na ordem de CLUES: o painel
+// mostra "OLD LAKE 2/3". Escreve em `out`.
+export function clueSentCounts({ sent = [] }: ScienceLists = {}, out: number[] = [], needed: number = CLUE_SAMPLES): number[] {
+  for (let i = 0; i < CLUES.length; i += 1) out[i] = Math.min(needed, countSamples(sent, CLUES[i].typeId));
   out.length = CLUES.length;
   return out;
 }

@@ -1,6 +1,7 @@
 import { SCIENCE_CONFIG } from '../config/constants.ts';
 import { pointsWord, scienceGoalText, scienceMissingText } from '../mission/sciencePackage.ts';
 import type { ScienceItem, SciencePackage, ScienceStatus } from '../mission/sciencePackage.ts';
+import type { TubeChoice } from '../mission/sampleTubes.ts';
 
 // Painel "SCIENCE FOR EARTH" do terminal de ciencia (issue #269): no lugar do bloco de texto com
 // contagens, a crianca ve O QUE achou. Cada descoberta ou amostra e uma linha com desenho, nome e
@@ -25,6 +26,8 @@ export interface SciencePanelModel {
   sentPoints: number;
   usedPoints: number;
   rawSamples: number;
+  // Trade-off do ato 4 (issue #422): os dois destinos da proxima amostra, ou null
+  choice: TubeChoice | null;
   next: string;
   missing: string;
 }
@@ -37,7 +40,7 @@ const row = (item: ScienceItem): ScienceRow => ({ name: item.name, points: item.
 // Os que valem mais primeiro: e o que a crianca quer ver no topo
 const byPoints = (items: readonly ScienceItem[]) => [...items].sort((a, b) => b.points - a.points).map(row);
 
-export function sciencePanelModel(status: ScienceStatus, pkg: SciencePackage, rawSamples = 0, config = SCIENCE_CONFIG): SciencePanelModel {
+export function sciencePanelModel(status: ScienceStatus, pkg: SciencePackage, rawSamples = 0, config = SCIENCE_CONFIG, choice: TubeChoice | null = null): SciencePanelModel {
   const next = pkg.items > 0
     ? `Next upload: ${pkg.items} item${pkg.items === 1 ? '' : 's'} = ${pointsWord(pkg.points)}. Cost: ${config.UPLOAD_BASE_COST}% to start the radio + ${pkg.items} x ${config.UPLOAD_COST_PER_ITEM}% = ${pkg.cost}% power.` +
       (pkg.leftAfter > 0 ? ` ${pkg.leftAfter} more wait for the next orbiter pass (max ${config.MAX_ITEMS_PER_UPLOAD} per pass).` : '')
@@ -53,6 +56,7 @@ export function sciencePanelModel(status: ScienceStatus, pkg: SciencePackage, ra
     sentPoints: status.sentPoints,
     usedPoints: status.usedPoints,
     rawSamples,
+    choice,
     next,
     missing: scienceMissingText({ pendingPoints: status.pendingPoints, sentPoints: status.sentPoints, clues: status.clues }, config),
   };
@@ -71,6 +75,18 @@ function listHtml(rows: ScienceRow[], empty: string, iconUrl: (row: ScienceRow) 
   return `<ul class="sci-list">${items}</ul>`;
 }
 
+// Analisar aqui ou levar o tubo para a Terra (issue #422): os dois numeros lado a lado
+function choiceHtml(choice: TubeChoice): string {
+  const ice = `+${choice.icePerTube} ice`;
+  return '<div class="sci-choice">' +
+    `<b class="sci-choice-title">${esc(choice.name.toUpperCase())}: PICK ONE</b>` +
+    '<div class="sci-choice-row">' +
+    `<span class="sci-choice-opt"><i>ANALYZE HERE</i><b>+${choice.analyzePoints}</b><small>now: counts for launch, pays upgrades</small></span>` +
+    '<span class="sci-choice-or">OR</span>' +
+    `<span class="sci-choice-opt is-tube"><i>TUBE TO EARTH</i><b>+${choice.tubePoints}</b><small>only in your final report, ${ice}. Load it at the rocket</small></span>` +
+    '</div></div>';
+}
+
 // `iconUrl` devolve o desenho de cada linha (ficha do diario ou amostra): fica fora daqui para a
 // conta continuar pura e testavel sem DOM
 export function sciencePanelHtml(model: SciencePanelModel, iconUrl: (row: ScienceRow) => string, { compact = false } = {}): string {
@@ -82,6 +98,7 @@ export function sciencePanelHtml(model: SciencePanelModel, iconUrl: (row: Scienc
     `<span class="sci-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></span></div>` +
     (compact ? '' : `<p class="sci-why">${esc(model.why)}</p>`) +
     raw +
+    (model.choice ? choiceHtml(model.choice) : '') +
     '<div class="sci-cols">' +
     `<section><h4>TO SEND <small>${pointsWord(model.toSendPoints)}</small></h4>${listHtml(model.toSend, 'Nothing yet. Scan with the scope or bring samples from the map.', iconUrl)}</section>` +
     `<section><h4>SENT TO EARTH <small>${pointsWord(model.sentPoints)}</small></h4>${listHtml(model.sent, 'Nothing sent yet.', iconUrl)}</section>` +

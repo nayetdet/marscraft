@@ -18,7 +18,7 @@ export interface SampleSiteOptions {
   // construida, fora do mapa, chao que nao e natural)
   groundTop: (x: number, z: number) => number;
   seed?: number;
-  count?: number;
+  count?: number; // total de amostras: `config.PER_TYPE` por campo
   config?: typeof SAMPLE_SITE_CONFIG;
 }
 
@@ -34,37 +34,54 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-// A ordem dos tipos: um de cada, em rodizio, ate fechar `count` (10 locais = 2 de cada tipo)
-export function sampleTypeOrder(count: number): string[] {
-  return Array.from({ length: count }, (_, i) => SAMPLE_TYPES[i % SAMPLE_TYPES.length].id);
+// A ordem dos tipos: um campo por tipo, com `perType` amostras seguidas (15 locais = 3 de cada)
+export function sampleTypeOrder(count: number, perType: number = SAMPLE_SITE_CONFIG.PER_TYPE): string[] {
+  return Array.from({ length: count }, (_, i) => SAMPLE_TYPES[Math.floor(i / perType) % SAMPLE_TYPES.length].id);
 }
 
+// Campo de amostras (ato 4, issue #410): cada tipo fica num campo so, com as pedrinhas a poucos
+// blocos uma da outra. O centro do campo segue as regras de antes: anel em volta da base, o gelo
+// perto da cratera de gelo e os tipos que sao pista (issue #344) cada um no seu anel.
 export function placeSampleSites({ groundTop, seed = SAMPLE_SITE_CONFIG.SEED, count = SAMPLE_SITE_CONFIG.COUNT, config = SAMPLE_SITE_CONFIG }: SampleSiteOptions): SampleSite[] {
   const rand = seededRandom(seed);
   const base = TERRAIN_CONFIG.BASE_CENTER;
   const ice = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER;
   const sites: SampleSite[] = [];
+  const centers: { x: number; z: number }[] = [];
+  const farFromBase = (x: number, z: number) => Math.hypot(x - base.x, z - base.z) >= config.MIN_RADIUS;
 
-  const seen = new Set<string>();
-  for (const typeId of sampleTypeOrder(count)) {
-    // O gelo fica num anel em volta da cratera de gelo; o resto, num anel em volta da base.
-    // O primeiro local de um tipo que e pista (issue #344) tem o seu anel: cada pista mais longe.
+  for (let first = 0; first < count; first += config.PER_TYPE) {
+    const typeId = SAMPLE_TYPES[(first / config.PER_TYPE) % SAMPLE_TYPES.length].id;
+    const size = Math.min(config.PER_TYPE, count - first);
     const isIce = typeId === ICE_TYPE_ID;
     const center = isIce ? ice : base;
-    const clueRing = seen.has(typeId) ? undefined : config.CLUE_RINGS?.[typeId];
-    seen.add(typeId);
-    const [rMin, rMax] = isIce ? config.ICE_RING : clueRing ?? [config.MIN_RADIUS, config.MAX_RADIUS];
+    const [rMin, rMax] = isIce ? config.ICE_RING : config.CLUE_RINGS?.[typeId] ?? [config.MIN_RADIUS, config.MAX_RADIUS];
     for (let attempt = 0; attempt < config.PLACEMENT_TRIES; attempt += 1) {
       const angle = rand() * Math.PI * 2;
       const radius = rMin + rand() * (rMax - rMin);
-      const x = Math.round(center.x + Math.cos(angle) * radius);
-      const z = Math.round(center.z + Math.sin(angle) * radius);
+      const cx = Math.round(center.x + Math.cos(angle) * radius);
+      const cz = Math.round(center.z + Math.sin(angle) * radius);
       // Longe da base mesmo quando o anel e o da cratera de gelo
-      if (Math.hypot(x - base.x, z - base.z) < config.MIN_RADIUS) continue;
-      if (sites.some((site) => Math.hypot(site.x - x, site.z - z) < config.MIN_SPACING)) continue;
-      const y = groundTop(x, z);
-      if (y < 0) continue;
-      sites.push({ id: `site-${sites.length}`, typeId, x, y, z });
+      if (!farFromBase(cx, cz)) continue;
+      if (centers.some((other) => Math.hypot(other.x - cx, other.z - cz) < config.MIN_SPACING)) continue;
+      // As pedrinhas do campo: a primeira no centro, as outras em volta
+      const centerTop = groundTop(cx, cz);
+      if (centerTop < 0) continue;
+      const field = [{ x: cx, y: centerTop, z: cz }];
+      for (let pebble = 0; pebble < config.FIELD_TRIES && field.length < size; pebble += 1) {
+        const a = rand() * Math.PI * 2;
+        const r = config.FIELD_MIN_GAP + rand() * (config.FIELD_RADIUS - config.FIELD_MIN_GAP);
+        const x = Math.round(cx + Math.cos(a) * r);
+        const z = Math.round(cz + Math.sin(a) * r);
+        if (!farFromBase(x, z)) continue;
+        if (field.some((other) => Math.hypot(other.x - x, other.z - z) < config.FIELD_MIN_GAP)) continue;
+        const y = groundTop(x, z);
+        if (y < 0) continue;
+        field.push({ x, y, z });
+      }
+      if (field.length < size) continue;
+      centers.push({ x: cx, z: cz });
+      for (const spot of field) sites.push({ id: `site-${sites.length}`, typeId, ...spot });
       break;
     }
   }

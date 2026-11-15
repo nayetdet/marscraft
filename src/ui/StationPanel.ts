@@ -9,6 +9,7 @@ import { STORM_SKIP_PANEL_LINE, stormSkipButtonLabel } from '../mission/stormSki
 import { doseHistoryText } from '../mission/doseBudget.ts';
 import { uploadButtonLabel } from '../mission/sciencePackage.ts';
 import { sciencePanelHtml, sciencePanelModel } from './sciencePanelView.ts';
+import { tubeChoice } from '../mission/sampleTubes.ts';
 import { getJournalIcon } from '../graphics/journalIcons.ts';
 import { getSampleItemIcon } from '../graphics/itemIcons.ts';
 import { bulletinText, donkiLabel, formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.ts';
@@ -1033,7 +1034,9 @@ export class StationPanel {
   // Painel SCIENCE FOR EARTH (issue #269): o que a crianca achou, em itens com nome e pontos
   _sciencePanelHtml() {
     const { engine } = this;
-    const model = sciencePanelModel(engine.scienceStatus(), engine.currentSciencePackage(), engine.stations.rawSampleCount(engine.survival));
+    // Trade-off do ato 4 (issue #422): analisar aqui ou levar o tubo para a Terra
+    const choice = tubeChoice((itemId) => engine.survival.countItem(itemId), engine.mission.sampleTubes);
+    const model = sciencePanelModel(engine.scienceStatus(), engine.currentSciencePackage(), engine.stations.rawSampleCount(engine.survival), undefined, choice);
     return sciencePanelHtml(model, (row) => (row.kind === 'sample' ? getSampleItemIcon(row.icon) : getJournalIcon(row.icon)), { compact: true });
   }
 

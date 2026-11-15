@@ -62,6 +62,16 @@ describe('missionReport (issue #90)', () => {
     expect(science({ discoveries: undefined, scanTotal: undefined, sampleTypes: undefined, sciencePointsSent: undefined, sciencePointsGoal: undefined })).toMatchObject({ grade: 'C', score: 0 });
   });
 
+  it('counts the sample tubes only here, apart from the science sent by radio (issue #422)', () => {
+    const science = (stats) => missionReport({ ...GREAT, ...stats }).categories.find((c) => c.id === 'science');
+    const radioOnly = science({ sciencePointsSent: 10 });
+    const withTubes = science({ sciencePointsSent: 10, scienceTubePoints: 12 });
+    expect(withTubes.detail).toBe('14 scans, 4 samples, 10 pts sent, 12 pts in tubes');
+    expect(withTubes.score).toBeGreaterThan(radioOnly.score);
+    // Sem tubos o texto nao muda
+    expect(science({ scienceTubePoints: 0 }).detail).toBe('14 scans, 4 samples, 20 pts sent');
+  });
+
   it('tells what the cadet found: count, journal rank and the 3 coolest finds (issue #271)', () => {
     const { explorer } = missionReport(GREAT);
     expect(explorer).toMatchObject({ found: 18, total: 29, text: 'You found 18 of 29 things', rank: 'SPECIALIST' });

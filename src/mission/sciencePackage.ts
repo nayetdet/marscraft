@@ -1,5 +1,5 @@
 import { SCIENCE_CONFIG } from '../config/constants.ts';
-import { allCluesSent, clueStates, cluesUnsentText, isClueItem, type ClueState } from './clues.ts';
+import { CLUE_SAMPLES, allCluesSent, clueStates, cluesUnsentText, isClueItem, type ClueState } from './clues.ts';
 
 // Ciencia para a Terra em UMA moeda so: pontos de ciencia (issues #105 e #269). Logica pura, sem
 // DOM. Cada coisa que a crianca acha e um item com nome e pontos:
@@ -36,7 +36,8 @@ export interface ScienceStatus {
   sentPoints: number;
   usedPoints: number;
   goal: number;
-  // Pistas da missao (issue #344), na ordem de CLUES: 'todo' | 'found' (espera o envio) | 'sent'
+  // Pistas da missao (issue #344), na ordem de CLUES: 'todo' | 'bag' (menos de 3 amostras
+  // analisadas) | 'found' (as 3 esperam o envio) | 'sent' (as 3 na Terra)
   clues: ClueState[];
   cluesSent: boolean;
   met: boolean; // a Terra ja tem os pontos E as 3 pistas que o foguete pede
@@ -191,10 +192,10 @@ export function scienceMissingText(
   config: Config = SCIENCE_CONFIG,
 ): string {
   const cluesLeft = clues && !allCluesSent(clues) ? cluesUnsentText(clues) : '';
-  const cluesNote = cluesLeft ? ` Earth also needs the 3 clues. Still missing: ${cluesLeft}.` : '';
+  const cluesNote = cluesLeft ? ` Earth also needs the 3 clues (${CLUE_SAMPLES} samples each). Still missing: ${cluesLeft}.` : '';
   if (sentPoints >= config.POINTS_TO_LAUNCH) {
     return cluesLeft
-      ? `Enough points are home, but Earth still needs these clues: ${cluesLeft}. Find the glowing samples, analyze them and send them.`
+      ? `Enough points are home, but Earth still needs these clues: ${cluesLeft}. Each clue is ${CLUE_SAMPLES} samples of one kind: find the glowing samples, analyze them and send them.`
       : 'Enough science is home. Extra uploads still count for your report.';
   }
   const goal = `The rocket needs ${pointsWord(config.POINTS_TO_LAUNCH)} of science sent to Earth.`;

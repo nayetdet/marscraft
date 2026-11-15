@@ -18,6 +18,7 @@ import { NO_STORM_DATA_TEXT, donkiCredit, donkiLabel, formatDateDMY, formatDose,
 import { doseEventMessage, doseVictoryRows, evaBlockMessage, roverMavBlocks } from '../mission/doseBudget.ts';
 import { discoveryItem, pointsStillNeeded, pointsWord, sampleItem, scienceCountText, scienceStep, uploadResultText } from '../mission/sciencePackage.ts';
 import { placeSampleSites } from '../world/sampleSites.ts';
+import { noTubeSampleText, pickTubeSample, tubeLoadedText, tubeableCount } from '../mission/sampleTubes.ts';
 import { SampleSiteMarkers } from '../world/SampleSiteMarkers.ts';
 import { naturalGroundTop } from '../world/surfaceRocks.ts';
 import { isBuildZone } from '../world/terrainGenerator.ts';
@@ -1260,10 +1261,32 @@ export class GameEngine {
     return this.mission.spendScience(this.scienceItems(), cost);
   }
 
-  // Tubo de amostra analisada entra (ou sai) do foguete: cada tubo pede mais gelo no tanque
+  // Trade-off do ato 4 (issue #422): a amostra CRUA da mochila entra lacrada no foguete (ou volta
+  // para a mochila). No tubo ela nao e analisada: vale mais, mas so no boletim final, e cada tubo
+  // pede mais gelo no tanque. Amostra de pista nao vai no tubo (src/mission/sampleTubes.ts).
   _loadSampleTube(load) {
-    const result = load ? this.mission.loadSampleTube(this.stations.analyzedSamples) : this.mission.unloadSampleTube();
-    if (result === 'no-samples') this.hud.showToast('Analyze a sample at the science & radio terminal first.');
+    const countItem = this._countItem ??= (itemId) => this.survival.countItem(itemId);
+    if (load) {
+      const type = pickTubeSample(countItem);
+      const result = this.mission.loadSampleTube(type ? { typeId: type.id, name: type.name, points: type.points } : null);
+      if (result === 'loaded') {
+        this.survival.removeItems(type.itemId, 1);
+        this.hud.showToast(tubeLoadedText(type), 6000);
+        this.missionLog.add({ text: `Sealed a sample in a tube for Earth: ${type.name}.`, kind: 'study', hours: this._skyHours() });
+      } else if (result === 'no-samples') {
+        this.hud.showToast(noTubeSampleText(this.stations.rawSampleCount(this.survival) > 0), 6000);
+      }
+    } else {
+      const sample = this.mission.tubeSamples.at(-1);
+      const type = sample ? sampleTypeById(sample.typeId) : null;
+      // A amostra volta para a mochila: sem lugar nela, o tubo fica no foguete
+      if (type && !this.mission.launched && !this.survival.addBlockToInventory(type.itemId)) {
+        this.hud.showToast('Your bag is full. Make room to take the sample back.');
+      } else if (this.mission.unloadSampleTube() === 'unloaded' && type) {
+        this.hud.showToast(`${type.name} is back in your bag. You can analyze it now.`);
+      }
+    }
+    this.hud.renderHotbar(this.survival.slots);
     this._refreshMavPanel();
   }
 
@@ -1286,7 +1309,7 @@ export class GameEngine {
   }
 
   _refreshMavPanel() {
-    this.missionHud.updateMavPanel(this.mission, this.survival.countWaterIce(), this.stations.analyzedSamples, this.scienceStatus());
+    this.missionHud.updateMavPanel(this.mission, this.survival.countWaterIce(), tubeableCount(this._countItem ??= (itemId) => this.survival.countItem(itemId)), this.scienceStatus());
   }
 
   _toggleShield() {
@@ -1369,8 +1392,8 @@ export class GameEngine {
       ['Sols on Mars (1 sol = 1 Mars day)', String(this.sky.solCount)],
       ...doseVictoryRows(m.doseBreakdown),
       ['Solar storms survived', String(m.stormsSurvived)],
-      ['Science sent home', `${pointsWord(m.sentPoints)} (${scienceCountText(m.sentDiscoveries, m.sentSamples)})`],
-      ['Rock sample tubes on the rocket', String(m.sampleTubes)],
+      ['Science sent home by radio', `${pointsWord(m.sentPoints)} (${scienceCountText(m.sentDiscoveries, m.sentSamples)})`],
+      ['Science in the sample tubes', `${pointsWord(m.tubePoints)} (${m.sampleTubes} ${m.sampleTubes === 1 ? 'tube' : 'tubes'}, studied on Earth)`],
       ['Oxygen made by the base', `${oxygenPointsToKg(m.oxygenProducedPoints).toFixed(2)} kg`],
       ['Ice turned into rocket fuel', `${m.iceDelivered} blocks`],
       ['Solar energy collected', `${(m.solarEnergyCollected / m.battery.capacity).toFixed(1)} full batteries`],
@@ -1388,7 +1411,7 @@ export class GameEngine {
       'Storm shelter water wall: PREDICCS shielding model (University of New Hampshire, Curiosity RAD data) and NASA storm shelter studies. ' +
       'Radio delay: Earth-Mars distance from NASA/JPL planet orbits; solar conjunction rules from NASA/JPL. ' +
       'Trip time, thin air and launch windows: NASA Mars facts. ' +
-      'Science sent through orbiters: NASA Mars Relay Network. Rock sample tubes: NASA Perseverance; science points, upload costs and extra ice per tube are game rules. ' +
+      'Science sent through orbiters: NASA Mars Relay Network. Rock sample tubes: NASA Perseverance; science points, upload costs, the extra points of a tube and the extra ice per tube are game rules. ' +
       'Map samples: real finds by NASA Curiosity in Gale Crater (dune sand, mudstone, sulfur, iron meteorite) and by NASA Phoenix (buried ice); where they sit on the map is a game rule. ' +
       'Mars events: NASA InSight (marsquakes and the 2021 meteor impact), MRO, Perseverance (Phobos eclipse, aurora), Spirit (dust devils) and Viking 2 (frost); when and how strong they are is a game rule.';
     this.missionHud.showVictory(rows, sources, earthFarewell({
@@ -1446,6 +1469,9 @@ export class GameEngine {
       sampleTypes: new Set(this.stations.analyzed.map((sample) => sample.typeId)).size,
       sciencePointsSent: status.sentPoints,
       sciencePointsGoal: SCIENCE_CONFIG.POINTS_TO_LAUNCH,
+      // Ciencia que viaja nos tubos de amostra (issue #422): so conta aqui, no boletim
+      scienceTubePoints: this.mission.tubePoints,
+      sampleTubes: this.mission.sampleTubes,
       topFinds,
     };
   }

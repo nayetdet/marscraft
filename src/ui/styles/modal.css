@@ -1786,6 +1786,17 @@ body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 
 .station-screen .sci-panel .sci-why { color: #cfe8ff; padding: 6px 10px; background: #14283c; border-left: 4px solid #5aa9e6; }
 .station-screen .sci-panel .sci-note.is-hot { color: #ffdf75; }
 .station-screen .sci-panel .sci-empty { padding: 6px 8px; background: #10262a; border-left: 3px solid #2c4a4f; }
+/* Trade-off do ato 4 (issue #422): analisar aqui ou levar o tubo para a Terra, lado a lado */
+.sci-choice { display: grid; gap: 4px; padding: 6px 8px; background: #14283c; border-left: 4px solid #c084fc; }
+.sci-choice-title { font-size: 11px; letter-spacing: .08em; color: #ffdf75; font-weight: normal; }
+.sci-choice-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; gap: 6px; }
+.sci-choice-opt { display: grid; gap: 1px; padding: 4px 6px; background: #10262a; border: 2px solid #2c4a4f; }
+.sci-choice-opt i { font-style: normal; font-size: 10px; letter-spacing: .08em; color: #d9ffe9; }
+.sci-choice-opt b { font-size: 16px; color: #7ef0a8; }
+.sci-choice-opt small { font-size: 10px; line-height: 1.25; color: #a9c9c4; }
+.sci-choice-opt.is-tube { border-color: #c084fc; }
+.sci-choice-opt.is-tube b { color: #c084fc; }
+.sci-choice-or { align-self: center; font-size: 10px; color: #ffdf75; }
 .sci-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
 .sci-cols h4 { margin: 0 0 4px; font-size: 11px; letter-spacing: .08em; color: #ffdf75; font-weight: normal; display: flex; justify-content: space-between; gap: 8px; }
 .sci-cols h4 small { color: #d9ffe9; font-size: 11px; }
