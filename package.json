@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
-    "build:pages": "bash scripts/build-github-pages.sh",
     "start": "next start --hostname 0.0.0.0",
     "preview": "next start --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit",
