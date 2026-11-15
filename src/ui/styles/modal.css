@@ -27,6 +27,16 @@ body.pause-menu-open .mc-menu-card #demo-btn { display: block; }
 body:not(.pause-menu-open) .mc-menu-card #demo-btn { display: none; }
 body:not(.pause-menu-open) .mc-menu-card #sources-btn { grid-column: 1 / -1; }
 body.pause-menu-open .crew-picker { display: none; }
+body.pause-menu-open #menu-main {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+body.pause-menu-open #menu-main > #start-btn,
+body.pause-menu-open #menu-main > #controls-btn,
+body.pause-menu-open #menu-main > .menu-row { grid-column: 1 / -1; }
+body.pause-menu-open #menu-main > #options-btn { grid-column: 1; grid-row: 4; }
+body.pause-menu-open #menu-main > #reset-btn { grid-column: 2; grid-row: 4; }
 
 .mc-overlay.hidden,
 .victory-overlay.hidden,
