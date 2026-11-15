@@ -75,6 +75,21 @@ describe('CrewManager needs', () => {
     expect(three.base.graywater).toBeCloseTo(3 * CREW_CONFIG.WATER_L_PER_HOUR);
   });
 
+  it('on the gentle first sol the crew needs less air, water and food, but never nothing (issue #81)', () => {
+    const normal = makeCrew(2);
+    const gentle = makeCrew(2, { demandFactor: 0.6 });
+    restAll(normal.crew);
+    restAll(gentle.crew);
+    normal.crew.update(1, 0);
+    gentle.crew.update(1, 0);
+
+    expect(20 - gentle.base.food).toBeCloseTo(0.6 * (20 - normal.base.food));
+    expect(50 - gentle.base.water).toBeCloseTo(0.6 * (50 - normal.base.water));
+    expect(gentle.base.graywater).toBeCloseTo(50 - gentle.base.water);
+    expect(100 - gentle.base.battery.charge).toBeCloseTo(0.6 * (100 - normal.base.battery.charge));
+    expect(gentle.base.food).toBeLessThan(20);
+  });
+
   it('runs out of food: the crew member gets weak and says what is missing', () => {
     const { crew } = makeCrew(1, { food: 0 });
     crew.update(0.1, 0);

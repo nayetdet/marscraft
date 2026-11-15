@@ -2,6 +2,7 @@ import { RADIATION_CONFIG, STATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config
 
 // Estacoes da base que a tripulacao opera. Sem Three.js nem DOM, para testar com Vitest.
 // `base` e o estoque compartilhado: { battery, water, maxWater, food, maxFood, graywater }
+// e `demandFactor` (src/mission/pacing.js): fracao do consumo passivo normal, menor no primeiro sol.
 // mais o estado do comandante para a enfermaria: { playerDoseRate, playerHealth, playerHeal }.
 // Modelo de manutencao: sem operador a estacao estraga devagar (health cai); com operador ela
 // e consertada e produz, mas o trabalho gasta energia da bateria. Nenhuma ordem e de graca.
@@ -23,7 +24,7 @@ export class Station {
   update(hours, effort, base) {
     this.operating = false;
     if (effort > 0 && this.canOperate(base)) {
-      const need = STATION_CONFIG.WORK_ENERGY_PER_HOUR * hours;
+      const need = STATION_CONFIG.WORK_ENERGY_PER_HOUR * hours * (base.demandFactor ?? 1);
       const share = need > 0 ? base.battery.drain(need) / need : 0;
       if (share > 0) {
         this.operating = true;

@@ -35,6 +35,7 @@ import { StationPanel } from '../ui/StationPanel.js';
 import { AdminPanel } from '../ui/AdminPanel.js';
 import { UtilityModule } from './UtilityModule.js';
 import { CommsLink } from '../mission/commsLink.js';
+import { passiveDemandFactor } from '../mission/pacing.js';
 import { AudioManager } from '../audio/AudioManager.js';
 import { getCategoryLabel } from '../data/scanCatalog.js';
 import { ScanJournal } from '../scanner/scanJournal.js';
@@ -1154,6 +1155,11 @@ export class GameEngine {
     const hours = this._skyHours();
     const delta = hours - (this._crewLastHours ?? hours);
     this._crewLastHours = hours;
+
+    // Ritmo (issue #81): o primeiro sol gasta menos; a exigencia sobe aos poucos depois dele
+    const demandFactor = passiveDemandFactor(hours);
+    this.crewStock.demandFactor = demandFactor;
+    this.utility.demandFactor = demandFactor;
 
     if (this.input.isLocked && !this.crewPicker.locked) this.crewPicker.lock();
     const playing = this.input.isLocked || this.crewPanel.isOpen;
