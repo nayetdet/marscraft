@@ -1,7 +1,7 @@
 import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS } from '../world/greenhouseLayout.js';
 import { createCropPlantModel } from '../graphics/cropModels.js';
 import * as THREE from 'three';
-import { CAMERA_CONFIG, CROP_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, CROP_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
 import { createBaseStock } from '../crew/baseStock.js';
@@ -674,6 +674,16 @@ export class GameEngine {
       this.camera.fov += (targetFov - this.camera.fov) * 0.18;
       this.camera.updateProjectionMatrix();
     }
+  }
+
+  _applyDamageScreenShake(now) {
+    const s = this.survival;
+    if (s.isDead || s.damageFeedbackTime <= 0) return;
+    const strength = SURVIVAL_CONFIG.DAMAGE_SHAKE_AMPLITUDE
+      * (s.damageFeedbackTime / SURVIVAL_CONFIG.DAMAGE_FEEDBACK_SECONDS);
+    const phase = now * 0.001 * SURVIVAL_CONFIG.DAMAGE_SHAKE_RATE;
+    this.camera.position.x += Math.sin(phase) * strength;
+    this.camera.position.y += Math.cos(phase * 1.27) * strength * 0.6;
   }
 
   // Horas de jogo desde o inicio do sol 1
@@ -1377,6 +1387,8 @@ export class GameEngine {
         else this._updateCamera();
         this.sky.update(dt, this.player.pos);
       }
+
+      if (isGameRunning) this._applyDamageScreenShake(now);
 
       this.audio.update({
         dt,

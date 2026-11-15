@@ -64,6 +64,9 @@ export const SURVIVAL_CONFIG = {
   FOOD_DRAIN_RATE: 0.11,
   STARVE_DAMAGE_RATE: 0.8,
   DANGER_THRESHOLD: 5,
+  DAMAGE_FEEDBACK_SECONDS: 0.8,
+  DAMAGE_SHAKE_AMPLITUDE: 0.09,
+  DAMAGE_SHAKE_RATE: 42,
   // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
   HEAL_MIN_OXYGEN: 5,
   // Tempestade de poeira na borda da area jogavel, medida a partir de TERRAIN_CONFIG.BASE_CENTER

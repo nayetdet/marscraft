@@ -56,3 +56,36 @@ export function getDeathReport(cause, detail) {
   if (cause !== 'BIOLOGICAL_COLLAPSE' || !BIOLOGICAL_DETAILS[detail]) return base;
   return { ...base, ...BIOLOGICAL_DETAILS[detail] };
 }
+
+const DAMAGE_FEEDBACK = {
+  OXYGEN_DEPLETION: {
+    source: 'OXYGEN',
+    message: 'Your suit is out of oxygen. Return through the airlock.',
+  },
+  RADIATION_OVERDOSE: {
+    source: 'SOLAR RADIATION',
+    message: 'Solar particles are hurting you. Enter the storm shelter or get inside the shield.',
+  },
+  POWER_FAILURE: {
+    source: 'LIFE SUPPORT POWER',
+    message: 'The base battery is empty. Restore power in the Power & Heat room.',
+  },
+};
+
+const BIOLOGICAL_DAMAGE_FEEDBACK = {
+  'water-depleted': { source: 'WATER', message: 'Your water is empty. Drink at the base or bring ice with the rover.' },
+  'food-depleted': { source: 'FOOD', message: 'Your food is empty. Eat before leaving the base.' },
+  'dust-storm-exposure': { source: 'DUST STORM', message: 'The storm is damaging your suit. Turn back to the habitat.' },
+  'contaminated-air': { source: 'DUST IN BASE AIR', message: 'Clean your suit and the habitat at life support.' },
+  'bad-base-air': { source: 'BASE AIR', message: 'Replace the air filter at life support.' },
+};
+
+export function getDamageFeedback(cause, detail) {
+  if (cause === 'BIOLOGICAL_COLLAPSE' && BIOLOGICAL_DAMAGE_FEEDBACK[detail]) {
+    return BIOLOGICAL_DAMAGE_FEEDBACK[detail];
+  }
+  return DAMAGE_FEEDBACK[cause] ?? {
+    source: 'SURVIVAL SYSTEM',
+    message: 'A survival hazard is reducing your health. Check the resource warnings.',
+  };
+}

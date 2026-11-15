@@ -20,6 +20,28 @@
 
 .damage-overlay.hidden { display: none; }
 
+.damage-source {
+  position: fixed;
+  z-index: 31;
+  top: max(76px, calc(env(safe-area-inset-top) + 56px));
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  padding: 8px 12px;
+  transform: translate(-50%, -8px);
+  opacity: 0;
+  pointer-events: none;
+  color: #fff;
+  background: rgba(82, 12, 12, .94);
+  border: 2px solid #ff7777;
+  box-shadow: 3px 3px 0 #160707;
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: center;
+  transition: opacity .12s ease, transform .12s ease;
+}
+.damage-source.visible { transform: translate(-50%, 0); opacity: 1; }
+
 .breach-overlay {
   position: fixed;
   inset: 0;
