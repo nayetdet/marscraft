@@ -3,6 +3,7 @@ import { DUST_STORM_VISUAL_CONFIG as V, DUST_WEATHER_CONFIG as W } from '../conf
 import {
   DUST_STORM_CENTER,
   DUST_STORM_WALL_RADIUS,
+  dustStormProximity,
   dustStormVisualStrength,
 } from '../world/dustStormZone.js';
 
