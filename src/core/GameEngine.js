@@ -49,6 +49,7 @@ import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
 import { buildBaseDecor } from '../base/baseDecor.js';
 import { buildGreenhouseFields } from '../base/greenhouseFields.js';
+import { earthCard, plantsStalled } from '../base/greenhouseCare.js';
 import { MenuScreens } from '../ui/MenuScreens.js';
 import { StoryDirector } from '../story/StoryDirector.js';
 import { objectiveView } from '../story/objectiveView.js';
@@ -856,7 +857,28 @@ export class GameEngine {
       this.stationCrop.scale.y = 0.2 + 0.8 * crop.progress / CROP_CONFIG[crop.type].seconds;
       for (const [type, model] of Object.entries(this.stationCropModels)) model.visible = type === crop.type;
     }
-    this.greenhouseFields.update(this.stations.plots);
+    this.greenhouseFields.update(this.stations.plots, {
+      stalled: this.stations.hasGrowingCrops() && plantsStalled(this.greenhouseState()),
+    });
+    // Cada colheita mostra um card "Ciencia espacial na Terra" (issue #89)
+    const harvests = this.stations.harvestCount;
+    if (harvests > (this._harvestsSeen ?? 0)) {
+      this._harvestsSeen = harvests;
+      this.storyHud.showCard(earthCard(harvests));
+    }
+  }
+
+  // Os 3 cuidados da estufa (luz, agua reciclada, sem poeira) para o monitor e para as plantas
+  greenhouseState() {
+    return {
+      lightsOn: this.utility.greenhouseLightsOn,
+      powered: this.expedition.greenhousePowered,
+      cold: this.utility.cold,
+      waterL: this.survival.baseWater,
+      thirsty: this.stations.cropsThirsty,
+      recovery: this.utility.waterRecovery,
+      contaminated: this.stations.contaminated,
+    };
   }
 
   // Estado do jogo que as telas e os pontos de informacao da base mostram
