@@ -80,7 +80,7 @@ src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades
 src/story/                 história em 3 atos: StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
                            objectiveView (o que o painel do objetivo desenha), waypoints (para onde a seta aponta) e WaypointBeacon (seta 3D)
   cutscene/                animações de chegada e de decolagem: timeline (keyframes), CutscenePlayer, efeitos, cápsula
-src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu), CrewPanel, StoryHud
+src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu), StoryHud
                            (card de rádio), WaypointHud (seta na tela), CutsceneHud (legendas, pular) + CSS
 docs/                      contexto do desafio, APIs e dados reais
 ```

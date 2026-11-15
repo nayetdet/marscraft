@@ -361,10 +361,8 @@ body.pause-menu-open .crew-picker { display: none; }
   .inventory-window { padding: 10px; }
 }
 
-/* Tripulacao (issue #47) */
-.crew-window .mc-btn.crew-current,
+/* Seletor de tripulacao do menu inicial (issue #47) */
 .crew-picker .mc-btn.crew-current { color: #ffff55; outline: 2px solid #ffff55; }
-.crew-help { font-size: 12px; color: #e5e5e5; margin: 6px 0 0 16px; line-height: 1.4; }
 .crew-picker { text-align: center; margin-bottom: 6px; }
 .crew-picker-title { font-size: 14px; color: #ffffa0; margin: 0 0 4px; }
 .crew-picker-buttons { display: flex; gap: 6px; justify-content: center; }
