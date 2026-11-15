@@ -82,6 +82,14 @@ export function renderReportCard(container, report) {
     container.append(firstIce);
   }
 
+  // Como a crianca chegou ao foguete: andando ou carregada (ato 3, #421)
+  if (report.boarding) {
+    const boarding = document.createElement('p');
+    boarding.className = report.boarding.walked ? 'report-launch' : 'report-launch is-late';
+    boarding.textContent = report.boarding.text;
+    container.append(boarding);
+  }
+
   const profile = document.createElement('p');
   profile.className = 'report-profile';
   const title = document.createElement('b');

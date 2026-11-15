@@ -752,7 +752,9 @@ export const STORY_CONFIG = {
   // o passo, a crianca e mandada buscar. Para o passo voltar, o recurso precisa passar do minimo
   // por esta folga (L de agua, % de bateria, porcoes de comida, % da bateria do rover): sem ela a
   // tarefa ficaria piscando entre o passo e o desvio.
-  DETOUR_RESUME_EXTRA: { water: 20, power: 2, food: 0, roverPower: 5 },
+  // As barras da crianca (bodyFood e bodyWater, issue #421) nao tem folga: comer ou beber ja
+  // passa bem do minimo do treino.
+  DETOUR_RESUME_EXTRA: { water: 20, power: 2, food: 0, roverPower: 5, bodyFood: 0, bodyWater: 0 },
   // Racoes na despensa que o passo de comer pede (UtilityModule.eatRation tira 1)
   TUTORIAL_RATIONS_NEEDED: 1,
   // Trade-off do primeiro gelo (ato 1, issue #413, src/story/firstIceChoice.ts): blocos de gelo
@@ -1153,6 +1155,18 @@ export const ACT3_CONFIG = {
   WORKOUT_FOOD_PCT: 10,
   WORKOUT_WATER_PCT: 15,
   WORKOUT_HOURS: 2,
+  // Pular o treino (issue #421). Com os ossos ou o preparo abaixo deste nivel (0 a 100) o corpo
+  // esta fraco: o trabalho anda nesta fracao da velocidade e a vida so se recupera ate esta
+  // porcentagem da barra (nunca tira vida: so nao deixa passar dai). Na decolagem, corpo fraco e
+  // carregado pela tripulacao ate o foguete. Regra de jogo: quanto osso se perde em 0,38 g
+  // ninguem mediu (docs/data/numeros-reais.md).
+  WEAK_BODY_BELOW: 40,
+  WEAK_WORK_SPEED: 0.6,
+  WEAK_HEAL_CAP_PCT: 70,
+  // Segundos reais do card TRAIN NOW x LATER na tela
+  GYM_CARD_SECONDS: 20,
+  // Segundos da cena da ida ate o foguete, antes da decolagem (boardingCutscene.ts)
+  BOARDING_SECONDS: 7,
 };
 
 // Ato 4 (issue #410): traje, 3 amostras de cada tipo, analise e envio.

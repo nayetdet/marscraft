@@ -1,6 +1,7 @@
 import { ENERGY_CONFIG, UTILITY_CONFIG } from '../../config/constants.ts';
 import { ActController, type StorySnapshot } from './actTypes.ts';
 import { ACT3_FIRST_STEP_ID } from './act3Steps.ts';
+import { gymChoiceCard, shouldAskGym } from './act3Gym.ts';
 import { crossedSunset, nightLightsCard, nightLightsForecast, shouldAskNightLights, type NightLightsForecast } from './act3NightLights.ts';
 
 // Modal de trade-off (src/story/tradeoffScenes.ts) dos passos do ato que ensinam o mesmo que um
@@ -18,8 +19,11 @@ const TRADEOFF_TRIGGERS: Record<string, string> = {
 //   - o modal de trade-off dos passos de agua e de comida;
 //   - o card da luz da estufa a noite (issue #420, act3NightLights.ts): no primeiro por do sol com
 //     uma planta da crianca crescendo. Quem aplica a escolha e o GameEngine (_onCardChoice).
+//   - o card da academia (issue #421, act3Gym.ts): TRAIN NOW x LATER quando o passo da academia
+//     comeca, uma vez por partida, e as barras da crianca para o desvio de comer e beber.
 export class Act3Controller extends ActController {
   nightLightsAsked = false;
+  gymAsked = false;
   private timeOfDay: number | null = null;
 
   fillSnapshot(s: StorySnapshot): void {
@@ -27,12 +31,21 @@ export class Act3Controller extends ActController {
     s.scriptedStormOver = Boolean(mission?.tutorialStormOver);
     s.plantInBag = Boolean(utility?.playerCrop());
     s.rationsMade = utility?.playerRationsMade ?? 0;
+    // Barras da crianca (issue #421): o treino gasta comida e agua dela (desvios need-eat e need-drink)
+    const survival = this.engine.survival;
+    s.playerFood = survival?.food;
+    s.playerWater = survival?.water;
   }
 
   onStepStart(id: string, s: StorySnapshot): void {
     const trigger = TRADEOFF_TRIGGERS[id];
     if (trigger) this.engine._tradeoff?.(trigger);
     if (id === ACT3_FIRST_STEP_ID) this.engine.mission?.startTutorialStorm(s.hours);
+    // Academia agora ou depois (issue #421): o card entra na fila, depois do balao do passo
+    if (shouldAskGym({ asked: this.gymAsked, stepId: id })) {
+      this.gymAsked = true;
+      this.engine.storyHud?.showCard(gymChoiceCard());
+    }
   }
 
   update(_dt: number, s: StorySnapshot, _running: boolean): void {
