@@ -632,16 +632,18 @@ export class InputController {
     window.addEventListener('blur', () => { this.keys = {}; });
 
     window.addEventListener('wheel', (e) => {
-      if (!this.isLocked || this.survival.isDead || this.isInputBlocked()) return;
+      if (this.survival.isDead || this.isInputBlocked()) return;
       const dir = Math.sign(e.deltaY);
-      // Com o scanner aberto, a rodinha controla o zoom (para cima aproxima) em vez da hotbar.
+      // The scope uses the wheel for zoom, even if pointer lock was temporarily lost.
       if (this.isScannerOpen) {
+        e.preventDefault();
         if (dir !== 0) this._setScope(true, dir < 0);
         return;
       }
+      if (!this.isLocked) return;
       this.hud.selectSlot(this.hud.selectedSlot + dir, this.survival.slots);
       this._syncHandWithSlot();
-    });
+    }, { passive: false });
 
     window.addEventListener('mousedown', (e) => {
       if (this._awaitingPointerLock && !this.isTouchMode) {
