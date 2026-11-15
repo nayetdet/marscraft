@@ -67,7 +67,7 @@ O jogo usa Next.js e é publicado na Vercel. Dados que precisam de chave passam 
 }
 ```
 
-**`impactList` é o que o jogo usa (issue #99).** Cada rodada do modelo WSA-ENLIL lista os lugares que a CME deve atingir (`location`: `Mars`, `STEREO A`, sondas…), com a chegada prevista (`arrivalTime`) e se é golpe de raspão (`isGlancingBlow`). A maioria das CMEs **não** tem `Mars` na lista: na janela de 01 a 13/11/2026 foram 2 de 33. O script `scripts/fetch-donki-cme.mjs` grava só essas, com `marsArrivalTime` e `isGlancingBlow`, e o tempo de aviso no jogo é `marsArrivalTime − startTime` (1 dia real = 1 hora de jogo). Exemplo real da amostra: CME de 01/11 19:00Z (357 km/s), chegada prevista em Marte em 07/11 06:00Z, de raspão.
+**`impactList` é o que o jogo usa (issue #99).** Cada rodada do modelo WSA-ENLIL lista os lugares que a CME deve atingir (`location`: `Mars`, `STEREO A`, sondas…), com a chegada prevista (`arrivalTime`) e se é golpe de raspão (`isGlancingBlow`). A maioria das CMEs **não** tem `Mars` na lista: na janela de 01 a 13/11/2026 foram 2 de 33. O script `scripts/fetch-donki-cme.ts` grava só essas, com `marsArrivalTime` e `isGlancingBlow`, e o tempo de aviso no jogo é `marsArrivalTime − startTime` (1 dia real = 1 hora de jogo). Exemplo real da amostra: CME de 01/11 19:00Z (357 km/s), chegada prevista em Marte em 07/11 06:00Z, de raspão.
 
 ```bash
 # Uma vez: copie o modelo e cole a chave gratuita de https://api.nasa.gov/ no .env (o git ignora)
@@ -87,7 +87,7 @@ npm run fetch:donki                    # ou: npm run fetch:donki -- 2025-11-14 2
 Único ponto de rede do jogo: `src/data/spaceWeather.js`, chamado uma vez em `src/main.js`, ao abrir a página, em paralelo com a construção do mundo. Nunca dentro do loop.
 
 - **Pedidos** (em paralelo, ~5 s de tempo limite cada, via `AbortController`):
-  - `CME` dos últimos 30 dias → normalizado pelo mesmo `summarizeCmes` do script (`src/data/donkiNormalize.js`), então o formato é igual ao de `donkiCme.json` (`headedToMars`, `marsArrivalTime`, `isGlancingBlow`).
+  - `CME` dos últimos 30 dias → normalizado pelo mesmo `summarizeCmes` do script (`src/data/donkiNormalize.ts`), então o formato é igual ao de `donkiCme.json` (`headedToMars`, `marsArrivalTime`, `isGlancingBlow`).
   - `SEP` dos últimos 60 dias (limite da API) → `{ id, eventTime, seenBy, link }`.
   - `notifications?type=all` dos últimos 7 dias → só o boletim mais novo: `{ type, issueTime, url }`. O `messageBody` não é usado.
 - **Chave:** a rota Next `/api/space-weather` lê `process.env.NASA_API_KEY` no servidor. O navegador chama somente essa rota, sem receber a chave. Sem a variável, a rota usa `DEMO_KEY` como fallback (10 pedidos por hora por IP).

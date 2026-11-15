@@ -10,7 +10,7 @@
     "preview": "next start --hostname 0.0.0.0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "fetch:donki": "node scripts/fetch-donki-cme.mjs"
+    "fetch:donki": "tsx scripts/fetch-donki-cme.ts"
   },
   "dependencies": {
     "next": "^15.5.29",
@@ -22,6 +22,7 @@
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "vitest": "^5.1.0"
   }

@@ -1,12 +1,12 @@
 // Baixa as CMEs reais do NASA DONKI e grava em src/data/donkiCme.json as que tinham impacto
 // previsto em Marte, com a chegada prevista pelo modelo WSA-ENLIL da NASA (issue #99).
-// Uso: node scripts/fetch-donki-cme.mjs [startDate] [endDate]  (datas YYYY-MM-DD)
+// Uso: npm run fetch:donki -- [startDate] [endDate]  (datas YYYY-MM-DD)
 // Chave: NASA_API_KEY no arquivo .env da raiz (copie de .env.example; o git ignora o .env),
 // ou no ambiente. Sem chave usa DEMO_KEY, que estoura em ~10 requisicoes por hora.
 import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { marsImpact, summarizeCme, summarizeCmes } from '../src/data/donkiNormalize.js';
+import { marsImpact, summarizeCme, summarizeCmes } from '../src/data/donkiNormalize.ts';
 
 const DAY_MS = 24 * 3600 * 1000;
 // A API responde melhor em janelas curtas: uma requisição por bloco de 30 dias
@@ -14,7 +14,7 @@ const CHUNK_DAYS = 30;
 
 const isoDay = (date) => date.toISOString().slice(0, 10);
 
-// marsImpact/summarizeCme moram em src/data/donkiNormalize.js: o fetch ao vivo do jogo (#100)
+// marsImpact/summarizeCme moram em src/data/donkiNormalize.ts: o fetch ao vivo do jogo (#100)
 // usa as mesmas funcoes, para o JSON embutido e o dado ao vivo terem o mesmo formato.
 export { marsImpact, summarizeCme };
 

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, it, expect } from 'vitest';
-import { marsImpact, summarizeCme } from '../../scripts/fetch-donki-cme.mjs';
+import { marsImpact, summarizeCme } from '../../scripts/fetch-donki-cme.ts';
 import sample from '../../docs/data/samples/donki-cme-2026-11-sample.json';
 import donki from '../data/donkiCme.json';
 

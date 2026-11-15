@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Normaliza respostas do NASA DONKI para o formato que o jogo usa. Puro (sem rede nem DOM):
-// serve ao script de coleta (scripts/fetch-donki-cme.mjs) e ao fetch ao vivo (spaceWeather.js),
+// serve ao script de coleta (scripts/fetch-donki-cme.ts) e ao fetch ao vivo (spaceWeather.ts),
 // para o JSON embutido e o dado ao vivo terem sempre o mesmo formato (issues #99 e #100).
 
 // Impacto previsto em Marte para uma CME: a rodada mais recente do WSA-ENLIL que lista Marte,

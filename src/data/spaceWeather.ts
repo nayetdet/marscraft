@@ -12,7 +12,7 @@ const SPACE_WEATHER_ENDPOINT = '/api/space-weather';
 const CACHE_KEY = 'marscraft.spaceWeather.v1';
 const DAY_MS = 24 * 3600 * 1000;
 
-// Dado embutido (gravado por scripts/fetch-donki-cme.mjs): "real data from DD/MM/AAAA"
+// Dado embutido (gravado por scripts/fetch-donki-cme.ts): "real data from DD/MM/AAAA"
 export const EMBEDDED_SPACE_WEATHER = Object.freeze({
   live: false,
   fetchedAt: donkiCme.fetched,
