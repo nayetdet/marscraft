@@ -93,7 +93,14 @@ export class StationSystem {
     this.fitness = Math.max(0, this.fitness - C.FITNESS_DECAY * dt);
     if (this.mission.greenhousePowered && !this.contaminated) this.growCrops(dt, survival);
     else this.cropsThirsty = false; // parado por luz ou poeira, nao por sede
-    if (inside && (this.contaminated || this.co2 >= 80)) survival.health = Math.max(0, survival.health - C.DUST_DAMAGE * dt);
+    if (inside && (this.contaminated || this.co2 >= 80)) {
+      const powerFailure = !this.contaminated && this.mission.energy <= 0;
+      survival.takeDamage(
+        C.DUST_DAMAGE * dt,
+        powerFailure ? 'POWER_FAILURE' : 'BIOLOGICAL_COLLAPSE',
+        powerFailure ? 'life-support-power' : this.contaminated ? 'contaminated-air' : 'bad-base-air',
+      );
+    }
     if (this.messageTimer > 0) {
       this.messageTimer = Math.max(0, this.messageTimer - dt);
       if (!this.messageTimer) {

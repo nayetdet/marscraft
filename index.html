@@ -411,9 +411,14 @@
 
   <!-- Tela de Morte Estilo Minecraft ("Voce Morreu!") -->
   <div id="death-overlay" class="mc-death-overlay hidden">
-    <div class="mc-menu">
-      <h1 class="mc-death-title">You Died!</h1>
-      <p class="mc-death-sub">You ran out of oxygen, water, or food, or got too much radiation on Mars.</p>
+    <div class="mc-menu death-report">
+      <h1 id="death-title" class="mc-death-title">MISSION ENDED</h1>
+      <p id="death-diagnosis" class="mc-death-sub"></p>
+      <p id="death-science" class="death-report-science"></p>
+      <div class="death-protocol">
+        <h2>NEXT MISSION</h2>
+        <p id="death-protocol"></p>
+      </div>
       <button id="respawn-btn" class="mc-btn">Respawn</button>
     </div>
   </div>

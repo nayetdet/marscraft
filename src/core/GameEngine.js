@@ -810,12 +810,16 @@ export class GameEngine {
       insideShelter: this.survival.insidePressurizedShip && isInsideShelter(this.player.pos.x, this.player.pos.z),
       active,
     });
-    if (active) this.survival.takeDamage(damage * (this.stations.upgraded && !this.survival.insidePressurizedShip ? STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR : 1));
+    if (active) this.survival.takeDamage(
+      damage * (this.stations.upgraded && !this.survival.insidePressurizedShip ? STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR : 1),
+      'RADIATION_OVERDOSE',
+      'solar-radiation',
+    );
 
     if (this.survival.isDead && !this._wasDead) {
       this.mission.markDeath();
       this.missionHud.closeMavPanel(); // a tela de morte precisa aparecer por cima
-      this.hud.showDeathScreen(); // a radiacao pode matar depois do hud.update deste frame
+      this.hud.showDeathScreen(this.survival); // a radiacao pode matar depois do hud.update deste frame
     }
     this._wasDead = this.survival.isDead;
 
