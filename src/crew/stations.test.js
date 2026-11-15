@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RADIATION_CONFIG, STATION_CONFIG } from '../config/constants.js';
+import { RADIATION_CONFIG, STATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { Battery } from '../mission/energy.js';
 import { Greenhouse, WaterRecycler, OxygenGenerator, MedBay, createStations, problemText } from './stations.js';
 
@@ -8,7 +8,6 @@ function makeBase(overrides = {}) {
     battery: new Battery(100),
     water: 50,
     maxWater: 100,
-    hydration: 100,
     food: 0,
     maxFood: 40,
     graywater: 0,
@@ -71,9 +70,11 @@ describe('Greenhouse', () => {
     greenhouse.update(1, 1, base);
     expect(base.food).toBeCloseTo(STATION_CONFIG.GREENHOUSE_FOOD_PER_HOUR);
 
-    const dry = makeBase({ hydration: STATION_CONFIG.GREENHOUSE_MIN_HYDRATION - 1 });
+    const dry = makeBase({ water: STATION_CONFIG.GREENHOUSE_WATER_L_PER_FOOD / 2 });
     greenhouse.update(1, 1, dry);
     expect(dry.food).toBe(0);
+    // A ultima agua do tanque fica para beber
+    expect(dry.water).toBe(STATION_CONFIG.GREENHOUSE_WATER_L_PER_FOOD / 2);
     expect(greenhouse.problems(dry)).toContain('no-water');
 
     const alone = makeBase();
@@ -86,6 +87,23 @@ describe('Greenhouse', () => {
     const base = makeBase({ food: 39.9 });
     greenhouse.update(1, 1, base);
     expect(base.food).toBe(40);
+    // So a agua da comida que coube na despensa foi usada
+    expect(50 - base.water).toBeCloseTo(0.1 * STATION_CONFIG.GREENHOUSE_WATER_L_PER_FOOD);
+  });
+
+  it('waters the plants from the base tank and sends what they breathe out to gray water (issue #101)', () => {
+    const greenhouse = new Greenhouse();
+    const base = makeBase();
+    greenhouse.update(1, 1, base);
+    const used = STATION_CONFIG.GREENHOUSE_FOOD_PER_HOUR * STATION_CONFIG.GREENHOUSE_WATER_L_PER_FOOD;
+    expect(base.water).toBeCloseTo(50 - used);
+    expect(base.graywater).toBeCloseTo(used * WATER_SYSTEM_CONFIG.CROP_WATER_RETURN);
+
+    // Sem luz ou com tudo congelado ela nao produz, entao tambem nao bebe
+    const dark = makeBase({ greenhouseDark: true });
+    greenhouse.update(1, 1, dark);
+    expect(dark.water).toBe(50);
+    expect(dark.food).toBe(0);
   });
 });
 

@@ -26,14 +26,16 @@ const CO2_WARN = 40;
 const CO2_DAMAGE = 80;
 const WATER_LOW = 0.2;
 const WATER_EMPTY = 0.1;
-const GREENHOUSE_DRY = 20;
+// A partir de quantos litros de agua cinza vale mais mandar alguem reciclar do que buscar gelo
+const GRAYWATER_WORTH_RECYCLING = 5;
 
 // Fonte curta e honesta: dado embutido aparece como "real data from DD/MM/AAAA"
 export function stormSourceShort(storm, fetchedIso) {
   return `Real NASA DONKI data from ${formatDateDMY(fetchedIso)}: CME of ${formatDateDMY(storm.cme.startTime)}, ${Math.round(storm.cme.speedKmS)} km/s`;
 }
 
-// `base`: agua do reservatorio (SurvivalSystem) e ar do habitat (StationSystem, #54).
+// `base`: agua do reservatorio e agua cinza (SurvivalSystem), campos sem agua e ar do habitat
+// (StationSystem, #54).
 // O "O2 da base" e 100% - CO2: o ar fica ruim quando o filtro acaba ou falta energia.
 export function missionStatus(mission, fetchedIso, base = {}) {
   const power = Math.round(mission.battery.percent);
@@ -51,7 +53,8 @@ export function missionStatus(mission, fetchedIso, base = {}) {
   const waterLiters = base.water ?? maxWater;
   const waterPct = maxWater > 0 ? clamp01(waterLiters / maxWater) : 0;
   const waterTone = waterPct <= WATER_EMPTY ? 'danger' : waterPct <= WATER_LOW ? 'warn' : 'ok';
-  const greenhouseDry = (base.hydration ?? 100) <= GREENHOUSE_DRY;
+  // Campos da estufa parados por falta de agua no tanque (issue #101)
+  const greenhouseDry = Boolean(base.greenhouseDry);
 
   const co2 = base.co2 ?? 0;
   const contaminated = Boolean(base.contaminated);
@@ -113,10 +116,16 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       text: 'CO2 is the gas we breathe out. Change the filter at life support.',
     });
   }
-  if (waterTone === 'danger') {
-    alerts.push({ id: 'water', icon: 'drop', tone: 'danger', title: 'Base water almost empty', text: 'Use the rover to bring ice. Ice melts into water.' });
-  } else if (greenhouseDry) {
-    alerts.push({ id: 'greenhouse', icon: 'plant', tone: 'warn', title: 'The plants are thirsty', text: 'The greenhouse needs water to grow food.' });
+  if (waterTone === 'danger' || greenhouseDry) {
+    alerts.push({
+      id: 'water',
+      icon: 'drop',
+      tone: 'danger',
+      title: greenhouseDry ? 'No water: the plants stopped growing' : 'Base water almost empty',
+      text: (base.graywater ?? 0) >= GRAYWATER_WORTH_RECYCLING
+        ? 'Used water is waiting. Send a crew member to the water recycler to clean it.'
+        : 'Use the rover to bring ice. Ice melts into water.',
+    });
   }
   if (radTone === 'danger' && !shielded && phase !== 'active') {
     alerts.push({ id: 'radiation', icon: 'radiation', tone: 'danger', title: 'Radiation very high', text: 'Go inside the base.' });

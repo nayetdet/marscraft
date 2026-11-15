@@ -2,6 +2,7 @@ import { CROP_ITEM_IDS, ITEM_DEFINITIONS } from '../config/blockTypes.js';
 import { describe, it, expect } from 'vitest';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { SurvivalSystem } from './SurvivalSystem.js';
+import { WATER_SYSTEM_CONFIG } from '../config/constants.js';
 
 describe('SurvivalSystem', () => {
   it('leaks base and suit oxygen during a breach, then restores them using power after sealing', () => {
@@ -88,10 +89,10 @@ describe('SurvivalSystem', () => {
     }
   });
 
-  it('manages base water reserves, greenhouse hydration, and drinking from habitat dispenser', () => {
+  it('manages base water reserves and drinking from habitat dispenser', () => {
     const survival = new SurvivalSystem();
     expect(survival.baseWater).toBeGreaterThan(0);
-    expect(survival.greenhouseHydration).toBe(100);
+    expect(survival.graywater).toBe(0);
 
     // Adiciona água à base
     const added = survival.addBaseWater(30);
@@ -102,11 +103,32 @@ describe('SurvivalSystem', () => {
     const drinkResult = survival.drinkFromBaseDispenser();
     expect(drinkResult.success).toBe(true);
     expect(survival.water).toBe(survival.maxStat);
+  });
 
-    // Esgota a água e testa hidratação da estufa caindo
-    survival.baseWater = 0;
-    survival.update(10.0, { x: 0, y: 11.7, z: 0 });
-    expect(survival.greenhouseHydration).toBeLessThan(100);
+  it('the base tank does not go down by itself: with nothing planted there is no irrigation (issue #101)', () => {
+    const survival = new SurvivalSystem();
+    const before = survival.baseWater;
+    for (let i = 0; i < 600; i++) survival.update(1, { x: 0, y: 11.7, z: 0 });
+    expect(survival.baseWater).toBe(before);
+    expect(survival.graywater).toBe(0);
+  });
+
+  it('water drunk at the purifier becomes gray water for the recycler (issue #101)', () => {
+    const survival = new SurvivalSystem();
+    const before = survival.baseWater;
+    survival.water = 5;
+    expect(survival.drinkFromBaseDispenser().success).toBe(true);
+    expect(before - survival.baseWater).toBe(WATER_SYSTEM_CONFIG.DRINK_AMOUNT_FROM_DISPENSER);
+    expect(survival.graywater).toBe(WATER_SYSTEM_CONFIG.DRINK_AMOUNT_FROM_DISPENSER);
+    expect(survival.graywater).toBe(2);
+
+    // Tanque quase vazio: so vira agua cinza o que foi bebido de verdade
+    survival.baseWater = 1.2;
+    survival.graywater = 0;
+    survival.water = 5;
+    survival.drinkFromBaseDispenser();
+    expect(survival.baseWater).toBe(0);
+    expect(survival.graywater).toBeCloseTo(1.2);
   });
 });
 

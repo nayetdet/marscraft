@@ -110,13 +110,22 @@ describe('missionStatus', () => {
     expect(missionStatus(fakeMission(), FETCHED, { contaminated: true }).alerts[0].title).toBe('Dust in the base!');
   });
 
-  it('asks for ice when the base water is almost empty, and for water when plants are dry', () => {
+  it('asks for ice when the base water is almost empty, and says so when the plants stopped', () => {
     expect(missionStatus(fakeMission(), FETCHED, { water: 18 }).water.tone).toBe('warn');
-    const empty = missionStatus(fakeMission(), FETCHED, { water: 6, hydration: 10 });
+    const empty = missionStatus(fakeMission(), FETCHED, { water: 6 });
     expect(empty.alerts.map((a) => a.id)).toEqual(['water']);
-    const dry = missionStatus(fakeMission(), FETCHED, { water: 60, hydration: 10 });
+    expect(empty.alerts[0].text).toMatch(/rover/);
+    expect(empty.water.greenhouseDry).toBe(false);
+    const dry = missionStatus(fakeMission(), FETCHED, { water: 0, greenhouseDry: true });
     expect(dry.water.greenhouseDry).toBe(true);
-    expect(dry.alerts.map((a) => a.id)).toEqual(['greenhouse']);
+    expect(dry.alerts.map((a) => a.id)).toEqual(['water']);
+    expect(dry.alerts[0].title).toMatch(/plants stopped/);
+  });
+
+  it('points to the recycler when used water is waiting to be cleaned (issue #101)', () => {
+    const s = missionStatus(fakeMission(), FETCHED, { water: 4, graywater: 12 });
+    expect(s.alerts[0]).toMatchObject({ id: 'water', tone: 'danger' });
+    expect(s.alerts[0].text).toMatch(/water recycler/);
   });
 
   it('formats a short source line', () => {

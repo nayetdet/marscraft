@@ -23,7 +23,8 @@ export class SurvivalSystem {
     // Sistema de Água Potável e Irrigação da Base
     this.baseWater = WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER;
     this.maxBaseWater = WATER_SYSTEM_CONFIG.MAX_BASE_WATER;
-    this.greenhouseHydration = 100;
+    // Agua usada (bebida, lavada, transpirada pelas plantas) esperando o reciclador da base
+    this.graywater = 0;
   }
 
   resetInventory() {
@@ -102,15 +103,6 @@ export class SurvivalSystem {
 
     this.water = Math.max(0, this.water - SURVIVAL_CONFIG.WATER_DRAIN_RATE * dt);
     this.food = Math.max(0, this.food - SURVIVAL_CONFIG.FOOD_DRAIN_RATE * dt);
-
-    // Irrigação da estufa a partir da reserva de água da base
-    if (this.baseWater > 0) {
-      const waterUsed = WATER_SYSTEM_CONFIG.GREENHOUSE_WATER_CONSUMPTION * dt;
-      this.baseWater = Math.max(0, this.baseWater - waterUsed);
-      this.greenhouseHydration = Math.min(100, this.greenhouseHydration + dt * 2.5);
-    } else {
-      this.greenhouseHydration = Math.max(0, this.greenhouseHydration - dt * 0.9);
-    }
 
     // Regeneração natural se comida e água estiverem altas (estilo Minecraft)
     if (this.food >= 16 && this.water >= 12 && this.canHeal() && this.health < this.maxStat) {
@@ -245,10 +237,12 @@ export class SurvivalSystem {
 
     const consumed = Math.min(this.baseWater, WATER_SYSTEM_CONFIG.DRINK_AMOUNT_FROM_DISPENSER);
     this.baseWater -= consumed;
+    // A agua bebida nao some: vira agua cinza e o reciclador da base limpa de novo
+    this.graywater += consumed;
     this.water = this.maxStat;
     return {
       success: true,
-      message: `Drank clean water from habitat purifier (+Hydration full). Base reserve: ${Math.round(this.baseWater)}L`,
+      message: `Drank clean water from habitat purifier (+Hydration full). Base reserve: ${Math.round(this.baseWater)}L. The used water goes to the recycler.`,
     };
   }
 }
