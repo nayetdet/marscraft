@@ -69,7 +69,8 @@ export const SURVIVAL_CONFIG = {
   DAMAGE_SHAKE_RATE: 42,
   // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
   HEAL_MIN_OXYGEN: 5,
-  // Tempestade de poeira na borda da area jogavel, medida a partir de TERRAIN_CONFIG.BASE_CENTER
+  // Raios de exposição à poeira, medidos a partir de TERRAIN_CONFIG.BASE_CENTER.
+  // O efeito visual da parede acompanha separadamente a borda física do mapa.
   DUST_STORM_START_RADIUS: 70,
   DUST_STORM_FATAL_RADIUS: 100,
   DUST_STORM_DAMAGE_RATE: 20,
@@ -81,14 +82,13 @@ export const SURVIVAL_CONFIG = {
 
 // Visual da tempestade da borda (src/sky/DustStormEffect.js). O dano fica no SURVIVAL_CONFIG.
 export const DUST_STORM_VISUAL_CONFIG = {
-  WALL_RADIUS_OFFSET: 2, // a parede de poeira fica 2 blocos depois do inicio da tempestade
   WALL_BOTTOM_Y: -4,
   WALL_HEIGHT: 44,
   // A parede some perto da camera (entre estas distancias, em blocos) para nao virar um plano duro
   WALL_FADE_NEAR: 1.5,
   WALL_FADE_FAR: 8,
-  // A neblina e a cupula de poeira comecam um pouco antes da tempestade, junto com a parede
-  VISUAL_LEAD: 4,
+  // Neblina, cúpula e partículas aparecem nos últimos blocos antes da borda do mapa.
+  VISUAL_LEAD: 12,
   DOME_RADIUS: 26,
   DOME_MAX_OPACITY: 0.93,
   FOG_BASE_DENSITY: 0.0015,
