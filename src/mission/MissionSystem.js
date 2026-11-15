@@ -1,23 +1,25 @@
 import {
+  DOSE_CONFIG,
   ENERGY_CONFIG,
   MAV_CONFIG,
   MISSION_CONFIG,
   STORM_CONFIG,
   RADIATION_CONFIG,
+  SCIENCE_CONFIG,
   SURVIVAL_CONFIG,
 } from '../config/constants.js';
 import { Battery, solarChargePerHour } from './energy.js';
-import { doseRateMsvPerHour, radiationDamage } from './radiation.js';
+import { doseRateMsvPerHour, missionDoseMsvPerHour, radiationDamage } from './radiation.js';
+import { DOSE_LIMIT_MSV, createDoseLedger, doseBreakdown, doseSourceFor } from './doseBudget.js';
+import { OxygenPlant } from './oxygenPlant.js';
 import { buildStormSchedule, rescheduleStorms, stormStateAt } from './solarStorms.js';
+import { DustWeather } from './dustWeather.js';
 
 const PROPELLANT_PER_ICE = 100 / MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
+import { sciencePackage, scienceMinimumMet } from './sciencePackage.js';
 
-// Converte pontos de O2 do jogo em kg: um sol inteiro respirando la fora = 0,84 kg (NASA BVAD)
-export function oxygenPointsToKg(points) {
-  const secondsPerSol = 24 / MISSION_CONFIG.GAME_HOURS_PER_SECOND;
-  const pointsPerSol = SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE * secondsPerSol;
-  return (points / pointsPerSol) * MAV_CONFIG.OXYGEN_KG_PER_DAY;
-}
+// Converte pontos de O2 do jogo em kg (mora em oxygenPlant.js, junto da conta da agua)
+export { oxygenPointsToKg } from './oxygenPlant.js';
 
 export function mavProgress({ propellant, stormsSurvived, dataSent }) {
   const propellantPart = Math.min(1, propellant / 100);
@@ -37,11 +39,13 @@ export function mavProgress({ propellant, stormsSurvived, dataSent }) {
 export class MissionSystem {
   // `stormsStarted: false` deixa o clima espacial calmo ate `startStorms()` (a historia so
   // solta as tempestades no ato 2, para nenhuma CME cair no meio do tutorial).
-  constructor({ cmes, startHours, stormsStarted = true }) {
+  // `seps`: SEPs reais do fetch ao vivo do DONKI (issue #100); vazio no dado embutido.
+  constructor({ cmes, seps = [], startHours, stormsStarted = true, rng = Math.random }) {
     this.battery = new Battery();
     this.cmes = cmes;
+    this.seps = seps;
     this.stormsStarted = stormsStarted;
-    this.schedule = stormsStarted ? buildStormSchedule(cmes, startHours) : [];
+    this.schedule = stormsStarted ? buildStormSchedule(cmes, startHours, undefined, seps) : [];
     this.lastHours = startHours;
 
     this.shieldOn = false;
@@ -53,11 +57,27 @@ export class MissionSystem {
     this.factoryOn = true;
     this.iceStock = 0; // blocos de gelo esperando na fabrica
     this.propellant = 0; // %
+    // Ciencia ja enviada para a Terra (issue #105). `dataSent` so vale com o minimo do pacote.
+    this.sentDiscoveries = 0;
+    this.sentSamples = 0;
+    this.uploads = 0;
     this.dataSent = false;
+    // Tubos de amostra carregados no foguete: cada um pede mais gelo para encher o tanque
+    this.sampleTubes = 0;
+    this._spareFuelIce = 0; // combustivel que sobrou ao tirar um tubo com o tanque cheio
     this.launched = false;
 
     this.stormsSurvived = 0;
-    this.totalDoseMsv = 0;
+    // Dose acumulada (issue #104): comeca com a viagem ate Marte e nunca desce.
+    // `totalDoseMsv` = soma de `dose`; `missionDoseRate` = mSv por hora de jogo que entram na barra.
+    this.dose = createDoseLedger();
+    this.totalDoseMsv = this.dose.transit;
+    // Dose na escala real (sem viagem nem GAME_FACTOR): e o que o boletim do cadete (#90) compara
+    this.realDoseMsv = 0;
+    this.missionDoseRate = 0;
+    this.suitUpgraded = false;
+    this._doseWarned = false;
+    this._doseLimitPassed = false;
     this.doseRate = doseRateMsvPerHour();
     this.chargeRate = 0;
     this.solarEnergyCollected = 0; // % de bateria somados
@@ -69,6 +89,10 @@ export class MissionSystem {
     this.stormHours = 0;
     this.protectedStormHours = 0;
 
+    // Tempestade de poeira e poeira nos paineis (issue #103). Comeca junto com as tempestades
+    // solares: a historia solta o clima no ato 2, longe do tutorial.
+    this.dustWeather = new DustWeather({ rng, startHours, started: stormsStarted });
+
     this.storm = stormStateAt(this.schedule, startHours);
     this._phaseKey = this._keyFor(this.storm);
     this._diedDuringStorm = false;
@@ -76,6 +100,10 @@ export class MissionSystem {
     this.events = [];
     // Filtros de ar gastos encarecem o O2 do habitat (gerador de O2 da tripulacao, issue #47)
     this.oxygenCostMultiplier = 1;
+    // Gerador de O2: eletrolise (agua) ou MOXIE (ar de Marte), issue #102
+    this.oxygenPlant = new OxygenPlant();
+    // Fracao da luz do Sol que chega aos paineis (1 = normal; o eclipse de Fobos baixa, issue #107)
+    this.sunlightFactor = 1;
   }
 
   // A fila de tempestades comecou, mas os dados nao tem nenhuma CME com destino a Marte
@@ -96,9 +124,11 @@ export class MissionSystem {
   // Avanca a missao ate `hours`. `active` = jogo rodando (sem pausa e jogador vivo):
   // so entao a radiacao atinge o jogador. Devolve o dano de radiacao a aplicar na vida.
   // `insideShield` = jogador dentro da bolha do escudo; fora dela o escudo ligado nao protege.
-  update(hours, { insideHabitat = false, insideShield = true, insideShelter = false, active = true } = {}) {
+  // `suitUpgraded` = traje melhorado na estacao: reduz a dose somada la fora.
+  update(hours, { insideHabitat = false, insideShield = true, insideShelter = false, active = true, suitUpgraded = false } = {}) {
     this.insideShield = insideShield;
     this.insideShelter = insideShelter;
+    this.suitUpgraded = suitUpgraded;
     let remaining = hours - this.lastHours;
     let damage = 0;
     while (remaining > 1e-9) {
@@ -115,7 +145,9 @@ export class MissionSystem {
     const previousTime = ((((this.lastHours - h) % 24) + 24) % 24);
     const timeOfDay = ((this.lastHours % 24) + 24) % 24;
 
-    this.chargeRate = solarChargePerHour(timeOfDay);
+    this.dustWeather.step(h, this.lastHours);
+    this.chargeRate = solarChargePerHour(timeOfDay, this.dustWeather.solarFactor);
+    this.chargeRate *= this.sunlightFactor; // eclipse de Fobos (issue #107)
     this.solarEnergyCollected += this.battery.add(this.chargeRate * h);
     // O RTG gera de dia e de noite, so para o suporte de vida (issue #85)
     this.battery.addLifeSupportPower(
@@ -138,29 +170,66 @@ export class MissionSystem {
     this._runFactory(h);
     this._updateStormPhase();
 
-    this.doseRate = doseRateMsvPerHour({
-      stormDoseUGyPerHour: this.storm.phase === 'active' ? this.storm.storm.doseUGyPerHour : 0,
-      insideHabitat,
-      shieldOn: this.shieldOn && this.insideShield,
-      shelterWaterL: this.insideShelter ? this.shelterWaterL : 0,
+    const stormActive = this.storm.phase === 'active';
+    const stormDoseUGyPerHour = stormActive ? this.storm.storm.doseUGyPerHour : 0;
+    const shieldOn = this.shieldOn && this.insideShield;
+    const shelterWaterL = this.insideShelter ? this.shelterWaterL : 0;
+    this.doseRate = doseRateMsvPerHour({ stormDoseUGyPerHour, insideHabitat, shieldOn, shelterWaterL });
+    this.missionDoseRate = missionDoseMsvPerHour({
+      stormDoseUGyPerHour, insideHabitat, shieldOn, shelterWaterL, suitUpgraded: this.suitUpgraded,
     });
     if (!active) return 0;
 
     if (this.standby) this.standbyHours += h;
-    if (this.storm.phase === 'active') {
+    if (stormActive) {
       this._playedDuringStorm = true;
       this.stormHours += h;
       if (this.doseRate < RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR) this.protectedStormHours += h;
     }
-    this.totalDoseMsv += this.doseRate * h;
+    this.realDoseMsv += this.doseRate * h;
+    this.addDose(this.missionDoseRate * h, doseSourceFor({ stormActive, insideHabitat }));
     return radiationDamage(this.doseRate, h);
+  }
+
+  // Soma dose na fonte `source` ('eva', 'storm', 'habitat'). Nunca desce.
+  addDose(msv, source = 'eva') {
+    if (!(msv > 0)) return;
+    this.dose[source] += msv;
+    this.totalDoseMsv += msv;
+    if (!this._doseWarned && this.totalDoseMsv >= DOSE_LIMIT_MSV * DOSE_CONFIG.WARN_FRACTION) {
+      this._doseWarned = true;
+      if (this.totalDoseMsv < DOSE_LIMIT_MSV) this._emit('dose-warning');
+    }
+    if (!this._doseLimitPassed && this.totalDoseMsv >= DOSE_LIMIT_MSV) {
+      this._doseLimitPassed = true;
+      this._emit('dose-limit');
+    }
+  }
+
+  // Acima do limite de carreira a medica de voo proibe novas saidas do comandante
+  get grounded() {
+    return this.totalDoseMsv >= DOSE_LIMIT_MSV;
+  }
+
+  // { transit, eva, storm, habitat, total, limit, fraction, grounded } para telas e boletim (#90)
+  get doseBreakdown() {
+    return doseBreakdown(this.dose);
+  }
+
+  // Painel de admin: volta a dose para so a viagem
+  resetDose() {
+    this.dose = createDoseLedger();
+    this.totalDoseMsv = this.dose.transit;
+    this._doseWarned = false;
+    this._doseLimitPassed = false;
   }
 
   // Comeca a fila de tempestades a partir de `hours`. Chamar de novo nao refaz a fila.
   startStorms(hours) {
     if (this.stormsStarted) return;
     this.stormsStarted = true;
-    this.schedule = buildStormSchedule(this.cmes, hours);
+    this.dustWeather.start(hours);
+    this.schedule = buildStormSchedule(this.cmes, hours, undefined, this.seps);
     this.storm = stormStateAt(this.schedule, hours);
     this._phaseKey = this._keyFor(this.storm);
   }
@@ -174,7 +243,7 @@ export class MissionSystem {
     const workedHours = need > 0 ? wanted * (got / need) : 0;
     const iceUsed = workedHours / MAV_CONFIG.ISRU_HOURS_PER_ICE_BLOCK;
     this.iceStock = Math.max(0, this.iceStock - iceUsed);
-    this.propellant = Math.min(100, this.propellant + iceUsed * PROPELLANT_PER_ICE);
+    this.propellant = Math.min(100, this.propellant + iceUsed * this.propellantPerIce());
     if (this.propellant >= 100 - 1e-6) {
       this.propellant = 100;
       this.iceStock = 0;
@@ -246,14 +315,21 @@ export class MissionSystem {
     return this.battery.percent < ENERGY_CONFIG.STANDBY_BELOW;
   }
 
-  // O2 que a bateria e o RTG conseguem pagar agora
-  oxygenRefillBudget() {
-    return this.battery.lifeSupportAvailable / (ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier);
+  // % de bateria por ponto de O2 no modo atual do gerador (MOXIE custa mais que a eletrolise)
+  oxygenEnergyPerPoint() {
+    return ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier * this.oxygenPlant.energyFactor;
   }
 
-  chargeOxygen(points) {
+  // O2 que a bateria (e, na eletrolise, o tanque `tank.water`) consegue pagar agora
+  oxygenRefillBudget(tank = null) {
+    return this.oxygenPlant.refillBudget(this.battery.lifeSupportAvailable / this.oxygenEnergyPerPoint(), tank);
+  }
+
+  chargeOxygen(points, tank = null) {
     if (points <= 0) return;
-    this.battery.drainLifeSupport(points * ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier);
+    // O RTG paga o ar antes da bateria (#85); no modo eletrolise o tanque paga a agua (#102)
+    this.battery.drainLifeSupport(points * this.oxygenEnergyPerPoint());
+    this.oxygenPlant.useWaterForPoints(points, tank);
     this.oxygenProducedPoints += points;
   }
 
@@ -302,9 +378,19 @@ export class MissionSystem {
     return this.factoryOn;
   }
 
+  // Blocos de gelo que enchem o tanque: o foguete vazio mais o peso dos tubos de amostra
+  iceForFullTank() {
+    return MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK + this.sampleTubes * SCIENCE_CONFIG.ICE_PER_SAMPLE_TUBE;
+  }
+
+  // % do tanque que cada bloco de gelo enche
+  propellantPerIce() {
+    return 100 / this.iceForFullTank();
+  }
+
   // Quantos blocos de gelo ainda cabem no tanque (contando os que esperam na fabrica)
   iceNeeded() {
-    const missing = (100 - this.propellant) / PROPELLANT_PER_ICE - this.iceStock;
+    const missing = (100 - this.propellant) / this.propellantPerIce() - this.iceStock;
     return Math.max(0, Math.ceil(missing - 1e-6));
   }
 
@@ -315,11 +401,51 @@ export class MissionSystem {
     return accepted;
   }
 
-  sendData() {
-    if (this.dataSent) return 'already-sent';
-    if (!this.battery.spend(ENERGY_CONFIG.DATA_UPLOAD_COST)) return 'no-energy';
-    this.dataSent = true;
-    return 'sent';
+  // O que o proximo envio leva. `discoveries` e `samples` = total feito nesta partida
+  // (descobertas do scanner nesta missao e amostras de regolito analisadas).
+  sciencePackage({ discoveries = 0, samples = 0 } = {}) {
+    return sciencePackage({ discoveries, samples, sentDiscoveries: this.sentDiscoveries, sentSamples: this.sentSamples });
+  }
+
+  // Envia o que ainda nao foi (ate o limite de uma passagem do orbitador). Pode enviar em partes;
+  // cada parte paga o custo base de novo. Devolve { status: 'sent' | 'empty' | 'no-energy', ... }.
+  sendData(totals = {}) {
+    const pkg = this.sciencePackage(totals);
+    const result = { status: 'sent', discoveries: pkg.uploadDiscoveries, samples: pkg.uploadSamples, cost: pkg.cost, leftAfter: pkg.leftAfter, dataSent: this.dataSent };
+    if (pkg.items === 0) return { ...result, status: 'empty' };
+    if (!this.battery.spend(pkg.cost)) return { ...result, status: 'no-energy' };
+    this.sentDiscoveries += pkg.uploadDiscoveries;
+    this.sentSamples += pkg.uploadSamples;
+    this.uploads++;
+    this.dataSent = scienceMinimumMet(this.sentDiscoveries, this.sentSamples);
+    result.dataSent = this.dataSent;
+    return result;
+  }
+
+  // Carrega 1 tubo de amostra no foguete. `analyzedSamples` = amostras analisadas no laboratorio
+  // (so elas viram tubos). O combustivel ja feito vale menos tanque: a mesma massa de combustivel
+  // agora tem que levantar um foguete mais pesado.
+  loadSampleTube(analyzedSamples) {
+    if (this.launched) return 'launched';
+    if (this.sampleTubes >= SCIENCE_CONFIG.MAX_SAMPLE_TUBES) return 'full';
+    if (this.sampleTubes >= analyzedSamples) return 'no-samples';
+    this._rescaleFuel(this.sampleTubes + 1);
+    return 'loaded';
+  }
+
+  unloadSampleTube() {
+    if (this.launched || this.sampleTubes <= 0) return 'empty';
+    this._rescaleFuel(this.sampleTubes - 1);
+    return 'unloaded';
+  }
+
+  // Combustivel medido em blocos de gelo, para tirar um tubo e colocar de novo nao perder nada
+  _rescaleFuel(tubes) {
+    const fuelIce = (this.propellant / 100) * this.iceForFullTank() + this._spareFuelIce;
+    this.sampleTubes = tubes;
+    const full = this.iceForFullTank();
+    this.propellant = Math.min(100, (fuelIce / full) * 100);
+    this._spareFuelIce = Math.max(0, fuelIce - full);
   }
 
   ignite() {

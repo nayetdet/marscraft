@@ -63,7 +63,7 @@ export class CrewManager {
       const destination = fixed ? fixedStations[index] : 'rest';
       member.stationary = fixed;
       member.dialogue = {
-        oxygen: 'This oxygen generator splits water into breathable oxygen and hydrogen. It needs power to run.',
+        oxygen: 'This oxygen machine can split water, or pull oxygen out of Mars air with more power. Pick the mode in Life Support.',
         greenhouse: 'Plants grow food here, but they need water, warmth, and light.',
         water: 'The recycler cleans used water so the habitat can use it again.',
         medbay: 'The medbay is where we check our health and recover after a tough trip outside.',
@@ -174,9 +174,8 @@ export class CrewManager {
     for (const member of this.members) {
       const lacking = [];
 
-      const energyNeed = CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR * this.oxygenCostMultiplier() * h * (base.demandFactor ?? 1);
-      // Ar da tripulacao e suporte de vida: o RTG paga antes da bateria (issue #85)
-      if (base.battery.drainLifeSupport(energyNeed) + 1e-9 < energyNeed) lacking.push('air');
+      // Ar da tripulacao no modo do gerador (#102); o RTG paga antes da bateria (#85)
+      if (!this._breathe(h)) lacking.push('air');
 
       const waterNeed = CREW_CONFIG.WATER_L_PER_HOUR * h * (base.demandFactor ?? 1);
       const water = Math.min(base.water, waterNeed);
@@ -192,6 +191,18 @@ export class CrewManager {
       if (lacking.length) this._starve(member, h, lacking);
       else this._recover(member, h);
     }
+  }
+
+  // Ar de um tripulante por `h` horas, no mesmo modo do gerador de O2 do jogador (issue #102):
+  // eletrolise gasta energia e agua do tanque; MOXIE so energia, mas mais. Sem gerador na base
+  // (testes antigos) o ar e pago so em energia.
+  _breathe(h) {
+    const base = this.base;
+    const personHours = h * (base.demandFactor ?? 1);
+    const energyPerPersonHour = CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR * this.oxygenCostMultiplier();
+    if (base.oxygenPlant) return base.oxygenPlant.supplyCrew(personHours, energyPerPersonHour, base);
+    const energyNeed = energyPerPersonHour * personHours;
+    return base.battery.drainLifeSupport(energyNeed) + 1e-9 >= energyNeed;
   }
 
   _starve(member, h, lacking) {

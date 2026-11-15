@@ -8,6 +8,8 @@ Este arquivo existe para **não inventar números**, o que o próprio desafio pe
 
 Arquivo: [`samples/radlab-dose-rate-summary.json`](samples/radlab-dose-rate-summary.json). Unidade provável: **µGy/h** (ver a nota em `apis-nasa.md`).
 
+No jogo, as mesmas consultas são refeitas por `node scripts/fetch-radlab-summary.mjs` e gravadas em `src/data/radlabSummary.json` (coleta de 15/11/2026 UTC, medianas idênticas às da tabela). A dose normal do jogo (`RADIATION_CONFIG.MARS_SURFACE_DOSE_UGY_PER_HOUR`) lê a mediana do Curiosity desse JSON, e o gráfico de 4 barras do diário e da enfermaria usa as proporções abaixo (issue #106).
+
 | Local | Instrumento | Janela | Mediana | Média | Máx. | Leitura para o jogo |
 |---|---|---|---|---|---|---|
 | **Superfície de Marte** (Cratera Gale) | Curiosity MSL-RAD | 16/11–10/12/2022 | **6,93** | 6,96 | 9,86 | Estável. A atmosfera fina protege um pouco. |
@@ -34,6 +36,28 @@ Mecânica: a dose acumulada sobe com a taxa do momento (dose normal ou dose da t
 
 [Ref] Para dar escala: o limite de carreira de astronautas da NASA é **600 mSv** (NASA-STD-3001, 2022).
 
+### Dose da missão: a viagem já gasta a maior parte do limite (issue #104)
+
+| Fato | Valor | Fonte |
+|---|---|---|
+| Dose na viagem até Marte, medida pelo RAD **dentro da nave** do Curiosity (2011–2012) | **1,8 mSv por dia** (1,84 ± 0,33) | [Ref] Zeitlin et al., *Science* 340 (2013); [SwRI/NASA, "SwRI-led team calculates the radiation exposure associated with a trip to Mars"](https://www.swri.org/newsroom/press-releases/swri-led-team-calculates-the-radiation-exposure-associated-trip-mars) |
+| Só o trânsito, ida e volta, com a propulsão atual (~180 dias cada perna) | **0,66 ± 0,12 Sv** (660 mSv, acima do limite de carreira) | mesma fonte |
+| Duração da viagem de ida no jogo | **203 dias** (Mars 2020: 30/07/2020 a 18/02/2021) | tabela de constantes abaixo |
+| Conta que o jogo mostra | 203 × 1,8 = **~365 mSv só para chegar**, ou seja, **~61 %** dos 600 mSv antes de pisar em Marte | `DOSE_CONFIG.TRANSIT_*`; a barra BODY DOSE do HUD abre aí |
+| Superfície de Marte | ~0,64 mSv/dia (metade do espaço profundo, graças ao planeta embaixo e à atmosfera fina) | [Ref] Hassler et al., *Science* 343 (2014); o jogo usa a mediana do RadLab (6,93 µGy/h × 3,05 = ~0,51 mSv/dia) |
+
+**Escala de jogo (declarada, não é medida), `DOSE_CONFIG.GAME_FACTOR = 8`:** a dose normal da superfície entra na barra no relógio das tempestades (1 hora de jogo = 1 dia real, o mesmo de `STORM_CONFIG.REAL_HOURS_PER_GAME_HOUR`), e **toda** dose que entra na barra (calmaria, tempestade, dentro e fora) é multiplicada por 8. Resultado: **1 hora de jogo vale ~8 dias em Marte**, e ~60 horas de jogo (2,5 sols) somam a dose de uma estadia real de ~500 dias. As proporções entre lá fora, habitat (×0,25), escudo (×0,2), parede de água (até ×0,17) e traje melhorado (×0,65, `STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR`) são as mesmas de `radiation.js`. Na barra (mSv de jogo):
+
+| Situação | Soma na barra |
+|---|---|
+| 1 hora de jogo lá fora em dia calmo (100 s reais) | ~4,1 mSv (uma saída de 10 min reais: ~24 mSv, 4 % do limite) |
+| 1 hora de jogo dentro da base em dia calmo | ~1,0 mSv |
+| A maior tempestade (8.100 µGy), lá fora sem proteção | ~198 mSv |
+| A maior tempestade, dentro da base sem abrigo | ~49 mSv |
+| A maior tempestade, no abrigo com a parede cheia | ~8 mSv |
+
+**Ao passar de 600 mSv** a médica de voo proíbe novas saídas do comandante: a porta externa do airlock não abre por dentro (quem está lá fora sempre entra). Não é game over: o rover, parado na plataforma do MAV, descarrega o gelo direto no tanque (10 kg = 1 bloco, escala de jogo), e quando o foguete está pronto a caminhada final até ele é liberada.
+
 ## Clima espacial [API, DONKI]
 
 - **34 CMEs** entre 01/11 e 13/11/2026, com velocidades de **245 a 974 km/s** (mediana em torno de 370 km/s).
@@ -52,6 +76,29 @@ Arquivo: [`samples/insight-weather-sols-675-681.json`](samples/insight-weather-s
 | Vento horizontal | média ~7 m/s, rajadas de ~22 m/s |
 
 A pressão baixíssima explica por que **não dá para respirar nem ficar sem traje** fora do habitat, o que justifica a mecânica de O2 do jogo.
+
+**No jogo (issue #108):** `scripts/fetch-insight-weather.mjs` grava [`src/data/insightWeather.json`](../../src/data/insightWeather.json) (fonte, URL sem chave e data de coleta), lido só por `src/data/marsWeather.js`. Cada sol do jogo usa um sol real em sequência (sol 1 = sol 675, repetindo depois do 681). Rajadas reais por sol: **18,4 a 26,9 m/s**.
+
+| Uso no jogo | Real ou jogo |
+|---|---|
+| Mínima e máxima de cada sol, citadas no relatório do tempo ("WEATHER TODAY") | **Real** (InSight) |
+| Curva da temperatura no sol: mínima às 5 h (antes do nascer do Sol), máxima às 14 h, meia onda de cosseno entre elas (`WEATHER_CONFIG`) | **Forma de jogo**; os extremos são reais |
+| Aquecedor: gasto cresce em linha reta com o frio, de `HEATER_DAY_PER_HOUR` no ar mais quente do arquivo (−4,4 °C) até `HEATER_NIGHT_PER_HOUR` no mais frio (−97,7 °C) | Temperaturas **reais**; potência de **jogo** |
+| Vento limpa poeira dos painéis: rajada acima de 20 m/s tira 2 % de poeira por m/s, uma vez por sol (`DUST_WEATHER_CONFIG.WIND_CLEAN_*`) | Rajadas **reais**; regra de **jogo**, inspirada nos "cleaning events" reais do Spirit e do Opportunity |
+
+Limite honesto: os 7 sols são quase iguais (mesma estação), então o que varia de verdade é o ciclo dentro do sol e o vento. O rótulo é sempre "real data from InSight, October 2020", nunca "today" nem "live".
+
+## Poeira e tempestades de poeira (issue #103)
+
+| Grandeza | Valor real | Fonte |
+|---|---|---|
+| Opacidade do ar ("tau") média no local do Opportunity | **~0,5** | [Ref] NASA JPL, release de 08/2018 sobre a recuperação do Opportunity ("an average tau for its location on Mars is usually 0.5"), reproduzido em [phys.org](https://phys.org/news/2018-08-opportunity-recovery-efforts.html) |
+| Tau da tempestade global de 2018 (Opportunity, 10/06/2018) | **10,8**, o maior já medido na superfície; último contato em 10/06/2018 | [Ref] [NASA JPL: Opportunity Hunkers Down During Dust Storm](https://www.jpl.nasa.gov/news/opportunity-hunkers-down-during-dust-storm/) |
+| Tau abaixo do qual o Opportunity voltaria a carregar | **< 2,0** | [Ref] mesmo release de 08/2018 |
+| Vento e redemoinhos limparam os painéis do Spirit e do Opportunity ("cleaning events") | fato qualitativo | [Ref] NASA JPL; [Planetary Society, 08/2018](https://www.planetary.org/articles/08-mer-update-opportunity-sleeps) |
+| O vento de Marte não derruba ninguém: o perigo é a poeira, que tapa a luz e cobre os painéis | fato qualitativo | [Ref] [NASA: The Fact and Fiction of Martian Dust Storms](https://www.nasa.gov/solar-system/the-fact-and-fiction-of-martian-dust-storms/) |
+
+**Escala de jogo** (`DUST_WEATHER_CONFIG` em `src/config/constants.js`): geração solar cai em linha reta de 100 % (tau 0,5) até **20 %** no tau recorde (nunca zero de dia); o pico de cada tempestade é sorteado entre tau 7 e 10,8; aviso de 2 h de jogo, tempestade de 6 a 9 h, poeira baixando em 3 h; primeira tempestade 8 a 16 h depois do tutorial, depois uma a cada 24 a 36 h. Poeira nos painéis: +0,6 %/h normal e +5 %/h na tempestade; painel todo coberto ainda gera 30 %. Limpar a mão tira 25 % de poeira e custa **1 ponto de O2 do traje** (de 20) por vez. A borda do mapa não machuca mais: virou parede invisível no raio `DUST_STORM_FATAL_RADIUS` (100 blocos do centro da base).
 
 ## Constantes físicas e de missão [Ref]
 
@@ -96,6 +143,7 @@ Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG
 | Força de cada tempestade (`stormTotalDoseUGy`) | **regra do jogo**: cresce com a velocidade da CME, do mínimo em 300 km/s ao recorde em 1.200 km/s; golpe de raspão em Marte vale 75 % | A velocidade e o "golpe de raspão" vêm do DONKI; o mapeamento para dose não é medida da NASA, e a tela "NASA Data" diz isso |
 | Tempo de aviso da tempestade | chegada prevista em Marte − saída do Sol, da própria CME (`marsArrivalTime − startTime`); 1 dia real de viagem = 1 hora de jogo | [API, DONKI] modelo WSA-ENLIL, `cmeAnalyses[].enlilList[].impactList[]` com `location: "Mars"`. Exemplo: CME de 01/11/2026 19:00Z, chegada em 07/11 06:00Z = 5 dias e 11 h = 5,46 h de jogo |
 | Tempestades usadas | só CMEs reais com **impacto previsto em Marte**; se não houver nenhuma, a fila fica vazia ("No storms headed to Mars in this data") | [API, DONKI] `src/data/donkiCme.json`, gerado por `node scripts/fetch-donki-cme.mjs`. Coleta de 15/11/2026: **153 CMEs para Marte** de 1.651 entre 14/11/2025 e 13/11/2026; velocidades de 255 a 1.960 km/s (mediana 535), avisos de 1,6 a 7,2 horas de jogo (mediana 4,7), 92 de raspão |
+| Pico de SEP (só com dado ao vivo, issue #100; `SPACE_WEATHER_CONFIG`) | a cada 3 tempestades, a 3ª é um pico de SEP: aviso de **0,25 h de jogo** (~25 s reais) e dose total de **665 µGy** (a menor tempestade real do Curiosity). As duas coisas são **regra do jogo** | [API, DONKI] `/DONKI/SEP`: data (`eventTime`) e nave que mediu (`instruments`) são reais. O DONKI não dá a força da SEP em Marte. As partículas viajam perto da velocidade da luz e chegam em minutos a horas, por isso o aviso é curto. Sem SEP na janela ao vivo (caso de 14/11/2026: 0 em 60 dias), o jogo não cria uma |
 | Relevo do mundo (`src/data/marsTerrain.js`) | recorte de **224 × 224 pixels a 1,0118 m por pixel** de uma cratera de ~180 m em Aeolis Palus, cratera Gale (**4,4743°S, 137,4032°E**, ~7 km ao norte do pouso do Curiosity); **12,7 m** de relevo, de −4.448,1 m a −4.435,5 m; 1 bloco ≈ 1 m | [API, HiRISE DTM `DTEEC_010573_1755_010639_1755_U01`](https://www.uahirise.org/dtm/PSP_010573_1755), NASA/JPL-Caltech/University of Arizona; `src/data/marsTerrain.json`, gerado por `node scripts/fetch-mars-terrain.mjs`. Nivelados para as construções: base, alas norte e leste, estufa e plataforma do MAV. Com a cratera de gelo, que é do jogo, só **~5 % das colunas** diferem do dado real depois do arredondamento para blocos. |
 | Limite de carreira exibido na vitória | **600 mSv** | [Ref] NASA-STD-3001 (2022) |
 | O2 em kg no resumo da vitória | 1 sol respirando lá fora = **0,84 kg** | [Ref] NASA BVAD |
@@ -105,14 +153,15 @@ Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG
 | Parede de água do abrigo de tempestade (`RADIATION_CONFIG.SHELTER_WATER_CURVE`, issue #56) | redução média da dose das tempestades solares de 2012: **1 g/cm² → 42 %**, **5 g/cm² → 79 %**, **10 g/cm² → 83 %** (10 g/cm² de água é a referência de "abrigo de tempestade") | [Ref] Quinn et al., *Modeling shielding in the Earth-Moon-Mars radiation environment using PREDICCS* (pôster, UNH, com dados do MSL/RAD): [PDF](https://posters.unh.edu/private_media/4209/). Paredes de água no alojamento como abrigo: [Clowdsley, NASA LaRC, 2021](https://ntrs.nasa.gov/citations/20210009760) |
 | Bateria do rover (`ROVER_CONFIG`, issue #111) | dirigir gasta **0,5 %/s**, cada perfuração **4 %**; abaixo de **15 %** o rover anda a 35 % da velocidade e não perfura; parado no depósito recarrega **8 %/s**, e a carga cheia custa **10 %** da bateria da base. Uma viagem de gelo completa gasta ~26 % (3 viagens por carga) | Tudo escala de jogo. Os números reais do Curiosity ficam na ficha do scanner (`src/data/scanCatalog.js`) |
 | Repouso do tripulante (`CREW_CONFIG.BEDRIDDEN_AFTER_HOURS`, `BED_REST_HOURS`, issue #111) | **12 h** de jogo sem ar, água ou comida deixam o tripulante de cama na enfermaria; **6 h** com tudo em dia para voltar (metade com a médica de plantão) | Escala de jogo. Ninguém volta para a Terra fora do foguete: a janela de lançamento só abre a cada ~26 meses (período sinódico) |
-| Aquecedor do módulo norte (`UTILITY_CONFIG.HEATER_*`, issue #56 B2) | **0,5 %/h** de dia e **2 %/h** à noite (escala de jogo; eram 1 e 4 antes da issue #81); desligado à noite, o reciclador de água e a estufa param | Temperatura real: média ~−62 °C, mínima **−97,7 °C** (InSight, tabela de clima acima). A potência é de jogo: não achamos um número oficial de aquecimento para uma base em Marte |
+| Aquecedor do módulo norte (`UTILITY_CONFIG.HEATER_*`, issue #56 B2) | de **0,5 %/h** (ar mais quente do InSight) a **2 %/h** (ar mais frio), proporcional à temperatura real lá fora (issue #108; escala de jogo; eram 1 e 4 antes da issue #81); desligado à noite, o reciclador de água e a estufa param | Temperatura real: média ~−62 °C, mínima **−97,7 °C** (InSight, tabela de clima acima). A potência é de jogo: não achamos um número oficial de aquecimento para uma base em Marte |
 | Primeira impressão 3D no espaço (oficina, issue #56 B5) | **novembro de 2014**, na ISS (impressora da Made In Space, peça de plástico ABS) | [NASA: 3-D Printer Creates First Object in Space](https://www.nasa.gov/missions/station/open-for-business-3-d-printer-creates-first-object-in-space-on-international-space-station/) |
 | Cozinha e despensa (issue #56 B3) | ~**1,8 kg** de comida por pessoa por dia; na ISS a comida vem embalada e é aquecida na cozinha | [Ref] NASA BVAD (linha da tripulação acima). A ração do jogo sai da mesma despensa da tripulação |
 | Atraso do rádio Terra–Marte (`src/mission/earthMars.js`, issue #56 A2) | calculado para a data do jogo: em 14/11/2026, **~198 milhões de km = ~11 min só de ida**; oposição de 16/01/2025: 96 milhões de km (5,4 min); conjunção de 09/01/2026: ~360 milhões de km (20 min) | [Ref] NASA/JPL, [Approximate Positions of the Planets](https://ssd.jpl.nasa.gov/planets/approx_pos.html) (tabela 1, válida de 1800 a 2050); velocidade da luz 299.792,458 km/s. No jogo, cada minuto real de luz vira 3 s de espera |
 | Conjunção solar (`COMMS_CONFIG.CONJUNCTION_SUN_ANGLE_DEG`) | os comandos para Marte param quando o Sol fica a **menos de ~2°** de Marte no céu da Terra, por **~2 semanas**, a cada **~26 meses** | [Ref] NASA/JPL: [What's Mars Solar Conjunction, and Why Does It Matter?](https://www.nasa.gov/solar-system/whats-mars-solar-conjunction-and-why-does-it-matter/). A próxima real é só em 2028, então o jogo encena uma por partida (6 h de jogo) e a chama de "simulated" |
 | Água na parede cheia | **40 L = 10 g/cm²** (escala de jogo: 0,25 g/cm² por litro) | Uma parede real de 10 cm em volta de uma cabine pede centenas de litros; o jogo encolhe para caber no tanque de 100 L da base |
+| Pacote de ciência para a Terra (`SCIENCE_CONFIG`, issue #105) | mínimo de **5 descobertas ou 2 amostras analisadas** enviadas; custo **8 % + 3 % por item**, no máximo **8 itens por envio**; cada tubo de amostra no MAV pede **+1 bloco de gelo** (até 4 tubos) | Tudo escala de jogo. Fatos reais usados só em texto: os rovers mandam quase todo o dado por orbitadores, que repassam para a Terra, em sessões limitadas por passagem ([NASA, Mars Relay Network](https://science.nasa.gov/mars/mars-relay-network/); [NASA/JPL](https://www.jpl.nasa.gov/news/the-mars-relay-network-connects-us-to-nasas-martian-explorers)); o Perseverance guarda amostras em tubos para uma futura missão de retorno ([NASA, Perseverance](https://science.nasa.gov/mission/mars-2020-perseverance/)). Um tubo real pesa muito menos que um bloco de gelo: o painel do MAV diz que é regra do jogo |
 
-| Pôster "How we make air" | MOXIE (rover Perseverance) produziu **122 g** de O2 em 16 rodadas, pico de **12 g/h** | [Ref] [NASA, 06/09/2023](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/) |
+| Pôster "How we make air" | as duas máquinas do gerador de O2 (seção abaixo); MOXIE (rover Perseverance) produziu **122 g** de O2 em 16 rodadas, pico de **12 g/h** | [Ref] [NASA, 06/09/2023](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/) |
 | Painel da enfermaria (`src/ui/stationText.js`, issue #111) | "na Estação Espacial, sem exercício, os ossos ficam ~1 % menos densos por mês"; **quanto se perde em Marte (0,38 g) ninguém mediu** | [Ref] [NASA, 01/12/2023](https://www.nasa.gov/missions/station/iss-research/counteracting-bone-and-muscle-loss-in-microgravity/): "for every month in space, astronauts' weight-bearing bones become roughly 1% less dense if they don't take precautions". O artigo é sobre microgravidade e não dá número para gravidade parcial: nenhum astronauta viveu meses em 0,38 g. A perda no jogo é taxa de jogo (`STATION_CONFIG.FITNESS_DECAY`) |
 | Pôster "Why we exercise" | ossos perdem **~1 %** de densidade por mês no espaço sem exercício; tripulações da ISS treinam **~2 h por dia** | [Ref] [NASA, 01/12/2023](https://www.nasa.gov/missions/station/iss-research/counteracting-bone-and-muscle-loss-in-microgravity/) |
 | Pôsteres "Mars vs Earth" e "Going outside" | gravidade 38 %, sol de 24 h 39 min, luz 43 %, pressão 0,7 %, −62 °C (média) e −97,7 °C (mínima) | tabelas acima (Mars Fact Sheet e InSight) |
@@ -148,7 +197,62 @@ Escala de jogo (não é dado real): capacidade da bateria, custos de energia em 
 
 Simplificação a explicar: a "blindagem ligada" (tecla R) é um escudo ativo que gasta energia e só protege dentro da bolha em volta da base. Escudos magnéticos ativos ainda são pesquisa; nas bases reais, o abrigo de tempestade usa massa (água, regolito). Detalhes e fontes em [`protecao-radiacao.md`](protecao-radiacao.md).
 
+## Gerador de O2: eletrólise ou MOXIE (issue #102)
+
+O ar do habitat (o do jogador e o da tripulação) sai de um gerador com **dois modos**, escolhidos no painel "LIFE SUPPORT / ECLSS". Um gasta água, o outro gasta mais energia: nenhum é melhor em tudo. Código em `src/mission/oxygenPlant.js` (conta) e `src/mission/oxygenText.js` (textos), números em `OXYGEN_PLANT_CONFIG`.
+
+| Máquina | Como faz O2 | O que vale no jogo | Fonte |
+|---|---|---|---|
+| **OGA** (Oxygen Generation Assembly, Estação Espacial): modo **"Air from water"** | eletrólise: 2 H2O → 2 H2 + O2. **36 g de água dão 32 g de O2** (razão 1,125) | Com os **0,84 kg de O2 por pessoa por dia** do BVAD: **0,945 L de água por pessoa por sol** (`ELECTROLYSIS_WATER_L_PER_PERSON_SOL`; 1 kg de água = 1 L). O ar do jogador segue a mesma razão: a água tirada do tanque é 1,125 × os kg de O2 do `oxygenPointsToKg` (1 sol respirando lá fora = 0,84 kg). Com o tanque vazio o O2 para de recarregar e o HUD diz "WATER TANK EMPTY" | [Ref] [NASA, status do OGA da ISS (2015)](https://ntrs.nasa.gov/api/citations/20150016494/downloads/20150016494.pdf); [NASA, ICES 2024](https://ntrs.nasa.gov/api/citations/20240002161/downloads/ICES24%20Paper%20168.pdf) (reação de eletrólise); NASA BVAD |
+| **Sabatier** (Estação Espacial): melhoria opcional | junta o H2 da eletrólise com o CO2 que a tripulação expira: CO2 + 4 H2 → CH4 + 2 H2O. O hidrogênio que sai no metano limita a recuperação de O2 a **~50 %** | Montado uma vez na impressora 3D pelo painel (3 regolitos, 8 % de bateria, escala de jogo), devolve **metade** da água da eletrólise (`SABATIER_WATER_RETURN = 0.5`) | [Ref] [NASA, ICES 2024](https://ntrs.nasa.gov/api/citations/20240002161/downloads/ICES24%20Paper%20168.pdf) |
+| **MOXIE** (rover Perseverance): modo **"Air from Mars air"** | tira o oxigênio do CO2 do ar de Marte | Não gasta água. **122 g** no total em 16 rodadas, pico de **12 g/h**: no pico, uma pessoa (840 g/dia) pediria 70 horas de MOXIE por dia | [Ref] [NASA, 06/09/2023](https://www.nasa.gov/missions/mars-2020-perseverance/perseverance-rover/nasas-oxygen-generating-experiment-moxie-completes-mars-mission/) |
+
+**Escala de jogo (não é dado da NASA):** o custo de energia de cada modo. Não existe potência oficial de um gerador de O2 para uma base em Marte. A eletrólise usa os custos que já existiam (`ENERGY_CONFIG.OXYGEN_COST_PER_POINT = 1,5 %` por ponto de O2 do jogador, `CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR = 0,75 %/h` por tripulante) e o MOXIE gasta **o dobro** (`MOXIE_ENERGY_FACTOR = 2`). O painel diz que esses custos são regra do jogo e que a conta da água é química real.
+
+Nenhum modo domina (testes em `src/mission/MissionSystem.test.js` e `src/crew/CrewManager.test.js`):
+
+- **Noite sem Sol, bateria em 30 %:** 15 pontos de O2 custam 22,5 % na eletrólise e 45 % no MOXIE. Só a eletrólise chega ao amanhecer. Com a tripulação (2 pessoas, 12 h, bateria em 40 %) é igual: no MOXIE eles ficam sem ar.
+- **Tanque quase vazio (0,05 L):** a eletrólise só faz ~7 pontos de O2 e para; o MOXIE faz os 20 sem tocar no tanque.
+
+O tripulante no gerador de O2 avisa quando o modo está gastando o recurso que está acabando: tanque abaixo de **10 L** com eletrólise, bateria abaixo de **25 %** com MOXIE (`LOW_WATER_WARN_L`, `LOW_BATTERY_WARN_PCT`, escala de jogo). A sala de energia mostra o modo na lista "WHERE THE POWER GOES" (linha "Crew air: water" ou "Crew air: Mars air") e a tela "POWER MAP" da base mostra "O2 MAKER: FROM WATER / FROM MARS AIR / NO WATER / NO POWER".
+
+Com a razão real a água do ar é pouca perto da que se bebe: ~0,14 L por recarga completa do traje do jogador e ~1,9 L por sol para 2 tripulantes. O peso da escolha aparece quando o tanque está baixo (a água também vai para beber, para as plantas e para a parede do abrigo) ou à noite, quando cada ponto de bateria conta.
+
+### Sono no beliche (issue #109)
+
+| Número | Valor | Fonte |
+|---|---|---|
+| Sono real de astronautas | **~6 h por noite**, com **8,5 h** reservadas na agenda (64 astronautas do ônibus espacial e 21 da Estação Espacial) | Barger et al., *The Lancet Neurology* 13(9), 2014; resumo em https://www.space.com/26829-astronauts-space-station-sleep-deprivation.html |
+| Gasto de energia dormindo | taxa de atividade do sono = **1,0× o metabolismo basal**; um dia moderadamente ativo fica em **~1,7–2,0×** | FAO/WHO/UNU, *Human energy requirements* (2004) |
+| Ritmo do corpo e erros | dormir fora do ritmo do relógio do corpo piora o sono; cansaço leva a erros | NASA, ritmo circadiano e iluminação para astronautas (2016): https://phys.org/news/2016-12-nasa-effects-circadian-solution-astronauts.pdf |
+
+Escala de jogo (`SLEEP_CONFIG` em `src/config/constants.js`, regras em `src/player/sleep.js`):
+
+- Dormindo, o relógio corre 3 h de jogo por segundo real, em passos de 0,1 h. A missão, o aquecedor, a luz da estufa, o filtro de CO2 e as plantas andam como acordado.
+- Fome e sede caem **1,2 e 0,8 pontos (de 20) por hora dormida**. Acordado a barra de comida dura ~1,8 h de jogo, então a mesma taxa matava quem dormisse; o corpo gasta menos dormindo (FAO acima), e o jogo arredonda isso para "uma noite de 9 h gasta metade da comida e um terço da água".
+- Aviso de tempestade, bateria vazia, vazamento de ar, alarme da base (frio, CO2 ≥ 40 %, poeira) ou fome/sede ≤ 4 acordam o jogador; o relógio para naquele passo.
+- Mais de 1 sol (24 h de jogo) acordado deixa o trabalho mais lento (o mesmo 0,6× de `getWorkSpeed`). Cada hora dormida paga 3 h acordado.
+
+## Eventos aleatórios de Marte (issue #107)
+
+Cada evento mostra um card com o fato abaixo, a data e a fonte (`src/mission/eventText.js`). Os fatos foram conferidos nas fontes em 14/11/2026. Quando cada evento acontece e o tamanho do efeito são **escala de jogo**, sorteados pela semente da partida (`src/mission/eventDirector.js`, números em `EVENTS_CONFIG`).
+
+| Evento | Fato real usado no card | Fonte |
+|---|---|---|
+| Meteoro | Em **24/12/2021** um meteoroide atingiu Marte; o InSight sentiu um tremor de **magnitude 4** e o MRO achou a cratera nova (**~150 m** de diâmetro), com **pedaços de gelo do tamanho de pedregulhos** jogados para fora | [NASA JPL, 27/10/2022](https://www.jpl.nasa.gov/news/nasas-insight-lander-detects-stunning-meteoroid-impact-on-mars/) |
+| Tremor de Marte | O InSight detectou **mais de 1.313 tremores**; o maior, de **magnitude 5**, em **04/05/2022** | [NASA JPL, 09/05/2022](https://www.jpl.nasa.gov/news/nasas-insight-records-monster-quake-on-mars/) |
+| Eclipse de Fobos | O Perseverance filmou Fobos cruzando o Sol em **02/04/2022** (sol 397); o eclipse durou **um pouco mais de 40 segundos** | [NASA JPL, 20/04/2022](https://www.jpl.nasa.gov/news/nasas-perseverance-rover-captures-video-of-solar-eclipse-on-mars) |
+| Redemoinho de poeira | No sol 420 do Spirit (**09/03/2005**) a poeira saiu dos painéis e a energia subiu **cerca de 50 %**; no dia seguinte o Spirit filmou redemoinhos. **Não confirmado** que foi um redemoinho: a própria NASA pergunta se foi coincidência, e o card diz isso | [NASA/JPL MER, 14/03/2005 (via Spaceflight Now)](https://spaceflightnow.com/mars/mera/050314dustdevil.html); [NASA Photojournal PIA03608](https://science.nasa.gov/photojournal/solar-panel-dust-accumulation-and-cleanings/) ("wind events" que limpam os painéis, sol 420) |
+| Geada ao amanhecer | O Viking Lander 2 fez a primeira foto clara de geada no chão de Marte em **13/09/1977** (Utopia Planitia). **Não se sabe** se era gelo de água, gelo seco (CO2) ou os dois; o card diz isso | [NASA Photojournal PIA00530](https://science.nasa.gov/photojournal/frost-on-utopia-planitia) |
+| Aurora | Depois de uma erupção solar em **15/03/2024**, o Perseverance detectou uma aurora **verde** (557,7 nm), a primeira em luz visível vista da superfície de outro planeta | [NASA JPL, 14/05/2025](https://www.jpl.nasa.gov/news/nasa-observes-first-visible-light-auroras-at-mars/) |
+
+Correções em relação ao texto da issue: a foto da geada (PIA00530) é de **1977**, não de 1979, e a fonte **não** diz que era gelo de água. O texto do redemoinho ficou como hipótese, não como fato.
+
+Escala de jogo (não é dado real): a cratera do meteoro tem raio de 4 blocos (a real tem ~150 m); o tremor tira 35 % da saúde de uma estação da tripulação; o eclipse corta até 40 % da luz e da carga solar (Fobos é menor que o Sol visto de Marte, então o eclipse real também é parcial, mas o jogo não usa a fração real); o redemoinho limpa 30 % da poeira dos painéis (quando a poeira nos painéis existir, issue #103). As durações em segundos reais (`EVENTS_CONFIG.DURATION_SECONDS`) são o tempo da animação; só a do eclipse (40 s) segue o evento real.
+
 ## Calibração atual do jogo vs. realidade
+
+A aba **REAL VS GAME** do diário [J] (`src/data/realVsGame.js`, issue #106) mostra para a criança onde o jogo muda a realidade: gravidade, duração do sol, airlock, bateria, tempestade, parede do abrigo, plantas, rádio e conjunção. Os valores do jogo vêm de `constants.js`; os reais, das tabelas deste arquivo.
 
 | Parâmetro no código | Valor atual | Real | Comentário |
 |---|---|---|---|

@@ -224,6 +224,30 @@ ICONS.food = [
   '........',
 ];
 
+// Luneta do scanner (lupa): escanear coisas para o pacote de ciencia
+ICONS.scope = [
+  '.XXXX...',
+  'X....X..',
+  'X....X..',
+  'X....X..',
+  '.XXXX...',
+  '....XX..',
+  '.....XX.',
+  '......XX',
+];
+
+// Amostra de rocha (regolito) para analisar
+ICONS.rock = [
+  '........',
+  '...XX...',
+  '..XXXX..',
+  '.XX.XXX.',
+  'XXXXX.XX',
+  'XX.XXXXX',
+  'XXXXXXXX',
+  '.XXXXXX.',
+];
+
 const cache = new Map();
 
 export function pixelIconSvg(name) {

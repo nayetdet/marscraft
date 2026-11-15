@@ -70,8 +70,17 @@ export class AdminPanel {
         this.toggle();
       } else if (e.code === 'Escape' && this.isOpen) {
         this.close();
+      } else if (e.code === 'KeyT' && !e.repeat && !this.isOpen && this._isPlaying()) {
+        // Atalho de teste: o jogo normal passa o tempo dormindo no beliche (issue #109)
+        this.engine.sky.advanceTime(1.5);
+        this.engine.hud.showToast('Admin: time advanced (+1h 30m on Mars)');
       }
     });
+  }
+
+  _isPlaying() {
+    const { input, survival, sleep, cutscenes } = this.engine;
+    return Boolean(input?.isLocked) && !survival.isDead && !sleep?.isSleeping && !sleep?.isPanelOpen && !cutscenes?.isActive;
   }
 
   toggle() {
@@ -107,13 +116,15 @@ export class AdminPanel {
       <pre id="admin-status" class="admin-status"></pre>
       <p id="admin-feedback" class="admin-feedback" role="status"></p>
       ${group('Solar storm', [['storm:warning', 'Warning now'], ['storm:active', 'Storm now'], ['storm:end', 'End storm']])}
+      ${group('Dust storm (weather)', [['dust:warning', 'Warning now'], ['dust:storm', 'Dust storm now'], ['dust:end', 'End dust storm'], ['dust:dirty', 'Panels 90% dusty'], ['dust:clean', 'Panels clean']])}
       ${group('Radio to Earth', [['radio:on', 'Solar conjunction now'], ['radio:off', 'End conjunction']])}
       ${group('Power', [['power:100', 'Battery 100%'], ['power:15', 'Battery 15%'], ['power:0', 'Battery 0%']])}
       ${group('Water', [['water:add', 'Base tank +20 L'], ['water:empty', 'Base tank 0 L'], ['wall:full', 'Shelter wall full'], ['wall:empty', 'Shelter wall empty']])}
-      ${group('Astronaut', [['me:refill', 'Refill astronaut'], ['me:dose', 'Reset radiation dose'], ['me:hurt', 'Health to 25%']])}
+      ${group('Astronaut', [['me:refill', 'Refill astronaut'], ['me:dose', 'Reset radiation dose'], ['me:doseLimit', 'Dose over the limit'], ['me:hurt', 'Health to 25%']])}
       ${group('Base', [['base:dirtySuit', 'Dusty suit'], ['base:contaminate', 'Dust in habitat'], ['base:clean', 'Clean suit + habitat'], ['base:filter', 'CO2 filter 0%']])}
       ${group('North module', [['north:waterFilter', 'Water filter 10%'], ['north:pantry', 'Pantry +10 rations'], ['north:wear', 'Crew stations 30%'], ['north:regolith', '+6 regolith'], ['north:carrot', '+3 carrots']])}
-      ${group('Time', [['time:1', '+1 hour'], ['time:day', 'Skip to 08:00'], ['time:night', 'Skip to 21:00']])}
+      ${group('Mars events (issue #107)', [['event:meteor', 'Meteor'], ['event:marsquake', 'Marsquake'], ['event:eclipse', 'Phobos eclipse'], ['event:dustDevil', 'Dust devil'], ['event:frost', 'Frost'], ['event:aurora', 'Aurora']])}
+      ${group('Time', [['time:1', '+1 hour [T: +1.5 h]'], ['time:day', 'Skip to 08:00'], ['time:night', 'Skip to 21:00'], ['time:tired', 'Awake 25 h (tired)']])}
       ${group('Teleport', TELEPORTS.map(([name], i) => [`tp:${i}`, name]))}
     `;
   }
@@ -124,6 +135,12 @@ export class AdminPanel {
     switch (kind) {
       case 'storm':
         return `Storm phase is now: ${mission.forceStorm(arg).toUpperCase()}`;
+      case 'dust': {
+        const dust = mission.dustWeather;
+        if (arg === 'dirty') { dust.panelDust = 0.9; return 'Solar panels 90% dusty.'; }
+        if (arg === 'clean') { dust.panelDust = 0; return 'Solar panels clean.'; }
+        return `Dust weather is now: ${dust.force(arg).toUpperCase()}`;
+      }
       case 'radio':
         this.engine.comms.forceConjunction(arg === 'on');
         return arg === 'on' ? 'Radio silent (simulated solar conjunction).' : 'Radio contact is back.';
@@ -142,7 +159,11 @@ export class AdminPanel {
           survival.health = survival.oxygen = survival.water = survival.food = survival.maxStat;
           return 'Astronaut refilled.';
         }
-        if (arg === 'dose') { mission.totalDoseMsv = 0; return 'Radiation dose reset.'; }
+        if (arg === 'dose') { mission.resetDose(); return 'Radiation dose reset to the trip dose.'; }
+        if (arg === 'doseLimit') {
+          mission.addDose(RADIATION_CONFIG.CAREER_LIMIT_MSV + 1 - mission.totalDoseMsv);
+          return 'Dose over the limit: the outer airlock door stays shut.';
+        }
         survival.health = survival.maxStat * 0.25;
         return 'Health set to 25%.';
       case 'base':
@@ -168,11 +189,17 @@ export class AdminPanel {
         return 'North module state changed.';
       }
       case 'time': {
+        if (arg === 'tired') {
+          this.engine.sleep.awakeSinceHours = this.engine._skyHours() - 25;
+          return 'You have been awake for 25 h: work is slower until you sleep.';
+        }
         const target = arg === 'day' ? 8 : arg === 'night' ? 21 : null;
         const delta = target === null ? 1 : ((target - sky.timeOfDay) % 24 + 24) % 24;
         sky.advanceTime(delta);
         return `Time moved forward ${delta.toFixed(1)} h.`;
       }
+      case 'event':
+        return this.engine.triggerEvent(arg);
       case 'tp': {
         const [name, x, y, z, yaw] = TELEPORTS[Number(arg)];
         player.pos.set(x, y, z);
@@ -186,6 +213,18 @@ export class AdminPanel {
     }
   }
 
+  // Semente da partida e agenda dos eventos aleatorios (issue #107)
+  _eventsLine() {
+    const { events } = this.engine;
+    if (!events) return '';
+    const hours = this.engine._skyHours();
+    const next = events.nextEvent;
+    const state = events.active
+      ? `ACTIVE ${events.active.type}`
+      : !events.started ? 'waiting for act 2' : next ? `next ${next.type} in ${(next.hours - hours).toFixed(1)} h` : 'none left';
+    return `Events: seed ${events.seed} (?seed=${events.seed})   ${state}`;
+  }
+
   _renderStatus() {
     const { mission, survival, sky, player } = this.engine;
     const { phase, hoursUntil, hoursLeft, storm } = mission.storm;
@@ -197,12 +236,14 @@ export class AdminPanel {
     this.status.textContent = [
       `Sol ${sky.solCount}  ${String(hh).padStart(2, '0')}:${mm}`,
       `Storm: ${stormLine}`,
+      `Dust: ${mission.dustWeather.phase} tau ${mission.dustWeather.tau.toFixed(1)}  panels ${Math.round(mission.dustWeather.panelDust * 100)}%  sun x${mission.dustWeather.solarFactor.toFixed(2)}  heater ${this.engine.utility.heaterRatePerHour.toFixed(2)}%/h`,
       `Dose rate: ${mission.doseRate.toFixed(3)} mSv/h   Total: ${mission.totalDoseMsv.toFixed(2)} mSv`,
       `Inside habitat: ${survival.insidePressurizedShip ? 'yes' : 'no'}   In shelter: ${mission.insideShelter ? 'yes' : 'no'}   Shield: ${mission.shieldOn ? 'on' : 'off'}`,
       `Battery: ${mission.battery.percent.toFixed(0)}%   Base tank: ${Math.round(survival.baseWater)} L   Wall: ${Math.round(mission.shelterWaterL)} L`,
       `Health: ${Math.round(survival.health)}/${survival.maxStat}   O2: ${Math.round(survival.oxygen)}`,
       `Radio: ${this.engine.comms.blackout ? 'SILENT' : 'ok'}   Earth: ${Math.round(this.engine.comms.distanceKm / 1e6)} Mkm, ${this.engine.comms.lightMinutes.toFixed(1)} min one way`,
       `Heater: ${this.engine.utility.heaterOn ? 'on' : 'off'}${this.engine.utility.cold ? ' (FREEZING)' : ''}   Water filter: ${Math.round(this.engine.utility.waterFilter)}%   Pantry: ${Math.floor(this.engine.crewStock.food)}`,
+      this._eventsLine(),
       `Position: ${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)}, ${player.pos.z.toFixed(1)}`,
     ].join('\n');
   }

@@ -29,6 +29,28 @@ describe('north module (issue #56, part B)', () => {
     expect(utility.washUp()).toMatch(/frozen/);
   });
 
+  it('heater cost follows the real InSight air: more at 05:00 (coldest) than at 20:00 of the same sol (issue #108)', () => {
+    const { utility, mission } = setup();
+    mission.lastHours = 24 + 5;
+    const dawn = utility.heaterRatePerHour;
+    mission.lastHours = 24 + 20;
+    const evening = utility.heaterRatePerHour;
+    mission.lastHours = 24 + 14;
+    const afternoon = utility.heaterRatePerHour;
+    expect(dawn).toBeGreaterThan(evening);
+    expect(evening).toBeGreaterThan(afternoon);
+    // Os dois valores antigos viram os extremos
+    expect(dawn).toBeLessThanOrEqual(U.HEATER_NIGHT_PER_HOUR);
+    expect(afternoon).toBeGreaterThanOrEqual(U.HEATER_DAY_PER_HOUR);
+    // O painel mostra o mesmo gasto que o aquecedor tira da bateria
+    mission.lastHours = 24 + 5;
+    const heater = utility.loads().find(([name]) => name === 'Heater');
+    expect(heater[1]).toBeCloseTo(dawn);
+    const before = mission.battery.charge;
+    utility.update(0.01);
+    expect(before - mission.battery.charge).toBeCloseTo(dawn * 0.01);
+  });
+
   it('a ration feeds you but empties the shared pantry; a fresh meal costs water, power and a carrot', () => {
     const { utility, survival, base, stations, items } = setup();
     utility.eatRation();
@@ -92,7 +114,7 @@ describe('north module (issue #56, part B)', () => {
     const loads = Object.fromEntries(utility.loads({ crewSize: 2, operatingStations: 2 }).map(([name, rate]) => [name, rate]));
     expect(loads.Heater).toBeCloseTo(0.6 * U.HEATER_NIGHT_PER_HOUR);
     expect(loads['Greenhouse lights']).toBeCloseTo(0.6 * U.GREENHOUSE_LIGHTS_PER_HOUR);
-    expect(loads['Crew oxygen']).toBeCloseTo(0.6 * 2 * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR);
+    expect(loads['Crew air: water']).toBeCloseTo(0.6 * 2 * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR);
     expect(loads['Crew at work']).toBeCloseTo(0.6 * 2 * STATION_CONFIG.WORK_ENERGY_PER_HOUR);
     expect(utility.greenhouseLightsCost(1 / MISSION_CONFIG.GAME_HOURS_PER_SECOND)).toBeCloseTo(0.6 * U.GREENHOUSE_LIGHTS_PER_HOUR);
     // As escolhas do jogador custam o mesmo: so o consumo passivo e mais brando

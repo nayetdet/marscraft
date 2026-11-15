@@ -7,15 +7,16 @@ import { getDamageFeedback, getDeathReport } from '../player/deathReport.js';
 
 const ICONS_PER_BAR = 10;
 
-// Aviso da tempestade da borda, do mais calmo ao mais urgente
+// Aviso da borda do mapa (parede de poeira), do mais calmo ao mais urgente. A borda nao
+// machuca (issue #103): o limite verdadeiro e o ar do traje.
 const DUST_STORM_WARNINGS = {
-  near: { title: 'Dust storm ahead', detail: 'The dust wall is the edge of the safe zone' },
-  storm: { title: 'Return to base', detail: 'The wind gets stronger the farther you go' },
-  critical: { title: 'Return now', detail: 'The storm is damaging your suit' },
+  near: { title: 'Edge of the safe zone', detail: 'Past the dust wall, home is hard to find' },
+  storm: { title: 'Too far from the base', detail: 'Your suit air will not last. Turn back' },
+  critical: { title: 'Turn back now', detail: 'Thick dust: you can barely see the way home' },
 };
 
 function dustStormLevel(intensity, proximity) {
-  if (intensity >= SURVIVAL_CONFIG.DUST_STORM_DAMAGE_START) return 'critical';
+  if (intensity >= SURVIVAL_CONFIG.DUST_STORM_TURN_BACK_START) return 'critical';
   if (intensity > 0) return 'storm';
   if (proximity > 0) return 'near';
   return '';
@@ -585,11 +586,15 @@ export class HudManager {
       this.coordsEl.textContent = coordsText;
     }
 
-    const envKey = `${survival.insidePressurizedShip}:${Boolean(survival.oxygenNeedsPower)}:${Boolean(survival.baseBreached)}`;
+    const envKey = `${survival.insidePressurizedShip}:${Boolean(survival.oxygenNeedsPower)}:${Boolean(survival.baseBreached)}:${survival.oxygenShortage ?? ''}`;
     if (envKey !== this._lastInsideShip) {
       this._lastInsideShip = envKey;
       if (survival.insidePressurizedShip && survival.baseBreached) {
         this.envStatusEl.textContent = 'Environment: Habitat breach (oxygen leaking)';
+        this.envStatusEl.style.color = '#ff5555';
+      } else if (survival.insidePressurizedShip && survival.oxygenNeedsPower && survival.oxygenShortage === 'water') {
+        // Issue #102: no modo "Air from water" o tanque vazio tambem para o ar
+        this.envStatusEl.textContent = 'Environment: Pressurized Habitat (WATER TANK EMPTY: no water to make oxygen)';
         this.envStatusEl.style.color = '#ff5555';
       } else if (survival.insidePressurizedShip && survival.oxygenNeedsPower) {
         this.envStatusEl.textContent = 'Environment: Pressurized Habitat (NO POWER: oxygen is not refilling)';

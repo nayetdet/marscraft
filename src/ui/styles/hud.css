@@ -801,6 +801,14 @@
 #res-water.danger .res-fill, #res-air.danger .res-fill { background: var(--hud-danger); }
 .res-trend.dry { color: #c7743a; animation: mission-blink 1s steps(2, end) infinite; }
 
+/* Dose acumulada (issue #104): roxa, amarela perto do limite, vermelha acima dele */
+#res-dose .res-icon, #res-dose .res-value { color: #d58cff; }
+#res-dose .res-fill { background: #b061e8; }
+#res-dose.warn .res-value { color: #ffd23f; }
+#res-dose.warn .res-fill { background: #ffd23f; }
+#res-dose.danger .res-value, #res-dose.danger .res-icon { color: #ff4b4b; animation: mission-blink 1s steps(2, end) infinite; }
+#res-dose.danger .res-fill { background: #ff4b4b; }
+
 /* "+12 L" / "-2 L" saindo da linha da agua, para a esquerda do painel */
 .res-row { position: relative; }
 .res-delta {

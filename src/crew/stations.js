@@ -1,4 +1,5 @@
 import { RADIATION_CONFIG, STATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { oxygenModeWarning } from '../mission/oxygenPlant.js';
 
 // Estacoes da base que a tripulacao opera. Sem Three.js nem DOM, para testar com Vitest.
 // `base` e o estoque compartilhado: { battery, water, maxWater, food, maxFood, graywater }
@@ -110,6 +111,14 @@ export class OxygenGenerator extends Station {
   costMultiplier() {
     return 1 + (STATION_CONFIG.OXYGEN_MAX_COST_MULTIPLIER - 1) * (1 - this.health);
   }
+
+  // Issue #102: avisa quando o modo do gerador esta gastando o recurso que esta acabando
+  problems(base) {
+    const list = super.problems(base);
+    const warning = oxygenModeWarning(base.oxygenPlant, { water: base.water, batteryPct: base.battery.percent });
+    if (warning) list.push(warning);
+    return list;
+  }
 }
 
 export class MedBay extends Station {
@@ -146,6 +155,8 @@ const PROBLEM_TEXT = {
   'health-low': () => 'Commander, you are hurt! Come to the medical bay inside the base.',
   frozen: (s) => `Commander, it is freezing! The ${s.name} stopped. Turn the heater on in the power room.`,
   'lights-off': () => 'Commander, the greenhouse lights are off. The plants stopped growing.',
+  'air-water-low': () => 'Commander, making air from water is emptying our tank! Bring ice, or switch the oxygen machine to Mars air in Life Support. It needs no water, but more power.',
+  'air-power-low': () => 'Commander, making air from Mars air is eating the battery! If the tank has water, switch the oxygen machine to Air from water in Life Support.',
 };
 
 export function problemText(station, problem) {

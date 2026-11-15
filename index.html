@@ -51,8 +51,8 @@
     <div id="dust-storm-warning" class="dust-storm-warning hidden" aria-live="polite">
       <div class="dust-storm-vignette" aria-hidden="true"></div>
       <div class="dust-storm-banner">
-        <strong>Dust storm ahead</strong>
-        <span>The dust wall is the edge of the safe zone</span>
+        <strong>Edge of the safe zone</strong>
+        <span>Past the dust wall, home is hard to find</span>
       </div>
     </div>
     <!-- Textos antigos do canto superior esquerdo: escondidos via CSS, mas mantidos porque o
@@ -145,6 +145,18 @@
           <span class="res-levels"><i></i><i></i><i></i></span>
           <b class="res-value">LOW</b>
           <span class="res-key" title="Radiation shield: use the Shield Remote in your hotbar">S</span>
+        </div>
+        <!-- Dose acumulada (issue #104): comeca com a viagem ate Marte e so sobe -->
+        <div id="res-dose" class="res-row" data-icon="radiation" title="Dose is how much radiation your body has collected. It only goes up. NASA limit: 600 mSv.">
+          <span class="res-icon"></span>
+          <span class="res-name">DOSE</span>
+          <span class="res-meter"><i class="res-fill"></i></span>
+          <b class="res-value">60%</b>
+          <span class="res-trend"></span>
+        </div>
+        <div id="res-weather" class="res-weather" title="Outside air: real NASA InSight weather. Dust: how dusty the solar panels are.">
+          <span>OUTSIDE <b id="res-weather-temp">-60 C</b></span>
+          <span id="res-weather-dust" class="res-dust">PANELS CLEAN</span>
         </div>
       </section>
       <div id="mission-alerts" class="mission-alerts"></div>
@@ -305,17 +317,23 @@
         </div>
         <section id="sources-screen" class="controls-screen info-screen hidden" aria-labelledby="sources-title">
           <h2 id="sources-title">Where the data comes from</h2>
-          <p class="info-note">The science numbers in MineMars (radiation, sunlight, air, distance, crew needs) come from open NASA data. Speeds, sizes and costs are game rules, and each screen says which is which. The data is saved inside the game, it is not live.</p>
+          <p class="info-note">The science numbers in MineMars (radiation, sunlight, air, distance, crew needs) come from open NASA data. Speeds, sizes and costs are game rules, and each screen says which is which. Most data is saved inside the game with its date, so it is not live. Only space weather tries to load LIVE from NASA DONKI when the game opens. Without internet, the game uses the saved data and never says LIVE.</p>
           <div class="info-list">
-            <div class="info-row"><b>Solar storms</b><span>Real CMEs (clouds of particles thrown by the Sun) that NASA predicted would reach Mars, listed by NASA DONKI. The warning time is the trip NASA predicted, squeezed so 1 real day is 1 game hour. Real data from <span id="sources-donki-date"></span>.</span></div>
+            <div class="info-row"><b>Solar storms</b><span>Real CMEs (clouds of particles thrown by the Sun) that NASA predicted would reach Mars, listed by NASA DONKI. The warning time is the trip NASA predicted, squeezed so 1 real day is 1 game hour. <span id="sources-donki-date"></span>.</span></div>
+            <div class="info-row"><b>Space weather live</b><span>When the game opens it asks NASA DONKI for the CMEs of the last 30 days, the bursts of super fast particles (SEP) of the last 60 days and the newest NASA space weather bulletin, shown on the radio at the science station. If NASA sends no SEP, the game does not make one up. If the internet fails or no CME is headed to Mars, the game uses the data saved inside it.</span></div>
             <div class="info-row"><b>Storm strength</b><span>A game rule: a faster CME makes a stronger storm. It always stays between two real storms measured by the Curiosity rover: the one in 2017 that doubled the radiation for two days, and the biggest ever, in 2024 (8,100 uGy, like 30 chest X-rays). How much it hurts is also a game rule.</span></div>
             <div class="info-row"><b>Radiation</b><span>Curiosity rover RAD instrument at Gale Crater, from NASA RadLab (OSDR): 6.93 uGy per hour, measured 16/11 to 10/12/2022.</span></div>
+            <div class="info-row"><b>Trip dose</b><span>On the way to Mars, Curiosity's RAD measured 1.8 mSv per day inside the spacecraft (Zeitlin et al., Science, 2013). A 203-day trip like Mars 2020 adds about 365 mSv before landing. On Mars, the game counts each game hour like about 8 days (a game rule).</span></div>
             <div class="info-row"><b>Ground</b><span>The shape of the land is real. It is a small crater inside Gale Crater on Mars (<span id="sources-terrain-coords"></span>), measured from orbit by HiRISE, a camera on NASA's Mars Reconnaissance Orbiter. One block is about 1 meter. Real data from <span id="sources-terrain-date"></span>. The flat ground under the base and the ice pit were shaped for the game.</span></div>
             <div class="info-row"><b>Mars facts</b><span>Gravity 38% of Earth, a day of 24 h 39 min and 43% of Earth sunlight, from the NASA Mars Fact Sheet.</span></div>
-            <div class="info-row"><b>Weather</b><span>Temperature and air pressure from the NASA InSight lander, sols 675 to 681 (October 2020).</span></div>
+            <div class="info-row"><b>Weather</b><span>Real data from the NASA InSight lander at Elysium Planitia, sols 675 to 681 (October 2020): low and high temperature, air pressure and wind gusts. Each game sol uses one real sol, in order. The heater uses more power when the real air is colder. The shape of the temperature curve during the day is a game rule.</span></div>
+            <div class="info-row"><b>Dust storms</b><span>Dust in the air is measured as "tau" (how much sunlight it blocks). A clear sky at the Opportunity rover was about 0.5; the 2018 global storm reached 10.8, the highest ever measured on the ground (NASA JPL). Mars air is too thin to push you over: the danger is the dust, which hides the Sun and covers solar panels. When storms come, how long they last and how much power they cut are game rules.</span></div>
+            <div class="info-row"><b>Mars events</b><span>Real events: the InSight lander felt more than 1,300 marsquakes (the biggest, magnitude 5, on 04/05/2022) and a meteor impact on 24/12/2021, whose new crater with ice was found by the MRO orbiter. Perseverance filmed Phobos crossing the Sun (02/04/2022) and detected a green aurora (March 2024). Spirit got its solar panels cleaned by the wind in March 2005, maybe by a dust devil. Viking 2 photographed frost on the ground (1977). When events happen and how strong they are is a game rule, picked by the mission seed.</span></div>
             <div class="info-row"><b>Crew needs</b><span>Oxygen, water and food per person from the NASA Baseline Values and Assumptions Document. Water recycling of 98% like the Space Station.</span></div>
-            <div class="info-row"><b>Making air</b><span>MOXIE on the Perseverance rover made 122 g of oxygen on Mars (NASA, 2023).</span></div>
+            <div class="info-row"><b>Making air</b><span>Two real machines, and you pick one. The Space Station Oxygen Generation Assembly (OGA) splits water: 36 g of water make 32 g of oxygen, so one person needs about 0.95 L of water a day for air (NASA, 2015). A Sabatier reactor turns leftover hydrogen and the CO2 we breathe out back into water, but gets back only about half (NASA ICES, 2024). MOXIE on the Perseverance rover pulled 122 g of oxygen out of Mars air, at best 12 g per hour (NASA, 2023). How much power each machine uses is a game rule.</span></div>
+            <div class="info-row"><b>Space biology</b><span>Real studies about bones, muscles, radiation, rest and the immune system from the NASA Open Science Data Repository (OSDR), and the radiation comparison from NASA RadLab. They unlock in your journal [J], which shows the date the data was saved.</span></div>
             <div class="info-row"><b>Health</b><span>Career radiation limit of 600 mSv (NASA-STD-3001). Bones lose about 1% of density a month in space without exercise (NASA, 2023).</span></div>
+            <div class="info-row"><b>Sleep</b><span>Astronauts on the Space Shuttle and the Space Station slept about 6 hours a night, with 8.5 hours planned (study of 85 astronauts, Barger et al., 2014). How much food and water you use while you sleep is a game rule.</span></div>
           </div>
           <p class="info-note">Game speed, battery size and storm length are scaled so a mission fits in a few minutes. Art, textures and sounds are drawn by code, with no NASA logo. Parts of the code were written with AI assistance.</p>
           <button id="sources-back-btn" class="mc-btn secondary">Back</button>
@@ -325,10 +343,17 @@
           <p class="info-note">For judges and for recording the demo. These skip the waiting, they do not change the rules. Storms still come from the real NASA DONKI list.</p>
           <div class="demo-grid">
             <button class="mc-btn secondary" data-demo="storm">Start a solar storm</button>
+            <button class="mc-btn secondary" data-demo="dust">Start a dust storm</button>
             <button class="mc-btn secondary" data-demo="battery">Drain the battery to 10%</button>
             <button class="mc-btn secondary" data-demo="night">Jump to night</button>
             <button class="mc-btn secondary" data-demo="noon">Jump to noon</button>
             <button class="mc-btn secondary" data-demo="skip-training">Skip cadet training</button>
+            <button class="mc-btn secondary" data-demo="event:meteor">Meteor impact</button>
+            <button class="mc-btn secondary" data-demo="event:marsquake">Marsquake</button>
+            <button class="mc-btn secondary" data-demo="event:eclipse">Phobos eclipse</button>
+            <button class="mc-btn secondary" data-demo="event:dustDevil">Dust devil</button>
+            <button class="mc-btn secondary" data-demo="event:frost">Morning frost</button>
+            <button class="mc-btn secondary" data-demo="event:aurora">Green aurora</button>
           </div>
           <p id="demo-feedback" class="info-note demo-feedback" role="status"></p>
           <button id="demo-back-btn" class="mc-btn secondary">Back</button>
@@ -348,6 +373,7 @@
             <div class="control-row"><kbd>E</kbd><span>Inventory</span></div>
             <div class="control-row"><kbd>Q</kbd><span>Drop item</span></div>
             <div class="control-row"><kbd>F</kbd><span>Interact</span></div>
+            <div class="control-row"><kbd>F</kbd><span>At a bunk in the Crew Quarters: sleep to pass time (uses food, water and base power)</span></div>
           </div>
           <div class="controls-section">
             <h3>Rover</h3>
@@ -454,8 +480,19 @@
       </div>
 
       <div class="mav-req">
-        <h3>3. Science data sent: <span id="mav-data">No</span></h3>
-        <p>Send your Mars discoveries to Earth from the command console inside the base: stand next to it and press [G]. The radio uses energy.</p>
+        <h3>3. Science sent to Earth: <span id="mav-data">No</span></h3>
+        <p>Scan things with the scope and analyze regolith samples, then send them from the science &amp; radio terminal inside the base (Send button, or [G] next to it). A bigger package uses more energy.</p>
+        <p id="mav-data-status" class="mav-status"></p>
+      </div>
+
+      <div class="mav-req">
+        <h3>Extra: rock sample tubes on board: <span id="mav-tubes">0</span></h3>
+        <p>Real rovers like Perseverance seal rock samples in tubes so a rocket can one day bring them to Earth. A heavier rocket needs more fuel, so each tube asks for more ice.</p>
+        <p id="mav-tubes-math" class="mav-status"></p>
+        <div class="mav-actions">
+          <button id="mav-tube-load" class="mc-btn">Load 1 sample tube</button>
+          <button id="mav-tube-unload" class="mc-btn">Unload 1 tube</button>
+        </div>
       </div>
 
       <p id="mav-power" class="mav-status"></p>

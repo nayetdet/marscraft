@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { MissionSystem, mavProgress, oxygenPointsToKg } from './MissionSystem.js';
-import { ENERGY_CONFIG, MAV_CONFIG, MISSION_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.js';
+import { DOSE_CONFIG, ENERGY_CONFIG, MAV_CONFIG, SCIENCE_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.js';
+import { TRANSIT_DOSE_MSV } from './doseBudget.js';
 
 // CME com impacto direto previsto em Marte 3 dias depois (3 horas de jogo de aviso)
 const cmes = [{
@@ -33,6 +34,31 @@ describe('MissionSystem energy', () => {
     night.battery.charge = 10;
     night.update(2);
     expect(night.battery.charge).toBe(10);
+  });
+
+  it('a dust storm cuts the solar charge and nobody gets hurt by it (issue #103)', () => {
+    const clear = createMission(10);
+    clear.dustWeather.panelDust = 0;
+    clear.update(11);
+    const dusty = createMission(10);
+    dusty.dustWeather.panelDust = 0;
+    dusty.dustWeather.force('storm');
+    const damage = dusty.update(11);
+    expect(dusty.dustWeather.phase).toBe('storm');
+    expect(dusty.chargeRate).toBeLessThan(clear.chargeRate * 0.7);
+    expect(dusty.chargeRate).toBeGreaterThan(0); // de dia nunca zera
+    expect(damage).toBe(0);
+  });
+
+  it('a Phobos eclipse (sunlightFactor) cuts the solar charge (issue #107)', () => {
+    const clear = createMission(12);
+    const eclipse = createMission(12);
+    clear.battery.charge = eclipse.battery.charge = 10;
+    eclipse.sunlightFactor = 0.6;
+    clear.update(12.5);
+    eclipse.update(12.5);
+    expect(eclipse.chargeRate).toBeCloseTo(clear.chargeRate * 0.6);
+    expect(eclipse.battery.charge - 10).toBeCloseTo((clear.battery.charge - 10) * 0.6);
   });
 
   it('worn air filters (crew oxygen generator) make habitat oxygen cost more', () => {
@@ -75,14 +101,104 @@ describe('MissionSystem energy', () => {
     expect(mission.drainEvents().some((e) => e.type === 'shield-off-no-energy')).toBe(true);
   });
 
-  it('data upload costs energy and needs enough charge', () => {
+});
+
+describe('MissionSystem science package (issue #105)', () => {
+  const { UPLOAD_BASE_COST: BASE, UPLOAD_COST_PER_ITEM: PER_ITEM, MIN_DISCOVERIES, MIN_SAMPLES, MAX_ITEMS_PER_UPLOAD } = SCIENCE_CONFIG;
+
+  it('cannot complete the science goal with nothing scanned or analyzed this mission', () => {
     const mission = createMission(0);
-    mission.battery.charge = ENERGY_CONFIG.DATA_UPLOAD_COST - 1;
-    expect(mission.sendData()).toBe('no-energy');
     mission.battery.charge = 100;
-    expect(mission.sendData()).toBe('sent');
-    expect(mission.battery.charge).toBe(100 - ENERGY_CONFIG.DATA_UPLOAD_COST);
-    expect(mission.sendData()).toBe('already-sent');
+    const result = mission.sendData({ discoveries: 0, samples: 0 });
+    expect(result.status).toBe('empty');
+    expect(mission.dataSent).toBe(false);
+    expect(mission.battery.charge).toBe(100);
+    expect(mission.progress.ready).toBe(false);
+  });
+
+  it('costs more energy for a bigger package', () => {
+    const mission = createMission(0);
+    const small = mission.sciencePackage({ discoveries: 1, samples: 0 });
+    const big = mission.sciencePackage({ discoveries: 4, samples: 2 });
+    expect(small.cost).toBe(BASE + PER_ITEM);
+    expect(big.cost).toBe(BASE + 6 * PER_ITEM);
+    expect(big.cost).toBeGreaterThan(small.cost);
+  });
+
+  it('needs enough charge for the whole upload', () => {
+    const mission = createMission(0);
+    mission.battery.charge = BASE + 2 * PER_ITEM - 1;
+    const result = mission.sendData({ discoveries: 2, samples: 0 });
+    expect(result).toMatchObject({ status: 'no-energy', cost: BASE + 2 * PER_ITEM });
+    expect(mission.sentDiscoveries).toBe(0);
+  });
+
+  it('allows partial uploads, each paying the radio start again, until the minimum is home', () => {
+    const mission = createMission(0);
+    mission.battery.charge = 100;
+    const first = mission.sendData({ discoveries: MIN_DISCOVERIES - 2, samples: 0 });
+    expect(first).toMatchObject({ status: 'sent', discoveries: MIN_DISCOVERIES - 2, samples: 0, dataSent: false });
+    expect(mission.dataSent).toBe(false);
+    // Nada novo: o mesmo pacote nao e enviado duas vezes
+    expect(mission.sendData({ discoveries: MIN_DISCOVERIES - 2, samples: 0 }).status).toBe('empty');
+
+    const second = mission.sendData({ discoveries: MIN_DISCOVERIES, samples: 0 });
+    expect(second).toMatchObject({ status: 'sent', discoveries: 2, dataSent: true });
+    expect(mission.dataSent).toBe(true);
+    expect(mission.uploads).toBe(2);
+    expect(mission.battery.charge).toBeCloseTo(100 - (2 * BASE + MIN_DISCOVERIES * PER_ITEM));
+  });
+
+  it('also counts analyzed samples, which go first, and caps one upload at an orbiter pass', () => {
+    const mission = createMission(0);
+    mission.battery.charge = 100;
+    const result = mission.sendData({ discoveries: MAX_ITEMS_PER_UPLOAD, samples: MIN_SAMPLES });
+    expect(result).toMatchObject({ samples: MIN_SAMPLES, discoveries: MAX_ITEMS_PER_UPLOAD - MIN_SAMPLES, leftAfter: MIN_SAMPLES, dataSent: true });
+    expect(mission.sciencePackage({ discoveries: MAX_ITEMS_PER_UPLOAD, samples: MIN_SAMPLES }).items).toBe(MIN_SAMPLES);
+  });
+});
+
+describe('MissionSystem sample tubes on the MAV', () => {
+  const { ICE_PER_SAMPLE_TUBE, MAX_SAMPLE_TUBES } = SCIENCE_CONFIG;
+
+  it('only loads analyzed samples, up to the rack size', () => {
+    const mission = createMission(0);
+    expect(mission.loadSampleTube(0)).toBe('no-samples');
+    for (let i = 0; i < MAX_SAMPLE_TUBES; i++) expect(mission.loadSampleTube(99)).toBe('loaded');
+    expect(mission.loadSampleTube(99)).toBe('full');
+    expect(mission.sampleTubes).toBe(MAX_SAMPLE_TUBES);
+  });
+
+  it('asks for more ice for every tube loaded', () => {
+    const mission = createMission(0);
+    expect(mission.iceNeeded()).toBe(MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK);
+    mission.loadSampleTube(2);
+    mission.loadSampleTube(2);
+    expect(mission.iceForFullTank()).toBe(MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK + 2 * ICE_PER_SAMPLE_TUBE);
+    expect(mission.iceNeeded()).toBe(MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK + 2 * ICE_PER_SAMPLE_TUBE);
+  });
+
+  it('turns a full tank into a partly full one, and gives the fuel back when the tube comes out', () => {
+    const mission = createMission(0);
+    mission.propellant = 100;
+    mission.loadSampleTube(1);
+    const full = MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
+    expect(mission.propellant).toBeCloseTo((100 * full) / (full + ICE_PER_SAMPLE_TUBE));
+    expect(mission.iceNeeded()).toBe(ICE_PER_SAMPLE_TUBE);
+    expect(mission.progress.ready).toBe(false);
+    expect(mission.unloadSampleTube()).toBe('unloaded');
+    expect(mission.propellant).toBeCloseTo(100);
+    expect(mission.unloadSampleTube()).toBe('empty');
+  });
+
+  it('fills the heavier rocket with the extra ice through the factory', () => {
+    const mission = createMission(12);
+    mission.battery.charge = 100;
+    mission.loadSampleTube(1);
+    const need = mission.iceNeeded();
+    expect(mission.deliverIce(need + 3)).toBe(need);
+    mission.update(12 + need * MAV_CONFIG.ISRU_HOURS_PER_ICE_BLOCK + 0.1);
+    expect(mission.propellant).toBe(100);
   });
 });
 
@@ -166,7 +282,7 @@ describe('MissionSystem storms', () => {
     const storm = mission.schedule[0];
     const damage = mission.update(storm.end - 0.1, { active: false });
     expect(damage).toBe(0);
-    expect(mission.totalDoseMsv).toBe(0);
+    expect(mission.totalDoseMsv).toBe(TRANSIT_DOSE_MSV);
     mission.update(storm.end + 0.1, { active: false });
     expect(mission.stormsSurvived).toBe(0);
     expect(mission.drainEvents().map((e) => e.type)).toContain('storm-missed');
@@ -277,5 +393,191 @@ describe('MissionSystem demo storm control', () => {
     const habitat = mission.doseRate;
     mission.update(12.4, { insideHabitat: true, insideShelter: true });
     expect(mission.doseRate).toBeLessThan(habitat);
+  });
+});
+
+describe('MissionSystem with live SEPs (issue #100)', () => {
+  it('builds the storm queue with the real SEPs it was given, only when storms start', () => {
+    const seps = [{ id: 'sep', eventTime: '2025-11-15T03:42Z', seenBy: ['STEREO A'] }];
+    const mission = new MissionSystem({ cmes, seps, startHours: 12, stormsStarted: false });
+    expect(mission.schedule).toEqual([]);
+    mission.startStorms(12);
+    expect(mission.schedule.some((s) => s.sep === seps[0])).toBe(true);
+    expect(createMission().schedule.some((s) => s.sep)).toBe(false);
+  });
+});
+
+// Issue #104: dose acumulada como orcamento da missao
+describe('MissionSystem dose budget', () => {
+  // Sem tempestades na fila: so a dose normal de Marte
+  const calmMission = (startHours = 12) => new MissionSystem({ cmes, startHours, stormsStarted: false });
+
+  it('starts with the real trip dose: 203 days x 1.8 mSv = ~365 of 600 mSv', () => {
+    const mission = calmMission();
+    expect(TRANSIT_DOSE_MSV).toBeCloseTo(365.4, 1);
+    expect(mission.totalDoseMsv).toBeCloseTo(365.4, 1);
+    expect(mission.doseBreakdown.fraction).toBeCloseTo(0.609, 3);
+    expect(mission.grounded).toBe(false);
+  });
+
+  it('a long walk outside on a calm day fills the bar visibly, more than staying inside', () => {
+    const outside = calmMission();
+    outside.update(18); // 6 horas de jogo = 10 minutos reais
+    const evaDose = outside.doseBreakdown.eva;
+    expect(evaDose / RADIATION_CONFIG.CAREER_LIMIT_MSV).toBeGreaterThan(0.03);
+
+    const inside = calmMission();
+    inside.update(18, { insideHabitat: true });
+    expect(inside.doseBreakdown.habitat).toBeGreaterThan(0);
+    expect(inside.doseBreakdown.habitat).toBeCloseTo(evaDose * RADIATION_CONFIG.HABITAT_FACTOR, 6);
+  });
+
+  it('the dose never goes down, whatever the player does', () => {
+    const mission = createMission(0);
+    let last = mission.totalDoseMsv;
+    const places = [{}, { insideHabitat: true }, { insideHabitat: true, insideShelter: true }, { active: false }];
+    for (let h = 0.5; h < 30; h += 0.5) {
+      mission.update(h, places[Math.floor(h * 2) % places.length]);
+      expect(mission.totalDoseMsv).toBeGreaterThanOrEqual(last);
+      last = mission.totalDoseMsv;
+    }
+    const b = mission.doseBreakdown;
+    expect(b.transit + b.eva + b.storm + b.habitat).toBeCloseTo(mission.totalDoseMsv, 6);
+    expect(b.storm).toBeGreaterThan(0);
+  });
+
+  it('the water wall shelter cuts the storm dose that adds up', () => {
+    const stormDose = (wallL) => {
+      const mission = createMission(0);
+      mission.shelterWaterL = wallL;
+      const storm = mission.schedule[0];
+      mission.update(storm.arrival, { insideHabitat: true, insideShelter: true });
+      const before = mission.doseBreakdown.storm;
+      mission.update(storm.end - 0.01, { insideHabitat: true, insideShelter: true });
+      return mission.doseBreakdown.storm - before;
+    };
+    const empty = stormDose(0);
+    const full = stormDose(RADIATION_CONFIG.SHELTER_WALL_MAX_L);
+    expect(empty).toBeGreaterThan(0);
+    expect(full).toBeCloseTo(empty * 0.17, 3);
+  });
+
+  it('the suit upgrade cuts the dose that adds up outside', () => {
+    const plain = calmMission();
+    plain.update(16);
+    const upgraded = calmMission();
+    upgraded.update(16, { suitUpgraded: true });
+    expect(upgraded.doseBreakdown.eva).toBeCloseTo(plain.doseBreakdown.eva * DOSE_CONFIG.SUIT_FACTOR, 6);
+  });
+
+  it('passing the limit grounds the commander, warns once, and the mission can still be won', () => {
+    const mission = calmMission();
+    mission.addDose(RADIATION_CONFIG.CAREER_LIMIT_MSV * DOSE_CONFIG.WARN_FRACTION - mission.totalDoseMsv + 0.1);
+    expect(mission.drainEvents().map((e) => e.type)).toEqual(['dose-warning']);
+    mission.addDose(RADIATION_CONFIG.CAREER_LIMIT_MSV);
+    mission.addDose(10);
+    expect(mission.drainEvents().map((e) => e.type)).toEqual(['dose-limit']);
+    expect(mission.grounded).toBe(true);
+    expect(mission.doseBreakdown.grounded).toBe(true);
+
+    // Nao e game over: o rover entrega o gelo, a fabrica enche o tanque e o foguete decola
+    mission.battery.charge = 100;
+    mission.deliverIce(MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK);
+    let hours = 12;
+    while (mission.propellant < 100 && hours < 60) {
+      hours += 1;
+      mission.battery.charge = 100;
+      mission.update(hours, { insideHabitat: true });
+    }
+    expect(mission.propellant).toBe(100);
+    mission.stormsSurvived = MAV_CONFIG.STORMS_TO_SURVIVE;
+    mission.battery.charge = 100;
+    expect(mission.sendData()).toBe('sent');
+    expect(mission.ignite()).toBe(true);
+  });
+
+  it('admin reset goes back to the trip dose only', () => {
+    const mission = calmMission();
+    mission.update(20);
+    mission.resetDose();
+    expect(mission.totalDoseMsv).toBe(TRANSIT_DOSE_MSV);
+    expect(mission.doseBreakdown.eva).toBe(0);
+  });
+});
+
+// Issue #102: o gerador de O2 do habitat tem dois modos com custos opostos
+describe('MissionSystem oxygen modes (issue #102)', () => {
+  // Recarrega `points` de O2 em passos pequenos, como o motor faz a cada frame
+  function breathe(mission, tank, points) {
+    let delivered = 0;
+    while (delivered < points - 1e-9) {
+      const give = Math.min(0.5, points - delivered, mission.oxygenRefillBudget(tank));
+      if (give <= 1e-9) break;
+      mission.chargeOxygen(give, tank);
+      delivered += give;
+    }
+    return delivered;
+  }
+
+  const pointsPerSol = (24 / MISSION_CONFIG.GAME_HOURS_PER_SECOND) * SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE; // pontos de O2 por sol
+
+  it('electrolysis drains the base tank at the real ratio while oxygen refills', () => {
+    const mission = createMission(12);
+    mission.battery.charge = 100;
+    const tank = { water: 20 };
+    // 0,84 kg de O2 (um sol de ar) pedem 0,945 L de agua
+    mission.chargeOxygen(pointsPerSol, tank);
+    expect(20 - tank.water).toBeCloseTo(0.945, 3);
+    expect(mission.oxygenPlant.waterUsedL).toBeCloseTo(0.945, 3);
+  });
+
+  it('with an empty tank electrolysis stops refilling oxygen and says the tank is the reason', () => {
+    const mission = createMission(12);
+    mission.battery.charge = 100;
+    expect(mission.oxygenRefillBudget({ water: 0 })).toBe(0);
+    expect(mission.oxygenPlant.limitedBy).toBe('water');
+  });
+
+  it('MOXIE keeps the tank full but each oxygen point costs more power', () => {
+    const water = createMission(12);
+    const moxie = createMission(12);
+    moxie.oxygenPlant.setMode('moxie');
+    expect(moxie.oxygenEnergyPerPoint()).toBeGreaterThan(water.oxygenEnergyPerPoint());
+    moxie.battery.charge = 100;
+    const tank = { water: 20 };
+    moxie.chargeOxygen(10, tank);
+    expect(tank.water).toBe(20);
+    expect(moxie.battery.charge).toBeCloseTo(100 - 10 * moxie.oxygenEnergyPerPoint());
+    expect(moxie.oxygenRefillBudget({ water: 0 })).toBeGreaterThan(0);
+  });
+
+  it('night with no sun: air from water is the right choice', () => {
+    const run = (mode) => {
+      const mission = createMission(0); // meia-noite: os paineis nao geram
+      mission.oxygenPlant.setMode(mode);
+      mission.battery.charge = 30;
+      mission.update(6);
+      expect(mission.chargeRate).toBe(0);
+      return breathe(mission, { water: 30 }, 15);
+    };
+    expect(run('electrolysis')).toBeCloseTo(15);
+    expect(run('moxie')).toBeLessThan(15);
+  });
+
+  it('tank almost empty: air from Mars air is the right choice', () => {
+    const run = (mode) => {
+      const mission = createMission(12);
+      mission.oxygenPlant.setMode(mode);
+      mission.battery.charge = 100;
+      const tank = { water: 0.05 };
+      const delivered = breathe(mission, tank, 20);
+      return { delivered, water: tank.water };
+    };
+    const water = run('electrolysis');
+    expect(water.delivered).toBeLessThan(20);
+    expect(water.water).toBeCloseTo(0);
+    const moxie = run('moxie');
+    expect(moxie.delivered).toBeCloseTo(20);
+    expect(moxie.water).toBe(0.05);
   });
 });

@@ -1,4 +1,8 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
+import { INSIGHT_AVG_C, INSIGHT_PRESSURE_PA, INSIGHT_PRESSURE_PCT_EARTH, WEATHER_RANGE } from './marsWeather.js';
+
+// Clima real do InSight (issue #108): lido de src/data/insightWeather.json
+const INSIGHT_PRESSURE = `~${INSIGHT_PRESSURE_PCT_EARTH.toFixed(1)}% of Earth`;
 
 // Fichas do scanner da luneta. Os textos são curtos e em inglês (como o resto da UI), para
 // crianças de 7 a 12 anos. Os números vêm de docs/data/numeros-reais.md e dos fact sheets da
@@ -131,7 +135,7 @@ export const SCAN_CATALOG = [
     facts: [
       { label: 'Where', value: 'Polar caps and under the ground', source: SOURCES.marsScience },
       { label: 'Turns into', value: 'Drinking water, food, oxygen, rocket fuel', source: SOURCES.marsScience },
-      { label: 'Average air temperature', value: 'About -62 °C (InSight)', source: SOURCES.insight },
+      { label: 'Average air temperature', value: `About ${Math.round(INSIGHT_AVG_C)} °C (InSight)`, source: SOURCES.insight },
     ],
     why: 'Shipping water from Earth costs a fortune. Finding ice is mission priority number one!',
     reward: { items: [{ blockId: BLOCK_IDS.MARS_ICE, count: 1 }], iceSensor: true },
@@ -144,8 +148,8 @@ export const SCAN_CATALOG = [
     title: 'Mars Outpost',
     summary: 'Your whole base: habitat, tunnel, greenhouse, solar panels and antenna working together.',
     facts: [
-      { label: 'Outside air pressure', value: '~0.7% of Earth (InSight)', source: SOURCES.insight },
-      { label: 'Outside temperature', value: '-98 °C to -4 °C (InSight)', source: SOURCES.insight },
+      { label: 'Outside air pressure', value: `${INSIGHT_PRESSURE} (InSight)`, source: SOURCES.insight },
+      { label: 'Outside temperature', value: `${Math.round(WEATHER_RANGE.coldestC)} °C to ${Math.round(WEATHER_RANGE.warmestC)} °C (InSight)`, source: SOURCES.insight },
       { label: 'Surface radiation', value: '~6.9 µGy/h, ~1.5x the Space Station', source: SOURCES.radlab },
     ],
     why: 'Every module keeps the crew alive: air, water, food and power. If one fails, the others suffer.',
@@ -168,7 +172,7 @@ export const SCAN_CATALOG = [
     summary: 'A small room with two doors, so the air inside never escapes.',
     facts: [
       { label: 'Rule', value: 'Never open both doors at once', source: SOURCES.iss },
-      { label: 'Outside air pressure', value: '~0.7% of Earth (InSight)', source: SOURCES.insight },
+      { label: 'Outside air pressure', value: `${INSIGHT_PRESSURE} (InSight)`, source: SOURCES.insight },
     ],
     why: 'Every trip outside costs a little air, so astronauts plan their spacewalks carefully.',
   },
@@ -306,7 +310,7 @@ export const SCAN_CATALOG = [
     title: 'Mars Atmosphere',
     summary: 'A very thin layer of air, mostly carbon dioxide. Sunsets on Mars are blue!',
     facts: [
-      { label: 'Air pressure', value: '~0.7% of Earth (~746 Pa, InSight)', source: SOURCES.insight },
+      { label: 'Air pressure', value: `${INSIGHT_PRESSURE} (~${Math.round(INSIGHT_PRESSURE_PA)} Pa, InSight)`, source: SOURCES.insight },
       { label: 'Made of', value: '~95% carbon dioxide', source: SOURCES.marsFacts },
       { label: 'Blue sunsets', value: 'Fine dust scatters blue light near the Sun', source: SOURCES.marsScience },
     ],

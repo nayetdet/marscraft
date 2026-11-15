@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
-import { HABITAT_LAYOUT, SOLAR_FIELD } from './habitatLayout.js';
+import { EAST_WING, HABITAT_LAYOUT, SOLAR_FIELD } from './habitatLayout.js';
 import { signTexture } from '../base/baseCanvas.js';
 import { SIGNS } from '../base/basePosters.js';
 
@@ -69,6 +69,8 @@ export function buildNasaCustomModels(scene) {
     }
   }, 64, 64);
   mats.solarPanel = new THREE.MeshLambertMaterial({ map: solarTex });
+  // Material proprio do campo solar: a poeira nos paineis (issue #103) tinge so ele, nao o rover
+  mats.fieldSolarPanel = mats.solarPanel.clone();
 
   const { texture: screenTex } = makeCanvasTexture((ctx) => {
     ctx.fillStyle = '#0f172a';
@@ -161,8 +163,8 @@ export function buildNasaCustomModels(scene) {
 
   // 4. Beliches da Tripulação (Parede Noroeste)
   // Tres beliches no dormitorio (EAST_WING), com a cabeceira na parede sul
-  for (const bunkX of [21, 24, 27]) {
-    const crewQuarters = createCrewQuartersModel(mats, bunkX, floorTopY, -2.2);
+  for (const bunk of EAST_WING.BUNKS) {
+    const crewQuarters = createCrewQuartersModel(mats, bunk.x, floorTopY, bunk.z);
     group.add(crewQuarters);
     solidObjects.push(crewQuarters);
   }
@@ -287,7 +289,7 @@ export function buildNasaCustomModels(scene) {
   // O foguete do MAV tambem fica separado: ele sobe na animacao de decolagem.
   const merged = mergeByMaterial(group, [...plants, rover, rocket], [rover]);
   scene.add(merged);
-  return { group: merged, colliders, plants, rover, roverWheels, rocket };
+  return { group: merged, colliders, plants, rover, roverWheels, rocket, solarPanelMaterial: mats.fieldSolarPanel };
 }
 
 // Junta as centenas de caixas em uma malha por material (de ~300 draw calls para ~20).
@@ -577,7 +579,7 @@ function createExteriorSolarAndDish(mats, x, y, z) {
     array.position.set(x + SOLAR_FIELD.x, y, z + SOLAR_FIELD.zFirst - i * SOLAR_FIELD.spacing);
     addBox(array, 0.25, 1.4, 0.25, mats.lightGray, 0, 0.7, 0);
     addBox(array, 3.4, 0.1, 2.2, mats.whiteMetal, 0, 1.45, 0, 0.38, 0, 0);
-    addBox(array, 3.2, 0.12, 2.0, mats.solarPanel, 0, 1.47, 0, 0.38, 0, 0);
+    addBox(array, 3.2, 0.12, 2.0, mats.fieldSolarPanel, 0, 1.47, 0, 0.38, 0, 0);
     solarArrays.push(array);
   }
 

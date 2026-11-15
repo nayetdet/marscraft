@@ -1,4 +1,4 @@
-import { RADIATION_CONFIG, STORM_CONFIG } from '../config/constants.js';
+import { RADIATION_CONFIG, SPACE_WEATHER_CONFIG, STORM_CONFIG } from '../config/constants.js';
 
 const REAL_HOUR_MS = 3600 * 1000;
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
@@ -29,19 +29,26 @@ export function stormTotalDoseUGy(cme) {
 // repetindo a lista se acabar. Sem nenhuma CME para Marte a fila fica vazia: o jogo nao usa
 // CMEs que iam para outro lugar.
 // Cada tempestade: aviso -> chegada (aviso + viagem prevista pela NASA) -> fim (chegada + duracao).
-export function buildStormSchedule(cmes, startHours, count = 24) {
+// `seps`: SEPs reais do fetch ao vivo (issue #100). Com elas, a cada SEP_EVERY_N_STORMS a
+// tempestade vira um pico de SEP com aviso curto (`kind: 'sep'`, `cme: null`). Sem SEP, nada muda.
+export function buildStormSchedule(cmes, startHours, count = 24, seps = []) {
   const candidates = marsBoundCmes(cmes);
   if (candidates.length === 0) return [];
 
+  const W = SPACE_WEATHER_CONFIG;
   const schedule = [];
   let warningStart = startHours + STORM_CONFIG.FIRST_WARNING_AFTER_HOURS;
+  let cmeIndex = 0;
+  let sepIndex = 0;
   for (let i = 0; i < count; i++) {
-    const cme = candidates[i % candidates.length];
-    const leadHours = leadTimeHours(cme);
+    const isSep = seps.length > 0 && i % W.SEP_EVERY_N_STORMS === W.SEP_EVERY_N_STORMS - 1;
+    const cme = isSep ? null : candidates[cmeIndex++ % candidates.length];
+    const sep = isSep ? seps[sepIndex++ % seps.length] : null;
+    const leadHours = isSep ? W.SEP_WARNING_HOURS : leadTimeHours(cme);
     const arrival = warningStart + leadHours;
     const end = arrival + STORM_CONFIG.DURATION_HOURS;
-    const totalDoseUGy = stormTotalDoseUGy(cme);
-    schedule.push({
+    const totalDoseUGy = isSep ? RADIATION_CONFIG.STORM_DOSE_MIN_UGY : stormTotalDoseUGy(cme);
+    const storm = {
       index: i,
       cme,
       leadHours,
@@ -51,7 +58,9 @@ export function buildStormSchedule(cmes, startHours, count = 24) {
       warningStart,
       arrival,
       end,
-    });
+    };
+    if (isSep) Object.assign(storm, { kind: 'sep', sep });
+    schedule.push(storm);
     warningStart = end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS;
   }
   return schedule;

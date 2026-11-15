@@ -1,5 +1,5 @@
 import { RADIATION_CONFIG, SURVIVAL_CONFIG } from '../config/constants.js';
-import { formatDateDMY, formatHours } from '../mission/missionText.js';
+import { donkiLabel, formatDateDMY, formatHours } from '../mission/missionText.js';
 
 // Estado da missao -> o que o painel do canto superior direito mostra.
 // Inspirado em jogos de gestao: painel fixo de recursos com tendencia (Surviving Mars,
@@ -31,15 +31,19 @@ const WATER_EMPTY = 0.1;
 // A partir de quantos litros de agua cinza vale mais mandar alguem reciclar do que buscar gelo
 const GRAYWATER_WORTH_RECYCLING = 5;
 
-// Fonte curta e honesta: dado embutido aparece como "real data from DD/MM/AAAA"
-export function stormSourceShort(storm, fetchedIso) {
-  return `Real NASA DONKI data from ${formatDateDMY(fetchedIso)}: CME of ${formatDateDMY(storm.cme.startTime)}, ${Math.round(storm.cme.speedKmS)} km/s`;
+// Fonte curta e honesta: dado embutido aparece como "real data from DD/MM/AAAA" e o ao vivo como
+// "LIVE from NASA DONKI, fetched HH:MM" (issue #100). `source`: veja donkiLabel em missionText.js.
+export function stormSourceShort(storm, source) {
+  const label = donkiLabel(source);
+  const origin = label.startsWith('LIVE') ? label : `Real NASA DONKI data from ${label.slice('real data from '.length)}`;
+  if (storm.sep) return `${origin}: SEP of ${formatDateDMY(storm.sep.eventTime)}`;
+  return `${origin}: CME of ${formatDateDMY(storm.cme.startTime)}, ${Math.round(storm.cme.speedKmS)} km/s`;
 }
 
 // `base`: agua do reservatorio e agua cinza (SurvivalSystem), campos sem agua e ar do habitat
 // (StationSystem, #54).
 // O "O2 da base" e 100% - CO2: o ar fica ruim quando o filtro acaba ou falta energia.
-export function missionStatus(mission, fetchedIso, base = {}) {
+export function missionStatus(mission, source, base = {}) {
   const power = Math.round(mission.battery.percent);
   const powerTone = power <= 15 ? 'danger' : power <= 35 ? 'warn' : 'ok';
   const charging = mission.chargeRate > 0.05;
@@ -90,7 +94,7 @@ export function missionStatus(mission, fetchedIso, base = {}) {
         : shielded ? 'The shield is protecting you. Stay in the bubble.' : 'Enter the storm shelter and press F at the water wall to add shielding.',
       target: mission.insideShelter || shielded ? null : 'shelter',
       fill: clamp01(hoursLeft / Math.max(0.01, storm.end - storm.arrival)),
-      source: stormSourceShort(storm, fetchedIso),
+      source: stormSourceShort(storm, source),
     });
   } else if (phase === 'warning') {
     alerts.push({
@@ -101,7 +105,7 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       text: 'Fast particles from the Sun. Get ready to hide in the storm shelter!',
       target: 'shelter',
       fill: clamp01(hoursUntil / Math.max(0.01, storm.arrival - storm.warningStart)),
-      source: stormSourceShort(storm, fetchedIso),
+      source: stormSourceShort(storm, source),
     });
   }
   if (mission.radioBlackout) {

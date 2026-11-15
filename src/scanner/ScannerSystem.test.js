@@ -50,6 +50,16 @@ describe('ScannerSystem', () => {
     expect(scanner.update(0.01, 'phobos').known).toBe(false);
   });
 
+  it('asks for a full scan of targets known from an earlier mission, so they join this science package', () => {
+    const { scanner, journal } = setup();
+    journal.discovered.add('phobos'); // escaneado numa partida anterior
+    const start = scanner.update(0.01, 'phobos');
+    expect(start).toMatchObject({ known: true, done: false });
+    const full = scanner.update(DURATION, 'phobos');
+    expect(full.completed.discovery).toMatchObject({ isNew: false, missionNew: true, missionCount: 1 });
+    expect(journal.count).toBe(1);
+  });
+
   it('identifies previously discovered targets immediately without starting another scan', () => {
     const { scanner, journal } = setup();
     journal.record('phobos');

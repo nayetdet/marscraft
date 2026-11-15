@@ -1,3 +1,5 @@
+import { marsSurfaceMedian } from '../data/radlabSummary.js';
+
 export const WORLD_CONFIG = {
   SIZE_X: 224,
   SIZE_Y: 48,
@@ -12,6 +14,12 @@ export const TERRAIN_CONFIG = {
   BASE_FLAT_RADIUS: 28,
   BASE_BLEND_RADIUS: 36,
 };
+
+const DUST_STORM_FRONT_OFFSET = 24;
+const DUST_STORM_MAP_EDGE_RADIUS = Math.min(
+  WORLD_CONFIG.SIZE_X / 2 - Math.abs(TERRAIN_CONFIG.BASE_CENTER.x),
+  WORLD_CONFIG.SIZE_Z / 2 - Math.abs(TERRAIN_CONFIG.BASE_CENTER.z)
+);
 
 export const PHYSICS_CONFIG = {
   MARS_GRAVITY: 12.0,
@@ -69,26 +77,35 @@ export const SURVIVAL_CONFIG = {
   DAMAGE_SHAKE_RATE: 42,
   // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
   HEAL_MIN_OXYGEN: 5,
-  // Raios de exposição à poeira, medidos a partir de TERRAIN_CONFIG.BASE_CENTER.
-  // O efeito visual da parede acompanha separadamente a borda física do mapa.
-  DUST_STORM_START_RADIUS: 70,
-  DUST_STORM_FATAL_RADIUS: 100,
-  DUST_STORM_DAMAGE_RATE: 20,
-  // Intensidade (0..1) a partir da qual a tempestade machuca; antes disso e so aviso
-  DUST_STORM_DAMAGE_START: 0.55,
+  // Borda da area jogavel (parede de poeira), medida a partir de TERRAIN_CONFIG.BASE_CENTER.
+  // Issue #103: a borda nao machuca mais. O vento de Marte nao derruba ninguem (o ar e fino
+  // demais); quem limita a distancia e o ar do traje. No raio FATAL fica uma parede invisivel.
+  DUST_STORM_START_RADIUS: DUST_STORM_MAP_EDGE_RADIUS - DUST_STORM_FRONT_OFFSET,
+  DUST_STORM_FATAL_RADIUS: DUST_STORM_MAP_EDGE_RADIUS,
+  // Intensidade (0..1) a partir da qual o HUD manda voltar ja; antes disso e so aviso
+  DUST_STORM_TURN_BACK_START: 0.55,
   // Blocos antes do inicio da tempestade em que o HUD ja avisa que a borda esta perto
   DUST_STORM_WARNING_DISTANCE: 8,
 };
 
 // Visual da tempestade da borda (src/sky/DustStormEffect.js). O dano fica no SURVIVAL_CONFIG.
 export const DUST_STORM_VISUAL_CONFIG = {
+  INNER_WALL_OPACITY: 0.38,
+  MIDDLE_WALL_OPACITY: 0.68,
+  OUTER_WALL_OPACITY: 1,
+  OVERHEAD_FOG_HEIGHT: 24,
+  OVERHEAD_FOG_VIEW_START: 12,
+  OVERHEAD_FOG_VIEW_END: 36,
+  OVERHEAD_INNER_BAND_OPACITY: 0.14,
+  OVERHEAD_MIDDLE_BAND_OPACITY: 0.24,
+  OVERHEAD_OUTER_BAND_OPACITY: 0.34,
   WALL_BOTTOM_Y: -4,
   WALL_HEIGHT: 44,
   // A parede some perto da camera (entre estas distancias, em blocos) para nao virar um plano duro
   WALL_FADE_NEAR: 1.5,
   WALL_FADE_FAR: 8,
-  // Neblina, cúpula e partículas aparecem nos últimos blocos antes da borda do mapa.
-  VISUAL_LEAD: 12,
+  // A névoa cresce nas duas faixas entre a frente interna e a borda externa.
+  VISUAL_LEAD: DUST_STORM_FRONT_OFFSET,
   DOME_RADIUS: 26,
   DOME_MAX_OPACITY: 0.93,
   FOG_BASE_DENSITY: 0.0015,
@@ -169,7 +186,6 @@ export const ENERGY_CONFIG = {
   OXYGEN_COST_PER_POINT: 1.5, // reciclar 1 ponto de O2 no habitat (MOXIE + reciclagem)
   SHIELD_DRAIN_PER_HOUR: 12.5, // blindagem contra radiacao ligada
   ISRU_DRAIN_PER_HOUR: 25, // fabrica de combustivel ligada
-  DATA_UPLOAD_COST: 35, // enviar o pacote de dados cientificos para a Terra
   // Gerador nuclear (issue #85). [Ref] O MMRTG do Curiosity e do Perseverance gera ~110 W de
   // eletricidade de dia e de noite, com calor do plutonio (NASA). Na base ele so paga o suporte
   // de vida minimo (O2 do jogador e da tripulacao, filtro de CO2): fabrica, blindagem, luz da
@@ -184,8 +200,9 @@ export const ENERGY_CONFIG = {
 };
 
 export const RADIATION_CONFIG = {
-  // [API, RadLab] Curiosity MSL-RAD, Cratera Gale: mediana 6,93 uGy/h (16/11-10/12/2022)
-  MARS_SURFACE_DOSE_UGY_PER_HOUR: 6.93,
+  // [API, RadLab] Curiosity MSL-RAD, Cratera Gale: mediana ~6,93 uGy/h (16/11-10/12/2022), lida de
+  // src/data/radlabSummary.json (scripts/fetch-radlab-summary.mjs, issue #106)
+  MARS_SURFACE_DOSE_UGY_PER_HOUR: marsSurfaceMedian(),
   // [Ref] Fator de qualidade medio na superficie de Marte ~3,05 (0,21 mGy/dia -> 0,64 mSv/dia),
   // Hassler et al., Science 343 (2014), dados do MSL-RAD
   QUALITY_FACTOR: 3.05,
@@ -236,6 +253,24 @@ export const STORM_CONFIG = {
   DURATION_HOURS: 3,
   // Controle de demo (menu "Demo controls"): aviso curto antes da tempestade chegar (~10 s reais)
   DEMO_LEAD_HOURS: 0.2,
+};
+
+// Clima espacial ao vivo do NASA DONKI (issue #100). O fetch acontece uma vez, ao abrir o jogo,
+// e cai no JSON embutido (src/data/donkiCme.json) se qualquer coisa der errado.
+export const SPACE_WEATHER_CONFIG = {
+  // Janelas pedidas ao DONKI. A API recusa (HTTP 400) janelas acima de 60 dias.
+  CME_WINDOW_DAYS: 30,
+  SEP_WINDOW_DAYS: 60,
+  BULLETIN_WINDOW_DAYS: 7,
+  // A DEMO_KEY aguenta ~10 pedidos por hora; cada abertura sem cache faz 3
+  CACHE_TTL_MINUTES: 45,
+  FETCH_TIMEOUT_MS: 5000,
+  // SEP (particulas solares energeticas) so entra quando o fetch ao vivo trouxe uma; nunca inventamos.
+  // Regras do jogo: a cada 3 tempestades, a 3a e um pico de SEP. As particulas voam quase na
+  // velocidade da luz, entao o aviso e curto (~25 s reais). O DONKI nao da a forca da SEP em Marte:
+  // o pico usa a menor tempestade que o Curiosity mediu (RADIATION_CONFIG.STORM_DOSE_MIN_UGY).
+  SEP_EVERY_N_STORMS: 3,
+  SEP_WARNING_HOURS: 0.25,
 };
 
 export const MAV_CONFIG = {
@@ -311,8 +346,9 @@ export const CREW_CONFIG = {
 // Modulo norte (issue #56, parte B): energia/aquecimento, cozinha, banheiro e oficina.
 // Custos em % de bateria; "por hora" = hora de jogo (100 s reais). Fontes em docs/data/numeros-reais.md.
 export const UTILITY_CONFIG = {
-  // B2 aquecedor: gasta mais a noite, quando faz mais frio la fora e os paineis nao geram.
-  // [Ref] InSight: media ~-62 C, minima -97,7 C (Elysium Planitia). Potencia em escala de jogo.
+  // B2 aquecedor: gasta mais quanto mais frio estiver la fora (issue #108). DAY = gasto no ar
+  // mais quente do InSight (src/data/insightWeather.json), NIGHT = no mais frio; entre os dois,
+  // proporcional a temperatura. Potencia em escala de jogo.
   // Issue #81: cortado pela metade (era 1 / 4) para a bateria cheia aguentar a noite.
   HEATER_DAY_PER_HOUR: 0.5,
   HEATER_NIGHT_PER_HOUR: 2,
@@ -376,8 +412,7 @@ export const STATION_CONFIG = {
   EXERCISE_COST: 3, TREATMENT_COST: 5,
   COMMS_COST: 3, COMMS_DELAY: 40, SCIENCE_PER_SAMPLE: 2, UPGRADE_COST: 4,
   FITNESS_DECAY: 0.015, FRESH_FOOD_DURATION: 120,
-  TOOL_UPGRADE_COST: 4, MAV_REQUIRED_SAMPLES: 2,
-  MAV_TRANSMISSION_COST: 5,
+  TOOL_UPGRADE_COST: 4,
   SUIT_RADIATION_DAMAGE_FACTOR: 0.65,
 };
 
@@ -421,4 +456,231 @@ export const CROP_CONFIG = Object.freeze({
   lettuce: { water: 1, energy: 2, seconds: 5, nutrition: 3, strategy: 'Quick snack, small harvest' },
   potato: { water: 2, energy: 3, seconds: 7, nutrition: 6, strategy: 'Balanced meal, longer wait' },
   soy: { water: 3, energy: 5, seconds: 9, nutrition: 10, strategy: 'Big harvest, thirsty plants' },
+});
+
+// Dose de radiacao acumulada como orcamento da missao (issue #104). Fontes em
+// docs/data/numeros-reais.md, secao "Dose da missao".
+export const DOSE_CONFIG = {
+  // [Ref] Curiosity RAD medindo dentro da nave a caminho de Marte: 1,8 mSv por dia
+  // (Zeitlin et al., Science 340, 2013; SwRI/NASA). So a ida e a volta: 0,66 +- 0,12 Sv.
+  TRANSIT_MSV_PER_DAY: 1.8,
+  // [Ref] Mars 2020: 30/07/2020 a 18/02/2021 = 203 dias de viagem. 203 x 1,8 = ~365 mSv
+  // antes de pisar em Marte: a barra de dose ja abre em ~61 % do limite de 600 mSv.
+  TRANSIT_DAYS: 203,
+  // Escala de jogo (declarada, nao e medida). A dose normal da superficie usa o relogio das
+  // tempestades (STORM_CONFIG.REAL_HOURS_PER_GAME_HOUR: 1 hora de jogo = 1 dia real), e toda a
+  // dose que entra na barra (calmaria, tempestade, dentro e fora) e multiplicada por GAME_FACTOR.
+  // Resultado: 1 hora de jogo vale ~8 dias reais em Marte, e ~60 horas de jogo (2,5 sols) somam
+  // a dose de uma estadia real de ~500 dias. As proporcoes entre la fora, habitat, escudo e
+  // abrigo sao as mesmas de radiation.js.
+  GAME_FACTOR: 8,
+  // Acima desta fracao do limite de carreira a barra fica amarela e a medica avisa
+  WARN_FRACTION: 0.85,
+  // Traje melhorado (StationSystem.upgrade): a mesma fracao que ele tira do dano la fora
+  SUIT_FACTOR: STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR,
+  // Comandante acima do limite: o rover leva o gelo direto para o MAV. Uma perfuracao do rover
+  // (ICE_PER_DRILL kg) vale um bloco de gelo do tanque do foguete (escala de jogo).
+  ROVER_ICE_KG_PER_MAV_BLOCK: WATER_SYSTEM_CONFIG.ICE_PER_DRILL,
+  // Distancia do rover ao centro da plataforma do MAV para descarregar o gelo (blocos)
+  ROVER_MAV_REACH: 8,
+};
+
+// Gerador de O2 com dois modos (issue #102). Fontes em docs/data/numeros-reais.md.
+// "Air from water" = eletrolise, como o OGA da Estacao Espacial: 2 H2O -> 2 H2 + O2.
+// "Air from Mars air" = MOXIE do rover Perseverance: tira o O2 do CO2 do ar de Marte.
+export const OXYGEN_PLANT_CONFIG = {
+  // [Ref] Quimica da eletrolise: 36 g de agua dao 32 g de O2 (NASA ICES 2024; OGA, NASA 2015)
+  WATER_KG_PER_O2_KG: 36 / 32,
+  // [Ref] NASA BVAD: 0,84 kg de O2 por pessoa por dia. Com a razao acima: 0,945 L de agua por
+  // pessoa por sol. Agua e contada como 1 kg = 1 L, como no resto do jogo.
+  O2_KG_PER_PERSON_DAY: 0.84,
+  // Escala de jogo (nao ha potencia oficial para uma base): por ponto de O2, o MOXIE gasta
+  // MOXIE_ENERGY_FACTOR vezes a energia da eletrolise. A eletrolise usa os custos que ja existiam
+  // (ENERGY_CONFIG.OXYGEN_COST_PER_POINT e CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR).
+  ELECTROLYSIS_ENERGY_FACTOR: 1,
+  MOXIE_ENERGY_FACTOR: 2,
+  // [Ref] Sabatier (ISS): CO2 + 4 H2 -> CH4 + 2 H2O. O hidrogenio que sai no metano limita a
+  // recuperacao a ~50 % (NASA ICES 2024): devolve metade da agua da eletrolise.
+  SABATIER_WATER_RETURN: 0.5,
+  // Custo de montar o reator de Sabatier na impressora 3D (escala de jogo)
+  SABATIER_REGOLITH: 3,
+  SABATIER_POWER: 8,
+  // Avisos do tripulante: o modo escolhido esta gastando o recurso que esta acabando
+  LOW_WATER_WARN_L: 10,
+  LOW_BATTERY_WARN_PCT: 25,
+};
+
+// Tempestade de poeira como clima (issue #103): corta a energia solar, nao machuca ninguem.
+// Fontes em docs/data/numeros-reais.md ("Poeira e tempestades de poeira").
+export const DUST_WEATHER_CONFIG = {
+  // [Ref] Opacidade (tau) media no local do Opportunity: ~0,5 (NASA JPL, recuperacao do
+  // Opportunity, 08/2018). Tau alto = menos luz do Sol chega ao chao.
+  TAU_CLEAR: 0.5,
+  // [Ref] Opportunity, 10/06/2018: tau 10,8, o recorde na superficie (NASA JPL, 2018)
+  TAU_RECORD: 10.8,
+  // Escala de jogo: o pico de cada tempestade e sorteado entre isto e o recorde real
+  PEAK_TAU_MIN: 7,
+  // Regra de jogo: geracao solar com o tau no recorde (nunca zero de dia). Entre o ceu limpo e
+  // o recorde a geracao cai em linha reta.
+  SOLAR_FACTOR_AT_RECORD: 0.2,
+  // Escala de jogo (horas de jogo; 1 h = 100 s reais). O clima so comeca no ato 2 da historia.
+  FIRST_STORM_AFTER_HOURS: [8, 16],
+  GAP_BETWEEN_STORMS_HOURS: [24, 36],
+  WARNING_HOURS: 2,
+  STORM_HOURS: [6, 9],
+  RAMP_HOURS: 1.5, // o tau sobe ate o pico nas primeiras horas da tempestade
+  CLEARING_HOURS: 3, // a poeira baixa devagar depois
+  // Controle de demo / admin: aviso curto antes da tempestade chegar (~10 s reais)
+  DEMO_LEAD_HOURS: 0.1,
+  // Poeira nos paineis (0 = limpo, 1 = coberto). Escala de jogo: bem mais rapido que o real,
+  // para o jogador ver o efeito numa partida curta.
+  PANEL_DUST_PER_HOUR: 0.006,
+  PANEL_DUST_STORM_PER_HOUR: 0.05,
+  PANEL_DUST_MAX_LOSS: 0.7, // painel todo coberto ainda gera 30 %
+  START_PANEL_DUST: 0.1,
+  // Limpar os paineis a mao (no campo solar, a oeste da sala de energia): cada vez tira esta
+  // poeira e gasta ar do traje (pontos de O2, de 20). Esperar custa energia; limpar custa ar.
+  CLEAN_STEP: 0.25,
+  CLEAN_O2_COST: 1,
+  CLEAN_RADIUS: 10, // blocos do centro do campo solar
+  // [Ref] Ventos e redemoinhos limparam os paineis do Spirit e do Opportunity ("cleaning
+  // events", NASA JPL). Escala de jogo: rajada do sol (InSight) acima do limite tira poeira.
+  WIND_CLEAN_GUST_MS: 20,
+  WIND_CLEAN_PER_MS: 0.02,
+  // Visual: tau em que o ceu fica marrom escuro de vez
+  HAZE_FULL_TAU: 6,
+  // Visual com a poeira no maximo (src/sky/DustStormEffect.js e MarsSkySystem.js)
+  WEATHER_FOG_DENSITY: 0.035,
+  WEATHER_DOME_OPACITY: 0.55,
+  WEATHER_PARTICLE_OPACITY: 0.85,
+  WEATHER_FRONT_OPACITY: 0.9, // frente de poeira no horizonte durante o aviso
+  WEATHER_WIND: { x: -0.94, z: 0.34 }, // direcao do vento da tempestade (vem do leste)
+  SUN_DIM: 0.65, // fracao da luz do Sol que some no pico
+  SUN_SHRINK: 0.75, // o disco do Sol encolhe ate virar um ponto fraco
+};
+
+// Clima real do InSight por sol (issue #108). Os valores vem de src/data/insightWeather.json.
+export const WEATHER_CONFIG = {
+  // Forma da curva de temperatura dentro do sol (aproximacao de jogo): minima pouco antes do
+  // nascer do Sol (SUNRISE_HOUR = 6) e maxima no comeco da tarde
+  COLDEST_HOUR: 5,
+  WARMEST_HOUR: 14,
+  // Hora do relatorio do tempo (nascer do Sol)
+  REPORT_HOUR: 6,
+};
+
+// Pacote de ciencia para a Terra e tubos de amostra no foguete (issue #105). Escala de jogo.
+// [Ref] Os rovers mandam quase todo o dado por orbitadores (Mars Relay Network, NASA/JPL), em
+// passagens que carregam um volume limitado: daqui vem o limite de itens por envio.
+// [Ref] O Perseverance guarda amostras em tubos para uma futura missao de retorno, que usaria
+// um foguete de subida (MAV); massa a mais no foguete pede mais combustivel.
+export const SCIENCE_CONFIG = {
+  // Minimo enviado para a vitoria: N descobertas do scanner OU M amostras analisadas
+  MIN_DISCOVERIES: 5,
+  MIN_SAMPLES: 2,
+  // Custo do envio em % de bateria: base (ligar o radio e falar com o orbitador) + por item
+  UPLOAD_BASE_COST: 8,
+  UPLOAD_COST_PER_ITEM: 3,
+  // Itens por envio (uma passagem do orbitador). O resto espera o proximo envio.
+  MAX_ITEMS_PER_UPLOAD: 8,
+  // Analisar 1 amostra de regolito no laboratorio (% de bateria)
+  ANALYZE_POWER_COST: 2,
+  // Cada tubo de amostra no MAV pede mais gelo para encher o tanque. Muito mais do que um tubo de
+  // verdade pesa: regra de jogo, para a escolha "levar mais ciencia x buscar mais gelo" aparecer.
+  ICE_PER_SAMPLE_TUBE: 1,
+  MAX_SAMPLE_TUBES: 4,
+};
+
+// Diario de bordo por sol (issue #106). Escala de jogo, so de interface.
+export const MISSION_LOG_CONFIG = {
+  MAX_ENTRIES: 200, // linhas guardadas na partida (as mais antigas saem)
+  // Cliques seguidos na mesma decisao (encher a parede do abrigo de 10 em 10 L) dentro deste
+  // intervalo, em horas de jogo, viram uma linha so
+  MERGE_HOURS: 1,
+  SUMMARY_CARD_MS: 9000, // resumo do fim do sol na tela
+  STUDY_CARD_MS: 7000, // estudo real da NASA revelado
+};
+
+// Dormir no beliche do dormitorio (issue #109): substitui o avanco de tempo gratis da tecla T.
+// Escala de jogo, exceto o que esta marcado [Ref]. Fontes em docs/data/numeros-reais.md.
+export const SLEEP_CONFIG = {
+  NAP_HOURS: 2,
+  // "Sleep until sunrise" so de noite: o Sol fica abaixo do horizonte das 18h as 6h
+  // (MarsSkySystem); o nascer do sol e MISSION_CONFIG.SUNRISE_HOUR.
+  NIGHT_FROM_HOUR: 18,
+  // Enquanto dorme o relogio corre 3 horas de jogo por segundo real (uma noite passa em ~3 s)
+  CLOCK_HOURS_PER_SECOND: 3,
+  // A cada passo (6 min de jogo) a base anda e o jogo checa se algo acorda o jogador
+  STEP_HOURS: 0.1,
+  // Fome e sede do jogador por hora de jogo dormindo (barras de 20 pontos). Escala de jogo:
+  // acordado a barra de comida dura ~1,8 h de jogo, entao a mesma taxa matava qualquer um que
+  // dormisse. Dormindo o corpo gasta menos (taxa de sono = 1,0x o metabolismo basal, contra
+  // ~1,75x na media de um dia ativo, FAO/WHO/UNU 2004); aqui uma noite de 9 h gasta ~metade
+  // da comida e ~1/3 da agua, entao comer e beber antes de deitar e parte da escolha.
+  FOOD_PER_HOUR: 1.2,
+  WATER_PER_HOUR: 0.8,
+  // Com comida ou agua neste nivel o jogador acorda (e nao consegue pegar no sono)
+  WAKE_NEED_LEVEL: 4,
+  // Ar minimo da base (%) para poder dormir
+  MIN_BASE_OXYGEN: 50,
+  // CO2 do habitat (%) que dispara o alarme da tripulacao (igual ao aviso do HUD)
+  CO2_ALARM: 40,
+  // Mais de 1 sol (24 h de jogo) acordado: o trabalho fica mais lento (getWorkSpeed)
+  TIRED_AFTER_HOURS: 24,
+  // Cada hora dormida paga 3 horas acordado (8 h de sono "zeram" um dia inteiro). Escala de jogo.
+  REST_PER_HOUR_SLEPT: 3,
+  // [Ref] Barger et al., Lancet Neurology 2014: 64 astronautas do onibus espacial e 21 da
+  // Estacao Espacial dormiram ~6 h por noite, com 8,5 h reservadas na agenda.
+  ASTRONAUT_SLEEP_HOURS: 6,
+  ASTRONAUT_SCHEDULED_SLEEP_HOURS: 8.5,
+};
+
+// Eventos aleatorios de Marte (issue #107): meteoro, tremor, eclipse de Fobos, redemoinho de poeira,
+// geada e aurora. Quando e quanto duram e ESCALA DE JOGO; os fatos reais de cada evento estao em
+// src/mission/eventText.js e docs/data/numeros-reais.md. A agenda sai de uma semente (eventDirector.js).
+export const EVENTS_CONFIG = Object.freeze({
+  // Eventos sorteados (a aurora nao entra: ela vem depois de uma tempestade solar sobrevivida)
+  RANDOM_TYPES: Object.freeze(['meteor', 'marsquake', 'eclipse', 'dustDevil', 'frost']),
+  // Horas de jogo do inicio do ato 2 ate o primeiro evento (1 h de jogo = 100 s reais)
+  FIRST_DELAY_HOURS: Object.freeze([1, 2]),
+  // Horas de jogo entre o fim de um evento e o inicio do proximo, na agenda sorteada
+  GAP_HOURS: Object.freeze([2.5, 5]),
+  // Intervalo minimo garantido entre dois eventos, mesmo depois de adiar um deles
+  MIN_GAP_HOURS: 1.5,
+  // Durante uma tempestade solar nenhum evento comeca: ele espera esta folga depois de checar de novo
+  POSTPONE_HOURS: 0.5,
+  // A agenda cobre este tanto de horas de jogo depois do ato 2 (bem mais que uma partida)
+  HORIZON_HOURS: 240,
+  // Duracao de cada evento em segundos reais. O eclipse usa os ~40 s do eclipse real filmado pelo
+  // Perseverance; os outros sao escala de jogo, so o tempo de ver a animacao.
+  DURATION_SECONDS: Object.freeze({ meteor: 12, marsquake: 8, eclipse: 40, dustDevil: 36, frost: 50, aurora: 60 }),
+  // Janelas da hora do dia em que cada evento pode comecar: [de, ate). O eclipse precisa do Sol
+  // alto; a geada aparece no nascer do Sol (MISSION_CONFIG.SUNRISE_HOUR = 6); a aurora, de noite.
+  WINDOWS: Object.freeze({ eclipse: Object.freeze([9, 15]), frost: Object.freeze([5.4, 6.4]), aurora: Object.freeze([20, 28]) }),
+
+  // Segundos do card do evento na tela (tem um fato real para ler; OK ou Enter fecham antes)
+  CARD_SECONDS: 20,
+
+  // Meteoro: cratera nova num ponto afastado da base, com gelo exposto no fundo
+  METEOR_MIN_DISTANCE: 40, // blocos do centro da base (fora da area construida, raio 36)
+  METEOR_MAX_DISTANCE: 46, // dentro da area segura (antes da tempestade da borda, raio 52)
+  METEOR_MIN_PLAYER_DISTANCE: 14, // nunca cai em cima do jogador nem do rover
+  METEOR_CRATER_RADIUS: 4, // blocos (a cratera real de 2021 tem ~150 m: aqui e escala de jogo)
+  METEOR_CRATER_DEPTH: 3,
+  METEOR_ICE_RADIUS: 2.4, // fundo da cratera que vira gelo exposto
+
+  // Tremor: uma estacao da tripulacao perde saude (conserta com a impressora 3D da oficina)
+  QUAKE_STATION_DAMAGE: 0.35,
+  QUAKE_SHAKE: 0.11, // blocos de balanco da camera no pico
+  METEOR_SHAKE: 0.06,
+
+  // Eclipse de Fobos: fracao da luz do Sol e da carga solar cortada no meio do eclipse.
+  // Escala de jogo: Fobos e menor que o Sol visto de Marte, entao a queda real e parcial.
+  ECLIPSE_SUNLIGHT_DROP: 0.4,
+
+  // Redemoinho: limpa esta fracao da poeira dos paineis se passar pelo campo solar (#103)
+  DUST_DEVIL_PANEL_CLEAN: 0.3,
+  DUST_DEVIL_SPEED: 2.6, // blocos/s
+  DUST_DEVIL_HIT_RADIUS: 3, // perto disso o jogador fica no meio da poeira
+  DUST_DEVIL_BLIND_SECONDS: 3,
 });

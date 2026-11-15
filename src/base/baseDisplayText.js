@@ -1,4 +1,5 @@
 import { RADIATION_CONFIG } from '../config/constants.js';
+import { dustStatus } from '../mission/weatherText.js';
 
 // Conteudo das telas vivas da base, calculado a partir do estado do jogo.
 // Puro (sem Three.js nem DOM) para testar com Vitest; BaseDisplays.js so desenha o resultado.
@@ -41,9 +42,11 @@ function stormMode(storm) {
 const doseTone = (rate) => (rate >= RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR ? 'alert' : 'ok');
 
 export function commandModel(s) {
+  // `donkiCredit`: "NASA DONKI, real data from DD/MM/AAAA" ou "LIVE from NASA DONKI, fetched HH:MM" (#100)
+  const credit = s.donkiCredit ?? `NASA DONKI, real data from ${s.donkiDate}`;
   const footer = s.storm.phase === 'calm' || !s.storm.speedKmS
-    ? `Storm data: NASA DONKI, real data from ${s.donkiDate}`
-    : `Real CME seen ${s.storm.date}: ${Math.round(s.storm.speedKmS)} km/s (NASA DONKI, real data from ${s.donkiDate})`;
+    ? `Storm data: ${credit}`
+    : `Real CME seen ${s.storm.date}: ${Math.round(s.storm.speedKmS)} km/s (${credit})`;
   return {
     title: 'BASE STATUS',
     rows: [
@@ -52,10 +55,29 @@ export function commandModel(s) {
       { label: 'WATER TANK', value: `${Math.round(s.water)} L`, bar: ratio(s.water, s.maxWater), tone: 'water' },
       { label: 'RADIATION', value: formatRate(s.doseRate), tone: doseTone(s.doseRate) },
       { label: 'SPACE WEATHER', value: weatherValue(s.storm), tone: stormMode(s.storm) },
+      ...marsWeatherRows(s),
     ],
     footer,
     mode: stormMode(s.storm),
   };
+}
+
+// Gerador de O2 (issue #102): modo escolhido e o que falta para ele trabalhar
+function oxygenRow(s) {
+  if (s.batteryPct <= 0 || s.oxygenBlocked === 'power') return { label: 'O2 MAKER', value: 'NO POWER', tone: 'alert' };
+  if (s.oxygenBlocked === 'water') return { label: 'O2 MAKER', value: 'NO WATER', tone: 'alert' };
+  return { label: 'O2 MAKER', value: s.oxygenMode === 'moxie' ? 'FROM MARS AIR' : 'FROM WATER', tone: 'ok' };
+}
+
+// Clima de Marte na tela do comando (issues #103 e #108): ar la fora (InSight) e poeira
+function marsWeatherRows(s) {
+  const rows = [];
+  if (Number.isFinite(s.outsideC)) rows.push({ label: 'OUTSIDE', value: `${Math.round(s.outsideC)} C`, tone: 'water' });
+  if (s.dust) {
+    const dust = dustStatus(s.dust);
+    rows.push({ label: 'MARS WEATHER', value: dust.value, tone: dust.tone });
+  }
+  return rows;
 }
 
 export function powerModel(s) {
@@ -64,9 +86,10 @@ export function powerModel(s) {
   return {
     title: 'POWER MAP',
     rows: [
-      { label: 'SUN IN', value: s.chargeRate > 0 ? `+${s.chargeRate.toFixed(0)}%/h` : 'NIGHT: 0', tone: s.chargeRate > 0 ? 'ok' : 'warn' },
+      { label: 'SUN IN', value: sunInValue(s), tone: s.chargeRate > 0 && !dustLow(s) ? 'ok' : 'warn' },
+      ...(s.dust ? [{ label: 'PANEL DUST', value: `${Math.round(s.dust.panelDust * 100)}%`, bar: s.dust.panelDust, tone: s.dust.panelDust >= 0.5 ? 'alert' : 'warn' }] : []),
       { label: 'BATTERY', value: `${Math.round(s.batteryPct)}%`, bar: s.batteryPct / 100, tone: s.batteryPct <= 20 ? 'alert' : 'ok' },
-      { label: 'O2 MAKER', value: s.batteryPct > 0 ? 'READY' : 'NO POWER', tone: s.batteryPct > 0 ? 'ok' : 'alert' },
+      oxygenRow(s),
       { label: 'SHIELD', value: s.shieldOn ? 'ON' : 'OFF', tone: s.shieldOn ? 'warn' : 'ok' },
       { label: 'FUEL PLANT', value: fuel, tone: s.factoryBusy ? 'warn' : 'ok' },
       { label: 'GREENHOUSE', value: s.greenhousePowered ? 'LIGHTS ON' : 'NO POWER', tone: s.greenhousePowered ? 'ok' : 'alert' },
@@ -74,6 +97,16 @@ export function powerModel(s) {
     footer: 'Mars gets 43% of the sunlight Earth gets',
     mode: s.batteryPct <= 20 ? 'alert' : 'ok',
   };
+}
+
+const dustLow = (s) => Boolean(s.dust) && (s.dust.phase === 'storm' || s.dust.panelDust >= 0.3);
+
+// Geracao agora e, se caiu, o motivo (noite, tempestade de poeira, paineis sujos)
+function sunInValue(s) {
+  if (s.chargeRate <= 0) return 'NIGHT: 0';
+  const rate = `+${s.chargeRate.toFixed(0)}%/h`;
+  if (!dustLow(s)) return rate;
+  return `${rate} ${s.dust.phase === 'storm' ? 'DUST STORM' : 'DUSTY PANELS'}`;
 }
 
 export function shelterModel(s) {

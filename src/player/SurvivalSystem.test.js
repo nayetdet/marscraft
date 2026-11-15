@@ -2,7 +2,7 @@ import { CROP_ITEM_IDS, ITEM_DEFINITIONS } from '../config/blockTypes.js';
 import { describe, it, expect } from 'vitest';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { SurvivalSystem } from './SurvivalSystem.js';
-import { WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 
 describe('SurvivalSystem', () => {
   it('leaks base and suit oxygen during a breach, then restores them using power after sealing', () => {
@@ -19,6 +19,15 @@ describe('SurvivalSystem', () => {
     expect(survival.baseOxygen).toBe(82);
     expect(survival.oxygen).toBe(20);
     expect(survival.lastOxygenRefilled).toBeCloseTo(4.4);
+  });
+
+  it('standing at the map edge or in the dust does not hurt: only the suit air runs out (issue #103)', () => {
+    const survival = new SurvivalSystem();
+    const farOut = { x: -4 + SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS, y: 11, z: 0 };
+    survival.update(10, farOut, 100, false);
+    expect(survival.dustStormIntensity).toBe(1);
+    expect(survival.health).toBe(survival.maxStat);
+    expect(survival.oxygen).toBeLessThan(survival.maxStat);
   });
 
   it('keeps leaking base oxygen while the astronaut is outside', () => {

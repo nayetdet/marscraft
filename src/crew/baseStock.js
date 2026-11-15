@@ -6,6 +6,8 @@ import { CREW_CONFIG, STATION_CONFIG } from '../config/constants.js';
 export function createBaseStock({ survival, mission }) {
   return {
     battery: mission.battery,
+    // Gerador de O2 (issue #102): a tripulacao respira no mesmo modo escolhido pelo jogador
+    get oxygenPlant() { return mission.oxygenPlant; },
     get water() { return survival.baseWater; },
     set water(liters) { survival.baseWater = liters; },
     get maxWater() { return survival.maxBaseWater; },

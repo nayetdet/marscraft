@@ -20,6 +20,9 @@ export class Airlock {
     this.cleanPossible = true;
     this.stations = null; // StationSystem, ligado pelo GameEngine (traje sujo e limpeza)
     this.onEvent = null; // Emits door and suit-cleaning events.
+    // () => texto ou null, ligado pelo GameEngine: com texto, a porta externa nao abre para quem
+    // esta do lado da base (dose acima do limite, issue #104). Quem esta la fora sempre entra.
+    this.exitBlock = null;
     this.doors = [this.makeDoor(scene, 6.15, 'inner'), this.makeDoor(scene, 8.85, 'outer')];
     this.vapor = new THREE.Group();
     const vaporMaterial = new THREE.MeshBasicMaterial({ color: 0xbfe2ed, transparent: true, opacity: 0.5, depthWrite: false });
@@ -75,6 +78,10 @@ export class Airlock {
       door.target = 0;
       this.onEvent?.('door-close');
       return 'Closing airlock door.';
+    }
+    if (door.name === 'outer' && player.z < door.z) {
+      const blocked = this.exitBlock?.();
+      if (blocked) return blocked;
     }
     const other = this.doors.find(d => d !== door);
     if (other.openness > 0 && Math.abs(player.z - other.z) < 0.8 && player.x > -1.4 && player.x < 2.4) return 'Move clear of the other door.';

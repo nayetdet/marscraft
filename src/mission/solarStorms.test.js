@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildStormSchedule, leadTimeHours, marsBoundCmes, rescheduleStorms, stormStateAt, stormTotalDoseUGy,
 } from './solarStorms.js';
-import { RADIATION_CONFIG, STORM_CONFIG } from '../config/constants.js';
+import { RADIATION_CONFIG, SPACE_WEATHER_CONFIG, STORM_CONFIG } from '../config/constants.js';
 import donki from '../data/donkiCme.json';
 
 const toMars = (id, startTime, marsArrivalTime, speedKmS, isGlancingBlow = false) =>
@@ -114,5 +114,38 @@ describe('admin storm controls', () => {
       const moved = rescheduleStorms(schedule, 0.5, target);
       expect(stormStateAt(moved, 0.5).phase).toBe(phase);
     }
+  });
+});
+
+describe('SEP storms from live DONKI data (issue #100)', () => {
+  const seps = [{ id: 'sep-1', eventTime: '2025-11-15T03:42Z', seenBy: ['STEREO A'] }];
+
+  it('without a real SEP nothing changes: every storm is a CME, no SEP is made up', () => {
+    expect(buildStormSchedule(cmes, 10, 6, [])).toEqual(buildStormSchedule(cmes, 10, 6));
+    expect(buildStormSchedule(cmes, 10, 6).some((s) => s.sep || s.kind === 'sep')).toBe(false);
+  });
+
+  it('with a real SEP, every Nth storm is an SEP spike with a short warning', () => {
+    const N = SPACE_WEATHER_CONFIG.SEP_EVERY_N_STORMS;
+    const schedule = buildStormSchedule(cmes, 10, 2 * N, seps);
+    const sepStorms = schedule.filter((s) => s.kind === 'sep');
+    expect(sepStorms.map((s) => s.index)).toEqual([N - 1, 2 * N - 1]);
+    for (const storm of sepStorms) {
+      expect(storm.cme).toBeNull();
+      expect(storm.sep).toBe(seps[0]);
+      expect(storm.arrival - storm.warningStart).toBeCloseTo(SPACE_WEATHER_CONFIG.SEP_WARNING_HOURS);
+      // Menor que qualquer aviso de CME real: as particulas chegam quase na velocidade da luz
+      expect(storm.leadHours).toBeLessThan(Math.min(...marsBoundCmes(donki.cmes).map(leadTimeHours)));
+      // O DONKI nao da a forca da SEP em Marte: usa a menor tempestade real do Curiosity
+      expect(storm.totalDoseUGy).toBe(RADIATION_CONFIG.STORM_DOSE_MIN_UGY);
+    }
+    // As CMEs seguem a ordem delas, sem pular nenhuma por causa das SEPs
+    expect(schedule.filter((s) => s.cme).map((s) => s.cme.id)).toEqual(['fast', 'slow', 'fast', 'slow']);
+  });
+
+  it('keeps the SEP when the admin panel moves the storms', () => {
+    const schedule = buildStormSchedule(cmes, 0, 3, seps);
+    const moved = rescheduleStorms(schedule, 0, 'warning');
+    expect(moved[2].sep).toBe(seps[0]);
   });
 });

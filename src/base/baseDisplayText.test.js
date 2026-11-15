@@ -33,6 +33,13 @@ describe('base display text', () => {
     expect(active.rows.at(-1).value).toContain('STORM NOW');
   });
 
+  it('command screen says LIVE only when the storm data was fetched now (issue #100)', () => {
+    const live = commandModel(state({ donkiCredit: 'LIVE from NASA DONKI, fetched 18:40' }));
+    expect(live.footer).toBe('Storm data: LIVE from NASA DONKI, fetched 18:40');
+    const active = commandModel(state({ donkiCredit: 'LIVE from NASA DONKI, fetched 18:40', storm: { phase: 'active', hoursUntil: 0, hoursLeft: 1, speedKmS: 894, date: '01/11/2026' } }));
+    expect(active.footer).toContain('(LIVE from NASA DONKI, fetched 18:40)');
+  });
+
   it('power map shows night, the shield and an empty battery', () => {
     const night = powerModel(state({ chargeRate: 0, batteryPct: 0, greenhousePowered: false, shieldOn: true }));
     const byLabel = Object.fromEntries(night.rows.map((r) => [r.label, r.value]));
@@ -40,6 +47,27 @@ describe('base display text', () => {
     expect(byLabel['O2 MAKER']).toBe('NO POWER');
     expect(byLabel.SHIELD).toBe('ON');
     expect(night.mode).toBe('alert');
+  });
+
+  it('power map shows the oxygen machine mode and an empty tank (issue #102)', () => {
+    const o2 = (overrides) => powerModel(state(overrides)).rows.find((r) => r.label === 'O2 MAKER');
+    expect(o2({ oxygenMode: 'electrolysis' }).value).toBe('FROM WATER');
+    expect(o2({ oxygenMode: 'moxie' }).value).toBe('FROM MARS AIR');
+    expect(o2({ oxygenMode: 'electrolysis', oxygenBlocked: 'water' })).toMatchObject({ value: 'NO WATER', tone: 'alert' });
+  });
+
+  it('command and power screens show the outside air, the dust storm and why the sun power dropped (issues #103 and #108)', () => {
+    const dust = { phase: 'storm', hoursUntilStorm: 0, solarFactor: 0.3, panelDust: 0.4 };
+    const command = commandModel(state({ outsideC: -78.4, dust }));
+    const rows = Object.fromEntries(command.rows.map((r) => [r.label, r.value]));
+    expect(rows.OUTSIDE).toBe('-78 C');
+    expect(rows['MARS WEATHER']).toBe('DUST STORM: SUN 30%');
+
+    const power = Object.fromEntries(powerModel(state({ dust })).rows.map((r) => [r.label, r.value]));
+    expect(power['SUN IN']).toContain('DUST STORM');
+    expect(power['PANEL DUST']).toBe('40%');
+    const clean = Object.fromEntries(powerModel(state({ dust: { ...dust, phase: 'clear', panelDust: 0 } })).rows.map((r) => [r.label, r.value]));
+    expect(clean['SUN IN']).toBe('+12%/h');
   });
 
   it('shelter meter tells the player where to stand during a storm', () => {

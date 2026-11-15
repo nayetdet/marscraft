@@ -17,9 +17,12 @@ describe('objectiveTarget', () => {
     expect(objectiveTarget('fuel', { iceCount: 1, iceNeeded: 1 })).toBe('mav');
   });
 
-  it('points at the console once the tank needs no more ice and the data is not sent', () => {
-    expect(objectiveTarget('act2', { iceCount: 3, iceNeeded: 0 })).toBe('console');
-    expect(objectiveTarget('fuel', { iceNeeded: 0, propellantPct: 80 })).toBe('console');
+  it('points at the science terminal once the tank needs no more ice and the science is not sent', () => {
+    expect(objectiveTarget('act2', { iceCount: 3, iceNeeded: 0 })).toBe('science');
+    expect(objectiveTarget('fuel', { iceNeeded: 0, propellantPct: 80, scienceStep: 'send' })).toBe('science');
+    expect(objectiveTarget('fuel', { iceNeeded: 0, propellantPct: 80, scienceStep: 'analyze' })).toBe('science');
+    // Escanear vale em qualquer lugar com a luneta: sem seta
+    expect(objectiveTarget('act2', { iceNeeded: 0, scienceStep: 'scan' })).toBeNull();
   });
 
   it('has no place to point at while the factory works or only storms are left', () => {
@@ -29,7 +32,9 @@ describe('objectiveTarget', () => {
 
   it('covers the storm and the last jobs', () => {
     expect(objectiveTarget('storm-guide')).toBe('airlock');
-    expect(objectiveTarget('send-data')).toBe('console');
+    expect(objectiveTarget('send-data')).toBe('science');
+    expect(objectiveTarget('send-data', { scienceStep: 'analyze' })).toBe('science');
+    expect(objectiveTarget('send-data', { scienceStep: 'scan' })).toBeNull();
     expect(objectiveTarget('ignite')).toBe('mav');
     expect(objectiveTarget('done')).toBeNull();
     expect(objectiveTarget('failed')).toBeNull();
@@ -37,7 +42,7 @@ describe('objectiveTarget', () => {
   });
 
   it('has a label for every place', () => {
-    for (const place of ['airlock', 'console', 'ice', 'mav']) {
+    for (const place of ['airlock', 'console', 'science', 'ice', 'mav']) {
       expect(WAYPOINT_LABELS[place]).toBeTruthy();
     }
   });

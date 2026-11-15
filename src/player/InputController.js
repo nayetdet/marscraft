@@ -514,9 +514,6 @@ export class InputController {
         } else if (e.code === 'KeyF' && !e.repeat) {
           e.preventDefault();
           this.onInteract?.();
-        } else if (e.code === 'KeyT' && !e.repeat) {
-          this.sky.advanceTime(1.5);
-          this.hud.showToast('Time advanced (+1h 30m on Mars)');
         }
         return;
       }
@@ -575,12 +572,8 @@ export class InputController {
         }
         return;
       }
-
-      if (e.code === 'KeyT') {
-        this.sky.advanceTime(1.5);
-        this.hud.showToast('Time advanced (+1h 30m on Mars)');
-      }
-
+      // A tecla T nao avanca mais o tempo no jogo normal (issue #109): para passar o tempo,
+      // durma num beliche. O atalho de teste ficou so no painel de admin (AdminPanel).
     });
 
     window.addEventListener('keyup', (e) => {

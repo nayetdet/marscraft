@@ -133,4 +133,12 @@ describe('missionStatus', () => {
   it('formats a short source line', () => {
     expect(stormSourceShort(STORM, FETCHED)).toContain('14/11/2026');
   });
+
+  it('says LIVE in the storm card only after a fetch that worked (issue #100)', () => {
+    const fetchedAt = new Date(2026, 10, 14, 18, 40).toISOString();
+    expect(stormSourceShort(STORM, { live: true, fetchedAt })).toBe('LIVE from NASA DONKI, fetched 18:40: CME of 01/11/2026, 894 km/s');
+    expect(stormSourceShort(STORM, { live: false, fetchedAt: '2026-11-14' })).toBe('Real NASA DONKI data from 14/11/2026: CME of 01/11/2026, 894 km/s');
+    const sepStorm = { ...STORM, cme: null, kind: 'sep', sep: { eventTime: '2025-11-15T03:42Z', seenBy: ['STEREO A'] } };
+    expect(stormSourceShort(sepStorm, { live: true, fetchedAt })).toBe('LIVE from NASA DONKI, fetched 18:40: SEP of 15/11/2025');
+  });
 });

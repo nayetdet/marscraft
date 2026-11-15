@@ -9,7 +9,7 @@ O jogo é um site estático (Vite → GitHub Pages), sem backend. Uma API só po
 
 | API | Chave | CORS (navegador) | Situação | Estratégia recomendada |
 |---|---|---|---|---|
-| `api.nasa.gov/DONKI/*` | sim (`api_key`) | ✅ `*` | CME e notifications OK. **FLR retorna 404.** | Fetch ao vivo **com fallback** para um JSON embutido |
+| `api.nasa.gov/DONKI/*` | sim (`api_key`) | ✅ `*` | CME, SEP e notifications OK. **FLR retorna 404.** Janela máxima de 60 dias. | Fetch ao vivo **com fallback** para um JSON embutido (feito: `src/data/spaceWeather.js`, #100) |
 | `api.nasa.gov/insight_weather` | sim | ✅ `*` | OK (feed arquivado, sols 675–681 de out/2020) | Embutir (é estático, não muda) |
 | `api.nasa.gov/planetary/apod` | sim | ✅ `*` | deu 500 e depois 429 | Opcional (imagem do dia na tela inicial) |
 | `api.nasa.gov/mars-photos` | sim | — | ❌ **fora do ar** ("No such app", 404) | Não usar. Use a NASA Image Library. |
@@ -78,9 +78,26 @@ cp .env.example .env
 npm run fetch:donki                    # ou: npm run fetch:donki -- 2025-11-14 2026-11-13
 ```
 
-**Nunca commite a chave** nem a coloque numa variável `VITE_*`: o Vite publica essas no bundle do GitHub Pages. O `.env` só é lido pelos scripts de coleta.
+**Nunca commite a chave.** A `NASA_API_KEY` do `.env` só é lida pelos scripts de coleta e não vai para o bundle. A `VITE_NASA_API_KEY` (do fetch ao vivo, abaixo) vai para o bundle e fica pública: use nela só uma chave gratuita da api.nasa.gov, de preferência separada.
 
 `speed` e `isGlancingBlow` viram a força da tempestade por uma regra do jogo (ver `numeros-reais.md`).
+
+### Fetch ao vivo no jogo (issue #100)
+
+Único ponto de rede do jogo: `src/data/spaceWeather.js`, chamado uma vez em `src/main.js`, ao abrir a página, em paralelo com a construção do mundo. Nunca dentro do loop.
+
+- **Pedidos** (em paralelo, ~5 s de tempo limite cada, via `AbortController`):
+  - `CME` dos últimos 30 dias → normalizado pelo mesmo `summarizeCmes` do script (`src/data/donkiNormalize.js`), então o formato é igual ao de `donkiCme.json` (`headedToMars`, `marsArrivalTime`, `isGlancingBlow`).
+  - `SEP` dos últimos 60 dias (limite da API) → `{ id, eventTime, seenBy, link }`.
+  - `notifications?type=all` dos últimos 7 dias → só o boletim mais novo: `{ type, issueTime, url }`. O `messageBody` não é usado.
+- **Chave:** `import.meta.env.VITE_NASA_API_KEY`, ou `DEMO_KEY` se vazia. No GitHub Pages vem do secret `NASA_API_KEY` do repositório (`.github/workflows/deploy.yml`). **Ela fica visível no bundle**; para a chave gratuita isso é aceitável. Sem o secret, o site usa a `DEMO_KEY` (10 pedidos por hora por IP; cada abertura sem cache faz 3).
+- **Cache:** `localStorage` (`minemars.spaceWeather.v1`), só de resultado ao vivo, por 45 min (`SPACE_WEATHER_CONFIG.CACHE_TTL_MINUTES`). Reabrir dentro da validade não chama a API, e o rótulo mostra a hora do fetch original.
+- **Fallback para `donkiCme.json`** em qualquer falha do pedido de CME: sem rede, HTTP diferente de 200 (inclusive 429 e o 400 de janela grande, que vem em texto puro), corpo vazio, JSON inválido, resposta que não é lista, tempo esgotado ou **nenhuma CME para Marte** na janela. Falha só no SEP ou no boletim não derruba o modo ao vivo: o jogo segue sem SEP e sem boletim. Com 0 SEP, o jogo não inventa uma.
+- **Quando vale:** se o resultado chega antes do primeiro Play (e antes da fila de tempestades começar), a partida usa as CMEs ao vivo e todos os rótulos trocam para **"LIVE from NASA DONKI, fetched HH:MM"** (hora local). Se chega depois, fica no cache para a próxima abertura. Sem fetch, os rótulos dizem **"real data from DD/MM/AAAA"**.
+- **Onde o rótulo aparece:** aviso de tempestade (toast), card de alerta do HUD, tela do comando (`baseDisplayText.js`), pôster `SOLAR STORMS`, tela "NASA Data", computador da missão e tela de vitória.
+- **SEP no jogo:** com SEP ao vivo, a cada 3 tempestades a 3ª é um pico de SEP (`SPACE_WEATHER_CONFIG`): aviso curto (0,25 h de jogo, ~25 s), porque as partículas chegam quase na velocidade da luz, e dose igual à menor tempestade medida pelo Curiosity (o DONKI não dá a força da SEP em Marte). As duas coisas são **regra do jogo**; a data e a nave que mediu são reais.
+- **Boletim:** vira uma linha no rádio da estação de ciência ("NASA space weather bulletin, 13/11: CME (a giant cloud of particles from the Sun)") com link para o texto completo.
+- **Testado em 14/11/2026:** `CME` de 30 dias trouxe 90 CMEs, 10 com impacto previsto em Marte (~165 KB); `SEP` de 60 dias veio **vazio** (200 com corpo vazio) e janelas acima de 60 dias dão 400; `notifications` de 7 dias trouxe 9 boletins (CME, RBE, Report). O host `kauai.ccmc.gsfc.nasa.gov` deu timeout de novo.
 
 **notifications:** campos `messageType` (`RBE`, `CME`, `Report`, `SEP`…), `messageIssueTime`, `messageURL` e `messageBody` (texto markdown em inglês, longo). Amostra em [`samples/donki-notifications-2026-11-07_13.json`](samples/donki-notifications-2026-11-07_13.json).
 
@@ -117,6 +134,8 @@ curl "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&times
 
 > ⚠️ Pedidos grandes demoram e pesam: a série da Orion HERA-HSU1 em 25 dias tem cerca de 35 mil linhas (3 MB). Agregue (média por hora/dia) num script e embuta só o resumo.
 
+**No jogo (issue #106):** `node scripts/fetch-radlab-summary.mjs` refaz as 4 consultas da amostra (mesmas janelas) e grava `src/data/radlabSummary.json` com n, janela, mediana, média, p10, p90, máximo e data de coleta. Falha de rede ou série vazia interrompe o script. `RADIATION_CONFIG.MARS_SURFACE_DOSE_UGY_PER_HOUR` lê a mediana do Curiosity desse JSON (`src/data/radlabSummary.js`). O diário [J] (aba NASA STUDIES) e a enfermaria mostram um gráfico de 4 barras **sem unidade**, só a comparação com a Estação Espacial ("Mars: about 1.5 times the Space Station"), porque a unidade ainda não foi confirmada na documentação do RadLab (o portal de docs responde 500 em 14/11/2026).
+
 ## 3. OSDR: estudos de biologia espacial e saúde
 
 - Repositório: <https://osdr.nasa.gov/bio/repo/>
@@ -127,6 +146,7 @@ curl "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&times
 - Página de um estudo: `https://osdr.nasa.gov/bio/repo/data/studies/OSD-342`
 - Termos úteis: `bone loss`, `muscle atrophy`, `radiation`, `sleep`, `immune`, `plant growth` (para a estufa), `microgravity`.
 - **Uso no jogo:** "Fato real da NASA" curto e atribuído, ligado a uma mecânica. Ex.: ficar muitos sols sem exercício/gravidade → "Cientistas da NASA viram ossos enfraquecendo em camundongos na Estação Espacial (estudo OSD-342)".
+- **No jogo (issue #106):** `node scripts/fetch-osdr-topics.mjs` busca os 3 primeiros estudos de `bone loss`, `muscle atrophy`, `radiation`, `sleep` e `immune` e grava `src/data/osdrTopics.json` (URL da busca, data de coleta, accession, título, organismo, programa de voo e missão). Sem estudos inventados: falha de rede interrompe o script. A frase para criança de cada estudo fica em `src/data/osdrStudies.js`. Revelação (`src/story/studyReveals.js`): treino na esteira → osso, na bicicleta → músculo, tratamento na enfermaria → radiação (depois imunidade), tempestade sobrevivida → radiação; `reveal('sleep')` fica para o beliche (#109). A aba NASA STUDIES do diário mostra o link e o aviso de honestidade ("Done on the Space Station / in a lab on Earth with mice. It did not measure Mars."). Os resultados de `sleep` não são sobre sono em si (repouso na cama, cérebro de camundongo, missão RR-7 que observou ritmo de sono e vigília); a frase de cada um diz o que o estudo fez.
 
 ## 4. InSight Mars Weather: clima real na superfície de Marte
 
@@ -134,6 +154,8 @@ curl "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&times
 - **Feed arquivado:** a missão InSight terminou em 2022 e o endpoint devolve sempre os sols 675–681 (19 a 25/10/2020, Elysium Planitia).
 - Campos por sol: `AT` (temperatura do ar, °C), `PRE` (pressão, Pa), `HWS` (vento, m/s). Cada um traz `av`/`mn`/`mx`/`ct`, além de `Season` e `WD` (rosa dos ventos).
 - Amostra limpa: [`samples/insight-weather-sols-675-681.json`](samples/insight-weather-sols-675-681.json)
+- **No jogo (issue #108):** `node scripts/fetch-insight-weather.mjs` lê a chave do `.env` e grava [`src/data/insightWeather.json`](../../src/data/insightWeather.json) (só temperatura, pressão e vento por sol, com data de coleta e a URL sem a chave). Acesso só por `src/data/marsWeather.js`.
+- **Fonte com mais variação (REMS do Curiosity, MEDA do Perseverance no PDS):** ainda não investigada. Fica como próximo passo; se der certo, baixar por script e embutir como JSON, porque o PDS não serve para chamada do navegador.
 
 ## 5. Mars Trek / Moon Trek: mapas e terreno reais
 

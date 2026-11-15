@@ -1,5 +1,5 @@
-import { CROP_ITEM_IDS } from '../config/blockTypes.js';
-import { STATION_CONFIG as C, CROP_CONFIG, WATER_SYSTEM_CONFIG, CREW_CONFIG } from '../config/constants.js';
+import { BLOCK_IDS, CROP_ITEM_IDS } from '../config/blockTypes.js';
+import { STATION_CONFIG as C, CROP_CONFIG, SCIENCE_CONFIG, WATER_SYSTEM_CONFIG, CREW_CONFIG } from '../config/constants.js';
 import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.js';
 
 const RADIO_SILENT = 'Radio silent: the Sun is between Mars and Earth (solar conjunction). You must decide on your own until it passes.';
@@ -21,8 +21,6 @@ export class StationSystem {
     this.upgraded = false;
     this.toolUpgraded = false;
     this.analyzedSamples = 0;
-    this.mavSent = false;
-    this.messageKind = null;
     this.freshFood = C.FRESH_FOOD_DURATION;
     // Um cultivo por campo da estufa (GREENHOUSE_PLOTS). `crop` e o do campo selecionado no monitor.
     this.plots = GREENHOUSE_PLOTS.map(() => ({ crop: null }));
@@ -103,11 +101,9 @@ export class StationSystem {
     if (this.messageTimer > 0) {
       this.messageTimer = Math.max(0, this.messageTimer - dt);
       if (!this.messageTimer) {
-        if (this.messageKind === 'mav') { this.mavSent = true; this.message = 'Mission Control: MAV science package received.'; }
-        else this.message = `Mission Control: ${this.pendingAdvice ?? 'message received. Use the storm shelter when a solar storm comes.'}`;
+        this.message = `Mission Control: ${this.pendingAdvice ?? 'message received. Use the storm shelter when a solar storm comes.'}`;
         this.arrived = this.message; // o motor mostra um aviso e limpa
         this.pendingAdvice = null;
-        this.messageKind = null;
       }
     }
   }
@@ -132,6 +128,7 @@ export class StationSystem {
   exercise(mode = 'treadmill') {
     if (!this.mission.spend(C.EXERCISE_COST)) return 'Not enough power.';
     this.workoutCount++;
+    this.lastWorkoutMode = mode; // diario de bordo: esteira revela estudo de osso, bike de musculo
     if (mode === 'bike') {
       this.muscleStrength = Math.min(100, this.muscleStrength + 48);
       this.boneDensity = Math.min(100, this.boneDensity + 26);
@@ -146,6 +143,7 @@ export class StationSystem {
   treat(survival) {
     if (!this.mission.spend(C.TREATMENT_COST)) return 'Not enough power.';
     survival.health = Math.min(survival.maxStat, survival.health + 5);
+    this.treatmentCount = (this.treatmentCount ?? 0) + 1; // diario de bordo (issue #106)
     return 'Treatment restored health. Radiation dose cannot be erased.';
   }
   // Pergunta ao Controle da Missao. `delaySeconds` = ida e volta da luz (CommsLink);
@@ -155,7 +153,6 @@ export class StationSystem {
     if (this.messageTimer > 0) return 'Transmission already in progress.';
     if (!this.mission.spend(C.COMMS_COST)) return 'Not enough power.';
     this.messageTimer = delaySeconds;
-    this.messageKind = 'message';
     this.pendingAdvice = advice;
     this.message = `Question sent. The answer needs about ${Math.round(delaySeconds)} s (game time) to come back.`;
     return this.message;
@@ -214,16 +211,17 @@ export class StationSystem {
     if (!collected) return this.harvestBaskets[type] ? 'Inventory full. Make room to collect the harvest.' : `The ${type} basket is empty.`;
     return `Collected ${collected} ${type}.${this.harvestBaskets[type] ? ' The rest is in the basket.' : ''}`;
   }
-  sendMav({ delaySeconds = C.COMMS_DELAY, blackout = false } = {}) {
-    if (this.mavSent) return 'MAV science package already received.';
-    if (blackout) return RADIO_SILENT;
-    if (this.messageTimer > 0) return 'Transmission already in progress.';
-    if (this.analyzedSamples < C.MAV_REQUIRED_SAMPLES) return `Analyze ${C.MAV_REQUIRED_SAMPLES} samples first.`;
-    if (!this.mission.spend(C.MAV_TRANSMISSION_COST)) return 'Not enough power.';
-    this.messageKind = 'mav';
-    this.messageTimer = delaySeconds;
-    this.message = 'MAV data package in transit; game delay is accelerated.';
-    return this.message;
+  // Analisa 1 amostra de regolito coletada la fora: gasta o bloco e energia do laboratorio,
+  // da pontos de ciencia e entra no pacote para a Terra (e pode virar tubo no foguete).
+  analyzeSample(survival) {
+    if (this.samples < 1) return 'Collect a new regolith sample outside first.';
+    if (survival.countItem(BLOCK_IDS.REGOLITH) < 1) return 'Collect regolith before analyzing a sample.';
+    if (!this.mission.spend(SCIENCE_CONFIG.ANALYZE_POWER_COST)) return 'Not enough power.';
+    survival.removeItems(BLOCK_IDS.REGOLITH, 1);
+    this.samples--;
+    this.science += C.SCIENCE_PER_SAMPLE;
+    this.analyzedSamples++;
+    return `Sample analyzed: +${C.SCIENCE_PER_SAMPLE} science points. It is now part of your science package.`;
   }
   upgradeTool() {
     if (this.toolUpgraded) return 'Tool upgrade already installed.';
@@ -237,6 +235,6 @@ export class StationSystem {
     if (this.science < C.UPGRADE_COST) return 'Not enough science points.';
     this.science -= C.UPGRADE_COST;
     this.upgraded = true;
-    return 'Suit upgrade installed: outdoor radiation is reduced.';
+    return 'Suit upgrade installed: outside, less radiation hurts you and less dose adds up.';
   }
 }

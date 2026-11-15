@@ -129,13 +129,8 @@ export class SurvivalSystem {
     if (this.food <= 0) {
       damageSources.push({ rate: SURVIVAL_CONFIG.STARVE_DAMAGE_RATE * 0.8, cause: 'BIOLOGICAL_COLLAPSE', detail: 'food-depleted' });
     }
-    // The first gusts are a warning. Exposure hurts only after the storm has
-    // become strong enough that the player should already be heading back.
-    const damageStart = SURVIVAL_CONFIG.DUST_STORM_DAMAGE_START;
-    const damagingStorm = Math.max(0, (this.dustStormIntensity - damageStart) / (1 - damageStart));
-    if (damagingStorm > 0) {
-      damageSources.push({ rate: damagingStorm * SURVIVAL_CONFIG.DUST_STORM_DAMAGE_RATE, cause: 'BIOLOGICAL_COLLAPSE', detail: 'dust-storm-exposure' });
-    }
+    // A borda do mapa (parede de poeira) nao machuca (issue #103): o vento de Marte e fraco
+    // demais para ferir alguem. O que limita a distancia e o ar do traje.
 
     for (const source of damageSources) this.takeDamage(source.rate * dt, source.cause, source.detail);
   }
@@ -143,6 +138,13 @@ export class SurvivalSystem {
   // Comida nao substitui ar: sem oxigenio suficiente, nada recupera vida.
   canHeal() {
     return this.oxygen > SURVIVAL_CONFIG.HEAL_MIN_OXYGEN;
+  }
+
+  // Fome e sede gastas fora do relogio real do quadro (horas de jogo dormindo, issue #109)
+  spendNeeds(food, water) {
+    if (this.isDead) return;
+    this.food = Math.max(0, this.food - Math.max(0, food));
+    this.water = Math.max(0, this.water - Math.max(0, water));
   }
 
   takeDamage(amount, cause = 'BIOLOGICAL_COLLAPSE', detail = cause) {

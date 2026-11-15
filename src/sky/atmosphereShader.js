@@ -13,6 +13,7 @@ export const MARTIAN_SKY_FRAGMENT_SHADER = `
   varying vec3 vWorldDirection;
   uniform vec3 uSunDir;
   uniform float uSunElevation;
+  uniform float uDust; // tempestade de poeira (issue #103): 0 = ceu limpo, 1 = poeira no maximo
 
   void main() {
     vec3 dir = normalize(vWorldDirection);
@@ -50,7 +51,12 @@ export const MARTIAN_SKY_FRAGMENT_SHADER = `
     skyColor = mix(skyColor, martianBlueGlow, clamp(blueMieCone * 0.78, 0.0, 0.82));
 
     float sunCore = pow(sunCos, 160.0) * smoothstep(-0.12, 0.05, uSunElevation);
-    skyColor += vec3(0.98, 0.98, 1.0) * sunCore * 0.9;
+    skyColor += vec3(0.98, 0.98, 1.0) * sunCore * 0.9 * (1.0 - 0.85 * uDust);
+
+    // Tempestade de poeira: o ceu passa de caramelo para marrom escuro, com um brilho fraco
+    // onde o Sol esta escondido
+    vec3 dustSky = vec3(0.34, 0.20, 0.11) * (0.2 + 0.8 * dayFactor) + vec3(0.30, 0.20, 0.10) * pow(sunCos, 6.0) * dayFactor;
+    skyColor = mix(skyColor, dustSky, uDust * 0.9);
 
     if (vWorldDirection.y < 0.0) {
       vec3 groundCol = mix(vec3(0.18, 0.11, 0.06), vec3(0.60, 0.38, 0.26), dayFactor);
@@ -65,6 +71,7 @@ export function createAtmosphereDome() {
   const uniforms = {
     uSunDir: { value: new THREE.Vector3(1, 0.4, 0) },
     uSunElevation: { value: 0.4 },
+    uDust: { value: 0 },
   };
 
   const skyGeo = new THREE.SphereGeometry(420, 32, 24);
