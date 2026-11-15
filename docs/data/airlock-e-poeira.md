@@ -26,7 +26,7 @@
 - **Custo:** mais peso e espaço na cabine, e ainda é preciso uma porta para a primeira e a última saída ([Rucker 2016](https://ntrs.nasa.gov/citations/20150014493)).
 - O estudo da base lunar Artemis recomenda o suitport-airlock, que não precisa ser ciclado a cada saída ([NTRS 2023](https://ntrs.nasa.gov/citations/20230000121)).
 
-## Como o jogo usa isso (`src/world/Airlock.js`)
+## Como o jogo usa isso (`src/world/Airlock.ts`)
 
 - **A porta só abre no fim do ciclo.**
   - Para abrir para Marte: fechar a outra porta, bombear o ar para fora e abrir.
@@ -38,5 +38,5 @@
 - **Sem energia a porta nunca tranca** (issue #79). Se a bateria não paga o ciclo (`MISSION_CONFIG.AIRLOCK_COST`), a porta abre na manivela: o ciclo ganha uma etapa de `MISSION_CONFIG.AIRLOCK_MANUAL_EXTRA_SECONDS` (3 s), com um som mecânico pesado, e o jogador sempre consegue entrar para religar a base.
   - O custo é **tempo** (com o O2 do traje caindo) e, como não há energia para a limpeza, **a poeira entra junto**.
   - É regra do jogo: os 3 s não vêm de uma medida. A sala de energia funciona com a bateria em 0 %, porque desligar um sistema não gasta energia.
-- **A barra no centro da tela** (`src/ui/airlockProgress.js`) mostra a etapa atual em palavras simples. Na primeira limpeza aparece o fato do Apollo.
+- **A barra no centro da tela** (`src/ui/airlockProgress.ts`) mostra a etapa atual em palavras simples. Na primeira limpeza aparece o fato do Apollo.
 - **Simplificação:** no jogo a limpeza tira toda a poeira. Na vida real ela ainda não limpa bem o tecido. Os tempos (0,8 s de ar e 0,8 s de limpeza, porta abre em 0,1 s) são escalados para o jogo; na ISS o processo leva horas.

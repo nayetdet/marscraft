@@ -1,0 +1,80 @@
+// @ts-nocheck
+import { BLOCK_IDS } from '../config/blockTypes.ts';
+import { MAV_CONFIG, TERRAIN_CONFIG, WATER_SYSTEM_CONFIG, WORLD_CONFIG } from '../config/constants.ts';
+import { terrainOffset } from '../data/marsTerrain.ts';
+import { HABITAT_LAYOUT } from './habitatLayout.ts';
+
+// Retangulo aplainado para a ala norte (NORTH_WING) e os paineis solares a oeste dela
+const NORTH_PAD = { xMin: -31, xMax: 17, zMin: -42, zMax: -8, blend: 2 };
+// Idem para o dormitorio (EAST_WING) e para o foguete de ascensao, a leste e sudeste do habitat
+const EAST_PAD = { xMin: 13, xMax: 30, zMin: -12, zMax: 14, blend: 2 };
+const FLAT_PADS = [NORTH_PAD, EAST_PAD];
+// Raio da cratera de gelo (bacia + borda), que e do jogo e nao do dado real
+const ICE_CRATER_RADIUS = 11;
+
+// Onde o terreno foi nivelado ou escavado para o jogo: base, alas, estufa, MAV e cratera de gelo.
+// Fora daqui o relevo e o dado real, e e so ali que a decoracao (pedras) entra.
+export function isBuildZone(x, z) {
+  const { BASE_CENTER, BASE_BLEND_RADIUS } = TERRAIN_CONFIG;
+  if (Math.hypot(x - BASE_CENTER.x, z - BASE_CENTER.z) < BASE_BLEND_RADIUS) return true;
+  if (Math.hypot(x - MAV_CONFIG.PAD_POSITION.x, z - MAV_CONFIG.PAD_POSITION.z) < MAV_CONFIG.PAD_RADIUS + 6) return true;
+  const ice = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER;
+  if (Math.hypot(x - ice.x, z - ice.z) < ICE_CRATER_RADIUS + 1) return true;
+  if (Math.hypot(x - HABITAT_LAYOUT.DOME_X, z - HABITAT_LAYOUT.DOME_Z) < HABITAT_LAYOUT.DOME_RADIUS + 5) return true;
+  return FLAT_PADS.some((pad) => x > pad.xMin - pad.blend && x < pad.xMax + pad.blend && z > pad.zMin - pad.blend && z < pad.zMax + pad.blend);
+}
+
+// O relevo e real: elevacao HiRISE de uma cratera em Gale, 1 bloco ~ 1 m (src/data/marsTerrain.js).
+// So sao alterados os trechos nivelados para as construcoes e a cratera de gelo, que e do jogo.
+export function generateMartianTerrain(world) {
+  const { halfX, halfZ } = world;
+  const groundY = WORLD_CONFIG.GROUND_LEVEL;
+  for (let x = -halfX; x < halfX; x += 1) {
+    for (let z = -halfZ; z < halfZ; z += 1) {
+      // + 0.5 para o Math.floor do fim arredondar a altura real para o bloco mais proximo
+      let height = groundY + 0.5 + terrainOffset(x, z);
+      const iceDistance = Math.hypot(x - WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER.x, z - WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER.z);
+      if (iceDistance < ICE_CRATER_RADIUS) {
+        const rim = Math.exp(-Math.pow((iceDistance - 8.5) / 2.2, 2)) * 2.5;
+        const bowl = iceDistance < 7.5 ? -Math.cos((iceDistance / 7.5) * (Math.PI / 2)) * 3.5 : 0;
+        height += rim + bowl;
+      }
+      const baseDistance = Math.hypot(x - TERRAIN_CONFIG.BASE_CENTER.x, z - TERRAIN_CONFIG.BASE_CENTER.z);
+      if (baseDistance < TERRAIN_CONFIG.BASE_BLEND_RADIUS) {
+        const blendWidth = TERRAIN_CONFIG.BASE_BLEND_RADIUS - TERRAIN_CONFIG.BASE_FLAT_RADIUS;
+        const blend = Math.max(0, Math.min(1, (baseDistance - TERRAIN_CONFIG.BASE_FLAT_RADIUS) / blendWidth));
+        height = groundY * (1 - blend) + height * blend;
+      }
+      const distLaunchPad = Math.hypot(x - MAV_CONFIG.PAD_POSITION.x, z - MAV_CONFIG.PAD_POSITION.z);
+      const padFlat = MAV_CONFIG.PAD_RADIUS + 2;
+      if (distLaunchPad < padFlat + 4) {
+        const blend = Math.max(0, Math.min(1, (distLaunchPad - padFlat) / 4));
+        height = groundY * (1 - blend) + height * blend;
+      }
+      // Terreno plano sob as alas norte e leste (fora do disco plano da base)
+      for (const pad of FLAT_PADS) {
+        const padDx = Math.max(pad.xMin - x, 0, x - pad.xMax);
+        const padDz = Math.max(pad.zMin - z, 0, z - pad.zMax);
+        const padDistance = Math.hypot(padDx, padDz);
+        if (padDistance < pad.blend) {
+          const blend = padDistance / pad.blend;
+          height = groundY * (1 - blend) + height * blend;
+        }
+      }
+      // Terreno plano sob a redoma da estufa, que passa do disco plano da base
+      const domeEdge = Math.hypot(x - HABITAT_LAYOUT.DOME_X, z - HABITAT_LAYOUT.DOME_Z) - (HABITAT_LAYOUT.DOME_RADIUS + 2);
+      if (domeEdge < 3) {
+        const blend = Math.max(0, domeEdge / 3);
+        height = groundY * (1 - blend) + height * blend;
+      }
+      const surfaceY = Math.min(world.sizeY - 2, Math.max(2, Math.floor(height)));
+      for (let y = 0; y <= surfaceY; y += 1) {
+        let id = BLOCK_IDS.REGOLITH;
+        if (y === 0 || y < surfaceY - 3) id = BLOCK_IDS.BASALT;
+        else if (iceDistance < 4.8 && y >= surfaceY - 1) id = BLOCK_IDS.MARS_ICE;
+        else if (y < surfaceY - 1 || surfaceY > groundY + 3) id = BLOCK_IDS.SANDSTONE;
+        world.setBlock(x, y, z, id, false);
+      }
+    }
+  }
+}
