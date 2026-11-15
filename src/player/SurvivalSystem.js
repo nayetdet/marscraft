@@ -1,6 +1,7 @@
 import { BLOCK_IDS, HOTBAR_BLOCKS, ITEM_DEFINITIONS } from '../config/blockTypes.js';
 import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { isInsidePressurizedVolume } from '../world/habitatLayout.js';
+import { dustStormIntensity, dustStormProximity } from '../world/dustStormZone.js';
 
 export class SurvivalSystem {
   constructor() {
@@ -19,6 +20,7 @@ export class SurvivalSystem {
     this.isDead = false;
     this.insidePressurizedShip = false;
     this.dustStormIntensity = 0;
+    this.dustStormProximity = 0;
 
     // Sistema de Água Potável e Irrigação da Base
     this.baseWater = WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER;
@@ -78,11 +80,8 @@ export class SurvivalSystem {
       this.baseOxygen += recovered;
       this.lastOxygenRefilled = recovered * this.maxStat / 100;
     }
-    const distanceFromBase = Math.hypot(playerPos.x + 4, playerPos.z);
-    const stormRange = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS - SURVIVAL_CONFIG.DUST_STORM_START_RADIUS;
-    this.dustStormIntensity = this.insidePressurizedShip
-      ? 0
-      : Math.max(0, Math.min(1, (distanceFromBase - SURVIVAL_CONFIG.DUST_STORM_START_RADIUS) / stormRange));
+    this.dustStormIntensity = this.insidePressurizedShip ? 0 : dustStormIntensity(playerPos.x, playerPos.z);
+    this.dustStormProximity = this.insidePressurizedShip ? 0 : dustStormProximity(playerPos.x, playerPos.z);
 
     if (this.insidePressurizedShip && !baseBreached) {
       const suitRefill = Math.max(0, Math.min(
@@ -116,7 +115,8 @@ export class SurvivalSystem {
     if (this.food <= 0) damageRate += SURVIVAL_CONFIG.STARVE_DAMAGE_RATE * 0.8;
     // The first gusts are a warning. Exposure hurts only after the storm has
     // become strong enough that the player should already be heading back.
-    const damagingStorm = Math.max(0, (this.dustStormIntensity - 0.55) / 0.45);
+    const damageStart = SURVIVAL_CONFIG.DUST_STORM_DAMAGE_START;
+    const damagingStorm = Math.max(0, (this.dustStormIntensity - damageStart) / (1 - damageStart));
     if (damagingStorm > 0) {
       damageRate += damagingStorm * SURVIVAL_CONFIG.DUST_STORM_DAMAGE_RATE;
     }

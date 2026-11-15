@@ -1,10 +1,24 @@
 import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { airlockProgress } from './airlockProgress.js';
 import { roverBatteryText } from '../rover/roverText.js';
 
 const ICONS_PER_BAR = 10;
+
+// Aviso da tempestade da borda, do mais calmo ao mais urgente
+const DUST_STORM_WARNINGS = {
+  near: { title: 'Dust storm ahead', detail: 'The dust wall is the edge of the safe zone' },
+  storm: { title: 'Return to base', detail: 'The wind gets stronger the farther you go' },
+  critical: { title: 'Return now', detail: 'The storm is damaging your suit' },
+};
+
+function dustStormLevel(intensity, proximity) {
+  if (intensity >= SURVIVAL_CONFIG.DUST_STORM_DAMAGE_START) return 'critical';
+  if (intensity > 0) return 'storm';
+  if (proximity > 0) return 'near';
+  return '';
+}
 
 const STAT_ICON_PATHS = {
   heart: '<path d="M1 1h2v1h2V1h2v1h1v3H7v1H6v1H5v1H3V7H2V6H1V5H0V2h1Z"/>',
@@ -91,6 +105,9 @@ export class HudManager {
     this.dustStormEl = document.getElementById('dust-storm-warning');
     this.dustStormTitleEl = this.dustStormEl?.querySelector('strong');
     this.dustStormDetailEl = this.dustStormEl?.querySelector('span');
+    this.dustStormVignetteEl = this.dustStormEl?.querySelector('.dust-storm-vignette');
+    this._dustStormLevel = '';
+    this._dustStormVignette = 0;
 
     this.renderHotbar(initialSlots);
     this._initSkyLabels();
@@ -364,6 +381,28 @@ export class HudManager {
     }
   }
 
+  // So escreve no DOM quando o nivel muda; a escuridao das bordas e so `opacity`, que o
+  // navegador compoe sem repintar. Reescrever estilo e texto a cada frame repintava a tela toda.
+  _updateDustStormWarning(intensity, proximity) {
+    if (!this.dustStormEl) return;
+    const level = dustStormLevel(intensity, proximity);
+    if (level !== this._dustStormLevel) {
+      this._dustStormLevel = level;
+      this.dustStormEl.classList.toggle('hidden', !level);
+      this.dustStormEl.classList.toggle('near', level === 'near');
+      this.dustStormEl.classList.toggle('critical', level === 'critical');
+      if (level) {
+        if (this.dustStormTitleEl) this.dustStormTitleEl.textContent = DUST_STORM_WARNINGS[level].title;
+        if (this.dustStormDetailEl) this.dustStormDetailEl.textContent = DUST_STORM_WARNINGS[level].detail;
+      }
+    }
+    const vignette = Math.round(intensity * 20) / 20;
+    if (vignette !== this._dustStormVignette && this.dustStormVignetteEl) {
+      this._dustStormVignette = vignette;
+      this.dustStormVignetteEl.style.opacity = String(vignette);
+    }
+  }
+
   update({ player, survival, sky, camera, isScopeOpen = false, isRoverActive = false, roverTelemetry = null, mission, airlock = null }) {
     this.dangerVignetteEl?.classList.toggle('hidden', !survival.isInDanger || survival.isDead);
     if (survival.isDead) {
@@ -371,19 +410,7 @@ export class HudManager {
       return;
     }
 
-    const stormIntensity = survival.dustStormIntensity ?? 0;
-    if (this.dustStormEl) {
-      this.dustStormEl.classList.toggle('hidden', stormIntensity <= 0);
-      this.dustStormEl.classList.toggle('strong', stormIntensity >= 0.45);
-      this.dustStormEl.classList.toggle('critical', stormIntensity >= 0.75);
-      this.dustStormEl.style.setProperty('--storm-strength', stormIntensity.toFixed(2));
-      if (this.dustStormTitleEl) {
-        this.dustStormTitleEl.textContent = stormIntensity >= 0.65 ? 'Return now' : 'Return to base';
-      }
-      if (this.dustStormDetailEl) {
-        this.dustStormDetailEl.textContent = stormIntensity >= 0.65 ? 'Storm exposure is fatal' : 'Dust storm ahead';
-      }
-    }
+    this._updateDustStormWarning(survival.dustStormIntensity ?? 0, survival.dustStormProximity ?? 0);
 
     const damageIntensity = Math.max(0, Math.min(1, (survival.maxStat * 0.7 - survival.health) / (survival.maxStat * 0.7)));
     if (this.damageOverlayEl) {

@@ -1,7 +1,7 @@
 import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS } from '../world/greenhouseLayout.js';
 import { createCropPlantModel } from '../graphics/cropModels.js';
 import * as THREE from 'three';
-import { CAMERA_CONFIG, CROP_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, SURVIVAL_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, CROP_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
 import { createBaseStock } from '../crew/baseStock.js';
@@ -15,6 +15,7 @@ import { createCarrotTexture } from '../graphics/carrotTexture.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { createBlockMaterials } from '../graphics/blockMaterials.js';
 import { MarsSkySystem } from '../sky/MarsSkySystem.js';
+import { DustStormEffect } from '../sky/DustStormEffect.js';
 import { VoxelWorld } from '../world/VoxelWorld.js';
 import { buildNasaCustomModels } from '../world/nasaModelsBuilder.js';
 import { targetCrop } from '../world/cropInteraction.js';
@@ -110,6 +111,7 @@ export class GameEngine {
     const carrot = createCarrotTexture();
     previews[BLOCK_IDS.HYDRO_PLANT] = carrot.dataUrl;
     this.sky = new MarsSkySystem(this.scene);
+    this.dustStorm = new DustStormEffect(this.scene, this.renderer);
     this.world = new VoxelWorld(this.scene, materials, atlas, carrot.texture);
 
     // Modelos 3D detalhados estilo Mod de Minecraft + Caixas de Colisão AABB
@@ -1157,14 +1159,6 @@ export class GameEngine {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-  _updateStormFog(position) {
-    const distance = Math.hypot(position.x + 4, position.z);
-    const fogStart = SURVIVAL_CONFIG.DUST_STORM_START_RADIUS;
-    const fogRange = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS - fogStart;
-    const strength = Math.max(0, Math.min(1, (distance - fogStart) / fogRange));
-    this.scene.fog.density = 0.0015 + strength * 0.14;
-  }
-
   handleRoverAction() {
     if (!this.roverController.isActive) return;
 
@@ -1408,7 +1402,7 @@ export class GameEngine {
       if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
       if (isGameRunning) this._updateStory(dt);
 
-      this._updateStormFog(this.roverController.isActive ? this.roverController.pos : this.player.pos);
+      this.dustStorm.update(dt, this.roverController.isActive ? this.roverController.pos : this.player.pos, this.camera);
       this.renderer.render(this.scene, this.camera);
       this.debug.frame(frameMs);
     };

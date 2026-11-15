@@ -48,82 +48,62 @@
   75% { transform: translate(2px, -1px); }
 }
 
+/* Aviso da tempestade da borda. A poeira em si e 3D (src/sky/DustStormEffect.js): aqui so ha
+   uma faixa de texto e uma borda escura que muda por opacity, sem gradiente animado em tela cheia. */
 .dust-storm-warning {
   position: fixed;
   inset: 0;
   z-index: 30;
+  pointer-events: none;
+}
+
+.dust-storm-warning.hidden { display: none; }
+
+.dust-storm-vignette {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(150, 82, 38, 0) 35%, rgba(58, 26, 10, .85) 100%);
+  transition: opacity .4s linear;
+  will-change: opacity;
+}
+
+.dust-storm-banner {
+  position: absolute;
+  top: 12vh;
+  left: 50%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 12vh;
+  gap: 4px;
+  max-width: calc(100vw - 32px);
+  padding: 8px 16px 6px;
   color: #ffd36e;
-  background:
-    radial-gradient(ellipse at center, rgba(115, 68, 30, calc(var(--storm-strength) * .12)) 8%, rgba(27, 12, 5, calc(var(--storm-strength) * .82)) 100%),
-    repeating-linear-gradient(112deg, transparent 0 28px, rgba(215, 143, 66, calc(var(--storm-strength) * .14)) 29px 31px, transparent 32px 62px);
-  background-size: 100% 100%, 180px 180px;
+  background: rgba(37, 20, 9, .72);
+  border: 3px solid #c9803f;
   font-weight: 700;
   line-height: 1.2;
   text-align: center;
-  text-shadow: 3px 3px 0 #251409;
-  animation: dust-storm-drift 1.8s linear infinite;
+  text-shadow: 2px 2px 0 #251409;
+  transform: translateX(-50%);
 }
 
-.dust-storm-warning::before,
-.dust-storm-warning::after {
-  content: '';
-  position: absolute;
-  inset: -25%;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(108deg,
-      transparent 0 30px,
-      rgba(226, 163, 87, calc(var(--storm-strength) * .45)) 31px 33px,
-      transparent 34px 72px),
-    radial-gradient(circle at 25% 30%, rgba(238, 177, 96, calc(var(--storm-strength) * .8)) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 70% 65%, rgba(151, 87, 42, calc(var(--storm-strength) * .8)) 0 1px, transparent 1.6px);
-  background-size: 180px 180px, 9px 9px, 13px 13px;
-  opacity: calc(var(--storm-strength) * .9);
-  animation: wind-gust 3.2s linear infinite;
+.dust-storm-banner strong { font-size: 22px; letter-spacing: 1px; }
+.dust-storm-banner span { font-size: 13px; color: #f5dcb0; }
+
+/* Perto da borda: so um lembrete, menor e mais calmo */
+.dust-storm-warning.near .dust-storm-banner { padding: 5px 12px 4px; border-color: #8a5a2e; }
+.dust-storm-warning.near .dust-storm-banner strong { font-size: 17px; }
+
+.dust-storm-warning.critical .dust-storm-banner {
+  color: #ff8e58;
+  border-color: #ff6a3a;
+  animation: dust-storm-pulse .8s steps(2, end) infinite alternate;
 }
 
-.dust-storm-warning::after {
-  background:
-    repeating-linear-gradient(104deg,
-      transparent 0 46px,
-      rgba(244, 190, 109, calc(var(--storm-strength) * .36)) 47px 48px,
-      transparent 49px 92px),
-    radial-gradient(circle at 50% 50%, rgba(242, 191, 110, calc(var(--storm-strength) * .9)) 0 1px, transparent 1.7px);
-  background-size: 110px 110px, 7px 7px;
-  opacity: calc(var(--storm-strength) * .5);
-  animation-duration: 2.4s;
-  animation-direction: reverse;
-}
-
-.dust-storm-warning strong {
-  position: relative;
-  z-index: 1;
-  padding: 5px 10px 2px;
-  font-size: 24px;
-  letter-spacing: 1px;
-}
-
-.dust-storm-warning span { position: relative; z-index: 1; font-size: 14px; }
-.dust-storm-warning.strong { animation-duration: 1.1s; }
-.dust-storm-warning.strong::before { animation-duration: 1.65s; }
-.dust-storm-warning.strong::after { animation-duration: 1.15s; }
-.dust-storm-warning.critical { color: #ff8e58; }
-.dust-storm-warning.critical::before { animation-duration: .9s; }
-.dust-storm-warning.critical::after { animation-duration: .62s; }
-.dust-storm-warning.hidden { display: none; }
-
-@keyframes dust-storm-drift {
-  from { background-position: center, 0 0; }
-  to { background-position: center, 180px -90px; }
-}
-
-@keyframes wind-gust {
-  from { transform: translate3d(-12%, 8%, 0); }
-  to { transform: translate3d(12%, -8%, 0); }
+@keyframes dust-storm-pulse {
+  from { opacity: 1; }
+  to { opacity: .7; }
 }
 
 .danger-vignette {
