@@ -73,6 +73,9 @@ describe('missionText', () => {
     expect(text).toContain('3.5 mSv');
     expect(text).toContain('600 mSv');
     expect(text).not.toMatch(/unit unconfirmed|%/);
+    // Issue #104: a frase que explica "dose" e a escala de jogo declarada
+    expect(text).toContain('Dose is how much radiation your body has collected. It only goes up.');
+    expect(text).toContain('GAME SCALE');
   });
 });
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { RADIATION_CONFIG, STORM_CONFIG } from '../config/constants.js';
-import { BASE_DOSE_MSV_PER_HOUR, doseRateMsvPerHour, radiationDamage, shelterDoseFactor, uGyToMsv } from './radiation.js';
+import { DOSE_CONFIG, RADIATION_CONFIG, STORM_CONFIG } from '../config/constants.js';
+import { BASE_DOSE_MSV_PER_HOUR, CALM_DAY_DOSE_MSV, doseRateMsvPerHour, missionDoseMsvPerHour, radiationDamage, shelterDoseFactor, uGyToMsv } from './radiation.js';
 
 // Dose por hora de jogo, la fora, da tempestade mais fraca e da mais forte do jogo
 const WEAKEST = RADIATION_CONFIG.STORM_DOSE_MIN_UGY / STORM_CONFIG.DURATION_HOURS;
@@ -68,5 +68,48 @@ describe('storm shelter water wall', () => {
     const inside = doseRateMsvPerHour({ stormDoseUGyPerHour: STORM, insideHabitat: true });
     const sheltered = doseRateMsvPerHour({ stormDoseUGyPerHour: STORM, insideHabitat: true, shelterWaterL: 40 });
     expect(sheltered).toBeLessThan(inside * 0.2);
+  });
+});
+
+// Issue #104: dose que entra na barra da missao (escala de jogo declarada em DOSE_CONFIG)
+describe('mission dose budget rate', () => {
+  it('calm dose uses the storm clock (1 game hour = 1 real day) times the game factor', () => {
+    expect(CALM_DAY_DOSE_MSV).toBeCloseTo(BASE_DOSE_MSV_PER_HOUR * STORM_CONFIG.REAL_HOURS_PER_GAME_HOUR, 6);
+    expect(missionDoseMsvPerHour()).toBeCloseTo(CALM_DAY_DOSE_MSV * DOSE_CONFIG.GAME_FACTOR, 6);
+    // ~0,5 mSv por dia real na superficie (Curiosity RAD), perto dos 0,64 mSv/dia de Hassler et al.
+    expect(CALM_DAY_DOSE_MSV).toBeGreaterThan(0.4);
+    expect(CALM_DAY_DOSE_MSV).toBeLessThan(0.7);
+  });
+
+  it('a storm adds its real dose times the game factor, and every storm beats a calm hour', () => {
+    expect(missionDoseMsvPerHour({ stormDoseUGyPerHour: STRONGEST }))
+      .toBeCloseTo(uGyToMsv(STRONGEST) * DOSE_CONFIG.GAME_FACTOR, 6);
+    expect(missionDoseMsvPerHour({ stormDoseUGyPerHour: WEAKEST })).toBeGreaterThan(missionDoseMsvPerHour());
+  });
+
+  it('keeps the same outside / habitat / shield / shelter ratios as the dose rate', () => {
+    const cases = [
+      { insideHabitat: true },
+      { insideHabitat: true, shieldOn: true },
+      { insideHabitat: true, shelterWaterL: 20 },
+      { insideHabitat: true, shelterWaterL: 40 },
+      { shieldOn: true },
+    ];
+    for (const protection of cases) {
+      const ratio = doseRateMsvPerHour({ stormDoseUGyPerHour: STORM, ...protection }) / doseRateMsvPerHour({ stormDoseUGyPerHour: STORM });
+      const budgetRatio = missionDoseMsvPerHour({ stormDoseUGyPerHour: STORM, ...protection }) / missionDoseMsvPerHour({ stormDoseUGyPerHour: STORM });
+      expect(budgetRatio).toBeCloseTo(ratio, 9);
+    }
+  });
+
+  it('the water wall cuts the storm dose that adds up', () => {
+    const habitat = missionDoseMsvPerHour({ stormDoseUGyPerHour: STRONGEST, insideHabitat: true });
+    const shelter = missionDoseMsvPerHour({ stormDoseUGyPerHour: STRONGEST, insideHabitat: true, shelterWaterL: 40 });
+    expect(shelter).toBeCloseTo(habitat * 0.17, 6);
+  });
+
+  it('the suit upgrade cuts the dose outside, not inside the base', () => {
+    expect(missionDoseMsvPerHour({ suitUpgraded: true })).toBeCloseTo(missionDoseMsvPerHour() * DOSE_CONFIG.SUIT_FACTOR, 9);
+    expect(missionDoseMsvPerHour({ insideHabitat: true, suitUpgraded: true })).toBeCloseTo(missionDoseMsvPerHour({ insideHabitat: true }), 9);
   });
 });

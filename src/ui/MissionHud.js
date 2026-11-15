@@ -2,6 +2,7 @@ import { MAV_CONFIG } from '../config/constants.js';
 import { smoothNetRate } from '../mission/energy.js';
 import { missionStatus } from './missionCards.js';
 import { pixelIconSvg } from './pixelIcons.js';
+import { doseClimbingFast, dosePercent, doseTone } from '../mission/doseBudget.js';
 
 // So escreve no DOM quando a classe ou o texto mudam (o update roda a cada frame)
 function setClass(el, className) {
@@ -45,6 +46,7 @@ export class MissionHud {
       radiation: this._row($('res-radiation')),
     };
     this.levelEls = [...$('res-radiation').querySelectorAll('.res-levels i')];
+    this.doseRow = this._row($('res-dose')); // dose acumulada (issue #104)
     this.alerts = [this._alert($('mission-alerts')), this._alert($('mission-alerts'))];
     this.activeAlertWaypoint = null;
 
@@ -163,6 +165,7 @@ export class MissionHud {
     setText(radiation.value, view.radiation.word);
     this.levelEls.forEach((el, i) => setClass(el, i < view.radiation.level ? `on l${i + 1}` : ''));
     setClass(radiation.key, `res-key ${view.shieldOn ? 'on' : ''}`);
+    this._updateDose(mission);
 
     this.alerts.forEach((alert, i) => {
       const data = view.alerts[i];
@@ -195,6 +198,21 @@ export class MissionHud {
     const rate = Math.round(this._netRate);
     const text = `${rate > 0 ? '+' : ''}${rate}/h`;
     setText(row.rate, text, `res-rate ${rate > 0 ? 'up' : rate < 0 ? 'down' : ''}`);
+  }
+
+  // Barra da dose: comeca com a viagem e so sobe; seta vermelha quando sobe rapido (la fora, tempestade)
+  _updateDose(mission) {
+    const row = this.doseRow;
+    const pct = dosePercent(mission.totalDoseMsv);
+    setClass(row.root, `res-row ${doseTone(mission.totalDoseMsv)}`);
+    setText(row.value, mission.grounded ? 'LIMIT' : `${pct}%`);
+    setWidth(row.fill, pct);
+    const climbing = doseClimbingFast(mission.missionDoseRate);
+    if (row._climbing === climbing) return;
+    row._climbing = climbing;
+    setClass(row.trend, `res-trend ${climbing ? 'down' : ''}`);
+    row.trend.innerHTML = climbing ? pixelIconSvg('up') : '';
+    row.trend.title = climbing ? 'Your dose is going up fast' : '';
   }
 
   // Saltos de 1 L ou mais (gelo descarregado, agua bebida) aparecem como "+12 L" / "-2 L"

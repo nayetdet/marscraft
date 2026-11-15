@@ -1,4 +1,5 @@
 import {
+  DOSE_CONFIG,
   ENERGY_CONFIG,
   MAV_CONFIG,
   MISSION_CONFIG,
@@ -7,7 +8,8 @@ import {
   SURVIVAL_CONFIG,
 } from '../config/constants.js';
 import { Battery, solarChargePerHour } from './energy.js';
-import { doseRateMsvPerHour, radiationDamage } from './radiation.js';
+import { doseRateMsvPerHour, missionDoseMsvPerHour, radiationDamage } from './radiation.js';
+import { DOSE_LIMIT_MSV, createDoseLedger, doseBreakdown, doseSourceFor } from './doseBudget.js';
 import { buildStormSchedule, rescheduleStorms, stormStateAt } from './solarStorms.js';
 
 const PROPELLANT_PER_ICE = 100 / MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
@@ -59,7 +61,16 @@ export class MissionSystem {
     this.launched = false;
 
     this.stormsSurvived = 0;
-    this.totalDoseMsv = 0;
+    // Dose acumulada (issue #104): comeca com a viagem ate Marte e nunca desce.
+    // `totalDoseMsv` = soma de `dose`; `missionDoseRate` = mSv por hora de jogo que entram na barra.
+    this.dose = createDoseLedger();
+    this.totalDoseMsv = this.dose.transit;
+    // Dose na escala real (sem viagem nem GAME_FACTOR): e o que o boletim do cadete (#90) compara
+    this.realDoseMsv = 0;
+    this.missionDoseRate = 0;
+    this.suitUpgraded = false;
+    this._doseWarned = false;
+    this._doseLimitPassed = false;
     this.doseRate = doseRateMsvPerHour();
     this.chargeRate = 0;
     this.solarEnergyCollected = 0; // % de bateria somados
@@ -98,9 +109,11 @@ export class MissionSystem {
   // Avanca a missao ate `hours`. `active` = jogo rodando (sem pausa e jogador vivo):
   // so entao a radiacao atinge o jogador. Devolve o dano de radiacao a aplicar na vida.
   // `insideShield` = jogador dentro da bolha do escudo; fora dela o escudo ligado nao protege.
-  update(hours, { insideHabitat = false, insideShield = true, insideShelter = false, active = true } = {}) {
+  // `suitUpgraded` = traje melhorado na estacao: reduz a dose somada la fora.
+  update(hours, { insideHabitat = false, insideShield = true, insideShelter = false, active = true, suitUpgraded = false } = {}) {
     this.insideShield = insideShield;
     this.insideShelter = insideShelter;
+    this.suitUpgraded = suitUpgraded;
     let remaining = hours - this.lastHours;
     let damage = 0;
     while (remaining > 1e-9) {
@@ -140,22 +153,58 @@ export class MissionSystem {
     this._runFactory(h);
     this._updateStormPhase();
 
-    this.doseRate = doseRateMsvPerHour({
-      stormDoseUGyPerHour: this.storm.phase === 'active' ? this.storm.storm.doseUGyPerHour : 0,
-      insideHabitat,
-      shieldOn: this.shieldOn && this.insideShield,
-      shelterWaterL: this.insideShelter ? this.shelterWaterL : 0,
+    const stormActive = this.storm.phase === 'active';
+    const stormDoseUGyPerHour = stormActive ? this.storm.storm.doseUGyPerHour : 0;
+    const shieldOn = this.shieldOn && this.insideShield;
+    const shelterWaterL = this.insideShelter ? this.shelterWaterL : 0;
+    this.doseRate = doseRateMsvPerHour({ stormDoseUGyPerHour, insideHabitat, shieldOn, shelterWaterL });
+    this.missionDoseRate = missionDoseMsvPerHour({
+      stormDoseUGyPerHour, insideHabitat, shieldOn, shelterWaterL, suitUpgraded: this.suitUpgraded,
     });
     if (!active) return 0;
 
     if (this.standby) this.standbyHours += h;
-    if (this.storm.phase === 'active') {
+    if (stormActive) {
       this._playedDuringStorm = true;
       this.stormHours += h;
       if (this.doseRate < RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR) this.protectedStormHours += h;
     }
-    this.totalDoseMsv += this.doseRate * h;
+    this.realDoseMsv += this.doseRate * h;
+    this.addDose(this.missionDoseRate * h, doseSourceFor({ stormActive, insideHabitat }));
     return radiationDamage(this.doseRate, h);
+  }
+
+  // Soma dose na fonte `source` ('eva', 'storm', 'habitat'). Nunca desce.
+  addDose(msv, source = 'eva') {
+    if (!(msv > 0)) return;
+    this.dose[source] += msv;
+    this.totalDoseMsv += msv;
+    if (!this._doseWarned && this.totalDoseMsv >= DOSE_LIMIT_MSV * DOSE_CONFIG.WARN_FRACTION) {
+      this._doseWarned = true;
+      if (this.totalDoseMsv < DOSE_LIMIT_MSV) this._emit('dose-warning');
+    }
+    if (!this._doseLimitPassed && this.totalDoseMsv >= DOSE_LIMIT_MSV) {
+      this._doseLimitPassed = true;
+      this._emit('dose-limit');
+    }
+  }
+
+  // Acima do limite de carreira a medica de voo proibe novas saidas do comandante
+  get grounded() {
+    return this.totalDoseMsv >= DOSE_LIMIT_MSV;
+  }
+
+  // { transit, eva, storm, habitat, total, limit, fraction, grounded } para telas e boletim (#90)
+  get doseBreakdown() {
+    return doseBreakdown(this.dose);
+  }
+
+  // Painel de admin: volta a dose para so a viagem
+  resetDose() {
+    this.dose = createDoseLedger();
+    this.totalDoseMsv = this.dose.transit;
+    this._doseWarned = false;
+    this._doseLimitPassed = false;
   }
 
   // Comeca a fila de tempestades a partir de `hours`. Chamar de novo nao refaz a fila.

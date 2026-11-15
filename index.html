@@ -146,6 +146,14 @@
           <b class="res-value">LOW</b>
           <span class="res-key" title="Radiation shield: use the Shield Remote in your hotbar">S</span>
         </div>
+        <!-- Dose acumulada (issue #104): comeca com a viagem ate Marte e so sobe -->
+        <div id="res-dose" class="res-row" data-icon="radiation" title="Dose is how much radiation your body has collected. It only goes up. NASA limit: 600 mSv.">
+          <span class="res-icon"></span>
+          <span class="res-name">DOSE</span>
+          <span class="res-meter"><i class="res-fill"></i></span>
+          <b class="res-value">60%</b>
+          <span class="res-trend"></span>
+        </div>
       </section>
       <div id="mission-alerts" class="mission-alerts"></div>
     </div>
@@ -311,6 +319,7 @@
             <div class="info-row"><b>Space weather live</b><span>When the game opens it asks NASA DONKI for the CMEs of the last 30 days, the bursts of super fast particles (SEP) of the last 60 days and the newest NASA space weather bulletin, shown on the radio at the science station. If NASA sends no SEP, the game does not make one up. If the internet fails or no CME is headed to Mars, the game uses the data saved inside it.</span></div>
             <div class="info-row"><b>Storm strength</b><span>A game rule: a faster CME makes a stronger storm. It always stays between two real storms measured by the Curiosity rover: the one in 2017 that doubled the radiation for two days, and the biggest ever, in 2024 (8,100 uGy, like 30 chest X-rays). How much it hurts is also a game rule.</span></div>
             <div class="info-row"><b>Radiation</b><span>Curiosity rover RAD instrument at Gale Crater, from NASA RadLab (OSDR): 6.93 uGy per hour, measured 16/11 to 10/12/2022.</span></div>
+            <div class="info-row"><b>Trip dose</b><span>On the way to Mars, Curiosity's RAD measured 1.8 mSv per day inside the spacecraft (Zeitlin et al., Science, 2013). A 203-day trip like Mars 2020 adds about 365 mSv before landing. On Mars, the game counts each game hour like about 8 days (a game rule).</span></div>
             <div class="info-row"><b>Ground</b><span>The shape of the land is real. It is a small crater inside Gale Crater on Mars (<span id="sources-terrain-coords"></span>), measured from orbit by HiRISE, a camera on NASA's Mars Reconnaissance Orbiter. One block is about 1 meter. Real data from <span id="sources-terrain-date"></span>. The flat ground under the base and the ice pit were shaped for the game.</span></div>
             <div class="info-row"><b>Mars facts</b><span>Gravity 38% of Earth, a day of 24 h 39 min and 43% of Earth sunlight, from the NASA Mars Fact Sheet.</span></div>
             <div class="info-row"><b>Weather</b><span>Temperature and air pressure from the NASA InSight lander, sols 675 to 681 (October 2020).</span></div>

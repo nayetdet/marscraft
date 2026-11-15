@@ -1,5 +1,6 @@
 // Textos da missao para a UI (em ingles, para criancas de 7 a 12 anos)
-import { RADIATION_CONFIG } from '../config/constants.js';
+import { DOSE_CONFIG, RADIATION_CONFIG } from '../config/constants.js';
+import { DOSE_EXPLAINER } from './doseBudget.js';
 
 // "2026-11-05T20:00Z" ou "2026-11-14" -> "05/11/2026"
 export function formatDateDMY(iso) {
@@ -82,7 +83,9 @@ export function stormStatusText(state, source, noStormData = false) {
 export function radiationStatusText({ doseRate, totalDoseMsv }) {
   return `RADIATION NOW: ${formatDose(doseRate)} per hour\n` +
     `DOSE SO FAR: ${formatDose(totalDoseMsv)} (NASA career limit: ${RADIATION_CONFIG.CAREER_LIMIT_MSV} mSv)\n` +
-    'Measured on Mars by the Curiosity rover (NASA RadLab). mSv tells how much radiation a body takes.';
+    `${DOSE_EXPLAINER} The trip from Earth already used most of it.\n` +
+    'Measured on Mars by the Curiosity rover (NASA RadLab). GAME SCALE: each game hour adds the dose of about ' +
+    `${DOSE_CONFIG.GAME_FACTOR} days on Mars.`;
 }
 
 export function stormEventMessage(event, source) {
