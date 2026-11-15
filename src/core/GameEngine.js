@@ -405,7 +405,7 @@ export class GameEngine {
       this.stationPanel.open(target.type);
       return;
     }
-    this.hud.showToast(message);
+    this.hud.showToast(`SYSTEM: ${message}`);
   }
 
   mountGym(mode) {
@@ -453,10 +453,10 @@ export class GameEngine {
     } else if (type === 'manual-open') {
       this.audio.playManualCrank();
     } else if (type === 'clean-skipped') {
-      this.hud.showToast('No power to clean your suit: Mars dust came inside with you!', 4500);
+      this.hud.showToast('SYSTEM: No power to clean your suit: Mars dust came inside with you!');
     } else if (type === 'suit-cleaned' && !this._dustFactShown) {
       this._dustFactShown = true;
-      this.hud.showToast('Suit clean! Apollo astronauts got "lunar hay fever" from dust that came inside on their suits.', 6000);
+      this.hud.showToast('SYSTEM: Suit clean! Apollo astronauts got "lunar hay fever" from dust that came inside on their suits.');
     }
   }
 
@@ -1197,7 +1197,7 @@ export class GameEngine {
           Sam: 'I am doing a quick habitat check.', Noor: 'The corridor is clear for the next shift.', Kai: 'I spotted a dust plume outside.',
           Iris: 'The rock layers outside look fascinating.', Ravi: 'Earth will get our message when the signal window opens.',
         };
-        this.hud.showToast(`${speaker.name}: ${replies[speaker.name]}`, 3500);
+        this.hud.showToast(`${speaker.name}: ${replies[speaker.name]}`);
       }
     }
   }
@@ -1291,7 +1291,7 @@ export class GameEngine {
   handlePlayerInteract() {
     if (this.missionHud.isVictoryShown) return;
     if (this.currentInteraction === 'crew' && this.talkTarget) {
-      this.hud.showToast(`${this.talkTarget.name}: ${this.talkTarget.dialogue}`, 6500);
+      this.hud.showToast(`${this.talkTarget.name}: ${this.talkTarget.dialogue}`);
       return;
     }
     if (this.missionHud.isMavPanelOpen) {
