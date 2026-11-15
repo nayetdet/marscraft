@@ -71,7 +71,9 @@ export function buildNasaCustomModels(scene) {
   }, 64, 64);
   mats.solarPanel = new THREE.MeshLambertMaterial({ map: solarTex });
   // Material proprio do campo solar: a poeira nos paineis (issue #103) tinge so ele, nao o rover
-  mats.fieldSolarPanel = mats.solarPanel.clone();
+  // Um material por painel: cada painel mostra a sua poeira (ato 2, #408). Custa um desenho por painel.
+  mats.fieldSolarPanels = Array.from({ length: SOLAR_FIELD.count }, () => mats.solarPanel.clone());
+  mats.fieldSolarPanel = mats.fieldSolarPanels[0];
 
   const { texture: screenTex } = makeCanvasTexture((ctx) => {
     ctx.fillStyle = '#0f172a';
@@ -293,7 +295,7 @@ export function buildNasaCustomModels(scene) {
   // O foguete do MAV tambem fica separado: ele sobe na animacao de decolagem.
   const merged = mergeByMaterial(group, [...plants, rover, rocket], [rover]);
   scene.add(merged);
-  return { group: merged, colliders, plants, rover, roverWheels, rocket, solarPanelMaterial: mats.fieldSolarPanel };
+  return { group: merged, colliders, plants, rover, roverWheels, rocket, solarPanelMaterial: mats.fieldSolarPanel, solarPanelMaterials: mats.fieldSolarPanels };
 }
 
 // Junta as centenas de caixas em uma malha por material (de ~300 draw calls para ~20).
@@ -584,7 +586,7 @@ function createExteriorSolarAndDish(mats, x, y, z) {
     array.position.set(x + SOLAR_FIELD.xFirst + i * SOLAR_FIELD.spacing, y, z + SOLAR_FIELD.z);
     addBox(array, 0.25, 1.4, 0.25, mats.lightGray, 0, 0.7, 0);
     addBox(array, 3.4, 0.1, 2.2, mats.whiteMetal, 0, 1.45, 0, 0.38, 0, 0);
-    addBox(array, 3.2, 0.12, 2.0, mats.fieldSolarPanel, 0, 1.47, 0, 0.38, 0, 0);
+    addBox(array, 3.2, 0.12, 2.0, mats.fieldSolarPanels[i], 0, 1.47, 0, 0.38, 0, 0);
     solarArrays.push(array);
   }
 

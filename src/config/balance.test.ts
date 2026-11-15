@@ -3,7 +3,11 @@ import { describe, it, expect } from 'vitest';
 import {
   BLOCK_INTERACTION_CONFIG, CREW_CONFIG, ENERGY_CONFIG, MAV_CONFIG, MISSION_CONFIG, PACING_CONFIG,
   PHYSICS_CONFIG, RADIATION_CONFIG, STATION_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG, UTILITY_CONFIG, WATER_SYSTEM_CONFIG,
+  SAMPLE_SITE_CONFIG, SCIENCE_CONFIG,
 } from './constants.ts';
+import { SAMPLE_TYPES } from '../data/sampleTypes.ts';
+import { isClueType } from '../mission/clues.ts';
+import { pickForSpend, pointsOf, sampleItem, sciencePackage, scienceStatus } from '../mission/sciencePackage.ts';
 import { UtilityModule } from '../core/UtilityModule.ts';
 import { CrewManager } from '../crew/CrewManager.ts';
 import { createStations } from '../crew/stations.ts';
@@ -180,6 +184,79 @@ describe('base energy pacing (issue #81)', () => {
   });
 });
 
+// Ato 4 (issue #410): 3 amostras de cada um dos 5 tipos, meta de 30 pontos enviados. Tudo regra
+// de jogo: os testes so garantem que a meta fecha com a coleta e que a bateria paga a ciencia.
+describe('act 4 science goal (issue #410)', () => {
+  const { POINTS_TO_LAUNCH, MAX_ITEMS_PER_UPLOAD, ANALYZE_POWER_COST, SUIT_UPGRADE_POINTS, TOOL_UPGRADE_POINTS } = SCIENCE_CONFIG;
+  // As 15 amostras do mapa, ja analisadas, na ordem dos campos
+  const mapSamples = () => SAMPLE_TYPES.flatMap((type, t) =>
+    Array.from({ length: SAMPLE_SITE_CONFIG.PER_TYPE }, (_, i) => sampleItem(t * SAMPLE_SITE_CONFIG.PER_TYPE + i, { typeId: type.id, name: type.name, points: type.points })));
+  // Envia tudo o que espera, uma passagem do orbitador por vez: devolve o custo de cada envio
+  const uploadAll = (items, usedIds = new Set()) => {
+    const sentIds = new Set();
+    const costs = [];
+    for (let pass = 0; pass < 20; pass += 1) {
+      const pkg = sciencePackage(items, { sentIds, usedIds });
+      if (pkg.items === 0) break;
+      for (const item of pkg.upload) sentIds.add(item.id);
+      costs.push(pkg.cost);
+    }
+    return { costs, status: scienceStatus(items, { sentIds, usedIds }) };
+  };
+
+  it('the 15 map samples alone reach the goal, and the goal cannot be met without collecting', () => {
+    const samples = mapSamples();
+    expect(samples).toHaveLength(SAMPLE_SITE_CONFIG.COUNT);
+    expect(pointsOf(samples)).toBe(42);
+    expect(pointsOf(samples)).toBeGreaterThanOrEqual(POINTS_TO_LAUNCH);
+    const { status } = uploadAll(samples);
+    expect(status).toMatchObject({ met: true, cluesSent: true, sentPoints: 42 });
+    // So as 3 pistas (27 pontos) nao fecham a meta: areia ou meteorito tambem precisam ir
+    const cluePoints = pointsOf(samples.filter((item) => isClueType(item.icon)));
+    expect(cluePoints).toBeLessThan(POINTS_TO_LAUNCH);
+    // Um campo inteiro a menos de qualquer pista: o foguete nao decola
+    for (const type of SAMPLE_TYPES.filter((t) => isClueType(t.id))) {
+      expect(uploadAll(samples.filter((item) => item.icon !== type.id)).status.met, type.id).toBe(false);
+    }
+  });
+
+  it('the two lab upgrades still leave enough samples for the goal, and never take a clue sample', () => {
+    const samples = mapSamples();
+    const usedIds = new Set();
+    for (const cost of [SUIT_UPGRADE_POINTS, TOOL_UPGRADE_POINTS]) {
+      const pending = samples.filter((item) => !usedIds.has(item.id));
+      const picked = pickForSpend(pending, cost);
+      expect(picked).not.toBeNull();
+      for (const item of picked) {
+        expect(isClueType(item.icon)).toBe(false);
+        usedIds.add(item.id);
+      }
+    }
+    const { status } = uploadAll(samples, usedIds);
+    expect(status.sentPoints).toBeGreaterThanOrEqual(POINTS_TO_LAUNCH);
+    expect(status.met).toBe(true);
+  });
+
+  it('sending needs at least 2 orbiter passes, and the science of the act fits in the battery over one sol', () => {
+    const { costs } = uploadAll(mapSamples());
+    expect(costs.length).toBe(Math.ceil(SAMPLE_SITE_CONFIG.COUNT / MAX_ITEMS_PER_UPLOAD));
+    expect(costs.length).toBeGreaterThanOrEqual(2);
+    // Cada envio cabe com folga numa bateria cheia
+    for (const cost of costs) expect(cost).toBeLessThan(ENERGY_CONFIG.BATTERY_CAPACITY / 2);
+    const analysis = SAMPLE_SITE_CONFIG.COUNT * ANALYZE_POWER_COST;
+    const uploads = costs.reduce((sum, cost) => sum + cost, 0);
+    const science = analysis + uploads;
+    // Uma bateria cheia paga toda a ciencia do ato (analisar as 15 e enviar)...
+    expect(science).toBeLessThanOrEqual(ENERGY_CONFIG.BATTERY_CAPACITY);
+    // ...e o Sol de um sol paga a base parada e a ciencia juntas
+    const passivePerSol = passiveDrawPerHour({ night: false }) * (24 - NIGHT_HOURS) + passiveDrawPerHour({ night: true }) * NIGHT_HOURS;
+    expect(solarPerSol() - passivePerSol).toBeGreaterThan(0);
+    expect(solarPerSol() + ENERGY_CONFIG.BATTERY_CAPACITY - passivePerSol).toBeGreaterThan(science);
+    // Mas nao e de graca: a ciencia custa mais que um bloco de gelo virando combustivel
+    expect(science).toBeGreaterThan(ENERGY_CONFIG.ISRU_DRAIN_PER_HOUR * MAV_CONFIG.ISRU_HOURS_PER_ICE_BLOCK);
+  });
+});
+
 // Agua vezes 10 (15/11/2026, spec do ato 1): os volumes da base sobem 10 vezes com os gastos
 // junto; o que uma pessoa usa de uma vez fica no valor real e a energia por hora nao muda.
 describe('base water times 10 (act 1 spec)', () => {
@@ -202,7 +279,6 @@ describe('base water times 10 (act 1 spec)', () => {
 
   it('what one person uses at a time keeps its real size', () => {
     expect(WATER_SYSTEM_CONFIG.DRINK_AMOUNT_FROM_DISPENSER).toBe(2);
-    expect(UTILITY_CONFIG.MEAL_WATER_L).toBe(1);
   });
 });
 

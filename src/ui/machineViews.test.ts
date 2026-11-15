@@ -13,7 +13,6 @@ function baseData(over: Partial<MachineViewData> = {}): MachineViewData {
     baseWater: 600,
     maxBaseWater: 1200,
     regolith: 4,
-    carrots: 2,
     objective: 'Build water shield',
     filter: 88,
     co2: 5,
@@ -36,9 +35,6 @@ function baseData(over: Partial<MachineViewData> = {}): MachineViewData {
     stormPhase: 'none',
     shelterWaterL: 40,
     shelterBlockedPct: 50,
-    crewFood: 6,
-    maxCrewFood: 12,
-    freshFoodActive: false,
     graywater: 8.5,
     cold: false,
     isNight: false,
@@ -66,12 +62,15 @@ function baseData(over: Partial<MachineViewData> = {}): MachineViewData {
 }
 
 describe('machineViews', () => {
-  it('recognizes all 6 custom machine station types', () => {
-    for (const type of ['console', 'power', 'medical', 'science', 'galley', 'shelter']) {
+  it('recognizes all 5 custom machine station types', () => {
+    for (const type of ['console', 'power', 'medical', 'science', 'shelter']) {
       expect(isCustomMachineType(type)).toBe(true);
       expect(machineModalTitle(type)).not.toBe('STATION');
     }
     expect(isCustomMachineType('greenhouse')).toBe(false);
+    // A cozinha nao tem painel: o cozinheiro faz a racao com [F] (ato 3, #409)
+    expect(isCustomMachineType('galley')).toBe(false);
+    expect(machineModalTitle('galley')).toBe('STATION');
     expect(isCustomMachineType('powerroom')).toBe(false);
   });
 
@@ -81,7 +80,6 @@ describe('machineViews', () => {
       power: ['o2mode:electrolysis', 'o2mode:moxie', 'filter', 'buildSabatier'],
       medical: ['treat'],
       science: ['analyze', 'sendScience', 'send', 'upgrade', 'upgradeTool'],
-      galley: ['cookMeal'],
       shelter: [],
     };
 

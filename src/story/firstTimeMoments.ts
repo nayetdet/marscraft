@@ -48,6 +48,7 @@ export interface MomentCounts {
   suitUps: number;
   iceDelivered: number;
   stormsSurvived: number;
+  rationsMade: number;
 }
 
 export interface FirstTimeMoment extends MomentView {
@@ -195,6 +196,21 @@ export const FIRST_TIME_MOMENTS: FirstTimeMoment[] = [
       { icon: 'air', tone: 'space', text: 'Its backpack carries the air you breathe' },
     ],
     source: 'NASA: What Is a Spacesuit? (Grades 5-8)',
+  },
+  // Ato 3 (#409): a primeira racao feita pelo cozinheiro com a planta que a crianca colheu
+  {
+    id: 'ration',
+    keys: ['rationsMade'],
+    stamp: 'FIRST RATION!',
+    title: 'FROM PLANT TO PLATE',
+    reason: 'The cook made a ration from your plant',
+    accent: '#a3e635',
+    scene: { from: 'plant', to: 'food', motion: 'recycle' },
+    lines: [
+      { icon: 'food', tone: 'space', text: 'NASA freeze-dries and packs food for astronauts' },
+      { icon: 'clock', tone: 'space', text: 'Food for long missions must stay good for up to 5 years' },
+    ],
+    source: 'NASA Space Food Systems',
   },
   {
     id: 'fuel',

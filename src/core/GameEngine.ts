@@ -3,6 +3,8 @@ import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS, GREENHOUSE_
 import { createCropItemModel, createCropPlantModel } from '../graphics/cropModels.ts';
 import { createSpaceRationModel } from '../graphics/rationModel.ts';
 import { createSampleRockModel } from '../graphics/sampleModels.ts';
+import { UTILITY_CONFIG } from '../config/constants.ts';
+import { LIGHTS_OFF_ID, LIGHTS_ON_ID, nightLightsToast } from '../story/acts/act3NightLights.ts';
 import * as THREE from 'three';
 import { BLOCK_INTERACTION_CONFIG, CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
 import { separateCrew } from '../crew/separateCrew.ts';
@@ -18,6 +20,7 @@ import { NO_STORM_DATA_TEXT, donkiCredit, donkiLabel, formatDateDMY, formatDose,
 import { doseEventMessage, doseVictoryRows, evaBlockMessage, roverMavBlocks } from '../mission/doseBudget.ts';
 import { discoveryItem, pointsStillNeeded, pointsWord, sampleItem, scienceCountText, scienceStep, uploadResultText } from '../mission/sciencePackage.ts';
 import { placeSampleSites } from '../world/sampleSites.ts';
+import { noTubeSampleText, pickTubeSample, tubeLoadedText, tubeableCount } from '../mission/sampleTubes.ts';
 import { SampleSiteMarkers } from '../world/SampleSiteMarkers.ts';
 import { naturalGroundTop } from '../world/surfaceRocks.ts';
 import { isBuildZone } from '../world/terrainGenerator.ts';
@@ -87,6 +90,7 @@ import { FirstTimeMoments, momentLogText } from '../story/firstTimeMoments.ts';
 import { MenuScreens } from '../ui/MenuScreens.ts';
 import { StoryDirector } from '../story/StoryDirector.ts';
 import { createActControllers } from '../story/acts/index.ts';
+import { Act5Controller } from '../story/acts/Act5Controller.ts';
 import { objectiveView } from '../story/objectiveView.ts';
 import { WAYPOINT_LABELS, objectiveTarget, routeWaypoint } from '../story/waypoints.ts';
 import { WaypointBeacon } from '../story/WaypointBeacon.ts';
@@ -207,9 +211,10 @@ export class GameEngine {
     this._scienceStatusKey = '';
 
     // Modelos 3D detalhados estilo Mod de Minecraft + Caixas de Colisão AABB
-    const { group: customModels, colliders, plants, rover, roverWheels, rocket, solarPanelMaterial } = buildNasaCustomModels(this.scene);
+    const { group: customModels, colliders, plants, rover, roverWheels, rocket, solarPanelMaterial, solarPanelMaterials } = buildNasaCustomModels(this.scene);
     // Paineis do campo solar: ficam avermelhados com a poeira (issue #103)
     this.solarPanelMaterial = solarPanelMaterial;
+    this.solarPanelMaterials = solarPanelMaterials; // um por painel: cada um mostra a sua poeira (#408)
     this.mavRocket = rocket;
     this.customModels = customModels;
     this.plants = plants;
@@ -241,6 +246,7 @@ export class GameEngine {
     try {
       const saved = JSON.parse(window.localStorage.getItem('marscraft-save-v1') || 'null');
       this._savedArrivalPlayed = saved?.arrivalPlayed === true;
+      this._savedFreePlay = saved?.freePlay === true; // ja decolou nesta partida (ato 5, #411)
       if (saved?.survival) {
         Object.assign(this.survival, saved.survival);
         if (Array.isArray(saved.survival.inventorySlots)) {
@@ -354,12 +360,14 @@ export class GameEngine {
       onUnloadSample: () => this._loadSampleTube(false),
       onToggleFactory: () => this.mission.toggleFactory(),
       onIgnite: () => this._launchMav(),
+      onContinue: () => this.act5.continueAfterVictory(),
       onClose: () => this._closeMavPanel(),
     });
     this._wasDead = false;
     this.deathCount = 0; // para o boletim do cadete (issue #90)
     this._startHours = this._skyHours();
     this._initStory();
+    if (this._savedFreePlay) this.act5.restoreFreePlay();
     this._initWeather();
     this._initEvents();
 
@@ -442,7 +450,8 @@ export class GameEngine {
       onStartShipBlockBreak: () => this.audio.playShipBlockBreak(),
       onStopShipBlockBreak: () => this.audio.stopShipBlockBreak(),
       onBlockBroken: (blockId) => this.audio.playBlockBreakImpact(blockId === BLOCK_IDS.REGOLITH),
-      onFoodConsumed: () => this.audio.playUiConfirm(),
+      // Comer pela hotbar conta para o passo de comer do passeio completo (a cozinha nao tem mais painel)
+      onFoodConsumed: () => { this.tutorialCounts.meal++; this.audio.playUiConfirm(); },
       onWaterConsumed: () => {
         this.audio.playDrink();
         this.hud.triggerWaterPulse();
@@ -454,7 +463,7 @@ export class GameEngine {
       isInputBlocked: () => this.cutscenes.isActive || Boolean(this.sleep?.isSleeping) || Boolean(this.tradeoffHud?.isOpen),
       getInteraction: () => this._getInteraction(),
       isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen || Boolean(this.sleep?.isPanelOpen),
-      getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || !this.stations.freshFood || this.sleep?.isTired ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
+      getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || this.sleep?.isTired ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
     });
     // Dormir no beliche (issue #109): passa o tempo com custo, no lugar da antiga tecla T
     this.sleep = new SleepController(this);
@@ -515,6 +524,8 @@ export class GameEngine {
     this.stations.update(dt, insideCore, this.survival, !inside);
     this.stations.updateCrewHarvest(dt, this.crew.members.some(member => member.task === 'greenhouse' && member.stationary && member.canWork));
     this.utility.updateRations(dt, this.crew.members.some(member => member.task === 'kitchen' && member.stationary && member.canWork));
+    const cookedCrop = this.utility.updatePlayerRation(dt);
+    if (cookedCrop) this._deliverPlayerRation(cookedCrop);
     this._updateShelterWater();
     this.sampleSites.update(this.lastTime / 1000);
     this.updateCropVisuals();
@@ -695,8 +706,6 @@ export class GameEngine {
         { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
         { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
         { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
-        { type: 'galley', x: 13.1, y: 11.35, z: -16.2, label: 'Press F: kitchen' },
-        { type: 'galley', x: 16.1, y: 11.3, z: -21.0, label: 'Press F: pantry & kitchen' },
         { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
         ...GREENHOUSE_BASKETS.map(basket => ({ ...basket, cropType: basket.type, type: 'basket', minDot: 0.95, label: `Press F or tap: collect ${basket.type}` })),
         { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
@@ -961,7 +970,9 @@ export class GameEngine {
       maxDist: this.scanJournal.scanRange(),
     });
     const isScanning = this.input.isScanButtonHeld;
-    const state = this.scanner.update(dt, target?.id ?? null, isScanning);
+    // Ato 2 (#408): procurando o vazamento, um vidro na mira responde se esta inteiro ou rachado
+    const windowScan = this.act2.scanWindow(dt, target, isScanning);
+    const state = this.scanner.update(dt, windowScan ? null : target?.id ?? null, isScanning);
     if (
       isScanning &&
       state.done &&
@@ -971,8 +982,8 @@ export class GameEngine {
     ) {
       this.iceSensor.clear();
     }
-    this._updateScanHighlight(isScanning ? target : null, state, dt);
-    this.scannerHud.update(state);
+    this._updateScanHighlight(isScanning && !windowScan ? target : null, state, dt);
+    this.scannerHud.update(windowScan ?? state);
     if (state.completed) this._onScanCompleted(state.completed);
   }
 
@@ -1082,7 +1093,8 @@ export class GameEngine {
 
   _isNearMav() {
     const { x, z } = MAV_CONFIG.PAD_POSITION;
-    return Math.hypot(this.player.pos.x - x, this.player.pos.z - z) <= MAV_CONFIG.INTERACT_RADIUS;
+    // Depois da decolagem (modo livre, #411) nao ha foguete na plataforma
+    return !this.mission.launched && Math.hypot(this.player.pos.x - x, this.player.pos.z - z) <= MAV_CONFIG.INTERACT_RADIUS;
   }
 
   _openMavPanel() {
@@ -1255,10 +1267,32 @@ export class GameEngine {
     return this.mission.spendScience(this.scienceItems(), cost);
   }
 
-  // Tubo de amostra analisada entra (ou sai) do foguete: cada tubo pede mais gelo no tanque
+  // Trade-off do ato 4 (issue #422): a amostra CRUA da mochila entra lacrada no foguete (ou volta
+  // para a mochila). No tubo ela nao e analisada: vale mais, mas so no boletim final, e cada tubo
+  // pede mais gelo no tanque. Amostra de pista nao vai no tubo (src/mission/sampleTubes.ts).
   _loadSampleTube(load) {
-    const result = load ? this.mission.loadSampleTube(this.stations.analyzedSamples) : this.mission.unloadSampleTube();
-    if (result === 'no-samples') this.hud.showToast('Analyze a sample at the science & radio terminal first.');
+    const countItem = this._countItem ??= (itemId) => this.survival.countItem(itemId);
+    if (load) {
+      const type = pickTubeSample(countItem);
+      const result = this.mission.loadSampleTube(type ? { typeId: type.id, name: type.name, points: type.points } : null);
+      if (result === 'loaded') {
+        this.survival.removeItems(type.itemId, 1);
+        this.hud.showToast(tubeLoadedText(type), 6000);
+        this.missionLog.add({ text: `Sealed a sample in a tube for Earth: ${type.name}.`, kind: 'study', hours: this._skyHours() });
+      } else if (result === 'no-samples') {
+        this.hud.showToast(noTubeSampleText(this.stations.rawSampleCount(this.survival) > 0), 6000);
+      }
+    } else {
+      const sample = this.mission.tubeSamples.at(-1);
+      const type = sample ? sampleTypeById(sample.typeId) : null;
+      // A amostra volta para a mochila: sem lugar nela, o tubo fica no foguete
+      if (type && !this.mission.launched && !this.survival.addBlockToInventory(type.itemId)) {
+        this.hud.showToast('Your bag is full. Make room to take the sample back.');
+      } else if (this.mission.unloadSampleTube() === 'unloaded' && type) {
+        this.hud.showToast(`${type.name} is back in your bag. You can analyze it now.`);
+      }
+    }
+    this.hud.renderHotbar(this.survival.slots);
     this._refreshMavPanel();
   }
 
@@ -1281,7 +1315,7 @@ export class GameEngine {
   }
 
   _refreshMavPanel() {
-    this.missionHud.updateMavPanel(this.mission, this.survival.countWaterIce(), this.stations.analyzedSamples, this.scienceStatus());
+    this.missionHud.updateMavPanel(this.mission, this.survival.countWaterIce(), tubeableCount(this._countItem ??= (itemId) => this.survival.countItem(itemId)), this.scienceStatus());
   }
 
   _toggleShield() {
@@ -1299,6 +1333,14 @@ export class GameEngine {
   // Escolha feita num card de radio sem parar o jogo (issue #135). Devolve false para o card
   // continuar aberto. O escudo liga pelo mesmo caminho do Shield Remote: gasta a mesma bateria.
   _onCardChoice(id) {
+    const act5Choice = this.act5.onCardChoice(id); // ato 5 (#423): como deixar a base
+    if (act5Choice !== null) return act5Choice;
+    // Ato 3 (#420): luz da estufa a noite, escolhida no card do por do sol (Act3Controller)
+    if (id === LIGHTS_ON_ID || id === LIGHTS_OFF_ID) {
+      this.utility.greenhouseLightsOn = id === LIGHTS_ON_ID;
+      this.hud.showToast(nightLightsToast(this.utility.greenhouseLightsOn), 6000);
+      return true;
+    }
     if (id === 'hide') {
       this.hud.showToast('Follow the arrow to the base. Hide in the storm shelter and fill its water wall!', 6000);
       return true;
@@ -1362,8 +1404,8 @@ export class GameEngine {
       ['Sols on Mars (1 sol = 1 Mars day)', String(this.sky.solCount)],
       ...doseVictoryRows(m.doseBreakdown),
       ['Solar storms survived', String(m.stormsSurvived)],
-      ['Science sent home', `${pointsWord(m.sentPoints)} (${scienceCountText(m.sentDiscoveries, m.sentSamples)})`],
-      ['Rock sample tubes on the rocket', String(m.sampleTubes)],
+      ['Science sent home by radio', `${pointsWord(m.sentPoints)} (${scienceCountText(m.sentDiscoveries, m.sentSamples)})`],
+      ['Science in the sample tubes', `${pointsWord(m.tubePoints)} (${m.sampleTubes} ${m.sampleTubes === 1 ? 'tube' : 'tubes'}, studied on Earth)`],
       ['Oxygen made by the base', `${oxygenPointsToKg(m.oxygenProducedPoints).toFixed(2)} kg`],
       ['Ice turned into rocket fuel', `${m.iceDelivered} blocks`],
       ['Solar energy collected', `${(m.solarEnergyCollected / m.battery.capacity).toFixed(1)} full batteries`],
@@ -1381,7 +1423,7 @@ export class GameEngine {
       'Storm shelter water wall: PREDICCS shielding model (University of New Hampshire, Curiosity RAD data) and NASA storm shelter studies. ' +
       'Radio delay: Earth-Mars distance from NASA/JPL planet orbits; solar conjunction rules from NASA/JPL. ' +
       'Trip time, thin air and launch windows: NASA Mars facts. ' +
-      'Science sent through orbiters: NASA Mars Relay Network. Rock sample tubes: NASA Perseverance; science points, upload costs and extra ice per tube are game rules. ' +
+      'Science sent through orbiters: NASA Mars Relay Network. Rock sample tubes: NASA Perseverance; science points, upload costs, the extra points of a tube and the extra ice per tube are game rules. ' +
       'Map samples: real finds by NASA Curiosity in Gale Crater (dune sand, mudstone, sulfur, iron meteorite) and by NASA Phoenix (buried ice); where they sit on the map is a game rule. ' +
       'Mars events: NASA InSight (marsquakes and the 2021 meteor impact), MRO, Perseverance (Phobos eclipse, aurora), Spirit (dust devils) and Viking 2 (frost); when and how strong they are is a game rule.';
     this.missionHud.showVictory(rows, sources, earthFarewell({
@@ -1413,6 +1455,9 @@ export class GameEngine {
       cropVariety: s.cropCollection.size,
       iceDelivered: m.iceDelivered,
       standbyHours: m.standbyHours,
+      launched: m.launched,
+      launchWindow: this.story.launchWindow,
+      baseHandover: this.act5.handoverStats(),
       ...this._scienceReportStats(),
     };
   }
@@ -1436,6 +1481,9 @@ export class GameEngine {
       sampleTypes: new Set(this.stations.analyzed.map((sample) => sample.typeId)).size,
       sciencePointsSent: status.sentPoints,
       sciencePointsGoal: SCIENCE_CONFIG.POINTS_TO_LAUNCH,
+      // Ciencia que viaja nos tubos de amostra (issue #422): so conta aqui, no boletim
+      scienceTubePoints: this.mission.tubePoints,
+      sampleTubes: this.mission.sampleTubes,
       topFinds,
     };
   }
@@ -1480,7 +1528,7 @@ export class GameEngine {
     this._updateWeather(dt);
     this._updateMissionLog();
 
-    this.missionHud.update(this.mission, { survival: this.survival, stations: this.stations, world: this.world });
+    this.missionHud.update(this.mission, { survival: this.survival, stations: this.stations, world: this.world, storyLeak: this.act2.leakAlert });
     this._panelRefreshTimer = (this._panelRefreshTimer ?? 0) + dt;
     if (this.missionHud.isMavPanelOpen && this._panelRefreshTimer > 0.25) {
       this._panelRefreshTimer = 0;
@@ -1500,7 +1548,7 @@ export class GameEngine {
     this._panelColorDusty = new THREE.Color(0xb98a6a);
     // A poeira cobre o vidro azul escuro: brilho proprio cor de ferrugem, para aparecer
     this._panelDustGlow = new THREE.Color(0x9a5530);
-    this._panelDustShown = -1;
+    this._panelDustShown = new Array(SOLAR_FIELD.count).fill(-1);
     this._solarLookDir = new THREE.Vector3();
     this.panelCleanDustPuffs = new ParticlePuffs(this.scene, { count: 48, color: 0xc47e54 });
     this._panelCleanAnim = {
@@ -1509,6 +1557,7 @@ export class GameEngine {
       duration: DUST_WEATHER_CONFIG.CLEAN_ANIM_DURATION,
       dustBefore: 0,
       dustAfter: 0,
+      panelIndex: 0,
       panelX: SOLAR_FIELD_CENTER.x,
       panelY: WORLD_CONFIG.GROUND_LEVEL + 2.47,
       panelZ: SOLAR_FIELD.z,
@@ -1534,13 +1583,16 @@ export class GameEngine {
     fx.indoors = this.survival.isPlayerInsideShip(this.camera.position);
     this.sky.dustHaze = dust.haze;
 
-    // Paineis avermelhados com a poeira: so troca a cor quando muda 1 %
-    const visualDust = this._updatePanelCleanAnim(dt);
-    const shown = Math.round(visualDust * 100);
-    if (shown !== this._panelDustShown && this.solarPanelMaterial) {
-      this._panelDustShown = shown;
-      this.solarPanelMaterial.color.copy(this._panelColorClean).lerp(this._panelColorDusty, visualDust);
-      this.solarPanelMaterial.emissive.copy(this._panelDustGlow).multiplyScalar(visualDust);
+    // Paineis avermelhados com a poeira, cada um com a sua: so troca a cor quando muda 1 %
+    const cleaningDust = this._updatePanelCleanAnim(dt);
+    const materials = this.solarPanelMaterials;
+    for (let i = 0; materials && i < materials.length; i++) {
+      const visualDust = this._panelCleanAnim.active && this._panelCleanAnim.panelIndex === i ? cleaningDust : dust.panels[i] ?? 0;
+      const shown = Math.round(visualDust * 100);
+      if (shown === this._panelDustShown[i]) continue;
+      this._panelDustShown[i] = shown;
+      materials[i].color.copy(this._panelColorClean).lerp(this._panelColorDusty, visualDust);
+      materials[i].emissive.copy(this._panelDustGlow).multiplyScalar(visualDust);
     }
 
     const hours = this._skyHours();
@@ -1557,22 +1609,29 @@ export class GameEngine {
     return WORLD_CONFIG.GROUND_LEVEL + 1;
   }
 
-  _nearestSolarPanelPos() {
+  // Painel mais perto da mira (0 = o primeiro da fileira): e o que a crianca limpa
+  _nearestSolarPanelIndex() {
     const look = this.player.getLookDirection(this._solarLookDir);
     const aimX = this.player.pos.x + look.x * 2.0;
     const aimZ = this.player.pos.z + look.z * 2.0;
-    let bestX = SOLAR_FIELD.xFirst;
+    let best = 0;
     let bestDist = Infinity;
     for (let i = 0; i < SOLAR_FIELD.count; i++) {
       const px = SOLAR_FIELD.xFirst + i * SOLAR_FIELD.spacing;
       const dist = Math.hypot(aimX - px, aimZ - SOLAR_FIELD.z);
       if (dist < bestDist) {
         bestDist = dist;
-        bestX = px;
+        best = i;
       }
     }
+    return best;
+  }
+
+  _nearestSolarPanelPos() {
+    const index = this._nearestSolarPanelIndex();
     return {
-      x: bestX,
+      index,
+      x: SOLAR_FIELD.xFirst + index * SOLAR_FIELD.spacing,
       y: WORLD_CONFIG.GROUND_LEVEL + 1 + 1.47,
       z: SOLAR_FIELD.z,
     };
@@ -1580,7 +1639,8 @@ export class GameEngine {
 
   _updatePanelCleanAnim(dt) {
     const anim = this._panelCleanAnim;
-    let visualDust = this.mission.dustWeather.panelDust;
+    const panels = this.mission.dustWeather.panels;
+    let visualDust = panels[anim.panelIndex] ?? 0;
     if (anim.active) {
       anim.elapsed += dt;
       const p = Math.min(1, anim.elapsed / anim.duration);
@@ -1607,7 +1667,7 @@ export class GameEngine {
       }
       if (p >= 1) {
         anim.active = false;
-        visualDust = this.mission.dustWeather.panelDust;
+        visualDust = panels[anim.panelIndex] ?? 0;
       }
     }
     this.panelCleanDustPuffs.update(dt);
@@ -1636,39 +1696,41 @@ export class GameEngine {
     return Math.hypot(dx, dz) <= DUST_WEATHER_CONFIG.CLEAN_RADIUS;
   }
 
-  // Limpar os paineis a mao: restaura a geracao, mas gasta ar do traje (issue #103)
+  // Limpar os paineis a mao, um por vez (o mais perto da mira): restaura a geracao, mas gasta ar
+  // do traje (issue #103, ato 2 #408)
   _cleanSolarPanels() {
     if (this._panelCleanAnim?.active) return;
     const dust = this.mission.dustWeather;
     const cost = DUST_WEATHER_CONFIG.CLEAN_O2_COST;
-    if (dust.panelDust < 0.01) {
-      this.hud.showToast('The solar panels are already clean.');
+    const panelPos = this._nearestSolarPanelPos();
+    const dustBefore = dust.panels[panelPos.index];
+    if (dustBefore < 0.01) {
+      this.hud.showToast(dust.panelDust < 0.01 ? 'The solar panels are already clean.' : 'This panel is clean. Brush the dusty ones!');
       return;
     }
     if (!this.survival.hasBreathableOxygen(cost + 1)) {
       this.hud.showToast('Your suit air is too low to keep working. Go back inside!', 4500);
       return;
     }
-    const dustBefore = dust.panelDust;
     this.survival.spendBreathableOxygen(cost);
-    const removed = dust.cleanPanels();
-    const dustAfter = dust.panelDust;
-    const panelPos = this._nearestSolarPanelPos();
+    const removed = dust.cleanPanel(panelPos.index);
+    const dustAfter = dust.panels[panelPos.index];
     const anim = this._panelCleanAnim;
     anim.active = true;
     anim.elapsed = 0;
     anim.duration = DUST_WEATHER_CONFIG.CLEAN_ANIM_DURATION;
     anim.dustBefore = dustBefore;
     anim.dustAfter = dustAfter;
+    anim.panelIndex = panelPos.index;
     anim.panelX = panelPos.x;
     anim.panelY = panelPos.y;
     anim.panelZ = panelPos.z;
     anim.emitDebt = 0;
     this.playerHand.triggerCleanSolar();
     this.audio.playSolarClean();
-    const left = Math.round(dust.panelDust * 100);
+    const left = Math.round(dustAfter * 100);
     const storm = dust.phase === 'storm' ? ' The storm keeps adding more dust!' : '';
-    let message = `Brushed ${Math.round(removed * 100)}% of the dust off the panels (used suit air). Panel dust: ${left}%.${storm}`;
+    let message = `Brushed ${Math.round(removed * 100)}% of the dust off panel ${panelPos.index + 1} (used suit air). Dust left on it: ${left}%.${storm}`;
     if (!this._panelCleanFactShown) {
       this._panelCleanFactShown = true;
       message += ' Real case: gusts of wind cleaned the panels of NASA rovers Spirit and Opportunity.';
@@ -1855,6 +1917,8 @@ export class GameEngine {
     this.tutorialCounts = { drink: 0, meal: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0, suitUps: 0 };
     // Atos 2 a 5 da historia: cada um liga os seus passos ao jogo (src/story/acts/)
     this.actControllers = createActControllers(this);
+    this.act5 = this.actControllers.find((act) => act instanceof Act5Controller);
+    this.act2 = this.actControllers[0]; // Act2Controller: luneta, vazamento e janela rachada (#408)
     this._lastStepId = null;
     this.story = new StoryDirector({
       training: false, // tutorial padrao: so os 5 passos que a missao usa (CORE_STEPS)
@@ -1869,6 +1933,7 @@ export class GameEngine {
     // Escolha rapida dos cards de radio ([1] HIDE / [2] SHIELD): so com o jogo rodando
     this.storyHud.canChoose = () => Boolean(this._wasGameRunning);
     this.storyHud.onChoice = (id) => this._onCardChoice(id);
+    this.storyHud.onContinue = () => this.act5.continueAfterWindowClosed();
     this._objectiveText = '';
     // Retrato do jogo que o diretor le a cada frame (objeto reaproveitado)
     this._storySnapshot = {
@@ -1879,6 +1944,7 @@ export class GameEngine {
       drinkCount: 0, mealCount: 0, earthCalls: 0, plantCount: 0,
       roverDrives: 0, roverIceKg: 0, scanCount: 0, iceDelivered: 0,
       suitEquipped: false, suitUps: 0,
+      rationsMade: 0, // ato 3 (#409): racoes feitas com planta da crianca (Act3Controller)
       // Recursos da base, para os desvios do tutorial (issue #237, tutorialDetours.ts)
       baseWaterL: 0, batteryCharge: 0, foodStock: 0, roverBattery: 0, roverActive: false,
     };
@@ -2176,9 +2242,35 @@ export class GameEngine {
     this._activeRationHandoff = null;
   }
 
+  // [F] no cozinheiro, sem painel (ato 3, #409). Com planta colhida na mochila ele recebe a planta
+  // e prepara 1 racao (UtilityModule.startPlayerRation); sem planta entrega 1 racao da despensa.
   _giveRationFromCook(member) {
     if (this._activeRationHandoff) return;
     const cookAvatar = this.crewAvatars.find((avatar) => avatar.member === member);
+    if (this.utility.playerRation) {
+      const left = Math.ceil(this.utility.playerRationSecondsLeft);
+      this.hud.showCaption(left > 0
+        ? `${member.name}: Your ration is cooking! ${left} s to go.`
+        : `${member.name}: Your ration is ready! Make room in your bag.`);
+      return;
+    }
+    if (this.utility.playerCrop()) {
+      const cooking = this.utility.startPlayerRation();
+      if (!cooking.ok) {
+        this.audio.playUiError();
+        cookAvatar?.startHeadShake(this.player.pos, 1.0);
+        this.hud.showToast(cooking.message);
+        return;
+      }
+      this.audio.playUiConfirm();
+      this.playerHand.triggerSwing();
+      cookAvatar?.startHandoff(this.player.pos, 1.2);
+      this.hud.renderHotbar(this.survival.slots);
+      const heldSlot = this.survival.slots[this.hud.selectedSlot];
+      this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
+      this.hud.showCaption(`${member.name}: Thanks for the ${cooking.crop}! Your ration is ready in ${UTILITY_CONFIG.RATION_PREP_SECONDS} s.`);
+      return;
+    }
     const res = this.utility.takeRation();
     if (!res.ok) {
       this.audio.playUiError();
@@ -2191,12 +2283,29 @@ export class GameEngine {
       return;
     }
     this.audio.playUiConfirm();
+    // Pegar a racao conta como a tentativa de comer do passeio completo (quem esta sem fome nao trava)
+    this.tutorialCounts.meal++;
+    this._startRationHandoff(cookAvatar, `${member.name}: Here is a ration! ${res.remaining} left.`, res.message);
+  }
 
+  // A racao feita com a planta da crianca ficou pronta e ja esta na mochila: o cozinheiro entrega
+  _deliverPlayerRation(crop) {
+    const cookAvatar = this.crewAvatars.find((avatar) => avatar.member.task === 'kitchen');
+    this._finishRationHandoffEarly();
+    this._startRationHandoff(
+      cookAvatar,
+      `${cookAvatar?.member.name ?? 'Cook'}: Your ${crop} ration is ready!`,
+      `Got a Space Ration made from your ${crop}! Eat it from your hotbar.`,
+    );
+  }
+
+  // A racao (que ja esta no inventario) voa da mao do cozinheiro ate a crianca
+  _startRationHandoff(cookAvatar, caption, message) {
     if (!cookAvatar) {
       this.hud.renderHotbar(this.survival.slots);
       const heldSlot = this.survival.slots[this.hud.selectedSlot];
       this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
-      this.hud.showToast(res.message);
+      this.hud.showToast(message);
       return;
     }
 
@@ -2205,13 +2314,13 @@ export class GameEngine {
     this._handoffRationProp.position.copy(this._handoffStart);
     this._handoffRationProp.rotation.set(0.1, cookAvatar.group.rotation.y, 0);
     this._handoffRationProp.visible = true;
-    this.hud.showCaption(`${member.name}: Here is a ration! ${res.remaining} left.`);
+    this.hud.showCaption(caption);
     this._activeRationHandoff = {
       cookAvatar,
       elapsed: 0,
       duration: 0.85,
       delivered: false,
-      message: res.message,
+      message,
     };
   }
 
@@ -2312,7 +2421,9 @@ export class GameEngine {
         if (event.card.stepId) this._tradeoff(`step:${event.card.stepId}`);
       }
       else if (event.type === 'certificate') {
-        this.events.start(s.hours); // primeiro selo do tutorial: os eventos de Marte ja podem acontecer
+        // Primeiro selo do passeio completo: os eventos de Marte ja podem acontecer. Nos atos
+        // guiados (o ato 3 tambem da selos) eles so comecam no fim dos passos, com `start-storms`
+        if (this.story.training) this.events.start(s.hours);
         this.storyHud.showCertificate(event.badge);
         this._playGymTone(520, 0.22, 780);
       }
@@ -2543,7 +2654,7 @@ export class GameEngine {
   // descarrega o gelo direto no tanque do foguete, para a missao continuar sem saidas a pe.
   _roverFuelsMav() {
     const rover = this.roverController;
-    if (!this.mission.grounded || rover.iceCargo <= 0) return false;
+    if (!this.mission.grounded || rover.iceCargo <= 0 || this.mission.launched) return false;
     const { x, z } = MAV_CONFIG.PAD_POSITION;
     if (Math.hypot(rover.pos.x - x, rover.pos.z - z) > DOSE_CONFIG.ROVER_MAV_REACH) return false;
     const blocks = roverMavBlocks(rover.iceCargo, this.mission.iceNeeded());
@@ -2576,6 +2687,13 @@ export class GameEngine {
     }
 
     const member = this._nearestCrewMember();
+    // Ato 2 (#408): o engenheiro entrega a luneta e o vidro; [F] na janela rachada troca o vidro
+    const act2Prompt = this.act2.interactionPrompt(member);
+    if (act2Prompt) {
+      this.currentInteraction = 'act2';
+      this.hud.setInteractionPrompt(true, act2Prompt);
+      return;
+    }
     // Poster ou equipamento explicativo na mira: ler vem antes das acoes por proximidade
     const aimed = this._getInteraction();
     if (aimed?.type === 'info') {
@@ -2591,8 +2709,9 @@ export class GameEngine {
         this.hud.setInteractionPrompt(true, 'Cleaning solar panels...');
         return;
       }
-      const dust = Math.round(this.mission.dustWeather.panelDust * 100);
-      this.hud.setInteractionPrompt(true, `[F] Clean the solar panels (dust ${dust}%, uses suit air)`);
+      const panel = this._nearestSolarPanelIndex();
+      const dust = Math.round(this.mission.dustWeather.panels[panel] * 100);
+      this.hud.setInteractionPrompt(true, `[F] Clean solar panel ${panel + 1} (dust ${dust}%, uses suit air)`);
       return;
     }
 
@@ -2610,9 +2729,14 @@ export class GameEngine {
       this.talkTarget = member;
       if (member.task === 'kitchen') {
         const count = Math.floor(this.crewStock.food);
-        const prompt = count >= 1
-          ? `[F] Get space ration from ${member.name} (${count} in pantry)`
-          : `[F] Talk to ${member.name} (pantry empty)`;
+        const crop = this.utility.playerCrop();
+        const prompt = this.utility.playerRation
+          ? `${member.name} is cooking your ration (${Math.ceil(this.utility.playerRationSecondsLeft)} s)`
+          : crop
+            ? `[F] Give ${crop} to ${member.name}: 1 ration (${UTILITY_CONFIG.RATION_PREP_POWER}% battery)`
+            : count >= 1
+              ? `[F] Get space ration from ${member.name} (${count} in pantry)`
+              : `[F] Talk to ${member.name} (pantry empty)`;
         this.hud.setInteractionPrompt(true, prompt);
       } else {
         this.hud.setInteractionPrompt(true, `[F] Talk to ${member.name}`);
@@ -2638,6 +2762,10 @@ export class GameEngine {
 
   handlePlayerInteract() {
     if (this.missionHud.isVictoryShown) return;
+    if (this.currentInteraction === 'act2') {
+      this.act2.interact();
+      return;
+    }
     if (this.currentInteraction === 'crew' && this.talkTarget) {
       if (this.talkTarget.task === 'kitchen') {
         this._giveRationFromCook(this.talkTarget);
@@ -2785,6 +2913,8 @@ export class GameEngine {
         z: SOLAR_FIELD_CENTER.z + Math.cos(params.angle) * side,
       };
       this._devilCrossesPanels = params.crossesPanels;
+      // Painel por onde o redemoinho cruza a fileira (sorteado pelo angulo, da semente)
+      this._devilPanelIndex = ((params.angle / (Math.PI * 2)) % 1) * (SOLAR_FIELD.count - 1);
       info = { target, world: this.world };
     }
     this.eventEffects.start(event, info);
@@ -2821,15 +2951,17 @@ export class GameEngine {
   // que chega com a issue #103: se a missao tiver `cleanPanels(fracao)`, ela e chamada aqui.
   _dustDevilAtTarget() {
     if (!this._devilCrossesPanels) return;
-    const cleaned = this.mission.dustWeather?.cleanPanels(EVENTS_CONFIG.DUST_DEVIL_PANEL_CLEAN);
-    this.hud.showToast(dustDevilPanelsToast(typeof cleaned === 'number' ? Math.round(cleaned * 100) : 0), 6000);
+    // Limpa por inteiro os paineis mais perto de onde ele cruza a fileira (#408)
+    const dust = this.mission.dustWeather;
+    const cleaned = dust.sweepPanels(EVENTS_CONFIG.DUST_DEVIL_PANELS_CLEANED, this._devilPanelIndex);
+    this.hud.showToast(dustDevilPanelsToast(cleaned, dust.panels.length), 6000);
   }
 
   _saveGame() {
     try {
       const survival = {};
       for (const key of ['health','oxygen','suitEquipped','suitThermal','suitOxygen','suitScrubber','suitDust','suitIntegrity','baseOxygen','baseBreached','water','food','baseWater','maxBaseWater','graywater','inventorySlots','isDead']) survival[key] = this.survival[key];
-      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed }));
+      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed, freePlay: this.mission.launched }));
       return true;
     } catch { return false; }
   }

@@ -9,6 +9,7 @@ import { STORM_SKIP_PANEL_LINE, stormSkipButtonLabel } from '../mission/stormSki
 import { doseHistoryText } from '../mission/doseBudget.ts';
 import { uploadButtonLabel } from '../mission/sciencePackage.ts';
 import { sciencePanelHtml, sciencePanelModel } from './sciencePanelView.ts';
+import { tubeChoice } from '../mission/sampleTubes.ts';
 import { getJournalIcon } from '../graphics/journalIcons.ts';
 import { getSampleItemIcon } from '../graphics/itemIcons.ts';
 import { bulletinText, donkiLabel, formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.ts';
@@ -896,8 +897,6 @@ export class StationPanel {
     }
     // Comer conta para o tutorial guiado mesmo sem fome (GameEngine.tutorialCounts)
     const done = this.engine.tutorialCounts;
-    if (action === 'eatRation') { done.meal++; return utility.eatRation(); }
-    if (action === 'cookMeal') { done.meal++; const msg = utility.cookMeal(); hud.renderHotbar(survival.slots); return msg; }
     if (action === 'fillWall') return this.engine.mission.fillShelterWall(survival);
     if (action === 'drainWall') return this.engine.mission.drainShelterWall(survival);
     if (action === 'waitStorm') {
@@ -999,20 +998,6 @@ export class StationPanel {
     };
   }
 
-  _galleyText(survival) {
-    const { crewStock, stations, utility } = this.engine;
-    const baskets = Object.entries(stations.harvestBaskets).map(([crop, count]) => `${crop}: ${count}`).join(', ');
-    return `PANTRY: ${Math.floor(crewStock.food)} / ${crewStock.maxFood} rations (shared with the crew)\n` +
-      `GREENHOUSE BASKETS: ${baskets}\n` +
-      `YOUR FOOD: ${Math.round(survival.food)} / ${survival.maxStat}\n` +
-      `CARROTS IN YOUR BAG: ${survival.countItem(BLOCK_IDS.HYDRO_PLANT)}\n` +
-      `FRESH FOOD BONUS: ${stations.freshFood > 0 ? 'ACTIVE (you work faster)' : 'none'}\n` +
-      `BASE WATER TANK: ${Math.round(survival.baseWater)} L${utility.cold ? '   (FROZEN)' : ''}\n\n` +
-      `The cook turns one harvested item into one ration using ${U.RATION_PREP_POWER}% power. Talk to the cook here in the kitchen [F] to pick up a packaged space ration for your inventory. Every ration you take is one less for your crew. ` +
-      'A fresh meal from the greenhouse costs water and power, but fills you up and gives you energy to work.\n' +
-      'Real case: astronauts mostly eat food packed on Earth; fresh crops supplement their meals. Preparing rations on Mars is a game model.';
-  }
-
   _radioText(s) {
     const c = this.engine.comms;
     const status = c.blackout
@@ -1033,7 +1018,9 @@ export class StationPanel {
   // Painel SCIENCE FOR EARTH (issue #269): o que a crianca achou, em itens com nome e pontos
   _sciencePanelHtml() {
     const { engine } = this;
-    const model = sciencePanelModel(engine.scienceStatus(), engine.currentSciencePackage(), engine.stations.rawSampleCount(engine.survival));
+    // Trade-off do ato 4 (issue #422): analisar aqui ou levar o tubo para a Terra
+    const choice = tubeChoice((itemId) => engine.survival.countItem(itemId), engine.mission.sampleTubes);
+    const model = sciencePanelModel(engine.scienceStatus(), engine.currentSciencePackage(), engine.stations.rawSampleCount(engine.survival), undefined, choice);
     return sciencePanelHtml(model, (row) => (row.kind === 'sample' ? getSampleItemIcon(row.icon) : getJournalIcon(row.icon)), { compact: true });
   }
 
@@ -1187,12 +1174,6 @@ export class StationPanel {
         ['READY TO SEND', `${this.engine.currentSciencePackage().items}`, null, 'air'],
         ['SIGNAL TO EARTH', comms.blackout ? 'OFFLINE' : `${comms.lightMinutes.toFixed(1)} min`, null, 'power'],
       ],
-      galley: [
-        ['CREW RATIONS', `${Math.floor(crewStock.food)} / ${crewStock.maxFood}`, pct(crewStock.food, crewStock.maxFood), 'food'],
-        ['YOUR FOOD', `${round(v.food)} / ${v.maxStat}`, pct(v.food, v.maxStat), 'food'],
-        ['CARROTS', `${v.countItem(BLOCK_IDS.HYDRO_PLANT)}`, null, 'food'],
-        ['WATER', `${round(v.baseWater)} L`, pct(v.baseWater, v.maxBaseWater), 'water'],
-      ],
       shelter: [
         ['WATER WALL', `${round(mission.shelterWaterL)} / ${RADIATION_CONFIG.SHELTER_WALL_MAX_L} L`, pct(mission.shelterWaterL, RADIATION_CONFIG.SHELTER_WALL_MAX_L), 'water'],
         ['RADIATION BLOCKED', `${round((1 - shelterDoseFactor(mission.shelterWaterL)) * 100)}%`, pct((1 - shelterDoseFactor(mission.shelterWaterL)) * 100), 'health'],
@@ -1205,7 +1186,6 @@ export class StationPanel {
       power: mission.oxygenPlant.mode === 'moxie' ? 'Mars air saves water but uses more power.' : 'Water makes air with less power, but uses water.',
       medical: 'Exercise helps keep your bones strong.',
       science: 'Sending discoveries costs power. Signals take time to reach Earth.',
-      galley: 'Rations are shared with your crew. Fresh meals use water and power.',
       shelter: 'Water in the wall shields you, but cannot be used for drinking.',
     };
     const symbols = { power: 'bolt', water: 'drop', air: 'air', health: 'heart', food: 'food', science: 'scope', earth: 'rock', warning: 'radiation' };
@@ -1214,13 +1194,12 @@ export class StationPanel {
       power: ['AIR LAB', 'Pick how to make air'],
       medical: ['HEALTH BAY', 'Take care of your crew'],
       science: ['DISCOVERY LAB', 'Explore Mars, share with Earth'],
-      galley: ['SPACE KITCHEN', 'Fuel up for your next mission'],
       shelter: ['STORM SHELTER', 'Build a water shield'],
     };
     const [eyebrow, subtitle] = scenes[this.type] ?? scenes.console;
     const sceneIcons = {
       console: ['home', 'radio'], power: ['drop', 'air'], medical: ['heart', 'check'],
-      science: ['scope', 'rock'], galley: ['plant', 'food'], shelter: ['shield', 'drop'],
+      science: ['scope', 'rock'], shelter: ['shield', 'drop'],
     };
     const artwork = (sceneIcons[this.type] ?? sceneIcons.console).map(name => pixelIconSvg(name)).join('');
     const hero = document.createElement('div'); hero.className = 'machine-hero';
@@ -1262,12 +1241,6 @@ export class StationPanel {
         ['NASA: storm shelters', SHELTER_SOURCES.nasa],
       ];
     }
-    if (type === 'galley') {
-      return [
-        ['NASA: space food systems', 'https://www.nasa.gov/directorates/esdmd/hhp/space-food-systems/'],
-        ['NASA: growing plants in space', 'https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/'],
-      ];
-    }
     if (type === 'science') {
       const links = [];
       if (this.engine.spaceWeather?.bulletin) {
@@ -1305,7 +1278,6 @@ export class StationPanel {
       baseWater: v.baseWater,
       maxBaseWater: v.maxBaseWater,
       regolith: v.countItem(BLOCK_IDS.REGOLITH),
-      carrots: v.countItem(BLOCK_IDS.HYDRO_PLANT),
       objective: m.objective,
       filter: s.filter,
       co2: s.co2,
@@ -1331,9 +1303,6 @@ export class StationPanel {
       stormPhase: mission.storm.phase,
       shelterWaterL: mission.shelterWaterL,
       shelterBlockedPct: Math.round((1 - shelterDoseFactor(mission.shelterWaterL)) * 100),
-      crewFood: crewStock.food,
-      maxCrewFood: crewStock.maxFood,
-      freshFoodActive: s.freshFood > 0,
       graywater: crewStock.graywater,
       cold: utility.cold,
       isNight: utility.isNight,
@@ -1428,7 +1397,6 @@ export class StationPanel {
       ]],
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\n${doseHistoryText(mission.doseBreakdown)}\n\n${MEDBAY_BONE_TEXT}`, [['treat', 'Use medical station']]],
       science: ['SCIENCE FOR EARTH & RADIO', this._radioText(s), [['sendScience', uploadButtonLabel(this.engine.currentSciencePackage())], ['analyze', `Analyze a sample (${SCIENCE_CONFIG.ANALYZE_POWER_COST}% power)`], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (uses ${SCIENCE_CONFIG.SUIT_UPGRADE_POINTS} unsent science points)`], ['upgradeTool', `Upgrade tool (uses ${SCIENCE_CONFIG.TOOL_UPGRADE_POINTS} unsent science points)`]]],
-      galley: ['KITCHEN & PANTRY', this._galleyText(v), [['cookMeal', `Cook fresh meal (1 carrot, ${U.MEAL_WATER_L} L, ${U.MEAL_POWER}% power)`]]],
       shelter: ['STORM SHELTER', this._shelterText(mission, v), [['fillWall', `Fill wall (+${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`], ['drainWall', `Drain wall (-${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`], ['waitStorm', stormSkipButtonLabel(this.engine.sleep.stormSkipStatus())]]],
     };
     const [title, text, buttons] = pages[this.type];
@@ -1440,8 +1408,6 @@ export class StationPanel {
         ? [['NASA: Oxygen Generation Assembly (ISS)', OXYGEN_SOURCES.oga], ['NASA ICES 2024: Sabatier and oxygen recovery', OXYGEN_SOURCES.sabatier], ['NASA: MOXIE made oxygen on Mars', OXYGEN_SOURCES.moxie]]
       : this.type === 'shelter'
         ? [['PREDICCS: water shielding (UNH, MSL/RAD data)', SHELTER_SOURCES.prediccs], ['NASA: storm shelters and water walls', SHELTER_SOURCES.nasa]]
-        : this.type === 'galley'
-          ? [['NASA: space food systems', 'https://www.nasa.gov/directorates/esdmd/hhp/space-food-systems/'], ['NASA: growing plants in space', 'https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/']]
         : this.type === 'science' && this.engine.spaceWeather?.bulletin
           ? [['NASA DONKI: read the full space weather bulletin', this.engine.spaceWeather.bulletin.url]]
         : this.type === 'greenhouse' ? [['CSA: food production', 'https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/'], ...plantResearch.studies.map(study => [study.id + ': NASA study', study.url])] : [];
@@ -1454,7 +1420,7 @@ export class StationPanel {
       link.rel = 'noopener noreferrer';
       return link;
     }));
-    const actionIcons = { 'o2mode:electrolysis': 'drop', 'o2mode:moxie': 'air', buildSabatier: 'up', filter: 'air', cleanBase: 'home', treat: 'heart', sendScience: 'radio', analyze: 'rock', send: 'radio', upgrade: 'up', upgradeTool: 'up', cookMeal: 'food', washUp: 'drop', serviceFilter: 'drop', printPart: 'rock', fillWall: 'up', drainWall: 'down', mission: 'medal' };
+    const actionIcons = { 'o2mode:electrolysis': 'drop', 'o2mode:moxie': 'air', buildSabatier: 'up', filter: 'air', cleanBase: 'home', treat: 'heart', sendScience: 'radio', analyze: 'rock', send: 'radio', upgrade: 'up', upgradeTool: 'up', washUp: 'drop', serviceFilter: 'drop', printPart: 'rock', fillWall: 'up', drainWall: 'down', mission: 'medal' };
     this.actions.replaceChildren(...buttons.map(([action, label]) => {
       const button = document.createElement('button'); button.className = 'mc-btn machine-action'; button.dataset.action = action;
       const icon = document.createElement('span'); icon.className = 'machine-action-icon'; icon.innerHTML = pixelIconSvg(actionIcons[action] ?? 'check'); icon.setAttribute('aria-hidden', 'true');

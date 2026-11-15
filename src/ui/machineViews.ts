@@ -13,7 +13,6 @@ export type MachineStationType =
   | 'power'
   | 'medical'
   | 'science'
-  | 'galley'
   | 'shelter';
 
 export interface DoseBreakdownView {
@@ -44,7 +43,6 @@ export interface MachineViewData {
   baseWater: number;
   maxBaseWater: number;
   regolith: number;
-  carrots: number;
   objective: string;
   filter: number;
   co2: number;
@@ -69,9 +67,6 @@ export interface MachineViewData {
   stormPhase: 'none' | 'warning' | 'active';
   shelterWaterL: number;
   shelterBlockedPct: number;
-  crewFood: number;
-  maxCrewFood: number;
-  freshFoodActive: boolean;
   graywater: number;
   cold: boolean;
   isNight: boolean;
@@ -120,7 +115,6 @@ const MACHINE_TITLES: Record<MachineStationType, string> = {
   power: 'AIR FACTORY',
   medical: 'MEDBAY SCAN',
   science: 'SCIENCE & RADIO',
-  galley: 'SPACE KITCHEN',
   shelter: 'STORM SHIELD',
 };
 
@@ -861,93 +855,10 @@ function renderScience(d: MachineViewData): { top: string; checks: string; stage
   return { top, checks: '', stage, side, fact };
 }
 
-/* ---------------- 5. GALLEY (SPACE KITCHEN) ---------------- */
-function renderGalley(d: MachineViewData): { top: string; checks: string; stage: string; side: string; fact: string } {
-  const top = [
-    resPill('beds', 'food', `${Math.floor(d.crewFood)}/${d.maxCrewFood}`, 'mc-res-rations', 'Crew rations'),
-    resPill('food', 'plant', `${d.carrots}`, 'mc-res-carrots', 'Carrots in bag'),
-    resPill('water', 'drop', `${Math.round(d.baseWater)} L`, 'mc-res-water', 'Base water'),
-    resPill('power', 'bolt', `${Math.round(d.energy)}%`, 'mc-res-power', 'Battery'),
-    d.cold ? alertPill('FROZEN!', 'danger') : '',
-  ].filter(Boolean).join('');
+// A cozinha (antigo painel 5, SPACE KITCHEN) nao tem mais painel: o cozinheiro recebe a planta e
+// entrega a racao com [F] (ato 3, issue #409).
 
-  const checks = checksHtml([
-    { ok: d.carrots >= 1, label: 'CARROT', detail: d.carrots >= 1 ? `${d.carrots} in bag` : 'Grow in greenhouse' },
-    { ok: d.baseWater >= U.MEAL_WATER_L && !d.cold, label: 'WARM WATER', detail: d.cold ? 'Turn heater on!' : `${Math.round(d.baseWater)} L ready` },
-    { ok: d.energy >= U.MEAL_POWER, label: 'POWER', detail: `${Math.round(d.energy)}% battery` },
-  ]);
-
-  const canCook = d.carrots >= 1 && d.baseWater >= U.MEAL_WATER_L && !d.cold && d.energy >= U.MEAL_POWER;
-
-  // Draw up to 8 ration boxes on pantry shelf
-  const totalSlots = Math.min(8, d.maxCrewFood);
-  const filledSlots = Math.round((Math.min(d.crewFood, d.maxCrewFood) / Math.max(1, d.maxCrewFood)) * totalSlots);
-  const shelfBoxes = Array.from({ length: totalSlots }, (_, i) => {
-    const x = 18 + i * 17;
-    return `<rect x="${x}" y="18" width="13" height="12" fill="${i < filledSlots ? '#fbbf24' : '#291e14'}" stroke="#78350f" stroke-width="1"/>`;
-  }).join('');
-
-  const svg = `
-    <svg class="mc-scene-svg" viewBox="0 0 168 128" shape-rendering="crispEdges" aria-hidden="true">
-      <rect x="0" y="0" width="168" height="128" fill="#1e150e"/>
-      <!-- Pantry Shelf -->
-      <rect x="12" y="10" width="144" height="24" fill="#2d1f14" stroke="#92400e" stroke-width="2"/>
-      ${shelfBoxes}
-      <!-- Rising Steam (or Ice if frozen) -->
-      ${d.cold
-        ? `<rect x="66" y="54" width="36" height="8" fill="#7dd3fc"/>`
-        : `<g class="mc-anim-float">
-             <rect x="70" y="48" width="6" height="6" fill="#fef3c7" fill-opacity="0.7"/>
-             <rect x="84" y="42" width="6" height="6" fill="#fef3c7" fill-opacity="0.7"/>
-             <rect x="96" y="50" width="5" height="5" fill="#fef3c7" fill-opacity="0.5"/>
-           </g>`}
-      <!-- Cooking Pot -->
-      <rect x="56" y="64" width="56" height="30" fill="#94a3b8"/>
-      <rect x="60" y="68" width="48" height="22" fill="#64748b"/>
-      <rect x="48" y="70" width="8" height="6" fill="#cbd5e1"/>
-      <rect x="112" y="70" width="8" height="6" fill="#cbd5e1"/>
-      <!-- Carrot peeking out -->
-      <rect x="74" y="58" width="14" height="6" fill="#fb923c"/>
-      <rect x="88" y="56" width="6" height="6" fill="#4ade80"/>
-      <!-- Burner Glow -->
-      <rect x="62" y="96" width="44" height="6" fill="${d.cold ? '#38bdf8' : '#f97316'}"/>
-      <!-- Counter -->
-      <rect x="0" y="102" width="168" height="26" fill="#451a03"/>
-      <rect x="0" y="102" width="168" height="3" fill="#b45309"/>
-    </svg>`;
-
-  const stage = `
-    <div class="mc-stage-box">
-      ${svg}
-      <div class="mc-stage-caption">
-        <span class="mc-cap-tag">${d.freshFoodActive ? 'BOOST ON' : 'HUNGER'}</span>
-        <strong>${d.freshFoodActive ? 'Working faster from fresh meal!' : `Your food: ${Math.round(d.food)}/${d.maxStat}`}</strong>
-      </div>
-    </div>`;
-
-  const side = `
-    <div class="mc-step-bar">COOK FRESH MEAL</div>
-    <div class="mc-action-stack">
-      ${actionCard({
-        action: 'cookMeal',
-        icon: 'pot',
-        title: 'COOK FRESH MEAL',
-        costHtml: `${costChip('food', '1')}${costChip('drop', `${U.MEAL_WATER_L}L`)}${costChip('bolt', `${U.MEAL_POWER}%`)}`,
-        badgeText: canCook ? 'COOK!' : 'NEED',
-        badgeTone: canCook ? 'ready' : 'off',
-        disabled: !canCook,
-      })}
-    </div>
-    <div class="mc-tip-pill">${pixelIconSvg('food')} Talk to cook [F] for ration (${Math.floor(d.crewFood)} left)</div>`;
-
-  const fact = `
-    <p><strong>Real Case:</strong> Astronauts mostly eat food packed on Earth, and fresh crops from space greenhouses supplement their meals with vitamins and flavor.</p>
-    <p>Cooking fresh meals on Mars here is a game rule that gives you a work speed boost!</p>`;
-
-  return { top, checks, stage, side, fact };
-}
-
-/* ---------------- 6. SHELTER (STORM SHIELD) ---------------- */
+/* ---------------- 5. SHELTER (STORM SHIELD) ---------------- */
 function renderShelter(d: MachineViewData): { top: string; checks: string; stage: string; side: string; fact: string } {
   const maxWall = RADIATION_CONFIG.SHELTER_WALL_MAX_L;
   const availableWater = d.shelterWaterL + d.baseWater;
@@ -1139,7 +1050,6 @@ export function renderMachineMonitorHtml(data: MachineViewData): string {
     case 'power': parts = renderPowerAir(data); break;
     case 'medical': parts = renderMedical(data); break;
     case 'science': parts = renderScience(data); break;
-    case 'galley': parts = renderGalley(data); break;
     case 'shelter': parts = renderShelter(data); break;
   }
 

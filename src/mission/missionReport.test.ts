@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, expect, it } from 'vitest';
-import { gradeFor, missionReport } from './missionReport.ts';
+import { gradeFor, launchSummary, missionReport } from './missionReport.ts';
 
 const GREAT = {
   hoursPlayed: 60, sols: 3, deaths: 0,
@@ -62,6 +62,16 @@ describe('missionReport (issue #90)', () => {
     expect(science({ discoveries: undefined, scanTotal: undefined, sampleTypes: undefined, sciencePointsSent: undefined, sciencePointsGoal: undefined })).toMatchObject({ grade: 'C', score: 0 });
   });
 
+  it('counts the sample tubes only here, apart from the science sent by radio (issue #422)', () => {
+    const science = (stats) => missionReport({ ...GREAT, ...stats }).categories.find((c) => c.id === 'science');
+    const radioOnly = science({ sciencePointsSent: 10 });
+    const withTubes = science({ sciencePointsSent: 10, scienceTubePoints: 12 });
+    expect(withTubes.detail).toBe('14 scans, 4 samples, 10 pts sent, 12 pts in tubes');
+    expect(withTubes.score).toBeGreaterThan(radioOnly.score);
+    // Sem tubos o texto nao muda
+    expect(science({ scienceTubePoints: 0 }).detail).toBe('14 scans, 4 samples, 20 pts sent');
+  });
+
   it('tells what the cadet found: count, journal rank and the 3 coolest finds (issue #271)', () => {
     const { explorer } = missionReport(GREAT);
     expect(explorer).toMatchObject({ found: 18, total: 29, text: 'You found 18 of 29 things', rank: 'SPECIALIST' });
@@ -77,5 +87,31 @@ describe('missionReport (issue #90)', () => {
   it('writes a friendly profile with a strength and a tip', () => {
     const farmer = missionReport({ ...GREAT, stormHours: 9, protectedStormHours: 5 });
     expect(farmer.profile.text).toMatch(/^You .+, but next time .+!$/);
+  });
+});
+
+// Ato 5 (#411): o boletim registra em qual janela de lancamento o foguete decolou
+describe('missionReport: launch window (issue #411)', () => {
+  it('has no launch line when the rocket did not lift off', () => {
+    expect(missionReport(GREAT).launch).toBeNull();
+    expect(missionReport({ ...GREAT, launched: false, launchWindow: 2 }).launch).toBeNull();
+  });
+
+  it('says the liftoff was on time in the first window', () => {
+    const { launch } = missionReport({ ...GREAT, launched: true, launchWindow: 1 });
+    expect(launch).toMatchObject({ window: 1, waitMonths: 0, onTime: true });
+    expect(launch.text).toBe('Liftoff in the first launch window: right on time');
+    expect(launchSummary({ launched: true }).window).toBe(1); // sem o campo vale a primeira
+  });
+
+  it('records the liftoff in the second window, after the real 26-month wait', () => {
+    const { launch } = missionReport({ ...GREAT, launched: true, launchWindow: 2 });
+    expect(launch).toMatchObject({ window: 2, waitMonths: 26, onTime: false });
+    expect(launch.text).toBe('Liftoff in the second launch window: the crew waited about 26 months');
+  });
+
+  it('adds one wait for every window missed', () => {
+    expect(launchSummary({ launched: true, launchWindow: 3 }).waitMonths).toBe(52);
+    expect(launchSummary({ launched: true, launchWindow: 5 }).text).toBe('Liftoff in launch window 5: the crew waited about 104 months');
   });
 });

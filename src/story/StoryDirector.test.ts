@@ -335,16 +335,21 @@ describe('StoryDirector', () => {
 
     // Pontos na mao bastam: enviar
     rawSamples = 0;
-    // As 3 pistas da missao (9 pontos) e o que falta em descobertas
-    found.push(sampleItem(0, { typeId: 'sample-ice-core', name: 'Ice', points: 2 }));
-    found.push(sampleItem(1, { typeId: 'sample-mudstone', name: 'Mudstone', points: 3 }));
-    found.push(sampleItem(2, { typeId: 'sample-sulfur', name: 'Sulfur', points: 4 }));
-    for (let i = 0; i < GOAL - 9; i += 1) found.push(discoveryItem({ id: `thing-${i}`, title: `Thing ${i}`, category: 'base' }));
+    // As 3 pistas da missao, 3 amostras de cada (27 pontos), e o que falta em descobertas
+    for (let i = 0; i < 3; i += 1) {
+      found.push(sampleItem(found.length, { typeId: 'sample-ice-core', name: 'Ice', points: 2 }));
+      found.push(sampleItem(found.length, { typeId: 'sample-mudstone', name: 'Mudstone', points: 3 }));
+      found.push(sampleItem(found.length, { typeId: 'sample-sulfur', name: 'Sulfur', points: 4 }));
+    }
+    for (let i = 0; i < GOAL - 27; i += 1) found.push(discoveryItem({ id: `thing-${i}`, title: `Thing ${i}`, category: 'base' }));
     f = frame(41);
     expect(f.view.task.label).toBe('SEND SCIENCE');
     expect(f.target).toBe('science');
     expect(director.objectiveId).toBe('send-data');
 
+    // Uma passagem do orbitador leva poucos itens: a meta fecha no segundo envio
+    expect(mission.sendData(found)).toMatchObject({ status: 'sent', dataSent: false });
+    mission.battery.charge = 100;
     expect(mission.sendData(found)).toMatchObject({ status: 'sent', dataSent: true });
     f = frame(41.5);
     expect(f.view.goals).toMatchObject({ sciencePoints: GOAL, dataSent: true });

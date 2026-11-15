@@ -150,6 +150,13 @@ describe('EventDirector', () => {
     const director = new EventDirector({ seed: 4 });
     expect(director.trigger('meteor', 2)).toBe(true);
     expect(director.trigger('nope', 2)).toBe(false);
+    // A historia pode fixar parte do sorteio: o redemoinho do ato 2 sempre cruza os paineis
+    for (let i = 0; i < 6; i++) {
+      const story = new EventDirector({ seed: 100 + i });
+      story.trigger('dustDevil', 1, { crossesPanels: true });
+      story.update(1);
+      expect(story.active).toMatchObject({ type: 'dustDevil', params: { crossesPanels: true } });
+    }
     director.update(2);
     const [start] = director.drainEvents();
     expect(start.type).toBe('event-start');

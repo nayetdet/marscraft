@@ -10,6 +10,7 @@ import {
   SURVIVAL_CONFIG,
 } from '../config/constants.ts';
 import { Battery, solarChargePerHour } from './energy.ts';
+import { tubesPoints } from './sampleTubes.ts';
 import { doseRateMsvPerHour, missionDoseMsvPerHour, radiationDamage } from './radiation.ts';
 import { DOSE_LIMIT_MSV, createDoseLedger, doseBreakdown, doseSourceFor } from './doseBudget.ts';
 import { OxygenPlant } from './oxygenPlant.ts';
@@ -60,6 +61,8 @@ export class MissionSystem {
     this.dataSource = dataSource;
     this.stormsStarted = stormsStarted;
     this.schedule = stormsStarted ? tutorialStorm(cmes, startHours, dataSource) : [];
+    // A tempestade do tutorial ja entrou na fila (por `startStorms` ou, no ato 3, `startTutorialStorm`)
+    this.tutorialStormScheduled = stormsStarted;
     // A tempestade do tutorial ja acabou (sobrevivendo ou nao): a exigencia do foguete esta paga
     this.tutorialStormDone = false;
     // Eventos reais do DONKI que ja viraram tempestade nesta partida (cada um entra uma vez so)
@@ -92,6 +95,9 @@ export class MissionSystem {
     this.dataSent = false;
     // Tubos de amostra carregados no foguete: cada um pede mais gelo para encher o tanque
     this.sampleTubes = 0;
+    // A amostra crua de cada tubo ({ typeId, name, points }, issue #422): ela nao foi analisada
+    // e os pontos dela so contam no boletim final (tubePoints)
+    this.tubeSamples = [];
     this._spareFuelIce = 0; // combustivel que sobrou ao tirar um tubo com o tanque cheio
     this.launched = false;
 
@@ -265,10 +271,36 @@ export class MissionSystem {
   }
 
   // Comeca a fila de tempestades a partir de `hours`. Chamar de novo nao refaz a fila.
+  // Se a historia ja marcou a tempestade do tutorial (`startTutorialStorm`, ato 3), ela fica
+  // como esta: aqui so se liberam as tempestades reais e a poeira.
   startStorms(hours) {
     if (this.stormsStarted) return;
     this.stormsStarted = true;
     this.dustWeather.start(hours);
+    if (this.tutorialStormScheduled) return;
+    this._scheduleTutorialStorm(hours);
+  }
+
+  // Ato 3 da historia (#409): marca so a tempestade do tutorial, a partir de `hours`, sem liberar
+  // as tempestades reais nem a poeira (isso continua no fim dos passos guiados, `startStorms`).
+  // Devolve false se ela ja estava marcada ou se a fila ja comecou.
+  startTutorialStorm(hours) {
+    if (this.stormsStarted || this.tutorialStormScheduled) return false;
+    this._scheduleTutorialStorm(hours);
+    return true;
+  }
+
+  // A tempestade do tutorial ja passou (ou os dados nao tem nenhuma CME para Marte, entao ela
+  // nunca vem): o passo de se abrigar do ato 3 pode terminar. Chamado a cada frame: nao aloca.
+  get tutorialStormOver() {
+    if (!this.tutorialStormScheduled) return false;
+    if (this.tutorialStormDone) return true;
+    for (const storm of this.schedule) if (storm.scripted) return false;
+    return true;
+  }
+
+  _scheduleTutorialStorm(hours) {
+    this.tutorialStormScheduled = true;
     this.schedule = tutorialStorm(this.cmes, hours, this.dataSource);
     this.storm = stormStateAt(this.schedule, hours);
     this._phaseKey = this._keyFor(this.storm);
@@ -543,21 +575,32 @@ export class MissionSystem {
     return pointsOf(picked);
   }
 
-  // Carrega 1 tubo de amostra no foguete. `analyzedSamples` = amostras analisadas no laboratorio
-  // (so elas viram tubos). O combustivel ja feito vale menos tanque: a mesma massa de combustivel
-  // agora tem que levantar um foguete mais pesado.
-  loadSampleTube(analyzedSamples) {
+  // Carrega 1 tubo de amostra no foguete (issue #422). `sample` = a amostra crua que sai da
+  // mochila ({ typeId, name, points }): ela nao e analisada aqui, entao nao vira pontos agora.
+  // O combustivel ja feito vale menos tanque: a mesma massa de combustivel agora tem que levantar
+  // um foguete mais pesado.
+  loadSampleTube(sample) {
     if (this.launched) return 'launched';
     if (this.sampleTubes >= SCIENCE_CONFIG.MAX_SAMPLE_TUBES) return 'full';
-    if (this.sampleTubes >= analyzedSamples) return 'no-samples';
-    this._rescaleFuel(this.sampleTubes + 1);
+    if (!sample) return 'no-samples';
+    this.tubeSamples.push({ typeId: sample.typeId, name: sample.name, points: sample.points });
+    this._rescaleFuel(this.tubeSamples.length);
     return 'loaded';
   }
 
+  // Tira o ultimo tubo: a amostra volta para a mochila (`lastUnloadedTube`) e pode ser analisada
   unloadSampleTube() {
+    this.lastUnloadedTube = null;
     if (this.launched || this.sampleTubes <= 0) return 'empty';
-    this._rescaleFuel(this.sampleTubes - 1);
+    this.lastUnloadedTube = this.tubeSamples.pop() ?? null;
+    this._rescaleFuel(this.tubeSamples.length);
     return 'unloaded';
+  }
+
+  // Pontos de ciencia que viajam nos tubos: contam so no boletim final, nunca para a meta de
+  // decolagem nem para as melhorias (issue #422)
+  get tubePoints() {
+    return tubesPoints(this.tubeSamples);
   }
 
   // Combustivel medido em blocos de gelo, para tirar um tubo e colocar de novo nao perder nada

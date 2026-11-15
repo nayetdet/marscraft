@@ -6,10 +6,12 @@ import { nextRocketJob, objectiveView, scienceTask } from '../story/objectiveVie
 import { objectiveTarget } from '../story/waypoints.ts';
 import { earthFarewell } from '../story/storyChapters.ts';
 import { sampleItem } from './sciencePackage.ts';
-import { CLUES, CLUES_ANSWER, allCluesSent, clueDue, clueStates, cluesUnsentText, isClueItem, nextClueIndex } from './clues.ts';
+import { CLUES, CLUES_ANSWER, CLUE_SAMPLES, allCluesSent, clueDue, clueSentCounts, clueStates, cluesUnsentText, isClueItem, nextClueIndex } from './clues.ts';
 
 const sample = (order: number, typeId: string) => sampleItem(order, { typeId, name: typeId, points: 2 });
 const [ICE, MUD, SULFUR] = CLUES.map((clue) => clue.typeId);
+// `n` amostras analisadas do mesmo tipo (a ordem da analise comeca em `from`)
+const samples = (n: number, typeId: string, from = 0) => Array.from({ length: n }, (_, i) => sample(from + i, typeId));
 
 describe('mission clues (issue #344)', () => {
   it('has 3 clues, each one a real sample type from the map, with a short label and answer', () => {
@@ -25,12 +27,33 @@ describe('mission clues (issue #344)', () => {
   it('follows each clue from the map to Earth: todo, bag, found, sent', () => {
     expect(clueStates()).toEqual(['todo', 'todo', 'todo']);
     expect(clueStates({}, (typeId) => typeId === ICE)).toEqual(['bag', 'todo', 'todo']);
-    expect(clueStates({ pending: [sample(0, ICE)] })).toEqual(['found', 'todo', 'todo']);
-    expect(clueStates({ pending: [sample(1, MUD)], sent: [sample(0, ICE)] }, (typeId) => typeId === SULFUR)).toEqual(['sent', 'found', 'bag']);
+    expect(clueStates({ pending: samples(CLUE_SAMPLES, ICE) })).toEqual(['found', 'todo', 'todo']);
+    expect(clueStates({ pending: samples(CLUE_SAMPLES, MUD, 10), sent: samples(CLUE_SAMPLES, ICE) }, (typeId) => typeId === SULFUR)).toEqual(['sent', 'found', 'bag']);
     // Uma amostra bonus (meteorito) nao e pista
     expect(clueStates({ sent: [sample(0, 'sample-meteorite')] })).toEqual(['todo', 'todo', 'todo']);
     expect(isClueItem(sample(0, 'sample-meteorite'))).toBe(false);
     expect(isClueItem(sample(0, SULFUR))).toBe(true);
+  });
+
+  it('counts a clue only with the 3 samples of its type analyzed and sent (act 4, issue #410)', () => {
+    expect(CLUE_SAMPLES).toBe(SAMPLE_SITE_CONFIG.PER_TYPE);
+    expect(CLUE_SAMPLES).toBe(3);
+    // 1 ou 2 analisadas: a pista ainda esta a caminho, mesmo que uma ja tenha sido enviada
+    expect(clueStates({ pending: samples(1, ICE) })).toEqual(['bag', 'todo', 'todo']);
+    expect(clueStates({ pending: samples(1, ICE, 2), sent: samples(2, ICE) })).toEqual(['found', 'todo', 'todo']);
+    expect(clueStates({ sent: samples(2, ICE) })).toEqual(['bag', 'todo', 'todo']);
+    expect(clueStates({ sent: samples(3, ICE) })).toEqual(['sent', 'todo', 'todo']);
+    expect(allCluesSent(clueStates({ sent: [...samples(3, ICE), ...samples(3, MUD, 3), ...samples(2, SULFUR, 6)] }))).toBe(false);
+    expect(allCluesSent(clueStates({ sent: [...samples(3, ICE), ...samples(3, MUD, 3), ...samples(3, SULFUR, 6)] }))).toBe(true);
+    // Areia e meteorito dao pontos, mas nao sao pista
+    expect(clueStates({ sent: [...samples(3, 'sample-meteorite'), ...samples(3, 'sample-dune-sand', 3)] })).toEqual(['todo', 'todo', 'todo']);
+  });
+
+  it('counts how many samples of each clue are home, for the panel (OLD LAKE 2/3)', () => {
+    const out: number[] = [9, 9, 9, 9];
+    expect(clueSentCounts({ sent: [...samples(2, MUD), ...samples(5, SULFUR, 2)], pending: samples(3, ICE, 7) }, out)).toBe(out);
+    expect(out).toEqual([0, 2, 3]);
+    expect(clueSentCounts()).toEqual([0, 0, 0]);
   });
 
   it('reuses the array it is given (the engine calls it every frame)', () => {
@@ -103,8 +126,8 @@ describe('clue sample sites (issue #344)', () => {
   const distance = (site: { x: number; z: number }) => Math.hypot(site.x - base.x, site.z - base.z);
   const first = (typeId: string) => sites.find((site) => site.typeId === typeId)!;
 
-  it('places one site of every clue type', () => {
-    for (const clue of CLUES) expect(first(clue.typeId), clue.id).toBeTruthy();
+  it('places a whole field of every clue type: as many sites as the clue needs', () => {
+    for (const clue of CLUES) expect(sites.filter((site) => site.typeId === clue.typeId), clue.id).toHaveLength(CLUE_SAMPLES);
   });
 
   it('puts the lake clue at a middle distance and the sulfur clue far away, each in its own ring', () => {

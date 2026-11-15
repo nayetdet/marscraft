@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { MAV_CONFIG, STORY_CONFIG } from '../config/constants.ts';
+import { ACT4_CONFIG, MAV_CONFIG, STORY_CONFIG } from '../config/constants.ts';
 import { WINDOW_CLOSED } from '../story/storyChapters.ts';
 import { cardSpeaker, speakerFaceSvg } from '../story/radioSpeakers.ts';
 import { pixelIconSvg } from './pixelIcons.ts';
@@ -90,6 +90,14 @@ export class StoryHud {
     this.stepCountEl = $('story-step-count');
     this.stepsEl = $('story-steps');
     this.stepEls = [...this.stepsEl.querySelectorAll('.story-step')];
+    // Ato 4 (issue #410): contagem do passo e contador de ciencia
+    this.tallyEl = $('story-tally');
+    this.tallyEls = [];
+    this.scienceEl = $('story-science');
+    this.scienceFoundEl = $('story-science-found');
+    this.scienceSentEl = $('story-science-sent');
+    this.scienceGoalEl = $('story-science-goal');
+    this.scienceEl.style.setProperty('--flash-ms', `${ACT4_CONFIG.COUNTER_FLASH_MS}ms`);
 
     // Selo de certificado do treino de cadete (issue #88)
     this.certEl = $('cert-badge');
@@ -137,7 +145,9 @@ export class StoryHud {
     });
     // Na captura: com um card de escolha na tela, [1] e [2] vao para o card e nao trocam o item da mao
     document.addEventListener('keydown', (e) => this._onChoiceKey(e), true);
-    $('window-play-again-btn').addEventListener('click', () => window.location.reload());
+    // Continue (ato 5, #411): a tripulacao esperou a proxima janela; quem reabre e o Act5Controller
+    this.onContinue = () => {};
+    $('window-play-again-btn').addEventListener('click', () => this.onContinue());
   }
 
   // view: resultado de objectiveView() (src/story/objectiveView.js) ou null para esconder o painel
@@ -185,10 +195,32 @@ export class StoryHud {
       });
     }
 
+    // Contagem do passo (ato 4): um quadradinho por tipo de amostra ou por pista
+    const tally = view.tally ?? null;
+    setClass(this.tallyEl, tally ? 'story-tally' : 'story-tally hidden');
+    if (tally) {
+      while (this.tallyEls.length < tally.length) this.tallyEls.push(this.tallyEl.appendChild(el('span')));
+      while (this.tallyEls.length > tally.length) this.tallyEls.pop().remove();
+      for (let i = 0; i < tally.length; i++) {
+        const row = tally[i];
+        setText(this.tallyEls[i], `${row.label} ${row.have}/${row.need}`);
+        setClass(this.tallyEls[i], row.have >= row.need ? 'done' : row.have > 0 ? 'some' : '');
+      }
+    }
+    // Contador de ciencia: o numero pisca quando sobe
+    const science = view.science ?? null;
+    setClass(this.scienceEl, science ? 'story-science' : 'story-science hidden');
+    if (science) {
+      this._setCount(this.scienceFoundEl, science.found);
+      this._setCount(this.scienceSentEl, science.sent);
+      setText(this.scienceGoalEl, `/${science.goal}`);
+    }
+
     setClass(this.goalsEl, view.goals ? 'story-goals' : 'story-goals hidden');
     if (view.goals) {
       const { storms, stormsNeeded, dataSent, sciencePoints = 0, scienceGoal = 0 } = view.goals;
-      setText(this.dataPointsEl, scienceGoal > 0 ? `${sciencePoints}/${scienceGoal}` : '');
+      // Com o contador de ciencia a vista, o cabecalho nao repete os pontos
+      setText(this.dataPointsEl, !science && scienceGoal > 0 ? `${sciencePoints}/${scienceGoal}` : '');
       this.pipEls.forEach((node, i) => setClass(node, i < storms ? 'on' : ''));
       setClass(this.stormsGoalEl, storms >= stormsNeeded ? 'story-goal done' : 'story-goal');
       setClass(this.dataGoalEl, dataSent ? 'story-goal done' : 'story-goal');
@@ -204,6 +236,18 @@ export class StoryHud {
       setWidth(this.timerFillEl, view.timer.fill);
       setText(this.timerLabelEl, view.timer.label);
     }
+  }
+
+  // Numero do contador de ciencia: so escreve quando muda e pisca quando sobe
+  _setCount(node, value) {
+    if (node._value === value) return;
+    const rose = node._value !== undefined && value > node._value;
+    node._value = value;
+    node.textContent = String(value);
+    if (!rose) return;
+    node.classList.remove('is-up');
+    void node.offsetWidth; // reinicia a animacao
+    node.classList.add('is-up');
   }
 
   // Passos do painel (a volta de trabalho tem 3)
@@ -322,6 +366,11 @@ export class StoryHud {
     document.getElementById('window-text').textContent = WINDOW_CLOSED.text;
     document.getElementById('window-source').textContent = WINDOW_CLOSED.source;
     this.windowOverlayEl.classList.remove('hidden');
+  }
+
+  hideWindowClosed() {
+    this.isWindowClosedShown = false;
+    this.windowOverlayEl.classList.add('hidden');
   }
 
   _next() {

@@ -89,12 +89,14 @@ export const TUTORIAL_STEPS = [
     zone: 'kitchen',
     icon: 'food',
     label: 'EAT A MEAL',
-    hint: 'Kitchen: press F, then EAT A RATION',
+    // A cozinha nao tem mais painel (ato 3, #409): o cozinheiro entrega a racao com [F] e a
+    // crianca come pela hotbar. Pegar a racao ja conta (quem esta sem fome nao fica preso).
+    hint: 'Kitchen: press F on the cook, then eat the ration',
     place: 'kitchen',
-    objective: 'Eat a ration in the kitchen',
+    objective: 'Get a ration from the cook in the kitchen and eat it',
     lines: [
-      { icon: 'food', text: 'Go to the KITCHEN: press F' },
-      { icon: 'check', text: 'Choose EAT A RATION' },
+      { icon: 'food', text: 'KITCHEN: press F on the cook' },
+      { icon: 'check', text: 'Pick the ration, then right-click to eat' },
       { icon: 'heart', text: 'The pantry feeds the whole crew' },
     ],
     needs: [{ resource: 'food', amount: STORY_CONFIG.TUTORIAL_RATIONS_NEEDED }],

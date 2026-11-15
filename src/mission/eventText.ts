@@ -97,10 +97,10 @@ export function quakeToast({ stationName, lostPct }) {
   return `Marsquake! The ${stationName} lost ${lostPct}% health. Everyone is safe.`;
 }
 
-// `cleanedPct`: quanto da poeira dos paineis saiu (null se o jogo ainda nao tem poeira nos paineis)
-export function dustDevilPanelsToast(cleanedPct) {
-  return cleanedPct > 0
-    ? `The dust devil swept the solar field: ${cleanedPct}% of the panel dust blew away!`
+// `panels`: quantos paineis o redemoinho limpou por inteiro, de `total` (ato 2, #408)
+export function dustDevilPanelsToast(panels, total = 5) {
+  return panels > 0
+    ? `The dust devil swept ${panels} of your ${total} solar panels clean! Brush the others yourself.`
     : 'The dust devil crossed the solar field.';
 }
 

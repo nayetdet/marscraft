@@ -1,6 +1,7 @@
 // @ts-nocheck
-import { RADIATION_CONFIG } from '../config/constants.ts';
+import { ACT5_CONFIG, RADIATION_CONFIG } from '../config/constants.ts';
 import { BASE_DOSE_MSV_PER_HOUR } from './radiation.ts';
+import { handoverSummary } from '../story/acts/act5Handover.ts';
 
 // Boletim do cadete (issue #90): 5 notas (S, A, B, C) calculadas com o que o jogador fez na
 // partida, mais uma frase de perfil e o que ele descobriu (issue #271). Logica pura: o ReportCard
@@ -15,8 +16,11 @@ import { BASE_DOSE_MSV_PER_HOUR } from './radiation.ts';
 //   discoveries, scanTotal,                          // scanner: alvos desta partida / alvos que existem
 //   sampleTypes, samplesAnalyzed,                    // amostras do mapa analisadas no laboratorio
 //   sciencePointsSent, sciencePointsGoal,            // pontos de ciencia enviados / meta do foguete
+//   scienceTubePoints,                               // pontos nos tubos de amostra (issue #422): so contam aqui
 //   journalFound, journalTotal, journalRank,         // diario [J]: fichas abertas e patente
 //   topFinds: [{ name, points }],                    // as descobertas que valem mais
+//   launched, launchWindow,                          // decolou? em qual janela (1 = a primeira)
+//   baseHandover,                                    // a base na decolagem (act5Handover.ts, #423)
 // }
 
 const clamp01 = (v) => Math.max(0, Math.min(1, Number.isFinite(v) ? v : 0));
@@ -122,10 +126,12 @@ export const REPORT_CATEGORIES = [
     score(s) {
       const scans = Math.min(1, num(s.discoveries) / Math.max(1, num(s.scanTotal) * FULL_SCAN_SHARE));
       const samples = Math.min(1, num(s.sampleTypes) / FULL_SAMPLE_TYPES);
-      const sent = Math.min(1, num(s.sciencePointsSent) / Math.max(1, num(s.sciencePointsGoal) * FULL_SENT_FACTOR));
+      // Radio e tubos de amostra juntos: os pontos dos tubos (issue #422) so contam aqui, no boletim
+      const home = num(s.sciencePointsSent) + num(s.scienceTubePoints);
+      const sent = Math.min(1, home / Math.max(1, num(s.sciencePointsGoal) * FULL_SENT_FACTOR));
       return clamp01(SCIENCE_WEIGHTS.scans * scans + SCIENCE_WEIGHTS.samples * samples + SCIENCE_WEIGHTS.sent * sent);
     },
-    detail: (s) => `${num(s.discoveries)} scans, ${num(s.samplesAnalyzed)} samples, ${num(s.sciencePointsSent)} pts sent`,
+    detail: (s) => `${num(s.discoveries)} scans, ${num(s.samplesAnalyzed)} samples, ${num(s.sciencePointsSent)} pts sent${num(s.scienceTubePoints) > 0 ? `, ${num(s.scienceTubePoints)} pts in tubes` : ''}`,
   },
 ];
 
@@ -140,6 +146,26 @@ export function explorerSummary(stats) {
     text: `You found ${found} of ${total} things`,
     rank: stats.journalRank ?? 'CADET',
     top: (stats.topFinds ?? []).slice(0, 3).map((find) => ({ name: find.name, points: find.points })),
+  };
+}
+
+const ORDINALS = ['first', 'second', 'third'];
+
+// Em qual janela de lancamento o foguete decolou (ato 5, #411). Quem deixa a janela fechar e
+// aperta Continue decola numa janela depois da primeira: o boletim registra a espera. null se o
+// foguete nao decolou (tela de janela fechada).
+export function launchSummary(stats) {
+  if (!stats.launched) return null;
+  const window = Math.max(1, Math.round(num(stats.launchWindow)) || 1);
+  const waitMonths = (window - 1) * ACT5_CONFIG.WINDOW_WAIT_MONTHS;
+  const name = ORDINALS[window - 1] ? `the ${ORDINALS[window - 1]} launch window` : `launch window ${window}`;
+  return {
+    window,
+    waitMonths,
+    onTime: window === 1,
+    text: window === 1
+      ? `Liftoff in ${name}: right on time`
+      : `Liftoff in ${name}: the crew waited about ${waitMonths} months`,
   };
 }
 
@@ -171,5 +197,5 @@ export function missionReport(stats) {
     ? { title: 'Mission Commander', text: 'You did great at everything. Earth is proud of you!' }
     : { title: top.profile, text: `You ${top.strength}, but next time ${low.tip}!` };
 
-  return { categories, profile, explorer: explorerSummary(stats) };
+  return { categories, profile, explorer: explorerSummary(stats), launch: launchSummary(stats), handover: handoverSummary(stats) };
 }

@@ -684,11 +684,9 @@ export const UTILITY_CONFIG = {
   HEATER_NIGHT_PER_HOUR: 2,
   // Luz de cultivo da estufa: so gasta com a luz ligada (escala de jogo; era 2,5 antes da #81)
   GREENHOUSE_LIGHTS_PER_HOUR: 1.25,
-  // B3 cozinha: racao da despensa (compartilhada com a tripulacao) x refeicao fresca da estufa
+  // B3 cozinha: racao da despensa (compartilhada com a tripulacao). A refeicao fresca saiu no
+  // ato 3 (#409): a planta colhida vira racao nas maos do cozinheiro (RATION_PREP_*)
   RATION_FOOD: 6,
-  MEAL_WATER_L: 1,
-  MEAL_POWER: 2,
-  MEAL_HEAL: 2,
   // B4 reciclador de agua: limpa a agua cinza sozinho e gasta bateria por litro limpo.
   // [Ref] a Estacao Espacial recupera ~98 % da agua (STATION_CONFIG.WATER_RECOVERY). O custo de
   // energia e regra de jogo: 30 L por hora (STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR) = 0,6 %/h,
@@ -737,7 +735,7 @@ export const STATION_CONFIG = {
   DUST_DAMAGE: 0.015, DECONTAMINATION_COST: 2, FILTER_COST: 4,
   EXERCISE_COST: 3, TREATMENT_COST: 5,
   COMMS_COST: 3, COMMS_DELAY: 40,
-  FITNESS_DECAY: 0.015, FRESH_FOOD_DURATION: 120,
+  FITNESS_DECAY: 0.015,
   SUIT_RADIATION_DAMAGE_FACTOR: 0.65,
 };
 
@@ -944,7 +942,9 @@ export const WEATHER_CONFIG = {
 export const SCIENCE_CONFIG = {
   // Uma moeda so: pontos de ciencia (issue #269). Cada coisa que a crianca acha vale pontos, e o
   // foguete so decola com POINTS_TO_LAUNCH pontos enviados para a Terra. Regras de jogo.
-  POINTS_TO_LAUNCH: 10,
+  // Ato 4 (issue #410): as 15 amostras do mapa somam 42 pontos; com a meta em 30 da para decolar
+  // sem escanear tudo, mas nao sem a coleta.
+  POINTS_TO_LAUNCH: 30,
   // Descoberta do scanner: comum (terreno, base) x rara (ceu e paisagem, mais dificeis de achar)
   POINTS_PER_DISCOVERY: 1,
   POINTS_PER_RARE_DISCOVERY: 2,
@@ -967,6 +967,9 @@ export const SCIENCE_CONFIG = {
   // verdade pesa: regra de jogo, para a escolha "levar mais ciencia x buscar mais gelo" aparecer.
   ICE_PER_SAMPLE_TUBE: 1,
   MAX_SAMPLE_TUBES: 4,
+  // Trade-off do ato 4 (issue #422, src/mission/sampleTubes.ts): a amostra que viaja no tubo nao
+  // e analisada aqui e vale este tanto a mais, contado so no boletim final. Regra de jogo.
+  TUBE_POINTS_FACTOR: 2,
   // Pistas da missao (issue #344, src/mission/clues.ts): a seta manda buscar uma pista a cada
   // tantos blocos de gelo entregues, para a ciencia e o combustivel andarem juntos. Regra de jogo.
   ICE_PER_CLUE_TRIP: 2,
@@ -976,15 +979,21 @@ export const SCIENCE_CONFIG = {
 // real. Os fatos de cada tipo sao reais (src/data/sampleTypes.ts, docs/data/numeros-reais.md).
 export const SAMPLE_SITE_CONFIG = {
   SEED: 2026,
-  COUNT: 10,
+  // Ato 4 (issue #410): 3 amostras de cada um dos 5 tipos. Cada tipo fica num campo so, com as
+  // pedrinhas a poucos blocos uma da outra: sao 5 saidas, nao 15. Regra de jogo.
+  COUNT: 15,
+  PER_TYPE: 3,
+  FIELD_RADIUS: 4, // blocos do centro do campo ate cada pedrinha
+  FIELD_MIN_GAP: 2, // blocos entre duas pedrinhas do mesmo campo
+  FIELD_TRIES: 40, // sorteios por campo antes de tentar outro centro
   // Distancia do centro da base, em blocos: longe o bastante para ser um passeio de EVA
   MIN_RADIUS: 40,
   MAX_RADIUS: 78,
-  MIN_SPACING: 12, // blocos entre dois locais
+  MIN_SPACING: 12, // blocos entre os centros de dois campos
   PLACEMENT_TRIES: 600,
   // Amostras de gelo ficam perto da cratera de gelo (anel em volta do centro dela)
   ICE_RING: [13, 18],
-  // Pistas da missao (issue #344): o primeiro local de cada tipo fica num anel proprio em volta
+  // Pistas da missao (issue #344): o campo de cada tipo fica num anel proprio em volta
   // da base, cada vez mais longe (o gelo ja fica perto, na cratera de gelo). Regra de jogo.
   CLUE_RINGS: { 'sample-mudstone': [40, 48], 'sample-sulfur': [64, 76] } as Record<string, [number, number]>,
   INTERACT_RADIUS: 3.2, // blocos: de perto, olhando para a amostra
@@ -1083,8 +1092,9 @@ export const EVENTS_CONFIG = Object.freeze({
   // Escala de jogo: Fobos e menor que o Sol visto de Marte, entao a queda real e parcial.
   ECLIPSE_SUNLIGHT_DROP: 0.4,
 
-  // Redemoinho: limpa esta fracao da poeira dos paineis se passar pelo campo solar (#103)
-  DUST_DEVIL_PANEL_CLEAN: 0.3,
+  // Redemoinho: limpa por inteiro este tanto de paineis (dos 5) se passar pelo campo solar, os
+  // mais perto do caminho dele (#103, #408). Os outros a crianca limpa a mao.
+  DUST_DEVIL_PANELS_CLEANED: 2,
   DUST_DEVIL_SPEED: 2.6, // blocos/s
   DUST_DEVIL_HIT_RADIUS: 3, // perto disso o jogador fica no meio da poeira
   DUST_DEVIL_BLIND_SECONDS: 3,
@@ -1096,19 +1106,71 @@ export const EVENTS_CONFIG = Object.freeze({
 // Ato 2 (issue #408): tempestade de poeira, paineis, vazamento, luneta e diario.
 // Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
 export const ACT2_CONFIG = {
+  // Tempestade de poeira roteirizada: comeca com o passo CLEAN THE PANELS. Aviso curto (0,5 h de
+  // jogo = 25 s reais) e tempestade bem mais curta que as sorteadas (6 a 9 h), para ninguem
+  // esperar 5 minutos; em troca ela suja os paineis mais rapido (cerca de 60 % no total).
+  STORY_DUST_STORM_LEAD_HOURS: 0.5,
+  STORY_DUST_STORM_HOURS: 1.5, // 75 s reais
+  STORY_DUST_STORM_RAMP_HOURS: 0.3,
+  STORY_DUST_STORM_PEAK_TAU: 9,
+  STORY_DUST_STORM_DUST_PER_HOUR: 0.4,
+  // Poeira minima em cada painel quando a tempestade roteirizada chega (para sempre haver o que limpar)
+  STORY_DUST_STORM_START_DUST: 0.3,
+  // O redemoinho passa pelo campo solar nesta fracao da tempestade
+  STORY_DUST_DEVIL_AT: 0.35,
+  // O passo CLEAN THE PANELS termina com todos os paineis abaixo disto
+  PANELS_CLEAN_BELOW: 0.1,
+  // Limpar la fora durante uma tempestade de poeira gasta o traje este tanto mais rapido.
+  // Regra de jogo. O fato real por tras (poeira lunar gastou os trajes da Apollo) esta em
+  // docs/data/numeros-reais.md.
+  STORM_SUIT_WEAR_MULTIPLIER: 2,
+  // Vazamento roteirizado: a janela rachada perde ar bem mais devagar que um buraco aberto
+  // (BASE_OXYGEN_LEAK_RATE = 5 %/s) e o ar nunca cai abaixo do piso: ninguem morre dele.
+  STORY_LEAK_RATE: 0.15, // % do ar da base por segundo
+  STORY_LEAK_FLOOR: 30, // % do ar da base
+  // Janelas do habitat que podem rachar (bloco de vidro no meio da janela; uma e sorteada pela semente)
+  STORY_LEAK_WINDOWS: [
+    { x: -7, y: 11, z: -7 }, // parede oeste
+    { x: 13, y: 11, z: 3 }, // parede leste
+    { x: 9, y: 11, z: 6 }, // parede sul
+  ],
+  WINDOW_SCAN_SECONDS: 1.2, // tempo de escanear uma janela com a luneta
+  WINDOW_PANE_MAX_BLOCKS: 40, // tamanho maximo de uma janela (blocos de vidro vizinhos)
+  // O engenheiro leva este tempo (segundos reais) para buscar o vidro novo
+  STORY_REPAIR_FETCH_SECONDS: 10,
+  REPAIR_REACH: 4.5, // blocos: distancia maxima para trocar a janela rachada
 };
 
 // Ato 3 (issue #409): abrigo na tempestade solar, planta, racao e academia.
 // Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
 export const ACT3_CONFIG = {
+  // Trade-off da luz da estufa a noite (issue #420): segundos do card LIGHTS ON x LIGHTS OFF na
+  // tela. Sem resposta, a luz fica como estava.
+  NIGHT_LIGHTS_CARD_SECONDS: 20,
 };
 
 // Ato 4 (issue #410): traje, 3 amostras de cada tipo, analise e envio.
 // Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
 export const ACT4_CONFIG = {
+  // Tempo que o numero do contador de ciencia pisca quando os pontos sobem (ms, so interface)
+  COUNTER_FLASH_MS: 900,
 };
 
 // Ato 5 (issue #411): a corrida final, a decolagem e o que vem depois (Continue).
 // Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
 export const ACT5_CONFIG = {
+  // Meses entre uma janela de lancamento e a seguinte: periodo sinodico de Marte, 779,94 dias
+  // (NASA Mars Fact Sheet; docs/data/numeros-reais.md). Aparece no boletim de quem decolou numa
+  // janela depois da primeira.
+  WINDOW_WAIT_MONTHS: 26,
+  // Como deixar a base (issue #423). Arrumar a base antes do IGNITE (a tripulacao limpa os
+  // paineis) gasta estas horas da janela de lancamento. Regra de jogo.
+  HANDOVER_WINDOW_HOURS: 2,
+  // Metas de "base pronta para a proxima tripulacao" no boletim: tanque de agua pelo menos nesta
+  // fracao, poeira nos paineis ate este teto (0 a 1) e esta fracao dos campos da estufa plantada
+  HANDOVER_WATER_FRACTION: 0.5,
+  HANDOVER_MAX_PANEL_DUST: 0.15,
+  HANDOVER_FIELDS_FRACTION: 0.5,
+  // Segundos reais do card de escolha na tela (mais que um card comum: tem 3 itens e 2 opcoes)
+  HANDOVER_CARD_SECONDS: 20,
 };

@@ -19,29 +19,36 @@ import { SPEAKERS } from './radioSpeakers.ts';
 
 // Os baloes do tutorial (ato 1) ficam em src/story/tutorialSteps.ts, um por passo.
 export const CARDS = {
-  // A missao inteira num card: a rotina que se repete ate o tanque encher, a ciencia e o prazo.
-  // A janela de lancamento ja esta aberta. A tempestade tem o card dela, na hora em que chega.
+  // Abertura do ato 5 (#411), a corrida final: gelo, foguete e prazo. A janela de lancamento abre
+  // agora. O que mais o foguete pede (tempestade, ciencia) o painel do objetivo mostra se faltar.
   act2: {
     title: 'FILL THE ROCKET',
     speaker: SPEAKERS.engineer,
     lines: [
-      { icon: 'ice', text: 'Get ice at the crater' },
+      { icon: 'clock', text: 'The launch window is open' },
+      { icon: 'ice', text: 'Get the ice the rocket needs' },
       { icon: 'rocket', text: 'Load it into the rocket' },
-      { icon: 'rock', text: 'Find 3 clues: was Mars alive?' },
-      { icon: 'radio', text: 'Send the clues to Earth' },
-      { icon: 'clock', text: 'Launch before the window closes' },
+      { icon: 'check', text: 'Press IGNITE before the window closes' },
     ],
   },
-  // Como usar a luneta. O passo `scan` saiu do ato 1 (#407) e o ato 2 (#408) ainda nao entrega a
-  // luneta por um tripulante: ate la, este card aparece quando a missao comeca, logo depois do
-  // card da rotina, para a ciencia que o foguete pede nao ficar sem explicacao.
-  scopeGuide: {
-    title: 'USE YOUR SCOPE',
+  // Continue na tela de janela fechada (ato 5, #411): outra janela, no mesmo mundo
+  secondWindow: {
+    title: 'A NEW LAUNCH WINDOW',
     speaker: SPEAKERS.engineer,
     lines: [
-      { icon: 'scope', text: 'Pick the SCOPE in your hotbar' },
-      { icon: 'check', text: 'Left-click scans; right-click opens or closes it' },
-      { icon: 'radio', text: 'Scans become science for Earth' },
+      { icon: 'clock', text: 'The crew waited for the next window' },
+      { icon: 'rocket', text: 'Fill the rocket and press IGNITE' },
+    ],
+    source: 'Mars launch windows: about every 26 months (NASA)',
+  },
+  // Continue na tela de vitoria (ato 5, #411): modo livre, sem objetivo nem prazo
+  freePlay: {
+    title: 'FREE PLAY',
+    speaker: SPEAKERS.engineer,
+    lines: [
+      { icon: 'rocket', text: 'The rocket is on its way home' },
+      { icon: 'home', text: 'No deadline now: the base is yours' },
+      { icon: 'storm', text: 'Storms and Mars events still come' },
     ],
   },
   // Fim do tutorial guiado: dai em diante o jogo e a rotina de encher o foguete

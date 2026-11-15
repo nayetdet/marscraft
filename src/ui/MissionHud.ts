@@ -37,7 +37,7 @@ function setText(el, text, className) {
 }
 
 export class MissionHud {
-  constructor({ donkiFetched, onLoadIce, onLoadSample, onUnloadSample, onToggleFactory, onIgnite, onClose }) {
+  constructor({ donkiFetched, onLoadIce, onLoadSample, onUnloadSample, onToggleFactory, onIgnite, onClose, onContinue }) {
     this.donkiFetched = donkiFetched;
     const $ = (id) => document.getElementById(id);
 
@@ -97,7 +97,8 @@ export class MissionHud {
     this.tubeUnloadBtn.addEventListener('click', () => onUnloadSample?.());
     this.igniteBtn.addEventListener('click', () => onIgnite());
     $('mav-close').addEventListener('click', () => onClose());
-    $('play-again-btn').addEventListener('click', () => window.location.reload());
+    // Continue (ato 5, #411): fecha a tela final e o jogo segue em modo livre (Act5Controller)
+    $('play-again-btn').addEventListener('click', () => onContinue?.());
   }
 
   // Guarda os nos de uma linha do painel e desenha o icone uma vez
@@ -141,7 +142,8 @@ export class MissionHud {
   }
 
   // `survival` traz a agua da base e `stations` o ar do habitat (CO2, poeira)
-  update(mission, { survival, stations, world } = {}) {
+  // `storyLeak`: vazamento roteirizado do ato 2 ('hidden' | 'found' | null), sem buraco na parede
+  update(mission, { survival, stations, world, storyLeak = null } = {}) {
     const view = missionStatus(mission, this.donkiFetched, {
       water: survival?.baseWater,
       maxWater: survival?.maxBaseWater,
@@ -151,6 +153,7 @@ export class MissionHud {
       baseOxygen: survival?.baseOxygen,
       contaminated: stations?.contaminated,
       brokenWindows: world?.brokenBaseBlocks.size ?? 0,
+      storyLeak,
       suitOxygen: survival?.isSuitProtectingO2 ? (survival.suitOxygen / 100) * survival.maxStat : survival?.oxygen,
       oxygenNeedsPower: survival?.oxygenNeedsPower,
       insideHabitat: survival?.insidePressurizedShip,
@@ -245,7 +248,8 @@ export class MissionHud {
     this.mavOverlayEl.classList.add('hidden');
   }
 
-  // `analyzedSamples`: amostras analisadas no laboratorio (as que podem virar tubos);
+  // `analyzedSamples`: amostras cruas da mochila que podem ir num tubo (issue #422: a amostra do
+  // tubo nao e analisada; as de pista nao entram);
   // `science`: pontos de ciencia desta partida ({ pendingPoints, sentPoints }, sciencePackage.scienceStatus)
   updateMavPanel(mission, iceInBag, analyzedSamples = 0, science = { pendingPoints: 0, sentPoints: 0 }) {
     if (!this.isMavPanelOpen) return;
@@ -311,7 +315,7 @@ export class MissionHud {
     setClass(this.pillDataEl, `mav-check-tile${vm.dataSent ? ' is-ok' : ''}`);
 
     setText(this.tubesEl, `${tubes}/${vm.maxSampleTubes}`);
-    this.tubeLoadBtn.disabled = tubes >= vm.maxSampleTubes || tubes >= analyzedSamples;
+    this.tubeLoadBtn.disabled = tubes >= vm.maxSampleTubes || analyzedSamples <= 0;
     this.tubeUnloadBtn.disabled = tubes <= 0;
 
     this.igniteBtn.disabled = !progress.ready;
@@ -352,5 +356,10 @@ export class MissionHud {
     }
     this.victorySourcesEl.textContent = sourcesText;
     this.victoryOverlayEl.classList.remove('hidden');
+  }
+
+  hideVictory() {
+    this.isVictoryShown = false;
+    this.victoryOverlayEl.classList.add('hidden');
   }
 }

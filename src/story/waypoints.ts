@@ -22,7 +22,7 @@ export const WAYPOINT_LABELS = {
 };
 
 // Lugares que ficam dentro da base: de fora, o caminho ate eles passa pelo airlock
-const INDOOR = new Set(['console', 'science', 'shelter', 'powerroom', 'lifeSupport', 'brokenWindow', 'greenhouse', 'gym', 'water', 'kitchen', 'suitport']);
+const INDOOR = new Set(['console', 'science', 'shelter', 'powerroom', 'lifeSupport', 'brokenWindow', 'greenhouse', 'gym', 'water', 'kitchen', 'suitport', 'act2-engineer', 'act2-repair']);
 
 // Lugar de cada trabalho do foguete (nextRocketJob); fabrica trabalhando e tempestades nao tem lugar
 const JOB_PLACES = { ice: 'ice', load: 'mav', base: 'airlock', clue: 'clue' };
