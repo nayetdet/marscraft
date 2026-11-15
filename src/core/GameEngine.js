@@ -138,6 +138,8 @@ export class GameEngine {
     this.survival = new SurvivalSystem();
     // As tempestades solares so comecam no ato 2 da historia (StoryDirector)
     this.mission = new MissionSystem({ cmes: donkiCme.cmes, startHours: this._skyHours(), stormsStarted: false });
+    // O rover carrega no deposito puxando da bateria da base (issue #111)
+    this.roverController.basePower = this.mission.battery;
     // Radio Terra-Marte (issue #56, A2): atraso pela distancia real de hoje e conjuncao solar
     this.comms = new CommsLink({ startDate: new Date(), startHours: this._skyHours() });
     this._wasBlackout = false;
@@ -1133,7 +1135,6 @@ export class GameEngine {
     let best = null;
     let bestDist = CREW_CONFIG.TALK_RADIUS;
     for (const avatar of this.crewAvatars) {
-      if (!avatar.member.isActive) continue;
       const p = avatar.position;
       const dx = p.x - this.player.pos.x;
       const dz = p.z - this.player.pos.z;
@@ -1207,11 +1208,16 @@ export class GameEngine {
           res.amount * WATER_SYSTEM_CONFIG.LITERS_PER_KG_ICE
         );
         this._playGymTone(520, 0.14, 380);
+      } else if (res.reason) {
+        this.hud.showToast(res.reason);
       }
     } else if (this.roverController.canCollectIce()) {
       const res = this.roverController.collectIce();
       if (res.success) {
         this._playGymTone(260, 0.14, 480);
+      } else if (res.reason) {
+        // Cacamba cheia ou bateria baixa: dizer por que a broca nao ligou
+        this.hud.showToast(res.reason);
       }
     }
   }

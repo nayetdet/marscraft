@@ -16,8 +16,8 @@ export function crewEventMessage(event) {
     }
     case 'recovered':
       return `${name}: Thanks, Commander! I'm back to work.`;
-    case 'evacuated':
-      return `${name} was too weak and flew back to Earth to recover.`;
+    case 'bedridden':
+      return `${name} is too weak and must rest in the medical bay. Bring air, water and food back so ${name} can get better.`;
     case 'alert':
       return `${name}: ${event.text}`;
     default:

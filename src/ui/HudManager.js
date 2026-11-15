@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { airlockProgress } from './airlockProgress.js';
+import { roverBatteryText } from '../rover/roverText.js';
 
 const ICONS_PER_BAR = 10;
 
@@ -401,7 +402,7 @@ export class HudManager {
       if (this.roverSpeedEl) this.roverSpeedEl.textContent = `Speed: ${roverTelemetry.speedKmh} km/h`;
       if (this.roverHeadingEl) this.roverHeadingEl.textContent = `Heading: ${roverTelemetry.headingDeg}° ${roverTelemetry.headingCard}`;
       if (this.roverCoordsEl) this.roverCoordsEl.textContent = `Rover: X ${roverTelemetry.x} / Y ${roverTelemetry.y} / Z ${roverTelemetry.z}`;
-      if (this.roverBatteryEl) this.roverBatteryEl.textContent = `Battery: ${roverTelemetry.battery}%`;
+      if (this.roverBatteryEl) this.roverBatteryEl.textContent = roverBatteryText(roverTelemetry);
       if (this.roverIceEl) this.roverIceEl.textContent = `Ice cargo: ${roverTelemetry.iceCargo} / ${roverTelemetry.maxIceCargo} kg`;
 
       if (this.roverBucketEl && this.roverBucketFillEl) {
@@ -437,7 +438,7 @@ export class HudManager {
           const isFull = roverTelemetry.iceCargo >= roverTelemetry.maxIceCargo;
           this.roverActionTextEl.textContent = isFull
             ? 'Ice hold full'
-            : 'Collect ice';
+            : roverTelemetry.lowBattery ? 'Battery low: charge at the base' : 'Collect ice';
           this.roverActionBannerEl.classList.remove('hidden');
         } else {
           this.roverActionBannerEl.classList.add('hidden');

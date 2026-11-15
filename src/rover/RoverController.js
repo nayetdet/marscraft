@@ -1,10 +1,12 @@
 import * as THREE from 'three';
-import { WORLD_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { ROVER_CONFIG, WORLD_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { HABITAT_LAYOUT } from '../world/habitatLayout.js';
 
 export class RoverController {
-  constructor({ roverGroup, wheels = [], world, camera, colliders = [] }) {
+  // `basePower` = bateria da base ({ drain(amount) -> quanto saiu }): e ela que paga a carga do rover
+  constructor({ roverGroup, wheels = [], world, camera, colliders = [], basePower = null }) {
     this.roverGroup = roverGroup;
+    this.basePower = basePower;
     this.wheels = wheels;
     this.world = world;
     this.camera = camera;
@@ -34,7 +36,8 @@ export class RoverController {
     this.brakeDeceleration = 9.0;
     this.turnSpeed = 1.55;
 
-    this.battery = 98.5;
+    this.battery = ROVER_CONFIG.START_BATTERY;
+    this.isCharging = false;
     this.distanceTraveled = 0;
 
     // Carga de Gelo e Perfuração Robótica ISRU (extração térmica de água)
@@ -263,12 +266,36 @@ export class RoverController {
     return distToIceCrater <= 10.5 || blockBelow === 4;
   }
 
-  canUnloadIce() {
-    const distToDepot = Math.hypot(
+  _distanceToDepot() {
+    return Math.hypot(
       this.pos.x - WATER_SYSTEM_CONFIG.ICE_DEPOT_POS.x,
       this.pos.z - WATER_SYSTEM_CONFIG.ICE_DEPOT_POS.z
     );
-    return distToDepot <= 5.8 && this.iceCargo > 0;
+  }
+
+  canUnloadIce() {
+    return this._distanceToDepot() <= 5.8 && this.iceCargo > 0;
+  }
+
+  // Bateria baixa: o rover anda devagar e nao perfura ate carregar no deposito da base
+  get isBatteryLow() {
+    return this.battery < ROVER_CONFIG.LOW_BATTERY;
+  }
+
+  isAtChargingDepot() {
+    return this._distanceToDepot() <= ROVER_CONFIG.CHARGE_RADIUS;
+  }
+
+  // Carrega parado no deposito, e cada 1 % do rover sai da bateria da base. Sem bateria da
+  // base (ou com ela vazia) nao ha carga: o rover nao tem mais recarga de graca.
+  _charge(dt, throttle) {
+    this.isCharging = false;
+    if (throttle !== 0 || !this.basePower || this.battery >= 100 || !this.isAtChargingDepot()) return;
+    const wanted = Math.min(100 - this.battery, ROVER_CONFIG.CHARGE_PER_SECOND * dt);
+    const paid = this.basePower.drain(wanted * ROVER_CONFIG.BASE_COST_PER_ROVER_PERCENT);
+    if (paid <= 0) return;
+    this.battery = Math.min(100, this.battery + paid / ROVER_CONFIG.BASE_COST_PER_ROVER_PERCENT);
+    this.isCharging = true;
   }
 
   collectIce() {
@@ -277,6 +304,9 @@ export class RoverController {
     }
     if (this.iceCargo >= this.maxIceCargo) {
       return { success: false, reason: `Ice hold is full (${this.maxIceCargo}kg). Offload at Habitat Bay!` };
+    }
+    if (this.isBatteryLow) {
+      return { success: false, reason: 'Rover battery too low to drill. Park at the base depot to charge.' };
     }
 
     const prevCargo = this.iceCargo;
@@ -288,7 +318,7 @@ export class RoverController {
     this.drillCooldown = 1.65;
     this.unloadCooldown = 0;
     this.drillStage = this.armDeploy > 0.65 ? 'extract' : 'deploy';
-    this.battery = Math.max(5, this.battery - 1.2);
+    this.battery = Math.max(0, this.battery - ROVER_CONFIG.DRILL_DRAIN);
 
     return {
       success: true,
@@ -337,7 +367,9 @@ export class RoverController {
       x: this.pos.x.toFixed(1),
       y: (this.pos.y - 0.5).toFixed(1),
       z: this.pos.z.toFixed(1),
-      battery: Math.max(1, Math.min(100, Math.round(this.battery))),
+      battery: Math.max(0, Math.min(100, Math.round(this.battery))),
+      lowBattery: this.isBatteryLow,
+      isCharging: this.isCharging,
       distanceTraveled: Math.round(this.distanceTraveled),
       iceCargo: this.iceCargo,
       maxIceCargo: this.maxIceCargo,
@@ -450,8 +482,8 @@ export class RoverController {
 
     this._updateWaterExtractionAnimation(dt);
 
+    let throttle = 0;
     if (this.isActive) {
-      let throttle = 0;
       if (keys['KeyW'] || keys['ArrowUp']) throttle += 1;
       if (keys['KeyS'] || keys['ArrowDown']) throttle -= 1;
 
@@ -459,15 +491,19 @@ export class RoverController {
       if (keys['KeyA'] || keys['ArrowLeft']) steer += 1;
       if (keys['KeyD'] || keys['ArrowRight']) steer -= 1;
 
+      // Dirigir gasta a bateria; com ela baixa o rover so se arrasta (mas nunca para de vez)
+      const speedFactor = this.isBatteryLow ? ROVER_CONFIG.LOW_BATTERY_SPEED_FACTOR : 1;
+      if (throttle !== 0) {
+        this.battery = Math.max(0, this.battery - ROVER_CONFIG.DRIVE_DRAIN_PER_SECOND * dt);
+      }
+
       // Acceleration and braking are kept separate so direction changes feel deliberate.
       if (throttle > 0) {
         const rate = this.speed < 0 ? this.brakeDeceleration : this.acceleration;
-        this.speed = Math.min(this.maxForwardSpeed, this.speed + rate * dt);
-        this.battery = Math.max(5, this.battery - dt * 0.04);
+        this.speed = Math.min(this.maxForwardSpeed * speedFactor, this.speed + rate * dt);
       } else if (throttle < 0) {
         const rate = this.speed > 0 ? this.brakeDeceleration : this.acceleration;
-        this.speed = Math.max(-this.maxReverseSpeed, this.speed - rate * dt);
-        this.battery = Math.max(5, this.battery - dt * 0.04);
+        this.speed = Math.max(-this.maxReverseSpeed * speedFactor, this.speed - rate * dt);
       } else {
         // Atrito / freio na areia
         if (this.speed > 0) {
@@ -484,11 +520,6 @@ export class RoverController {
         const speedRatio = Math.min(1, Math.abs(this.speed) / this.maxForwardSpeed);
         const steeringGrip = 0.18 + speedRatio * 0.82;
         this.yaw += turnDir * this.turnSpeed * steeringGrip * dt * reverseFactor;
-      }
-
-      // Recarga lenta de bateria por painéis solares
-      if (throttle === 0 && this.battery < 100) {
-        this.battery = Math.min(100, this.battery + dt * 0.02);
       }
 
       // Movimentação linear
@@ -531,6 +562,9 @@ export class RoverController {
         }
       }
     }
+
+    // Parado no deposito da base (dirigido ou estacionado), o rover carrega da bateria da base
+    this._charge(dt, throttle);
 
     // Amostra terreno em volta para ajustar suspensão, pitch e roll
     const sinYaw = Math.sin(this.yaw);

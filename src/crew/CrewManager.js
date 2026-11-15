@@ -12,20 +12,23 @@ export class CrewMember {
     this.role = role.title;
     this.specialties = role.specialties;
     this.task = role.specialties[0];
-    this.state = 'working'; // walking | working | resting | weak | evacuated
+    this.state = 'working'; // walking | working | resting | weak | bedridden
     this.node = TASK_NODE[this.task];
     this.route = [this.node];
     this.distance = 0;
     this.routeLength = 0;
     this.hoursStarved = 0;
+    this.restHours = 0; // horas de repouso ja cumpridas na enfermaria
   }
 
   effortAt(kind) {
     return this.specialties.includes(kind) ? CREW_CONFIG.SPECIALIST_EFFORT : 1;
   }
 
-  get isActive() {
-    return this.state !== 'evacuated';
+  // De repouso na enfermaria: nao trabalha nem recebe ordens, mas continua precisando de ar,
+  // agua e comida. Ninguem volta para a Terra antes do foguete (issue #111).
+  get canWork() {
+    return this.state !== 'bedridden';
   }
 
   // Estado de quando ele nao esta fraco: andando, trabalhando ou descansando
@@ -62,7 +65,7 @@ export class CrewManager {
   assign(memberId, task) {
     const member = this.members[memberId];
     if (!member || !TASKS.includes(task)) return { ok: false, reason: 'Unknown order.' };
-    if (!member.isActive) return { ok: false, reason: `${member.name} went back to Earth.` };
+    if (!member.canWork) return { ok: false, reason: `${member.name} is too weak and must rest in the medical bay.` };
 
     const station = this.stationFor(task);
     if (station && !station.canOperate(this.base)) {
@@ -111,7 +114,6 @@ export class CrewManager {
   _consume(h) {
     const base = this.base;
     for (const member of this.members) {
-      if (!member.isActive) continue;
       const lacking = [];
 
       const energyNeed = CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR * this.oxygenCostMultiplier() * h;
@@ -129,15 +131,15 @@ export class CrewManager {
       if (food + 1e-9 < foodNeed) lacking.push('food');
 
       if (lacking.length) this._starve(member, h, lacking);
-      else this._recover(member);
+      else this._recover(member, h);
     }
   }
 
   _starve(member, h, lacking) {
     member.hoursStarved += h;
-    if (member.hoursStarved >= CREW_CONFIG.EVACUATE_AFTER_HOURS) {
-      member.state = 'evacuated';
-      this.events.push({ type: 'evacuated', member });
+    if (member.state === 'bedridden') return; // sem recurso o repouso nao rende
+    if (member.hoursStarved >= CREW_CONFIG.BEDRIDDEN_AFTER_HOURS) {
+      this._putToBed(member);
       return;
     }
     if (member.state !== 'weak') {
@@ -146,8 +148,38 @@ export class CrewManager {
     }
   }
 
-  _recover(member) {
+  // Fraco demais para trabalhar: fica de repouso na enfermaria, ao lado do posto de quem cuida
+  _putToBed(member) {
+    member.state = 'bedridden';
+    member.restHours = 0;
+    member.node = TASK_NODE.medbay;
+    member.route = findRoute(TASK_NODE.medbay, 'hub');
+    member.routeLength = CREW_CONFIG.BED_REST_OFFSET;
+    member.distance = CREW_CONFIG.BED_REST_OFFSET;
+    this.events.push({ type: 'bedridden', member });
+  }
+
+  // Alguem (que nao o proprio doente) trabalhando na enfermaria
+  _medicOnDuty(patient) {
+    return this.members.some((m) => m !== patient && m.state === 'working' && m.task === 'medbay');
+  }
+
+  // Passo com ar, agua e comida em dia
+  _recover(member, h) {
     member.hoursStarved = 0;
+    if (member.state === 'bedridden') {
+      const speed = this._medicOnDuty(member) ? CREW_CONFIG.MEDIC_RECOVERY_SPEED : 1;
+      member.restHours += h * speed;
+      if (member.restHours + 1e-9 < CREW_CONFIG.BED_REST_HOURS) return;
+      // Repouso cumprido: sai da enfermaria e volta para a tarefa que tinha
+      member.restHours = 0;
+      member.route = findRoute(TASK_NODE.medbay, TASK_NODE[member.task]);
+      member.routeLength = routeLength(member.route);
+      member.distance = 0;
+      member.state = member.dutyState;
+      this.events.push({ type: 'recovered', member });
+      return;
+    }
     if (member.state !== 'weak') return;
     member.state = member.dutyState;
     this.events.push({ type: 'recovered', member });

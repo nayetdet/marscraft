@@ -14,7 +14,7 @@ const STATE_TEXT = {
   working: 'Working',
   resting: 'Resting',
   weak: 'Too weak to work!',
-  evacuated: 'Back on Earth',
+  bedridden: 'Resting in the medical bay',
 };
 
 function escapeHtml(text) {
@@ -78,7 +78,7 @@ export class CrewPanel {
   }
 
   _memberHtml(member) {
-    const away = member.state === 'evacuated';
+    const away = member.state === 'bedridden'; // de repouso: nao recebe ordens
     const buttons = TASKS.map((t) => {
       const current = member.task === t.task ? ' crew-current' : '';
       const expert = member.specialties.includes(t.task) ? ' (expert)' : '';

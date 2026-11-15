@@ -10,6 +10,7 @@ import plantResearch from '../data/osdrPlants.json';
 import { plantDiscovery } from '../data/plantDiscoveries.js';
 import { createCropTexture } from '../graphics/cropTextures.js';
 import { GymWorkout } from './gymWorkout.js';
+import { MEDBAY_BONE_TEXT } from './stationText.js';
 
 const DATA_SOURCES = {
   donki: 'https://ccmc.gsfc.nasa.gov/tools/DONKI/',
@@ -849,7 +850,7 @@ export class StationPanel {
         ...Object.entries(CROP_CONFIG).map(([type, r]) => ['plant:' + type, type.toUpperCase() + ' | ' + s.plotCost(type).water + ' L water / ' + s.plotCost(type).energy + '% power / ' + r.seconds + 's / +' + r.nutrition + ' food']),
         ['harvest', 'Harvest & discover NASA research'], ['cleanBase', 'Clean habitat'],
       ]],
-      medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\nRADIATION DOSE SO FAR: ${formatDose(mission.totalDoseMsv)}\n\nIn Mars's 0.38g gravity, astronauts lose bone mineral density and muscle mass. Use the treadmill and bike in the Gym Wing!`, [['treat', 'Use medical station']]],
+      medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\nRADIATION DOSE SO FAR: ${formatDose(mission.totalDoseMsv)}\n\n${MEDBAY_BONE_TEXT}`, [['treat', 'Use medical station']]],
       science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   SAMPLES: ${s.samples}\n\n${this._radioText(s)}`, [['analyze', 'Analyze regolith'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
       mav: ['MAV DATA TERMINAL', `ANALYZED SAMPLES: ${s.analyzedSamples}/${C.MAV_REQUIRED_SAMPLES}\nPACKAGE: ${s.mavSent ? 'RECEIVED' : s.message}\n\nAnalyze samples at the science station, then send the package from the MAV.`, [['sendMav', 'Send MAV science package']]],
       powerroom: ['POWER & HEAT ROOM', this._powerText(), this._powerButtons()],
