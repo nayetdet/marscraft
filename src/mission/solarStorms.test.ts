@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildStormSchedule, leadTimeHours, marsBoundCmes, rescheduleStorms, stormStateAt, stormTotalDoseUGy,
 } from './solarStorms.ts';
-import { RADIATION_CONFIG, SPACE_WEATHER_CONFIG, STORM_CONFIG } from '../config/constants.ts';
+import { MISSION_CONFIG, RADIATION_CONFIG, SPACE_WEATHER_CONFIG, STORM_CONFIG } from '../config/constants.ts';
 import donki from '../data/donkiCme.json';
 
 const toMars = (id, startTime, marsArrivalTime, speedKmS, isGlancingBlow = false) =>
@@ -61,6 +61,11 @@ describe('stormTotalDoseUGy', () => {
 });
 
 describe('buildStormSchedule', () => {
+  it('leaves at least 100 real seconds of calm between solar storms', () => {
+    const calmSeconds = STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS / MISSION_CONFIG.GAME_HOURS_PER_SECOND;
+    expect(calmSeconds).toBeGreaterThanOrEqual(100);
+  });
+
   it('uses only CMEs that NASA predicted would reach Mars', () => {
     expect(marsBoundCmes(cmes).map((c) => c.id)).toEqual(['fast', 'slow']);
     const schedule = buildStormSchedule(cmes, 10, 4);
