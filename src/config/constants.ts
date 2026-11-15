@@ -904,7 +904,7 @@ export const DUST_WEATHER_CONFIG = {
   START_PANEL_DUST: 0.1,
   // Limpar os paineis a mao (no campo solar, a oeste da sala de energia): cada vez tira esta
   // poeira e gasta ar do traje (pontos de O2, de 20). Esperar custa energia; limpar custa ar.
-  CLEAN_STEP: 0.25,
+  CLEAN_STEP: 0.5,
   CLEAN_O2_COST: 1,
   CLEAN_RADIUS: 10, // blocos do centro do campo solar
   CLEAN_ANIM_DURATION: 1.05, // segundos da animacao em 1a pessoa escovando o painel solar

@@ -9,6 +9,18 @@ const EDGE_BOTTOM = 0.5; // deixa livre a parte de baixo (hotbar e barras)
 
 const _point = new THREE.Vector3();
 
+export function waypointEdgeDirection(nx, ny, behind) {
+  // An exactly-behind target projects to the screen center. Place it at the bottom edge rather
+  // than inventing a direction to the right.
+  if (behind && Math.abs(nx) < 0.05 && Math.abs(ny) < 0.05) return { nx: 0, ny: -1, angle: 0 };
+  if (behind) { nx = -nx; ny = -ny; }
+  const limitY = ny >= 0 ? EDGE_TOP : EDGE_BOTTOM;
+  const shrink = Math.min(EDGE_X / Math.max(Math.abs(nx), 1e-4), limitY / Math.max(Math.abs(ny), 1e-4));
+  nx *= shrink;
+  ny *= shrink;
+  return { nx, ny, angle: Math.round((Math.atan2(-ny, nx) * 180) / Math.PI - 90) };
+}
+
 export class WaypointHud {
   constructor() {
     this.el = document.getElementById('waypoint');
@@ -50,13 +62,10 @@ export class WaypointHud {
     let angle = 0; // graus; 0 = seta para baixo, em cima do lugar
     if (!onScreen) {
       // Leva o ponto ate a borda, na direcao do lugar, e gira a seta para fora
-      if (behind && Math.abs(nx) < 0.05 && Math.abs(ny) < 0.05) nx = 1;
-      const limitY = ny >= 0 ? EDGE_TOP : EDGE_BOTTOM;
-      const shrink = Math.min(EDGE_X / Math.max(Math.abs(nx), 1e-4), limitY / Math.max(Math.abs(ny), 1e-4));
-      const k = behind ? shrink : Math.min(1, shrink);
-      nx *= k;
-      ny *= k;
-      angle = Math.round((Math.atan2(-ny, nx) * 180) / Math.PI - 90);
+      const edge = waypointEdgeDirection(nx, ny, behind);
+      nx = edge.nx;
+      ny = edge.ny;
+      angle = edge.angle;
     }
 
     const x = Math.round((nx * 0.5 + 0.5) * window.innerWidth);

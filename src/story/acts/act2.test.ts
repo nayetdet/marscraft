@@ -323,12 +323,18 @@ describe('Act2Controller: three scans and the journal lesson', () => {
   it('wants one Mars target, one sky target and one base target scanned in this mission', () => {
     const f = fakeEngine();
     const scans = f.engine.scanJournal.missionScans;
-    expect(snapshot(f)).toMatchObject({ act2ScanMars: false, act2ScanSky: false, act2ScanBase: false });
-    scans.add('crater-rim'); // paisagem tambem e Marte
+    scans.add('crater-rim');
     scans.add('habitat');
-    expect(snapshot(f)).toMatchObject({ act2ScanMars: true, act2ScanSky: false, act2ScanBase: true });
+    f.act.onStepStart('scan-three', {});
+    expect(snapshot(f)).toMatchObject({ act2ScanMars: false, act2ScanSky: false, act2ScanBase: false });
+    scans.add('earth');
+    expect(snapshot(f)).toMatchObject({ act2ScanMars: false, act2ScanSky: true, act2ScanBase: false });
     expect(ACT2_STEPS[4].done(snapshot(f), {})).toBe(false);
-    scans.add('phobos'); // sem a Terra no ceu, qualquer alvo do ceu vale
+    scans.add('base');
+    expect(snapshot(f)).toMatchObject({ act2ScanMars: false, act2ScanSky: true, act2ScanBase: true });
+    expect(ACT2_STEPS[4].done(snapshot(f), {})).toBe(false);
+    scans.add('regolith'); // um alvo de Marte completa a lista; scans anteriores nao contam
+    expect(snapshot(f)).toMatchObject({ act2ScanMars: true, act2ScanSky: true, act2ScanBase: true });
     expect(ACT2_STEPS[4].done(snapshot(f), {})).toBe(true);
   });
 
