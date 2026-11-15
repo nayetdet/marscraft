@@ -182,6 +182,19 @@ const KID_CARD_META = {
     pills: ['95% CO2 gas', '0.7% Earth pressure', 'Blue Mars sunsets'],
     tip: 'Thin CO2 air with blue sunsets! Always wear a spacesuit outside.',
   },
+  // Fichas que so existem na tempestade (issue #419)
+  'dust-storm-wall': {
+    title: 'DUST WALL',
+    stat: 'TAU 10.8',
+    pills: ['Clear day: tau 0.5', '2018 storm: tau 10.8', 'Scan only in a storm'],
+    tip: 'A wall of fine dust that hides the Sun and covers your panels.',
+  },
+  'dust-devil': {
+    title: 'DUST DEVIL',
+    stat: '+50% POWER',
+    pills: ['Spirit rover, 2005', 'Power up about 50%', 'Scan only while it spins'],
+    tip: "A small whirlwind! Wind once cleaned the Spirit rover's panels.",
+  },
 };
 
 function escapeHtml(text) {

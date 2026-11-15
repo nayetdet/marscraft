@@ -3,6 +3,7 @@ import {
   CUTSCENE_ES, CUTSCENE_PT_BR, STORY_ES, STORY_MORE_ES, STORY_MORE_PT_BR, STORY_PT_BR,
 } from './i18nStory.ts';
 import { FIRST_ICE_ES, FIRST_ICE_PT_BR } from './i18nFirstIce.ts';
+import { STORM_SCANS_ES, STORM_SCANS_PT_BR } from './i18nStormScans.ts';
 
 export const LANGUAGE_STORAGE_KEY = 'marscraft.language';
 
@@ -23,6 +24,7 @@ const PT_BR: Record<string, string> = {
   ...STORY_MORE_PT_BR,
   ...CUTSCENE_PT_BR,
   ...FIRST_ICE_PT_BR, // trade-off do primeiro gelo (ato 1, #413)
+  ...STORM_SCANS_PT_BR, // fichas raras que so existem na tempestade (ato 2, #419)
   'Loading terrain...': 'Carregando terreno...',
   'Rotate your device': 'Gire o aparelho',
   'Turn your device sideways to continue playing.': 'Vire o aparelho na horizontal para continuar jogando.',
@@ -182,6 +184,7 @@ const ES: Record<string, string> = {
   ...STORY_MORE_ES,
   ...CUTSCENE_ES,
   ...FIRST_ICE_ES, // trade-off do primeiro gelo (ato 1, #413)
+  ...STORM_SCANS_ES, // fichas raras que so existem na tempestade (ato 2, #419)
   'Loading terrain...': 'Cargando terreno...',
   'Rotate your device': 'Gira el dispositivo',
   'Turn your device sideways to continue playing.': 'Gira el dispositivo a horizontal para seguir jugando.',
@@ -623,17 +626,34 @@ const DYNAMIC_PATTERNS: Array<{
     format: ([, value], language) => language === 'pt-BR' ? `+${value} mensagens a mais` : `+${value} mensajes más`,
   },
   {
-    // Boletim: ciencia que ficou em Marte x traje melhorado (#417)
-    match: /^Science kept on Mars: (\d+) pts\. Suit: (\d+)% less radiation outside$/,
+    // Boletim: ciencia gasta nas melhorias do laboratorio x traje melhorado (#417)
+    match: /^Lab upgrades used (\d+) science pts\. Suit: (\d+)% less radiation outside$/,
     format: ([, points, cut], language) => language === 'pt-BR'
-      ? `Ciência que ficou em Marte: ${points} pts. Traje: ${cut}% menos radiação lá fora`
-      : `Ciencia que se quedó en Marte: ${points} pts. Traje: ${cut}% menos radiación afuera`,
+      ? `Melhorias do laboratório gastaram ${points} pts de ciência. Traje: ${cut}% menos radiação lá fora`
+      : `Las mejoras del laboratorio gastaron ${points} pts de ciencia. Traje: ${cut}% menos radiación afuera`,
   },
   {
-    match: /^Science kept on Mars: (\d+) pts\. No suit upgrade$/,
+    match: /^Lab upgrades used (\d+) science pts\. No suit upgrade$/,
     format: ([, points], language) => language === 'pt-BR'
-      ? `Ciência que ficou em Marte: ${points} pts. Traje sem melhoria`
-      : `Ciencia que se quedó en Marte: ${points} pts. Traje sin mejora`,
+      ? `Melhorias do laboratório gastaram ${points} pts de ciência. Traje sem melhoria`
+      : `Las mejoras del laboratorio gastaron ${points} pts de ciencia. Traje sin mejora`,
+  },
+  {
+    // Dica do [F] na tela: HudManager.setInteractionPrompt troca "[F] " por "Press F: ". Usa a
+    // traducao da chave com [F] (ou a do texto sozinho) para a dica nao ficar em ingles.
+    match: /^Press F: (.+)$/,
+    format: ([, action], language) => {
+      const keyed = translate(`[F] ${action}`, language);
+      const text = keyed === `[F] ${action}` ? translate(action, language) : keyed.replace(/^\[F\]\s*/, '');
+      return `${language === 'pt-BR' ? 'Aperte F' : 'Pulsa F'}: ${text}`;
+    },
+  },
+  {
+    // Primeiro gelo no tanque (#413): o numero cai quando o tanque esta quase cheio
+    match: /^Ice in the base tank: \+(\d+) L of water\. The rocket still needs this block\.$/,
+    format: ([, liters], language) => language === 'pt-BR'
+      ? `Gelo no tanque da base: +${liters} L de água. O foguete ainda precisa deste bloco.`
+      : `Hielo en el tanque de la base: +${liters} L de agua. El cohete aún necesita este bloque.`,
   },
   {
     match: /^Total radiation: (.+) mSv$/,

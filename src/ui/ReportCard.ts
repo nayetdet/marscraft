@@ -81,6 +81,21 @@ export function renderReportCard(container, report) {
     firstIce.textContent = report.firstIce.text;
     container.append(firstIce);
   }
+  // Fichas de tempestade que ficaram para tras (ato 2, #419)
+  if (report.stormScans) {
+    const stormScans = document.createElement('p');
+    stormScans.className = 'report-launch is-late';
+    stormScans.textContent = report.stormScans.text;
+    container.append(stormScans);
+  }
+
+  // Como a crianca chegou ao foguete: andando ou carregada (ato 3, #421)
+  if (report.boarding) {
+    const boarding = document.createElement('p');
+    boarding.className = report.boarding.walked ? 'report-launch' : 'report-launch is-late';
+    boarding.textContent = report.boarding.text;
+    container.append(boarding);
+  }
 
   const profile = document.createElement('p');
   profile.className = 'report-profile';

@@ -8,7 +8,8 @@ import { ActController, type StorySnapshot, type Waypoint } from './actTypes.ts'
 import { ACT2_ENGINEER_NAME, ACT2_PLACES } from './act2Steps.ts';
 import { ACT2_CARDS, ACT2_TEXT, JournalLesson, WINDOW_SCAN_ENTRIES } from './act2Text.ts';
 import { SUIT_CHOICE_CARD, shouldShowSuitChoice } from './act2SuitChoice.ts';
-import { CREW_HELP_CARD, CREW_HELPERS, CrewHelp, DEFAULT_HELPER_ID, HELP_BOTANIST_ID, type CrewHelper } from './act2CrewHelp.ts';
+import { CREW_HELP_CARD, CREW_HELPERS, CrewHelp, DEFAULT_HELPER_ID, type CrewHelper } from './act2CrewHelp.ts';
+import { StormScans, type ScanTarget, type StormScanId } from './act2StormScans.ts';
 
 // Ato 2 (issue #408): liga os passos de act2Steps.ts ao jogo. Ver actTypes.ts.
 //   clean-panels   comeca a tempestade de poeira roteirizada; no meio dela o redemoinho cruza o
@@ -43,7 +44,6 @@ const STORM_SCRIPT = Object.freeze({
 });
 
 // Chave numerica de um bloco (sem alocar string a cada frame)
-const BOTANIST_INDEX = CREW_HELPERS[HELP_BOTANIST_ID].memberIndex;
 const blockKey = (x: number, y: number, z: number) => ((x + 512) * 1024 + y) * 1024 + (z + 512);
 
 export class Act2Controller extends ActController {
@@ -71,6 +71,7 @@ export class Act2Controller extends ActController {
   private lessonHud: { isVisible: boolean; onNext: () => void; show: Function; hide: Function; reposition: Function } | null = null;
   private lessonClock = 0;
   suitChoiceShown = false; // card SUIT OR EARTH? (#417)
+  stormScans = new StormScans(); // fichas raras que so existem na tempestade (#419)
 
   // Luneta num vidro
   private windowState = { targetId: 'act2-window', entry: WINDOW_SCAN_ENTRIES.scanning, progress: 0, done: false, known: false, completed: null };
@@ -172,14 +173,20 @@ export class Act2Controller extends ActController {
     if (survival && dust) survival.suitWearFactor = dust.phase === 'storm' ? C.STORM_SUIT_WEAR_MULTIPLIER : 1;
     if (dust) this.updateStorm(dust, s);
     if (running && this.stepId === 'fix-window') {
-      // Sem resposta no card, vem o engenheiro; o vidro so comeca a ser buscado depois da escolha
+      // Sem resposta no card, vem a opcao padrao; o vidro so comeca a ser buscado depois da escolha
       if (this.crewHelp.asking) {
-        if (this.crewHelp.tickChoice(dt)) this.chooseHelper(DEFAULT_HELPER_ID);
+        // O tempo da resposta so anda com o card na tela (ele pode estar na fila, atras de outro);
+        // card fechado sem resposta (tempo dele ou Enter) tambem vale a opcao padrao
+        const hud = this.engine.storyHud;
+        const queued = hud?.queue?.includes(CREW_HELP_CARD) ?? false;
+        const closed = Boolean(hud?.queue) && !queued && hud.current !== CREW_HELP_CARD;
+        if (closed || (!queued && this.crewHelp.tickChoice(dt))) this.chooseHelper(DEFAULT_HELPER_ID);
       } else if (this.repairWait > 0) this.repairWait -= dt;
     }
     const back = this.crewHelp.update(s.hours ?? 0);
     if (back) this.resumeStation(back);
     this.updateLesson(dt);
+    this.updateStormScans(dt);
   }
 
   // ---------- Tempestade de poeira roteirizada ----------
@@ -369,10 +376,13 @@ export class Act2Controller extends ActController {
     return this.crewHelp.warning;
   }
 
-  // Mostra o card da escolha. Sem um segundo tripulante ou sem o card, vem o engenheiro.
+  // Mostra o card da escolha. Sem o card ou sem as duas pessoas na base, vem a opcao padrao.
   private askCrewHelp(): void {
     const engine = this.engine;
-    if (!engine.storyHud || !engine.crew?.members?.[BOTANIST_INDEX]) {
+    const members = engine.crew?.members;
+    let everyone = Boolean(members);
+    for (const id in CREW_HELPERS) if (!members?.[CREW_HELPERS[id].memberIndex]) everyone = false;
+    if (!engine.storyHud || !everyone) {
       this.chooseHelper(DEFAULT_HELPER_ID);
       return;
     }
@@ -393,7 +403,7 @@ export class Act2Controller extends ActController {
     if (!helper) return;
     this.setStationPaused(helper, true);
     this.engineerWaypoint.label = helper.waypointLabel;
-    this.engine.hud?.showCaption(helper.coming ?? ACT2_TEXT.glassComing, 5000);
+    this.engine.hud?.showCaption(helper.coming, 5000);
     this.engine.hud?.showToast(helper.stopped, 7000);
   }
 
@@ -409,9 +419,22 @@ export class Act2Controller extends ActController {
     else utility.greenhousePaused = paused;
   }
 
-  // Quem entrega o item do passo: no conserto da janela, a pessoa escolhida; senao o engenheiro
+  // Partida salva (GameEngine): a parada em andamento continua depois de recarregar
+  saveState() {
+    return this.crewHelp.saveState();
+  }
+
+  restoreState(state: { id?: unknown; hoursLeft?: unknown } | null | undefined): void {
+    const helper = this.crewHelp.restore(state);
+    if (helper) this.setStationPaused(helper, true);
+  }
+
+  // Quem entrega o item do passo: no conserto da janela, a pessoa escolhida; senao o engenheiro.
+  // Base sem essa pessoa (tripulacao menor): o engenheiro entrega.
   private get giver() {
-    return this.engine.crew?.members?.[this.stepId === 'fix-window' ? this.crewHelp.memberIndex : 0] ?? null;
+    const members = this.engine.crew?.members;
+    const chosen = this.stepId === 'fix-window' ? members?.[this.crewHelp.memberIndex] : null;
+    return chosen ?? members?.[0] ?? null;
   }
 
   // ---------- [F]: o engenheiro entrega a luneta e o vidro; a janela rachada e trocada ----------
@@ -426,7 +449,7 @@ export class Act2Controller extends ActController {
     if (this.stepId !== 'fix-window' || !this.leak || this.leak.fixed) return null;
     if (this.hasItem(BLOCK_IDS.HAB_GLASS)) return this.nearCrackedWindow() ? ACT2_TEXT.promptRepair : null;
     if (this.crewHelp.asking || this.repairWait > 0 || !member || member !== this.giver) return null;
-    return this.crewHelp.helper?.promptGlass ?? ACT2_TEXT.promptGlass;
+    return (this.crewHelp.helper ?? CREW_HELPERS[DEFAULT_HELPER_ID]).promptGlass;
   }
 
   interact(): void {
@@ -434,7 +457,7 @@ export class Act2Controller extends ActController {
       this.handOver(BLOCK_IDS.SCOPE, ACT2_TEXT.scopeGiven);
     } else if (this.stepId === 'fix-window' && this.leak && !this.leak.fixed) {
       if (this.hasItem(BLOCK_IDS.HAB_GLASS)) this.replaceWindow();
-      else this.handOver(BLOCK_IDS.HAB_GLASS, this.crewHelp.helper?.glassGiven ?? ACT2_TEXT.glassGiven);
+      else this.handOver(BLOCK_IDS.HAB_GLASS, (this.crewHelp.helper ?? CREW_HELPERS[DEFAULT_HELPER_ID]).glassGiven);
     }
   }
 
@@ -563,5 +586,46 @@ export class Act2Controller extends ActController {
     this.engineerWaypoint.y = avatar.position.y + 2.6;
     this.engineerWaypoint.z = avatar.position.z;
     return this.engineerWaypoint;
+  }
+
+  // ---------- Fichas raras que so existem na tempestade (#419, act2StormScans.ts) ----------
+
+  // Le do jogo se a tempestade de poeira e o redemoinho estao acontecendo e se a crianca esta la fora
+  private syncStormScans(): void {
+    const engine = this.engine;
+    const effects = engine.eventEffects;
+    this.stormScans.sync(
+      engine.mission?.dustWeather?.phase === 'storm',
+      effects?.type === 'dustDevil' ? effects.devilPos : null,
+      Boolean(engine.survival) && !engine.survival.insidePressurizedShip,
+    );
+  }
+
+  // Aviso da chance, uma vez por evento e so para quem ja tem a luneta
+  private updateStormScans(dt: number): void {
+    const scans = this.stormScans;
+    this.syncStormScans();
+    if (!scans.stormActive && !scans.devilActive) {
+      scans.notice(false, null);
+      return;
+    }
+    const notice = scans.notice(this.hasItem(BLOCK_IDS.SCOPE), this.engine.scanJournal?.missionScans, dt);
+    if (notice) this.engine.hud?.showToast(notice, C.STORM_SCAN_NOTICE_MS);
+  }
+
+  // GameEngine._updateScanner: a caixa de mira do redemoinho (fora do evento ela fica fora de alcance)
+  stormScanBox() {
+    this.syncStormScans();
+    return this.stormScans.devilBox;
+  }
+
+  // GameEngine._updateScanner: o alvo da luneta ja com a regra das fichas de tempestade
+  stormScanTarget(target: ScanTarget | null): ScanTarget | null {
+    return this.stormScans.retarget(target);
+  }
+
+  // Boletim final: fichas de tempestade que a crianca pode pegar e deixou passar nesta partida
+  stormScansMissed(): StormScanId[] {
+    return this.stormScans.missed(this.engine.scanJournal?.missionScans);
   }
 }

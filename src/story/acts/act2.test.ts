@@ -269,13 +269,13 @@ describe('Act2Controller: hidden leak, scope and repair', () => {
     const engineer = f.engine.crew.members[0];
     f.act.leak.found = true;
     f.act.onStepStart('fix-window', {});
-    f.act.onCardChoice('help-engineer'); // #415: a crianca chama o engenheiro
+    f.act.onCardChoice('help-water'); // #415: base de teste com 2 pessoas, o engenheiro entrega
     // Enquanto o engenheiro busca o vidro, a seta mostra a janela achada
     expect(f.act.interactionPrompt(engineer)).toBeNull();
     expect(f.act.waypoint(ACT2_PLACES.repair).label).toBe('CRACKED WINDOW');
     f.act.update(C.STORY_REPAIR_FETCH_SECONDS + 0.1, { hours: 1 }, true);
-    expect(f.act.waypoint(ACT2_PLACES.repair).label).toBe('ANA, ENGINEER');
-    expect(f.act.interactionPrompt(engineer)).toBe('[F] Get the new window glass from Ana');
+    expect(f.act.waypoint(ACT2_PLACES.repair).label).toBe('WATER TECH');
+    expect(f.act.interactionPrompt(engineer)).toBe('[F] Get the new window glass from the water tech');
     f.act.interact();
     expect(f.engine.survival.countItem(BLOCK_IDS.HAB_GLASS)).toBe(1);
 
