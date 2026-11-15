@@ -190,7 +190,7 @@ export class RoverController {
   isPositionBlocked(nextX, nextZ, currentY) {
     // 1. Não subir em degraus mais altos que a capacidade do rover (paredes da base, rochas verticais)
     const targetHeight = this.getTerrainHeight(nextX, nextZ);
-    if (targetHeight - currentY > 1.15) {
+    if (targetHeight - currentY > ROVER_CONFIG.MAX_STEP_HEIGHT) {
       return true;
     }
 

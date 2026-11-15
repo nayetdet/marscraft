@@ -119,6 +119,7 @@ export const WATER_SYSTEM_CONFIG = {
 // Uma viagem completa de gelo (ir a cratera, 5 perfuracoes, voltar) gasta cerca de um quarto
 // a um terco da bateria do rover.
 export const ROVER_CONFIG = {
+  MAX_STEP_HEIGHT: 2.15, // blocos que o rover consegue subir, com margem para a suspensao
   START_BATTERY: 100, // %
   DRIVE_DRAIN_PER_SECOND: 0.5, // % por segundo real acelerando (frente ou re)
   DRILL_DRAIN: 4, // % por perfuracao
