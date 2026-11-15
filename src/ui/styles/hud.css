@@ -532,14 +532,12 @@
 
 .mc-toast {
   display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 0 5px;
-  max-width: min(90vw, 680px);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: min(90vw, 680px);
   font-size: 15px;
-  color: #ffff55;
-  background: rgba(0, 0, 0, 0.55);
-  padding: 3px 10px;
+  padding: 0;
   opacity: 0;
   transition: opacity 0.15s;
   margin-bottom: 2px;
@@ -550,12 +548,40 @@
   opacity: 1;
 }
 
-.mc-toast-speaker { color: #e0e0e0; }
+.mc-toast-line {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0 5px;
+  padding: 4px 10px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.76);
+  border-left: 3px solid #777;
+  overflow-wrap: anywhere;
+}
+
+.mc-toast-line.is-current { border-left-color: #ffff55; }
+.mc-toast-line.system,
+.mc-toast-line.airlock {
+  color: #fff6d2;
+  background: rgba(58, 39, 0, 0.94);
+  border: 2px solid #ffc83d;
+  box-shadow: 0 0 0 2px #000;
+  font-weight: 700;
+}
+.mc-toast-speaker { color: #e0e0e0; font-weight: 700; }
 .mc-toast-speaker.ravi { color: #ffff55; }
 .mc-toast-speaker.iris { color: #55ffff; }
 .mc-toast-speaker.system,
-.mc-toast-speaker.airlock { color: #b8b8b8; }
+.mc-toast-speaker.airlock {
+  align-self: center;
+  padding: 1px 4px;
+  color: #302000;
+  background: #ffc83d;
+  font-weight: 900;
+}
 .mc-toast-message { overflow-wrap: anywhere; }
+.mc-toast-overflow { color: #d0d0d0; font-size: 12px; text-shadow: 1px 1px #000; }
 
 .mc-item-name {
   font-size: 15px;
