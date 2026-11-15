@@ -238,6 +238,24 @@ export const STORM_CONFIG = {
   DEMO_LEAD_HOURS: 0.2,
 };
 
+// Clima espacial ao vivo do NASA DONKI (issue #100). O fetch acontece uma vez, ao abrir o jogo,
+// e cai no JSON embutido (src/data/donkiCme.json) se qualquer coisa der errado.
+export const SPACE_WEATHER_CONFIG = {
+  // Janelas pedidas ao DONKI. A API recusa (HTTP 400) janelas acima de 60 dias.
+  CME_WINDOW_DAYS: 30,
+  SEP_WINDOW_DAYS: 60,
+  BULLETIN_WINDOW_DAYS: 7,
+  // A DEMO_KEY aguenta ~10 pedidos por hora; cada abertura sem cache faz 3
+  CACHE_TTL_MINUTES: 45,
+  FETCH_TIMEOUT_MS: 5000,
+  // SEP (particulas solares energeticas) so entra quando o fetch ao vivo trouxe uma; nunca inventamos.
+  // Regras do jogo: a cada 3 tempestades, a 3a e um pico de SEP. As particulas voam quase na
+  // velocidade da luz, entao o aviso e curto (~25 s reais). O DONKI nao da a forca da SEP em Marte:
+  // o pico usa a menor tempestade que o Curiosity mediu (RADIATION_CONFIG.STORM_DOSE_MIN_UGY).
+  SEP_EVERY_N_STORMS: 3,
+  SEP_WARNING_HOURS: 0.25,
+};
+
 export const MAV_CONFIG = {
   // Plataforma de lancamento, longe da base e da cratera de gelo
   PAD_POSITION: { x: 24, z: 20 },
