@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { GameEngine } from './core/GameEngine.ts';
-import { loadSpaceWeather } from './data/spaceWeather.ts';
+import { loadSpaceWeather, pollSpaceWeather } from './data/spaceWeather.ts';
 
 // Clima espacial ao vivo do NASA DONKI (issue #100): o pedido sai ja no carregamento, em paralelo
 // com a construcao do mundo. Nunca rejeita: sem rede, devolve o dado embutido no jogo.
@@ -19,7 +19,12 @@ export async function startGame() {
         const engine = new GameEngine(container);
         engine.start();
         // So vale se chegar antes do primeiro Play; depois, fica no cache para a proxima partida
-        spaceWeatherPromise.then((spaceWeather) => engine.applySpaceWeather(spaceWeather));
+        spaceWeatherPromise.then((spaceWeather) => {
+          engine.applySpaceWeather(spaceWeather);
+          engine.applyLiveSpaceWeather(spaceWeather);
+        });
+        // Depois do tutorial, tempestade solar so quando o DONKI mostra uma de verdade agora
+        pollSpaceWeather((spaceWeather) => engine.applyLiveSpaceWeather(spaceWeather));
         // So no `npm run dev`: deixa o motor acessivel no console para testar a historia e as animacoes
         if (process.env.NODE_ENV === 'development') window.__marscraft = engine;
         requestAnimationFrame(() => {

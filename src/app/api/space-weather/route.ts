@@ -31,15 +31,20 @@ export async function GET() {
       optional(fetchList(donkiUrl('SEP', config.SEP_WINDOW_DAYS, nowMs, apiKey))),
       optional(fetchList(donkiUrl('notifications', config.BULLETIN_WINDOW_DAYS, nowMs, apiKey, '&type=all'))),
     ]);
+    // Sem CME para Marte a resposta continua 200 com `cmes: []`: o polling do jogo precisa saber
+    // que o Sol esta calmo (e ainda ver uma SEP). O carregamento inicial cai no dado embutido.
     const cmes = summarizeCmes(cmeItems);
-    if (!cmes.length) return Response.json({ error: 'No CMEs headed to Mars' }, { status: 404 });
     return Response.json({
       live: true,
       fetchedAt: new Date(nowMs).toISOString(),
       cmes,
       seps: summarizeSeps(sepItems),
       bulletin: latestBulletin(notificationItems),
-    }, { headers: { 'Cache-Control': 'private, max-age=300' } });
+    }, {
+      // Dado publico: a CDN guarda por LIVE_POLL_MINUTES, entao o polling de todos os jogadores
+      // faz no maximo 3 pedidos ao DONKI por intervalo (a chave aguenta 1000 por hora)
+      headers: { 'Cache-Control': `public, max-age=60, s-maxage=${config.LIVE_POLL_MINUTES * 60}, stale-while-revalidate=${config.LIVE_POLL_MINUTES * 60}` },
+    });
   } catch (error) {
     console.info('NASA DONKI live data unavailable:', error?.message ?? error);
     return Response.json({ error: 'NASA DONKI is unavailable' }, { status: 503 });

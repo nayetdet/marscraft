@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { STORY_CONFIG } from '../config/constants.ts';
 import { formatDateDMY } from '../mission/missionText.ts';
 import { shelterDoseFactor } from '../mission/radiation.ts';
 
@@ -34,7 +33,7 @@ export const CARDS = {
   },
   stormGuide: {
     title: 'SOLAR STORM COMING',
-    lines: [{ icon: 'storm', text: `Survive ${STORY_CONFIG.STORMS_FOR_WINDOW} storms, then you can launch` }],
+    lines: [{ icon: 'storm', text: 'Survive this storm, then you can launch' }],
     choices: [
       { icon: 'home', name: 'HIDE', good: 'Shelter with water wall', bad: 'No work outside' },
       { icon: 'shield', name: 'SHIELD', good: 'Keep working', bad: 'Eats battery' },

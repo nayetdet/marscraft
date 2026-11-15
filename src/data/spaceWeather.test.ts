@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, expect, it, vi } from 'vitest';
-import { EMBEDDED_SPACE_WEATHER, donkiUrl, loadSpaceWeather, readCache } from './spaceWeather.ts';
+import { EMBEDDED_SPACE_WEATHER, donkiUrl, loadSpaceWeather, pollSpaceWeather, readCache } from './spaceWeather.ts';
 import { SPACE_WEATHER_CONFIG } from '../config/constants.ts';
 import cmeSample from '../../docs/data/samples/donki-cme-2026-11-sample.json';
 import notificationSample from '../../docs/data/samples/donki-notifications-2026-11-07_13.json';
@@ -160,5 +160,42 @@ describe('loadSpaceWeather: live NASA DONKI with embedded fallback (issue #100)'
 describe('EMBEDDED_SPACE_WEATHER', () => {
   it('is the saved DONKI data, never marked live, with no invented SEP', () => {
     expect(EMBEDDED_SPACE_WEATHER).toMatchObject({ live: false, fetchedAt: donki.fetched, cmes: donki.cmes, seps: [], bulletin: null });
+  });
+});
+
+describe('pollSpaceWeather', () => {
+  // Relogio falso: guarda o tick para o teste chamar na mao
+  function fakeTimer() {
+    const timer = { tick: null, ms: null, cleared: false };
+    timer.set = (fn, ms) => { timer.tick = fn; timer.ms = ms; return 7; };
+    timer.clear = (id) => { timer.cleared = id === 7; };
+    return timer;
+  }
+  const reply = (status, body) => async () => ({ status, json: async () => body });
+
+  it('asks our route every LIVE_POLL_MINUTES and passes on only live answers, even a calm Sun', async () => {
+    const timer = fakeTimer();
+    const seen = [];
+    const calm = { live: true, fetchedAt: '2026-11-15T12:00:00Z', cmes: [] };
+    const fetchImpl = vi.fn(reply(200, calm));
+    const stop = pollSpaceWeather((sw) => seen.push(sw), { fetchImpl, setIntervalImpl: timer.set, clearIntervalImpl: timer.clear });
+    expect(timer.ms).toBe(SPACE_WEATHER_CONFIG.LIVE_POLL_MINUTES * 60 * 1000);
+
+    await timer.tick();
+    expect(fetchImpl).toHaveBeenCalledWith('/api/space-weather', { cache: 'no-store' });
+    expect(seen).toEqual([{ ...calm, seps: [] }]);
+
+    stop();
+    expect(timer.cleared).toBe(true);
+  });
+
+  it('ignores errors and anything that is not live', async () => {
+    const seen = [];
+    for (const fetchImpl of [reply(503, {}), reply(200, { live: false, cmes: [] }), async () => { throw new Error('offline'); }]) {
+      const timer = fakeTimer();
+      pollSpaceWeather((sw) => seen.push(sw), { fetchImpl, setIntervalImpl: timer.set, clearIntervalImpl: timer.clear });
+      await timer.tick();
+    }
+    expect(seen).toEqual([]);
   });
 });

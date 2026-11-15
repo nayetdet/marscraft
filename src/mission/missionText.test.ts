@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, it, expect } from 'vitest';
 import {
-  NO_STORM_DATA_TEXT, bulletinText, donkiCredit, donkiLabel, formatDateDMY, formatDose, formatHours, radiationStatusText, stormEventMessage, stormStatusText,
+  NO_STORM_DATA_TEXT, bulletinText, donkiCredit, donkiLabel, formatDateDMY, formatDose, formatHours, radiationStatusText, stormEventMessage, stormSourceText, stormStatusText,
 } from './missionText.ts';
 
 describe('missionText', () => {
@@ -118,5 +118,26 @@ describe('live space weather labels (issue #100)', () => {
       .toBe('NASA space weather bulletin, 13/11: CME (a giant cloud of particles from the Sun)');
     expect(bulletinText({ type: 'XYZ', issueTime: '2026-11-13T16:25Z', url: 'u' })).toContain(': XYZ');
     expect(bulletinText(null)).toBe('');
+  });
+});
+
+describe('missionText for the tutorial storm and live storms', () => {
+  const cme = { startTime: '2026-11-14T10:00Z', speedKmS: 812, marsArrivalTime: '2026-11-17T00:00Z' };
+  const embedded = { live: false, fetchedAt: '2026-11-14' };
+
+  it('a live storm says it is happening now and credits the fetch that found it', () => {
+    const storm = { cme, live: true, source: { live: true, fetchedAt: '2026-11-15T15:30:00' } };
+    const text = stormSourceText(storm, embedded);
+    expect(text).toMatch(/^Happening right now in real life: a real CME/);
+    expect(text).toContain('LIVE from NASA DONKI, fetched 15:30');
+    expect(stormSourceText({ cme }, embedded)).toMatch(/^Based on a real CME.*real data from 14\/11\/2026/);
+  });
+
+  it('after the tutorial storm, explains that only real storms come next', () => {
+    for (const type of ['storm-survived', 'storm-failed', 'storm-missed']) {
+      expect(stormEventMessage({ type, storm: { cme, scripted: true } }, embedded)).toMatch(/only when NASA sees a real one/);
+      expect(stormEventMessage({ type, storm: { cme, live: true } }, embedded)).not.toMatch(/only when NASA/);
+      expect(stormEventMessage({ type, storm: { cme } }, embedded)).not.toMatch(/MAV/);
+    }
   });
 });

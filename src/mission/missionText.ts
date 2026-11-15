@@ -50,11 +50,15 @@ function sepSeenBy(sep) {
   return sep.seenBy?.length ? sep.seenBy.join(' and ') : 'NASA spacecraft';
 }
 
+// Tempestade do polling ao vivo (`storm.live`): o evento esta acontecendo agora na vida real, e
+// a fonte e o fetch que a trouxe (`storm.source`), nao o dado do inicio da partida.
 export function stormSourceText(storm, source) {
+  const credit = donkiCredit(storm.source ?? source);
+  const basis = storm.live ? 'Happening right now in real life:' : 'Based on';
   if (storm.sep) {
-    return `Based on a real burst of fast particles (an SEP) seen on ${formatDateDMY(storm.sep.eventTime)} by ${sepSeenBy(storm.sep)} (${donkiCredit(source)})`;
+    return `${basis} a real burst of fast particles (an SEP) seen on ${formatDateDMY(storm.sep.eventTime)} by ${sepSeenBy(storm.sep)} (${credit})`;
   }
-  return `Based on a real CME that left the Sun on ${formatDateDMY(storm.cme.startTime)} at ${Math.round(storm.cme.speedKmS)} km/s, headed to Mars (${donkiCredit(source)})`;
+  return `${basis} a real CME that left the Sun on ${formatDateDMY(storm.cme.startTime)} at ${Math.round(storm.cme.speedKmS)} km/s, headed to Mars (${credit})`;
 }
 
 // Quando a NASA previu que a CME chegaria a Marte (modelo WSA-ENLIL, vem junto no DONKI)
@@ -89,6 +93,11 @@ export function radiationStatusText({ doseRate, totalDoseMsv }) {
     `${DOSE_CONFIG.GAME_FACTOR} days on Mars.`;
 }
 
+// Depois da tempestade do tutorial, o jogo so solta tempestade quando ha uma de verdade agora
+function afterTutorialStorm(storm) {
+  return storm?.scripted ? ' From now on, a storm comes only when NASA sees a real one heading to Mars.' : '';
+}
+
 export function stormEventMessage(event, source) {
   const { type, storm } = event;
   switch (type) {
@@ -100,11 +109,11 @@ export function stormEventMessage(event, source) {
     case 'storm-start':
       return 'SOLAR STORM! Radiation is much higher than normal. Stand in the storm shelter with water in its wall, or use the Shield Remote to turn on the shield.';
     case 'storm-survived':
-      return 'The solar storm is over. You made it!';
+      return `The solar storm is over. You made it!${afterTutorialStorm(storm)}`;
     case 'storm-failed':
-      return 'The solar storm is over, but you fainted during it. It does not count for the MAV.';
+      return `The solar storm is over, but you fainted during it. Next time, hide before it hits.${afterTutorialStorm(storm)}`;
     case 'storm-missed':
-      return 'A solar storm passed while the game was paused. It does not count for the MAV.';
+      return `A solar storm passed while the game was paused.${afterTutorialStorm(storm)}`;
     case 'shield-off-no-energy':
       return 'The radiation shield turned off: the battery is empty.';
     case 'sunset-soon':

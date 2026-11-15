@@ -178,12 +178,13 @@ describe('StoryDirector', () => {
     expect(director.objectiveId).toBe('storm-guide');
     expect(director.drainEvents()).toHaveLength(0);
 
+    // A tempestade do tutorial paga a exigencia: a janela de lancamento abre
     director.update(snap({ hours: 21, stormPhase: 'calm', stormsSurvived: 1 }));
-    expect(director.objectiveId).toBe('act2');
+    expect(director.act).toBe(3);
+    director.drainEvents();
 
-    // A segunda tempestade nao tem card nem objetivo guiado
+    // Uma tempestade real depois disso nao tem card guiado
     director.update(snap({ hours: 23, stormPhase: 'warning', stormsSurvived: 1 }));
-    expect(director.objectiveId).toBe('act2');
     expect(director.drainEvents()).toHaveLength(0);
   });
 
