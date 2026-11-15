@@ -240,11 +240,14 @@ describe('distinct crop inventory items', () => {
   });
 });
 
-describe('habitat blocks without their own item', () => {
-  it.each(['THRUSTER_METAL', 'SOLAR_PANEL', 'CONSOLE_SCREEN', 'RED_BEACON'])('%s is collected as a hull block, never as ice', (key) => {
+describe('picking up a broken block', () => {
+  // HYDRO_PLANT goes through addHarvestedCrop
+  const keys = Object.keys(BLOCK_IDS).filter((key) => key !== 'AIR' && key !== 'HYDRO_PLANT');
+  it.each(keys)('%s is collected as itself, never as another block', (key) => {
     const survival = new SurvivalSystem();
+    const before = survival.countItem(BLOCK_IDS[key]);
     expect(survival.addBlockToInventory(BLOCK_IDS[key])).toBe(true);
-    expect(survival.countItem(BLOCK_IDS.NASA_HULL)).toBe(1);
-    expect(survival.countItem(BLOCK_IDS.MARS_ICE)).toBe(0);
+    expect(survival.countItem(BLOCK_IDS[key])).toBe(before + 1);
+    if (key !== 'NASA_HULL') expect(survival.countItem(BLOCK_IDS.NASA_HULL)).toBe(0);
   });
 });

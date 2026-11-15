@@ -172,8 +172,8 @@ export class SurvivalSystem {
   }
 
   addBlockToInventory(blockId) {
-    // Special habitat blocks (metal floor, solar panel, console...) become hull blocks in the inventory.
-    // Looked up by id: a positional index breaks whenever the hotbar list gains an item.
+    // Every breakable block has its own item, so the drop is the block that was broken.
+    // Hull is only a fallback for an id without an item. Looked up by id, never by position.
     const block = ITEM_DEFINITIONS.find((item) => item.id === blockId)
       ?? ITEM_DEFINITIONS.find((item) => item.id === BLOCK_IDS.NASA_HULL);
     const slot = this.inventorySlots.find((item) => item?.id === block.id && item.count < 64);
