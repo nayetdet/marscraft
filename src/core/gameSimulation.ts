@@ -10,6 +10,7 @@ export interface GameSimulationState {
   storyWindowClosedShown: boolean;
   sleepPanelOpen: boolean;
   sleeping: boolean;
+  tradeoffOpen: boolean;
 }
 
 export function isGameSimulationRunning(state: GameSimulationState): boolean {
@@ -22,5 +23,6 @@ export function isGameSimulationRunning(state: GameSimulationState): boolean {
     && !state.cutsceneActive
     && !state.storyWindowClosedShown
     && !state.sleepPanelOpen
-    && !state.sleeping;
+    && !state.sleeping
+    && !state.tradeoffOpen;
 }

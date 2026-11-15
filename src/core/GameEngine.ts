@@ -68,7 +68,7 @@ import { SuitportStation } from '../base/SuitportStation.ts';
 import { buildGreenhouseFields, createSproutModel, cropGrowthLook } from '../base/greenhouseFields.ts';
 import { EarthFacts, earthFactLogText, earthFactView, plantsStalled } from '../base/greenhouseCare.ts';
 import { FirstTimeHud } from '../ui/FirstTimeHud.ts';
-import { MissionBriefingHud } from '../ui/MissionBriefingHud.ts';
+import { TradeoffHud } from '../ui/TradeoffHud.ts';
 import { FirstTimeMoments, momentLogText } from '../story/firstTimeMoments.ts';
 import { MenuScreens } from '../ui/MenuScreens.ts';
 import { StoryDirector } from '../story/StoryDirector.ts';
@@ -341,7 +341,6 @@ export class GameEngine {
       onGymLook: (dx, dy) => this.gymController.look(dx, dy),
       onInteract: () => this.handlePlayerInteract(),
       onSaveGame: () => this._saveGame(),
-      onBeforeFirstPlay: (start) => this._openBriefing(start),
       onRoverAction: () => this.handleRoverAction(),
       onRoverLook: (dx, dy) => this.roverController.look(dx, dy),
       onToggleShield: () => this._toggleShield(),
@@ -357,7 +356,7 @@ export class GameEngine {
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown
         || this.storyHud.isWindowClosedShown,
-      isInputBlocked: () => this.cutscenes.isActive || Boolean(this.sleep?.isSleeping),
+      isInputBlocked: () => this.cutscenes.isActive || Boolean(this.sleep?.isSleeping) || Boolean(this.tradeoffHud?.isOpen),
       getInteraction: () => this._getInteraction(),
       isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen || Boolean(this.sleep?.isPanelOpen),
       getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || !this.stations.freshFood || this.sleep?.isTired ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
@@ -628,7 +627,7 @@ export class GameEngine {
     if (!target) return;
     if (target.type === 'info') { this.hud.showToast(target.text(this._baseState()), 8000); return; }
     if (target.type === 'basket') { this.hud.showToast(this.stations.collectBasket(target.cropType, this.survival)); return; }
-    if (target.type === 'bunk') { this.sleep.openChooser(); return; }
+    if (target.type === 'bunk') { this._tradeoff('sleep', () => this.sleep.openChooser()); return; }
     if (target.type === 'door') {
       const msg = this.airlock.request(target.door, this.player.pos);
       if (msg.includes('Suitport')) this.suitport.flashLocked();
@@ -1140,6 +1139,8 @@ export class GameEngine {
       const message = stormEventMessage(event, this.spaceWeather) || doseEventMessage(event.type);
       // O aviso e o inicio da tempestade ja aparecem no card de alerta (com a contagem e a fonte
       // do dado): a legenda repetia o mesmo recado por cima. Eles continuam no diario da missao.
+      if (event.type === 'storm-warning') this._tradeoff('storm-warning');
+      else if (event.type === 'sunset-soon') this._tradeoff('sunset');
       const onAlertCard = event.type === 'storm-warning' || event.type === 'storm-start';
       if (message && !onAlertCard) this.hud.showToast(message, event.type.startsWith('dose-') ? 8000 : 4500);
       this.missionLogFeed.onMissionEvent(event, this._skyHours());
@@ -1175,7 +1176,10 @@ export class GameEngine {
     for (const event of dust.drainEvents()) {
       const message = dustEventMessage(event.type);
       if (message) this.hud.showToast(message, event.type === 'dust-warning' ? 9000 : 6000);
-      if (event.type === 'dust-warning') this.storyHud.showCard(DUST_WARNING_CARD);
+      if (event.type === 'dust-warning') {
+        this.storyHud.showCard(DUST_WARNING_CARD);
+        this._tradeoff('dust-warning');
+      }
     }
 
     // Visual: ceu, Sol, neblina e particulas (sem alocar: so numeros)
@@ -1507,13 +1511,11 @@ export class GameEngine {
     };
   }
 
-  // Briefing dos trade-offs: so na missao nova (antes da animacao de chegada). Devolve true
-  // se abriu; `start` comeca o jogo quando a crianca termina ou pula.
-  _openBriefing(start) {
-    if (this._arrivalPlayed) return false;
-    this.missionBriefing ??= new MissionBriefingHud();
-    this.missionBriefing.open(start);
-    return true;
+  // Pede o modal de trade-off de uma situacao (gatilhos em src/story/tradeoffScenes.ts). Cada
+  // cena aparece uma vez por partida; `onClose` roda quando ela fecha (ou na hora, se ja foi vista).
+  _tradeoff(trigger, onClose = null) {
+    this.tradeoffHud ??= new TradeoffHud();
+    this.tradeoffHud.request(trigger, onClose);
   }
 
   _playArrival() {
@@ -1637,8 +1639,12 @@ export class GameEngine {
     this.story.update(s);
 
     for (const event of this.story.drainEvents()) {
-      if (event.type === 'card') this.storyHud.showCard(event.card);
+      if (event.type === 'card') {
+        this.storyHud.showCard(event.card);
+        if (event.card.stepId) this._tradeoff(`step:${event.card.stepId}`);
+      }
       else if (event.type === 'certificate') {
+        this.events.start(s.hours); // primeiro selo do tutorial: os eventos de Marte ja podem acontecer
         this.storyHud.showCertificate(event.badge);
         this._playGymTone(520, 0.22, 780);
       }
@@ -2007,6 +2013,7 @@ export class GameEngine {
 
   _startEvent(event) {
     const { type, params } = event;
+    this._tradeoff(`event:${type}`);
     let info;
     let cardInfo;
     if (type === 'meteor') {
@@ -2107,7 +2114,10 @@ export class GameEngine {
         storyWindowClosedShown: this.storyHud.isWindowClosedShown,
         sleepPanelOpen: this.sleep.isPanelOpen,
         sleeping: this.sleep.isSleeping,
+        tradeoffOpen: Boolean(this.tradeoffHud?.isOpen),
       });
+      // Modal de trade-off na fila: so abre com o jogo rodando e o mouse no jogo
+      if (isGameRunning && this.input.isLocked && !this.hud.isInventoryOpen && !this.scannerHud.isJournalOpen) this.tradeoffHud?.pump();
       if (this._wasGameRunning && !isGameRunning) this.player.stopJumpMomentum();
       this._wasGameRunning = isGameRunning;
       if (isGameRunning) {

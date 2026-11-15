@@ -290,5 +290,6 @@ export function tutorialStepById(id) {
 // Balao do passo: titulo com o numero ("STEP 4/15: CALL EARTH") e as frases do passo.
 // `step: true` avisa o StoryHud que este balao troca o do passo anterior, sem fila.
 export function stepCard(step, index, total) {
-  return { step: true, color: STEP_COLORS[step.zone], title: `STEP ${index + 1}/${total}: ${step.label}`, lines: step.lines };
+  // `stepId`: o GameEngine usa como gatilho do modal de trade-off da tarefa (tradeoffScenes.ts)
+  return { step: true, color: STEP_COLORS[step.zone], title: `STEP ${index + 1}/${total}: ${step.label}`, lines: step.lines, stepId: step.id };
 }

@@ -13,6 +13,7 @@ const activeState: GameSimulationState = {
   storyWindowClosedShown: false,
   sleepPanelOpen: false,
   sleeping: false,
+  tradeoffOpen: false,
 };
 
 describe('isGameSimulationRunning', () => {
@@ -27,6 +28,7 @@ describe('isGameSimulationRunning', () => {
     ['portrait orientation', { portraitRequired: true }],
     ['death screen', { isDead: true }],
     ['station panel', { stationOpen: true }],
+    ['trade-off modal', { tradeoffOpen: true }],
     ['victory screen', { victoryShown: true }],
     ['cutscene', { cutsceneActive: true }],
     ['sleep panel', { sleepPanelOpen: true }],
