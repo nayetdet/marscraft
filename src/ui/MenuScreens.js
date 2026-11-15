@@ -7,7 +7,7 @@ export class MenuScreens {
   constructor({ donkiDate, onDemo }) {
     const menuMain = document.getElementById('menu-main');
     const feedback = document.getElementById('demo-feedback');
-    document.getElementById('sources-donki-date').textContent = donkiDate;
+    this.setDonkiSource(`Real data from ${donkiDate}`);
     document.getElementById('sources-terrain-coords').textContent = formatCoords(MARS_TERRAIN.centerLat, MARS_TERRAIN.centerLonE);
     document.getElementById('sources-terrain-date').textContent = formatDateDMY(MARS_TERRAIN.fetched);
 
@@ -30,5 +30,11 @@ export class MenuScreens {
       const action = event.target.closest('[data-demo]')?.dataset.demo;
       if (action) feedback.textContent = onDemo(action);
     });
+  }
+
+  // Origem dos dados de tempestade na tela "NASA Data": "Real data from DD/MM/AAAA" ou, depois de
+  // um fetch ao vivo que funcionou, "LIVE from NASA DONKI, fetched HH:MM" (issue #100)
+  setDonkiSource(label) {
+    document.getElementById('sources-donki-date').textContent = label;
   }
 }

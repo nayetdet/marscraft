@@ -3,9 +3,8 @@ import { GREENHOUSE_CENTER, PLOT_PLANT_CELLS } from '../world/greenhouseLayout.j
 import { greenhouseMapSvg, plotMapLabel, plotStatus } from './greenhouseMap.js';
 import { COMMS_CONFIG, CROP_CONFIG, ENERGY_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
-import { formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.js';
+import { bulletinText, donkiLabel, formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
-import donkiCme from '../data/donkiCme.json';
 import plantResearch from '../data/osdrPlants.json';
 import { plantDiscovery } from '../data/plantDiscoveries.js';
 import { createCropTexture } from '../graphics/cropTextures.js';
@@ -913,10 +912,13 @@ export class StationPanel {
       ? `RADIO: SILENT, solar conjunction (${c.realConjunction ? 'real' : 'simulated'}). ${formatHours(c.blackoutHoursLeft)} left.`
       : `RADIO: ${s.message}`;
     const next = c.blackout ? '' : `Next solar conjunction (simulated): in ${formatHours(c.hoursUntilConjunction)}.\n`;
+    // Boletim ao vivo do DONKI (issue #100): so a linha curta; o link fica embaixo do terminal
+    const sw = this.engine.spaceWeather;
+    const bulletin = sw?.bulletin ? `${bulletinText(sw.bulletin)} (${donkiLabel(sw)}).\n` : '';
     return `EARTH IS NOW ${Math.round(c.distanceKm / 1e6)} million km away.\n` +
       `A radio message needs ${c.lightMinutes.toFixed(1)} min to get there and ${(2 * c.lightMinutes).toFixed(1)} min to come back.\n` +
       `(Calculated for ${formatDateDMY(c.date.toISOString())} from NASA/JPL planet orbits. In the game, each real minute is ${COMMS_CONFIG.GAME_SECONDS_PER_LIGHT_MINUTE} s.)\n` +
-      `${status}\n${next}\n` +
+      `${status}\n${next}${bulletin}\n` +
       'Asking Mission Control costs power, and the answer only tells you what they saw when you asked. ' +
       'About every 26 months the Sun gets between Mars and Earth and the radio goes silent for about 2 weeks. Then the crew decides alone.';
   }
@@ -1070,7 +1072,7 @@ export class StationPanel {
     if (this.greenhouseContainer) this.greenhouseContainer.classList.add('hidden');
 
     const pages = {
-      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nFILTER: ${Math.round(s.filter)}%   SCIENCE POINTS: ${s.science}\n\n${radiationStatusText(mission)}\n\n${stormStatusText(mission.storm, donkiCme.fetched, mission.noStormData)}\n\nThe NASA data is saved inside the game, it is not live. Storm length and damage are game rules.`, [['mission', 'Show mission objective'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
+      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nFILTER: ${Math.round(s.filter)}%   SCIENCE POINTS: ${s.science}\n\n${radiationStatusText(mission)}\n\n${stormStatusText(mission.storm, this.engine.spaceWeather, mission.noStormData)}\n\n${this.engine.spaceWeather.live ? `Storm data: ${donkiLabel(this.engine.spaceWeather)}.` : 'The NASA data is saved inside the game, it is not live.'} Storm length and damage are game rules.`, [['mission', 'Show mission objective'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
       power: ['LIFE SUPPORT / ECLSS', `BATTERY: ${Math.round(m.energy)}%\nCO2 FILTER: ${Math.round(s.filter)}%\nCO2: ${Math.round(s.co2)}%\n\nThe oxygen system and greenhouse need power. A worn filter lets CO2 build up.`, [['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
       greenhouse: ['MARS GARDEN / FIELD NOTEBOOK', this.gardenText(s, m, v), [
         ...Object.entries(CROP_CONFIG).map(([type, r]) => ['plant:' + type, type.toUpperCase() + ' | ' + s.plotCost(type).water + ' L water / ' + s.plotCost(type).energy + '% power / ' + r.seconds + 's / +' + r.nutrition + ' food']),
@@ -1092,6 +1094,8 @@ export class StationPanel {
       ? [['NASA DONKI: space weather events', DATA_SOURCES.donki], ['NASA RadLab: radiation data', DATA_SOURCES.radlab]]
       : this.type === 'shelter'
         ? [['PREDICCS: water shielding (UNH, MSL/RAD data)', SHELTER_SOURCES.prediccs], ['NASA: storm shelters and water walls', SHELTER_SOURCES.nasa]]
+        : this.type === 'science' && this.engine.spaceWeather?.bulletin
+          ? [['NASA DONKI: read the full space weather bulletin', this.engine.spaceWeather.bulletin.url]]
         : this.type === 'greenhouse' ? [['CSA: food production', 'https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/'], ...plantResearch.studies.map(study => [study.id + ': NASA study', study.url])] : [];
     this.sources.replaceChildren(...links.map(([label, url]) => {
       const link = document.createElement('a');

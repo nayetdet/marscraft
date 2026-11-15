@@ -6,6 +6,7 @@
 import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
+import { marsImpact, summarizeCme, summarizeCmes } from '../src/data/donkiNormalize.js';
 
 const DAY_MS = 24 * 3600 * 1000;
 // A API responde melhor em janelas curtas: uma requisição por bloco de 30 dias
@@ -13,38 +14,9 @@ const CHUNK_DAYS = 30;
 
 const isoDay = (date) => date.toISOString().slice(0, 10);
 
-// Impacto previsto em Marte para uma CME: a rodada mais recente do WSA-ENLIL que lista Marte,
-// de preferência na análise marcada como a mais precisa. Devolve null se a CME não ia para Marte.
-export function marsImpact(item) {
-  const analyses = item.cmeAnalyses ?? [];
-  const ordered = [...analyses].sort((a, b) => Number(Boolean(b.isMostAccurate)) - Number(Boolean(a.isMostAccurate)));
-  for (const analysis of ordered) {
-    const runs = [...(analysis.enlilList ?? [])].sort((a, b) =>
-      String(b.modelCompletionTime ?? '').localeCompare(String(a.modelCompletionTime ?? '')));
-    for (const run of runs) {
-      const impact = (run.impactList ?? []).find((i) => i.location === 'Mars' && i.arrivalTime);
-      if (impact) return { analysis, impact };
-    }
-  }
-  return null;
-}
-
-// Resumo que o jogo usa: só CMEs com chegada prevista em Marte depois da saída do Sol
-export function summarizeCme(item) {
-  const hit = marsImpact(item);
-  if (!hit?.analysis.speed) return null;
-  if (Date.parse(hit.impact.arrivalTime) <= Date.parse(item.startTime)) return null;
-  return {
-    id: item.activityID,
-    startTime: item.startTime,
-    speedKmS: hit.analysis.speed,
-    type: hit.analysis.type,
-    headedToMars: true,
-    marsArrivalTime: hit.impact.arrivalTime,
-    isGlancingBlow: Boolean(hit.impact.isGlancingBlow),
-    link: item.link,
-  };
-}
+// marsImpact/summarizeCme moram em src/data/donkiNormalize.js: o fetch ao vivo do jogo (#100)
+// usa as mesmas funcoes, para o JSON embutido e o dado ao vivo terem o mesmo formato.
+export { marsImpact, summarizeCme };
 
 async function fetchRange(startDate, endDate, apiKey) {
   const items = [];
@@ -73,10 +45,7 @@ async function main() {
 
   const items = await fetchRange(startDate, endDate, apiKey);
   const unique = [...new Map(items.map((item) => [item.activityID, item])).values()];
-  const cmes = unique
-    .map(summarizeCme)
-    .filter(Boolean)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const cmes = summarizeCmes(unique);
 
   const output = {
     source: 'NASA DONKI (Space Weather Database Of Notifications, Knowledge, Information)',

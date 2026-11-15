@@ -279,3 +279,14 @@ describe('MissionSystem demo storm control', () => {
     expect(mission.doseRate).toBeLessThan(habitat);
   });
 });
+
+describe('MissionSystem with live SEPs (issue #100)', () => {
+  it('builds the storm queue with the real SEPs it was given, only when storms start', () => {
+    const seps = [{ id: 'sep', eventTime: '2025-11-15T03:42Z', seenBy: ['STEREO A'] }];
+    const mission = new MissionSystem({ cmes, seps, startHours: 12, stormsStarted: false });
+    expect(mission.schedule).toEqual([]);
+    mission.startStorms(12);
+    expect(mission.schedule.some((s) => s.sep === seps[0])).toBe(true);
+    expect(createMission().schedule.some((s) => s.sep)).toBe(false);
+  });
+});
