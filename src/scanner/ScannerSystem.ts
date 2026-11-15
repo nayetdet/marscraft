@@ -22,11 +22,17 @@ export class ScannerSystem {
   /**
    * @param {number} dt
    * @param {string|null} targetId alvo resolvido neste frame (null = nada escaneável)
+   * @param {boolean} isScanning se false, cancela o progresso atual
    * @returns {{targetId: string|null, progress: number, done: boolean, known: boolean, completed: object|null}}
    *   known: o alvo já estava no diário quando a mira chegou nele.
    *   completed vem preenchido só no frame em que o scan termina: {entry, discovery}
    */
-  update(dt, targetId) {
+  update(dt, targetId, isScanning = true) {
+    if (!isScanning) {
+      this.reset();
+      return { targetId: null, progress: 0, done: false, known: false, completed: null };
+    }
+
     if (targetId !== this.targetId) {
       this.targetId = targetId;
       this.targetWasKnown = targetId ? this.journal.has(targetId) : false;

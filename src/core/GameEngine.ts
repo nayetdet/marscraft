@@ -774,7 +774,7 @@ export class GameEngine {
     this._roverScanBox = { scanId: 'rover', minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: 0, maxZ: 0 };
   }
 
-  // Scanner aberto (com ou sem zoom): resolve o alvo na mira, avança o scan e aplica a descoberta quando completa.
+  // Com o botão de scan pressionado, resolve o alvo na mira e avança até aplicar a descoberta.
   _updateScanner(dt) {
     if (!this.isScannerOpen) {
       if (this.scanner.targetId) this.scanner.reset();
@@ -803,8 +803,9 @@ export class GameEngine {
       skyBodies: this._skyBodies,
       maxDist: this.scanJournal.scanRange(),
     });
-    const state = this.scanner.update(dt, target?.id ?? null);
-    this._updateScanHighlight(target, state, dt);
+    const isScanning = this.input.isScanButtonHeld;
+    const state = this.scanner.update(dt, target?.id ?? null, isScanning);
+    this._updateScanHighlight(isScanning ? target : null, state, dt);
     this.scannerHud.update(state);
     if (state.completed) this._onScanCompleted(state.completed);
   }

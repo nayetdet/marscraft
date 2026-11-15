@@ -48,6 +48,38 @@ describe('scope equipment', () => {
     input._useSelectedItem();
     expect(input.isScannerOpen).toBe(false);
   });
+
+  it('starts scanning with left-click without zooming', () => {
+    const input = Object.create(InputController.prototype);
+    input.isScannerOpen = false;
+    input.isZoomed = false;
+    input.isScanButtonHeld = false;
+    input.hud = { selectedSlot: 0, updateZoomState: vi.fn() };
+    input.survival = { slots: [{ id: BLOCK_IDS.SCOPE, count: 1 }] };
+    input.onToggleZoom = vi.fn();
+
+    expect(input._handleScopeMouseButton(0)).toBe(true);
+    expect(input.isScanButtonHeld).toBe(true);
+    expect(input.onToggleZoom).toHaveBeenCalledWith(true, false);
+  });
+
+  it('opens the scope and toggles zoom with right-click without scanning', () => {
+    const input = Object.create(InputController.prototype);
+    input.isScannerOpen = false;
+    input.isZoomed = false;
+    input.isScanButtonHeld = false;
+    input.hud = { selectedSlot: 0, updateZoomState: vi.fn() };
+    input.survival = { slots: [{ id: BLOCK_IDS.SCOPE, count: 1 }] };
+    input.onToggleZoom = vi.fn();
+
+    expect(input._handleScopeMouseButton(2)).toBe(true);
+    expect(input.onToggleZoom).toHaveBeenLastCalledWith(true, true);
+    expect(input.isScanButtonHeld).toBe(false);
+
+    input._handleScopeMouseButton(2);
+    expect(input.onToggleZoom).toHaveBeenLastCalledWith(true, false);
+    expect(input.isScanButtonHeld).toBe(false);
+  });
 });
 
 describe('time skip (issue #109)', () => {

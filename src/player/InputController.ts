@@ -74,6 +74,7 @@ export class InputController {
     document.body.classList.toggle('portrait-required', this.isPortraitRequired);
     this.isScannerOpen = false;
     this.isZoomed = false;
+    this.isScanButtonHeld = false;
     this.breakState = null;
     this.breakSwingTimer = 0;
     this.isBreakButtonHeld = false;
@@ -96,6 +97,7 @@ export class InputController {
 
     this.keys = {};
     this.isBreakButtonHeld = false;
+    this.isScanButtonHeld = false;
     this._cancelBreaking();
     this.touchHeldActions.clear();
     this.joystickPointerId = null;
@@ -124,6 +126,7 @@ export class InputController {
     if (this.isLocked) {
       this.keys = {};
       this.isBreakButtonHeld = false;
+      this.isScanButtonHeld = false;
       this._cancelBreaking();
       this.touchHeldActions.clear();
       this.joystickPointerId = null;
@@ -220,14 +223,14 @@ export class InputController {
     } else if (action === 'mine') {
       if (this.isRoverActive()) this.onRoverAction();
       else if (this.getInteraction?.()?.type === 'greenhouse') this.onInteract();
-      else {
+      else if (!this._handleScopeMouseButton(0)) {
         this.isBreakButtonHeld = true;
         this._startBreaking();
       }
     } else if (action === 'use') {
       if (this.isRoverActive()) this.onRoverAction();
       else if (this.getInteraction?.()?.type === 'greenhouse') this.onInteract();
-      else this._useSelectedItem();
+      else if (!this._handleScopeMouseButton(2)) this._useSelectedItem();
     } else if (action === 'interact') {
       this.onInteract();
     } else if (action === 'sprint') {
@@ -246,6 +249,7 @@ export class InputController {
       this.touchHeldActions.delete(pointerId);
       if (action === 'jump') this.keys.Space = false;
       if (action === 'mine') {
+        this.isScanButtonHeld = false;
         this.isBreakButtonHeld = false;
         this._cancelBreaking();
       }
@@ -287,6 +291,24 @@ export class InputController {
     const slot = this.survival.slots[this.hud.selectedSlot];
     this.playerHand.setHeldBlock(slot?.id, slot?.count ?? 0);
     if (slot?.id !== BLOCK_IDS.SCOPE && this.isScannerOpen) this._setScope(false, false);
+  }
+
+  _isScopeSelected() {
+    return this.survival.slots[this.hud.selectedSlot]?.id === BLOCK_IDS.SCOPE;
+  }
+
+  _handleScopeMouseButton(button) {
+    if (!this._isScopeSelected()) return false;
+    if (button === 0) {
+      this.isScanButtonHeld = true;
+      this._setScope(true, this.isZoomed);
+      return true;
+    }
+    if (button === 2) {
+      this._setScope(true, !this.isZoomed);
+      return true;
+    }
+    return false;
   }
 
   _canBreak(hit) {
@@ -478,6 +500,7 @@ export class InputController {
       if (!this.isLocked) {
         // Sem pointer lock o jogador para: sem teclas presas e sem animacao de caminhada.
         this._cancelBreaking();
+        this.isScanButtonHeld = false;
         this.keys = {};
         this.player.isMoving = false;
       }
@@ -633,16 +656,20 @@ export class InputController {
       }
 
       if (e.button === 0) {
+        if (this._handleScopeMouseButton(0)) return;
         this.isBreakButtonHeld = true;
         this._startBreaking();
         return;
       }
 
-      if (e.button === 2) this._useSelectedItem();
+      if (e.button === 2) {
+        if (!this._handleScopeMouseButton(2)) this._useSelectedItem();
+      }
     });
 
     window.addEventListener('mouseup', (e) => {
       if (e.button === 0) {
+        this.isScanButtonHeld = false;
         this.isBreakButtonHeld = false;
         this._cancelBreaking();
       }
@@ -650,6 +677,7 @@ export class InputController {
 
     window.addEventListener('blur', () => {
       this.isBreakButtonHeld = false;
+      this.isScanButtonHeld = false;
       this._cancelBreaking();
       this.keys = {};
     });
@@ -710,6 +738,7 @@ export class InputController {
 
   _setScope(open, zoomed) {
     const nextZoom = open && zoomed;
+    if (!open) this.isScanButtonHeld = false;
     const changed = open !== this.isScannerOpen || nextZoom !== this.isZoomed;
     this.isScannerOpen = open;
     this.isZoomed = nextZoom;
