@@ -64,6 +64,11 @@ import { StoryHud } from '../ui/StoryHud.js';
 import { CutsceneHud } from '../ui/CutsceneHud.js';
 import { CutscenePlayer } from '../story/cutscene/CutscenePlayer.js';
 import { EngineFlame, ParticlePuffs } from '../story/cutscene/effects.js';
+import { DUST_WEATHER_CONFIG, WEATHER_CONFIG } from '../config/constants.js';
+import { outsideTemperatureC, solWeather } from '../data/marsWeather.js';
+import { DUST_WARNING_CARD, dustEventMessage, weatherReportCard } from '../mission/weatherText.js';
+import { clampToPlayArea } from '../world/dustStormZone.js';
+import { WeatherHud } from '../ui/WeatherHud.js';
 import { LANDER_NOZZLE_Y, createLander, landerCollider } from '../story/cutscene/landerModel.js';
 import { createArrivalCutscene } from '../story/cutscene/arrivalCutscene.js';
 import { MAV_NOZZLE_Y, createLaunchCutscene } from '../story/cutscene/launchCutscene.js';
@@ -121,7 +126,9 @@ export class GameEngine {
     this.world = new VoxelWorld(this.scene, materials, atlas, carrot.texture);
 
     // Modelos 3D detalhados estilo Mod de Minecraft + Caixas de Colisão AABB
-    const { group: customModels, colliders, plants, rover, roverWheels, rocket } = buildNasaCustomModels(this.scene);
+    const { group: customModels, colliders, plants, rover, roverWheels, rocket, solarPanelMaterial } = buildNasaCustomModels(this.scene);
+    // Paineis do campo solar: ficam avermelhados com a poeira (issue #103)
+    this.solarPanelMaterial = solarPanelMaterial;
     this.mavRocket = rocket;
     this.customModels = customModels;
     this.plants = plants;
@@ -222,6 +229,7 @@ export class GameEngine {
     this.deathCount = 0; // para o boletim do cadete (issue #90)
     this._startHours = this._skyHours();
     this._initStory();
+    this._initWeather();
 
     // Tripulacao NPC (issues #47 e #48): o tamanho e escolhido no menu antes do primeiro Play
     this.crewStock = createBaseStock({ survival: this.survival, mission: this.mission });
@@ -335,6 +343,8 @@ export class GameEngine {
     const m = this.mission;
     const phase = m.storm.phase;
     if (phase === 'active' || phase === 'warning') return 'A solar storm is on the way. Fill the shelter water wall and hide in the storm shelter.';
+    if (m.dustWeather.phase === 'warning' || m.dustWeather.phase === 'storm') return 'A dust storm will hide the Sun for hours. Turn off the fuel factory and the greenhouse lights, and keep the heater on.';
+    if (m.dustWeather.panelDust >= 0.5) return 'Your solar panels are dusty. Clean them at the solar field, west of the power room.';
     if (m.battery.percent < 30) return 'Your battery is low. Turn off the fuel factory or the greenhouse lights until the Sun is back, but keep the heater on at night.';
     if (m.shelterWaterL < 20 && this.survival.baseWater > 30) return 'Put some water in the storm shelter wall before the next storm.';
     if (this.utility.waterFilter < 30) return 'Your water filter is dirty. Clean it in the bathroom so you get back more water.';
@@ -820,6 +830,7 @@ export class GameEngine {
       'Radiation: Curiosity RAD on the Mars surface (NASA RadLab); how strong each storm is in the game is a game rule, never above the biggest storm Curiosity measured. ' +
       'Trip dose: Curiosity RAD inside its spacecraft on the way to Mars, 1.8 mSv per day (Zeitlin et al., Science, 2013), for a 203-day trip like Mars 2020. ' +
       'Sunlight on Mars: 43% of Earth (NASA Mars Fact Sheet). ' +
+      'Weather: real data from the NASA InSight lander, October 2020. Dust storms: opacity (tau) 0.5 on a clear day and 10.8 in the 2018 storm, from the NASA Opportunity rover (NASA JPL); storm timing and power loss are game rules. ' +
       'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station. ' +
       'Storm shelter water wall: PREDICCS shielding model (University of New Hampshire, Curiosity RAD data) and NASA storm shelter studies. ' +
       'Radio delay: Earth-Mars distance from NASA/JPL planet orbits; solar conjunction rules from NASA/JPL. ' +
@@ -880,6 +891,7 @@ export class GameEngine {
       const message = stormEventMessage(event, this.spaceWeather) || doseEventMessage(event.type);
       if (message) this.hud.showToast(message, event.type === 'storm-warning' || event.type.startsWith('dose-') ? 8000 : 4500);
     }
+    this._updateWeather();
 
     this.missionHud.update(this.mission, { survival: this.survival, stations: this.stations, world: this.world });
     this._panelRefreshTimer = (this._panelRefreshTimer ?? 0) + dt;
@@ -887,6 +899,95 @@ export class GameEngine {
       this._panelRefreshTimer = 0;
       this._refreshMavPanel();
     }
+  }
+
+  // ---------- Clima: tempestade de poeira (#103) e clima real do InSight (#108) ----------
+
+  _initWeather() {
+    this.weatherHud = new WeatherHud();
+    // Lido pelo DustStormEffect a cada frame (objeto reaproveitado)
+    this._weatherFx = { haze: 0, front: 0, indoors: false };
+    // Relatorio do tempo: um por sol, no nascer do Sol, so depois do tutorial
+    this._weatherReportSol = this.sky.solCount;
+    this._panelColorClean = new THREE.Color(0xffffff);
+    this._panelColorDusty = new THREE.Color(0xb98a6a);
+    // A poeira cobre o vidro azul escuro: brilho proprio cor de ferrugem, para aparecer
+    this._panelDustGlow = new THREE.Color(0x9a5530);
+    this._panelDustShown = -1;
+  }
+
+  _updateWeather() {
+    const dust = this.mission.dustWeather;
+    for (const event of dust.drainEvents()) {
+      const message = dustEventMessage(event.type);
+      if (message) this.hud.showToast(message, event.type === 'dust-warning' ? 9000 : 6000);
+      if (event.type === 'dust-warning') this.storyHud.showCard(DUST_WARNING_CARD);
+    }
+
+    // Visual: ceu, Sol, neblina e particulas (sem alocar: so numeros)
+    const fx = this._weatherFx;
+    fx.haze = dust.haze;
+    fx.front = dust.frontProgress;
+    fx.indoors = this.survival.insidePressurizedShip && !this.roverController.isActive;
+    this.sky.dustHaze = dust.haze;
+
+    // Paineis avermelhados com a poeira: so troca a cor quando muda 1 %
+    const shown = Math.round(dust.panelDust * 100);
+    if (shown !== this._panelDustShown && this.solarPanelMaterial) {
+      this._panelDustShown = shown;
+      this.solarPanelMaterial.color.copy(this._panelColorClean).lerp(this._panelColorDusty, dust.panelDust);
+      this.solarPanelMaterial.emissive.copy(this._panelDustGlow).multiplyScalar(dust.panelDust);
+    }
+
+    const hours = this._skyHours();
+    this.weatherHud.update(outsideTemperatureC(hours), dust);
+    this._maybeWeatherReport(hours);
+  }
+
+  // Relatorio do tempo no nascer do Sol, com o sol real do InSight. Nunca no tutorial.
+  _maybeWeatherReport(hours) {
+    const sol = this.sky.solCount;
+    if (this.story.act < 2) {
+      this._weatherReportSol = sol;
+      return;
+    }
+    if (sol === this._weatherReportSol || this.sky.timeOfDay < WEATHER_CONFIG.REPORT_HOUR) return;
+    this._weatherReportSol = sol;
+    const weather = solWeather(hours);
+    // Rajada forte do dia (dado real) tira um pouco da poeira dos paineis
+    const windCleaned = this.mission.dustWeather.applyWindGust(weather.gustMs);
+    this.storyHud.showCard(weatherReportCard({ weather, windCleaned, dustPhase: this.mission.dustWeather.phase }));
+  }
+
+  _isAtSolarField() {
+    if (this.survival.insidePressurizedShip) return false;
+    const dx = this.player.pos.x - SOLAR_FIELD_CENTER.x;
+    const dz = this.player.pos.z - SOLAR_FIELD_CENTER.z;
+    return Math.hypot(dx, dz) <= DUST_WEATHER_CONFIG.CLEAN_RADIUS;
+  }
+
+  // Limpar os paineis a mao: restaura a geracao, mas gasta ar do traje (issue #103)
+  _cleanSolarPanels() {
+    const dust = this.mission.dustWeather;
+    const cost = DUST_WEATHER_CONFIG.CLEAN_O2_COST;
+    if (dust.panelDust < 0.01) {
+      this.hud.showToast('The solar panels are already clean.');
+      return;
+    }
+    if (this.survival.oxygen <= cost + 1) {
+      this.hud.showToast('Your suit air is too low to keep working. Go back inside!', 4500);
+      return;
+    }
+    this.survival.oxygen -= cost;
+    const removed = dust.cleanPanels();
+    const left = Math.round(dust.panelDust * 100);
+    const storm = dust.phase === 'storm' ? ' The storm keeps adding more dust!' : '';
+    let message = `Brushed ${Math.round(removed * 100)}% of the dust off the panels (used suit air). Panel dust: ${left}%.${storm}`;
+    if (!this._panelCleanFactShown) {
+      this._panelCleanFactShown = true;
+      message += ' Real case: gusts of wind cleaned the panels of NASA rovers Spirit and Opportunity.';
+    }
+    this.hud.showToast(message, 6000);
   }
 
   // O que esta plantado na estufa: o canteiro do jardim (campo 0) e os campos da redoma.
@@ -955,6 +1056,14 @@ export class GameEngine {
       shelterWaterL: m.shelterWaterL,
       donkiDate: formatDateDMY(this.spaceWeather.fetchedAt),
       donkiCredit: donkiCredit(this.spaceWeather),
+      // Clima (issues #103 e #108)
+      outsideC: outsideTemperatureC(this._skyHours()),
+      dust: {
+        phase: m.dustWeather.phase,
+        hoursUntilStorm: m.dustWeather.hoursUntilStorm,
+        solarFactor: m.dustWeather.solarFactor,
+        panelDust: m.dustWeather.panelDust,
+      },
     };
   }
 
@@ -986,6 +1095,11 @@ export class GameEngine {
         return this.mission.noStormData ? NO_STORM_DATA_TEXT : 'A solar storm is already hitting the base.';
       }
       return 'Storm warning sent. Press Back, then Play: the solar storm hits in about 10 seconds.';
+    }
+    if (action === 'dust') {
+      const phase = this.mission.dustWeather.force('warning');
+      if (phase === 'storm') return 'A dust storm is already over the base.';
+      return 'Dust storm warning sent. Press Back, then Play: the dust storm arrives in about 10 seconds.';
     }
     if (action === 'night' || action === 'noon') {
       const target = action === 'night' ? 21 : 12;
@@ -1403,6 +1517,14 @@ export class GameEngine {
       return;
     }
 
+    // Campo solar (issue #103): limpar a poeira dos paineis gasta ar do traje
+    if (this._isAtSolarField()) {
+      this.currentInteraction = 'solar_panels';
+      const dust = Math.round(this.mission.dustWeather.panelDust * 100);
+      this.hud.setInteractionPrompt(true, `[F] Clean the solar panels (dust ${dust}%, uses suit air)`);
+      return;
+    }
+
     // 1. Console de Comando do Rover (x: 4, z: -9.6, y: ~11)
     const distConsole = Math.hypot(this.player.pos.x - 4, this.player.pos.z - (-9.6));
     const dyConsole = Math.abs(this.player.pos.y - 11.0);
@@ -1455,11 +1577,13 @@ export class GameEngine {
     }
 
     const station = this._getInteraction();
-    if (station && !['water_dispenser', 'rover_terminal', 'greenhouse'].includes(this.currentInteraction) && station.type !== 'mav') {
+    if (station && !['water_dispenser', 'rover_terminal', 'greenhouse', 'solar_panels'].includes(this.currentInteraction) && station.type !== 'mav') {
       this._interact();
       return;
     }
-    if (this.currentInteraction === 'rover_terminal') {
+    if (this.currentInteraction === 'solar_panels') {
+      this._cleanSolarPanels();
+    } else if (this.currentInteraction === 'rover_terminal') {
       this.toggleRoverMode();
     } else if (this.currentInteraction === 'water_dispenser') {
       const res = this.survival.drinkFromBaseDispenser();
@@ -1510,6 +1634,7 @@ export class GameEngine {
         if (this.roverController.isActive) {
           if (this.scanHighlight.mesh) this.scanHighlight.clear();
           this.roverController.update(dt, this.input.keys);
+          clampToPlayArea(this.roverController.pos);
           this.sky.update(dt, this.roverController.pos);
           this._updateSurvival(dt);
           this.highlightBox.visible = false;
@@ -1523,6 +1648,7 @@ export class GameEngine {
           this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: false, isRoverActive: false, mission: this.mission });
         } else {
           this.player.update(dt, this.input.keys);
+          clampToPlayArea(this.player.pos); // parede invisivel na borda, sem dano (issue #103)
           this._updateSurvival(dt);
           this.input.update(dt);
           this.roverController.update(dt, {});
@@ -1594,7 +1720,7 @@ export class GameEngine {
       if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
       if (isGameRunning) this._updateStory(dt);
 
-      this.dustStorm.update(dt, this.roverController.isActive ? this.roverController.pos : this.player.pos, this.camera);
+      this.dustStorm.update(dt, this.roverController.isActive ? this.roverController.pos : this.player.pos, this.camera, this._weatherFx);
       this.renderer.render(this.scene, this.camera);
       this.debug.frame(frameMs);
     };

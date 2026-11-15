@@ -69,13 +69,13 @@ export const SURVIVAL_CONFIG = {
   DAMAGE_SHAKE_RATE: 42,
   // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
   HEAL_MIN_OXYGEN: 5,
-  // Raios de exposição à poeira, medidos a partir de TERRAIN_CONFIG.BASE_CENTER.
-  // O efeito visual da parede acompanha separadamente a borda física do mapa.
+  // Borda da area jogavel (parede de poeira), medida a partir de TERRAIN_CONFIG.BASE_CENTER.
+  // Issue #103: a borda nao machuca mais. O vento de Marte nao derruba ninguem (o ar e fino
+  // demais); quem limita a distancia e o ar do traje. No raio FATAL fica uma parede invisivel.
   DUST_STORM_START_RADIUS: 70,
   DUST_STORM_FATAL_RADIUS: 100,
-  DUST_STORM_DAMAGE_RATE: 20,
-  // Intensidade (0..1) a partir da qual a tempestade machuca; antes disso e so aviso
-  DUST_STORM_DAMAGE_START: 0.55,
+  // Intensidade (0..1) a partir da qual o HUD manda voltar ja; antes disso e so aviso
+  DUST_STORM_TURN_BACK_START: 0.55,
   // Blocos antes do inicio da tempestade em que o HUD ja avisa que a borda esta perto
   DUST_STORM_WARNING_DISTANCE: 8,
 };
@@ -329,8 +329,9 @@ export const CREW_CONFIG = {
 // Modulo norte (issue #56, parte B): energia/aquecimento, cozinha, banheiro e oficina.
 // Custos em % de bateria; "por hora" = hora de jogo (100 s reais). Fontes em docs/data/numeros-reais.md.
 export const UTILITY_CONFIG = {
-  // B2 aquecedor: gasta mais a noite, quando faz mais frio la fora e os paineis nao geram.
-  // [Ref] InSight: media ~-62 C, minima -97,7 C (Elysium Planitia). Potencia em escala de jogo.
+  // B2 aquecedor: gasta mais quanto mais frio estiver la fora (issue #108). DAY = gasto no ar
+  // mais quente do InSight (src/data/insightWeather.json), NIGHT = no mais frio; entre os dois,
+  // proporcional a temperatura. Potencia em escala de jogo.
   // Issue #81: cortado pela metade (era 1 / 4) para a bateria cheia aguentar a noite.
   HEATER_DAY_PER_HOUR: 0.5,
   HEATER_NIGHT_PER_HOUR: 2,
@@ -491,4 +492,63 @@ export const OXYGEN_PLANT_CONFIG = {
   // Avisos do tripulante: o modo escolhido esta gastando o recurso que esta acabando
   LOW_WATER_WARN_L: 10,
   LOW_BATTERY_WARN_PCT: 25,
+};
+
+// Tempestade de poeira como clima (issue #103): corta a energia solar, nao machuca ninguem.
+// Fontes em docs/data/numeros-reais.md ("Poeira e tempestades de poeira").
+export const DUST_WEATHER_CONFIG = {
+  // [Ref] Opacidade (tau) media no local do Opportunity: ~0,5 (NASA JPL, recuperacao do
+  // Opportunity, 08/2018). Tau alto = menos luz do Sol chega ao chao.
+  TAU_CLEAR: 0.5,
+  // [Ref] Opportunity, 10/06/2018: tau 10,8, o recorde na superficie (NASA JPL, 2018)
+  TAU_RECORD: 10.8,
+  // Escala de jogo: o pico de cada tempestade e sorteado entre isto e o recorde real
+  PEAK_TAU_MIN: 7,
+  // Regra de jogo: geracao solar com o tau no recorde (nunca zero de dia). Entre o ceu limpo e
+  // o recorde a geracao cai em linha reta.
+  SOLAR_FACTOR_AT_RECORD: 0.2,
+  // Escala de jogo (horas de jogo; 1 h = 100 s reais). O clima so comeca no ato 2 da historia.
+  FIRST_STORM_AFTER_HOURS: [8, 16],
+  GAP_BETWEEN_STORMS_HOURS: [24, 36],
+  WARNING_HOURS: 2,
+  STORM_HOURS: [6, 9],
+  RAMP_HOURS: 1.5, // o tau sobe ate o pico nas primeiras horas da tempestade
+  CLEARING_HOURS: 3, // a poeira baixa devagar depois
+  // Controle de demo / admin: aviso curto antes da tempestade chegar (~10 s reais)
+  DEMO_LEAD_HOURS: 0.1,
+  // Poeira nos paineis (0 = limpo, 1 = coberto). Escala de jogo: bem mais rapido que o real,
+  // para o jogador ver o efeito numa partida curta.
+  PANEL_DUST_PER_HOUR: 0.006,
+  PANEL_DUST_STORM_PER_HOUR: 0.05,
+  PANEL_DUST_MAX_LOSS: 0.7, // painel todo coberto ainda gera 30 %
+  START_PANEL_DUST: 0.1,
+  // Limpar os paineis a mao (no campo solar, a oeste da sala de energia): cada vez tira esta
+  // poeira e gasta ar do traje (pontos de O2, de 20). Esperar custa energia; limpar custa ar.
+  CLEAN_STEP: 0.25,
+  CLEAN_O2_COST: 1,
+  CLEAN_RADIUS: 10, // blocos do centro do campo solar
+  // [Ref] Ventos e redemoinhos limparam os paineis do Spirit e do Opportunity ("cleaning
+  // events", NASA JPL). Escala de jogo: rajada do sol (InSight) acima do limite tira poeira.
+  WIND_CLEAN_GUST_MS: 20,
+  WIND_CLEAN_PER_MS: 0.02,
+  // Visual: tau em que o ceu fica marrom escuro de vez
+  HAZE_FULL_TAU: 6,
+  // Visual com a poeira no maximo (src/sky/DustStormEffect.js e MarsSkySystem.js)
+  WEATHER_FOG_DENSITY: 0.035,
+  WEATHER_DOME_OPACITY: 0.55,
+  WEATHER_PARTICLE_OPACITY: 0.85,
+  WEATHER_FRONT_OPACITY: 0.9, // frente de poeira no horizonte durante o aviso
+  WEATHER_WIND: { x: -0.94, z: 0.34 }, // direcao do vento da tempestade (vem do leste)
+  SUN_DIM: 0.65, // fracao da luz do Sol que some no pico
+  SUN_SHRINK: 0.75, // o disco do Sol encolhe ate virar um ponto fraco
+};
+
+// Clima real do InSight por sol (issue #108). Os valores vem de src/data/insightWeather.json.
+export const WEATHER_CONFIG = {
+  // Forma da curva de temperatura dentro do sol (aproximacao de jogo): minima pouco antes do
+  // nascer do Sol (SUNRISE_HOUR = 6) e maxima no comeco da tarde
+  COLDEST_HOUR: 5,
+  WARMEST_HOUR: 14,
+  // Hora do relatorio do tempo (nascer do Sol)
+  REPORT_HOUR: 6,
 };

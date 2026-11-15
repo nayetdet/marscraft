@@ -13,6 +13,9 @@ import { GymWorkout } from './gymWorkout.js';
 import { growthChecks } from '../base/greenhouseCare.js';
 import { MEDBAY_BONE_TEXT } from './stationText.js';
 import { OXYGEN_SOURCES, oxygenPlantButtons, oxygenPlantText } from '../mission/oxygenText.js';
+import { INSIGHT_MONTH, WEATHER_RANGE, formatTempC } from '../data/marsWeather.js';
+import { solarReason } from '../mission/weatherText.js';
+import { tauSolarFactor } from '../mission/dustWeather.js';
 
 const DATA_SOURCES = {
   donki: 'https://ccmc.gsfc.nasa.gov/tools/DONKI/',
@@ -854,8 +857,18 @@ export class StationPanel {
     });
     const lines = loads.map(([name, rate, on]) => `  ${name.padEnd(18)} ${!on ? 'OFF' : rate > 0 ? `-${rate.toFixed(1)}%/h` : 'idle'}`);
     const used = loads.reduce((sum, [, rate, on]) => sum + (on ? rate : 0), 0);
+    // Clima (issues #103 e #108): por que a geracao caiu, poeira nos paineis e ar la fora
+    const dust = mission.dustWeather;
+    const reason = solarReason({ night: utility.isNight, phase: dust.phase, panelDust: dust.panelDust });
+    const temp = utility.outsideTempC;
+    const stormLine = dust.phase === 'storm' || dust.phase === 'clearing'
+      ? `DUST STORM: the dusty air lets through only ${Math.round(tauSolarFactor(dust.tau) * 100)}% of the sunlight.\n`
+      : '';
     return `BATTERY: ${Math.round(mission.battery.percent)}%\n` +
-      `SOLAR PANELS NOW: +${mission.chargeRate.toFixed(1)}%/h ${utility.isNight ? '(night: no sun)' : ''}\n` +
+      `SOLAR PANELS NOW: +${mission.chargeRate.toFixed(1)}%/h (${reason})\n` +
+      `DUST ON THE PANELS: ${Math.round(dust.panelDust * 100)}% (clean them at the solar field, outside to the west)\n` +
+      stormLine +
+      (temp === null ? '' : `OUTSIDE AIR NOW: ${formatTempC(temp)} (real NASA InSight data)\n`) +
       `NUCLEAR RTG: +${ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR}%/h, day and night, only for life support (air and CO2 filter)\n` +
       `${mission.standby ? 'BATTERY EMPTY: STANDBY. Factory, lights, heater and shield stopped. The RTG keeps the air on until the Sun is back.\n' : ''}` +
       `USING ABOUT: -${used.toFixed(1)}%/h (plus your own oxygen)\n` +
@@ -863,7 +876,7 @@ export class StationPanel {
       `WHERE THE POWER GOES:\n${lines.join('\n')}\n\n` +
       `OXYGEN MACHINE: ${mission.oxygenPlant.info.label.toUpperCase()}${mission.oxygenPlant.usesWater ? ' (uses water, less power)' : ' (no water, more power)'}. Change it in Life Support.\n` +
       `HEATER: ${utility.heaterOn ? 'ON' : 'OFF'}${utility.cold ? '   FREEZING! Pipes and plants stopped.' : ''}\n\n` +
-      'Mars nights get down to about -98 C (NASA InSight). At night the panels make nothing and the heater needs more power. ' +
+      `Mars nights get down to about ${formatTempC(WEATHER_RANGE.coldestC)} (real NASA InSight data, ${INSIGHT_MONTH}). The colder it is outside, the more power the heater needs. At night the panels make nothing. ` +
       'Turning systems off saves power, but each one stops doing its job.\n' +
       'Real case: the InSight lander shut down in 2022 when dust covered its solar panels. ' +
       'Curiosity and Perseverance use an RTG instead: a nuclear power source that makes about 110 W day and night (NASA).';

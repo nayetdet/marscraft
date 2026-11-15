@@ -107,6 +107,7 @@ export class AdminPanel {
       <pre id="admin-status" class="admin-status"></pre>
       <p id="admin-feedback" class="admin-feedback" role="status"></p>
       ${group('Solar storm', [['storm:warning', 'Warning now'], ['storm:active', 'Storm now'], ['storm:end', 'End storm']])}
+      ${group('Dust storm (weather)', [['dust:warning', 'Warning now'], ['dust:storm', 'Dust storm now'], ['dust:end', 'End dust storm'], ['dust:dirty', 'Panels 90% dusty'], ['dust:clean', 'Panels clean']])}
       ${group('Radio to Earth', [['radio:on', 'Solar conjunction now'], ['radio:off', 'End conjunction']])}
       ${group('Power', [['power:100', 'Battery 100%'], ['power:15', 'Battery 15%'], ['power:0', 'Battery 0%']])}
       ${group('Water', [['water:add', 'Base tank +20 L'], ['water:empty', 'Base tank 0 L'], ['wall:full', 'Shelter wall full'], ['wall:empty', 'Shelter wall empty']])}
@@ -124,6 +125,12 @@ export class AdminPanel {
     switch (kind) {
       case 'storm':
         return `Storm phase is now: ${mission.forceStorm(arg).toUpperCase()}`;
+      case 'dust': {
+        const dust = mission.dustWeather;
+        if (arg === 'dirty') { dust.panelDust = 0.9; return 'Solar panels 90% dusty.'; }
+        if (arg === 'clean') { dust.panelDust = 0; return 'Solar panels clean.'; }
+        return `Dust weather is now: ${dust.force(arg).toUpperCase()}`;
+      }
       case 'radio':
         this.engine.comms.forceConjunction(arg === 'on');
         return arg === 'on' ? 'Radio silent (simulated solar conjunction).' : 'Radio contact is back.';
@@ -201,6 +208,7 @@ export class AdminPanel {
     this.status.textContent = [
       `Sol ${sky.solCount}  ${String(hh).padStart(2, '0')}:${mm}`,
       `Storm: ${stormLine}`,
+      `Dust: ${mission.dustWeather.phase} tau ${mission.dustWeather.tau.toFixed(1)}  panels ${Math.round(mission.dustWeather.panelDust * 100)}%  sun x${mission.dustWeather.solarFactor.toFixed(2)}  heater ${this.engine.utility.heaterRatePerHour.toFixed(2)}%/h`,
       `Dose rate: ${mission.doseRate.toFixed(3)} mSv/h   Total: ${mission.totalDoseMsv.toFixed(2)} mSv`,
       `Inside habitat: ${survival.insidePressurizedShip ? 'yes' : 'no'}   In shelter: ${mission.insideShelter ? 'yes' : 'no'}   Shield: ${mission.shieldOn ? 'on' : 'off'}`,
       `Battery: ${mission.battery.percent.toFixed(0)}%   Base tank: ${Math.round(survival.baseWater)} L   Wall: ${Math.round(mission.shelterWaterL)} L`,

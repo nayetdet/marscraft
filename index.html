@@ -51,8 +51,8 @@
     <div id="dust-storm-warning" class="dust-storm-warning hidden" aria-live="polite">
       <div class="dust-storm-vignette" aria-hidden="true"></div>
       <div class="dust-storm-banner">
-        <strong>Dust storm ahead</strong>
-        <span>The dust wall is the edge of the safe zone</span>
+        <strong>Edge of the safe zone</strong>
+        <span>Past the dust wall, home is hard to find</span>
       </div>
     </div>
     <!-- Textos antigos do canto superior esquerdo: escondidos via CSS, mas mantidos porque o
@@ -153,6 +153,10 @@
           <span class="res-meter"><i class="res-fill"></i></span>
           <b class="res-value">60%</b>
           <span class="res-trend"></span>
+        </div>
+        <div id="res-weather" class="res-weather" title="Outside air: real NASA InSight weather. Dust: how dusty the solar panels are.">
+          <span>OUTSIDE <b id="res-weather-temp">-60 C</b></span>
+          <span id="res-weather-dust" class="res-dust">PANELS CLEAN</span>
         </div>
       </section>
       <div id="mission-alerts" class="mission-alerts"></div>
@@ -322,7 +326,8 @@
             <div class="info-row"><b>Trip dose</b><span>On the way to Mars, Curiosity's RAD measured 1.8 mSv per day inside the spacecraft (Zeitlin et al., Science, 2013). A 203-day trip like Mars 2020 adds about 365 mSv before landing. On Mars, the game counts each game hour like about 8 days (a game rule).</span></div>
             <div class="info-row"><b>Ground</b><span>The shape of the land is real. It is a small crater inside Gale Crater on Mars (<span id="sources-terrain-coords"></span>), measured from orbit by HiRISE, a camera on NASA's Mars Reconnaissance Orbiter. One block is about 1 meter. Real data from <span id="sources-terrain-date"></span>. The flat ground under the base and the ice pit were shaped for the game.</span></div>
             <div class="info-row"><b>Mars facts</b><span>Gravity 38% of Earth, a day of 24 h 39 min and 43% of Earth sunlight, from the NASA Mars Fact Sheet.</span></div>
-            <div class="info-row"><b>Weather</b><span>Temperature and air pressure from the NASA InSight lander, sols 675 to 681 (October 2020).</span></div>
+            <div class="info-row"><b>Weather</b><span>Real data from the NASA InSight lander at Elysium Planitia, sols 675 to 681 (October 2020): low and high temperature, air pressure and wind gusts. Each game sol uses one real sol, in order. The heater uses more power when the real air is colder. The shape of the temperature curve during the day is a game rule.</span></div>
+            <div class="info-row"><b>Dust storms</b><span>Dust in the air is measured as "tau" (how much sunlight it blocks). A clear sky at the Opportunity rover was about 0.5; the 2018 global storm reached 10.8, the highest ever measured on the ground (NASA JPL). Mars air is too thin to push you over: the danger is the dust, which hides the Sun and covers solar panels. When storms come, how long they last and how much power they cut are game rules.</span></div>
             <div class="info-row"><b>Crew needs</b><span>Oxygen, water and food per person from the NASA Baseline Values and Assumptions Document. Water recycling of 98% like the Space Station.</span></div>
             <div class="info-row"><b>Making air</b><span>Two real machines, and you pick one. The Space Station Oxygen Generation Assembly (OGA) splits water: 36 g of water make 32 g of oxygen, so one person needs about 0.95 L of water a day for air (NASA, 2015). A Sabatier reactor turns leftover hydrogen and the CO2 we breathe out back into water, but gets back only about half (NASA ICES, 2024). MOXIE on the Perseverance rover pulled 122 g of oxygen out of Mars air, at best 12 g per hour (NASA, 2023). How much power each machine uses is a game rule.</span></div>
             <div class="info-row"><b>Health</b><span>Career radiation limit of 600 mSv (NASA-STD-3001). Bones lose about 1% of density a month in space without exercise (NASA, 2023).</span></div>
@@ -335,6 +340,7 @@
           <p class="info-note">For judges and for recording the demo. These skip the waiting, they do not change the rules. Storms still come from the real NASA DONKI list.</p>
           <div class="demo-grid">
             <button class="mc-btn secondary" data-demo="storm">Start a solar storm</button>
+            <button class="mc-btn secondary" data-demo="dust">Start a dust storm</button>
             <button class="mc-btn secondary" data-demo="battery">Drain the battery to 10%</button>
             <button class="mc-btn secondary" data-demo="night">Jump to night</button>
             <button class="mc-btn secondary" data-demo="noon">Jump to noon</button>
