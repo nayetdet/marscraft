@@ -115,7 +115,7 @@ describe('objectiveView', () => {
       { icon: 'rocket', state: 'now' },
       { icon: 'home', state: 'todo' },
     ]);
-    expect(view.goals).toEqual({ storms: 0, stormsNeeded: 3, dataSent: false });
+    expect(view.goals).toEqual({ storms: 0, stormsNeeded: 1, dataSent: false });
     expect(view.progress).toBeNull(); // o numero do passo so existe no tutorial
 
     // Entregou o gelo: o degrau acende e o passo seguinte e voltar a base
@@ -141,13 +141,13 @@ describe('objectiveView', () => {
     step(story, { insideHabitat: true, earthCalls: 1 });
     step(story, { hours: 16, iceCount: 1 });
 
-    let view = step(story, { hours: 18, iceNeeded: 0, propellantPct: 90, stormsSurvived: 1 });
+    let view = step(story, { hours: 18, iceNeeded: 0, propellantPct: 90, stormsSurvived: 0 });
     expect(view.task).toMatchObject({ label: 'SEND SCIENCE' });
     expect(view.steps).toBeNull();
     expect(view.loop).toBe(false);
     expect(view.rocket).toEqual({ total: 10, loaded: 10, fuel: 9 });
 
-    view = step(story, { hours: 19, iceNeeded: 0, propellantPct: 100, stormsSurvived: 1, dataSent: true });
+    view = step(story, { hours: 19, iceNeeded: 0, propellantPct: 100, stormsSurvived: 0, dataSent: true });
     expect(view.task.label).toBe('SURVIVE THE STORMS');
     expect(view.rocket.fuel).toBe(10);
     expect(view.goals.dataSent).toBe(true);

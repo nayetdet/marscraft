@@ -159,6 +159,8 @@ export class GameEngine {
     // Zonas, placas, posteres e telas vivas da base (as caixas de colisao entram em `colliders`)
     // Clima espacial: comeca no dado embutido; o ao vivo do DONKI entra em applySpaceWeather (#100)
     this.spaceWeather = EMBEDDED_SPACE_WEATHER;
+    // Ultima resposta ao vivo do polling do DONKI (applyLiveSpaceWeather); null sem rede
+    this._liveSpaceWeather = null;
     this.baseDecor = buildBaseDecor(this.scene, colliders);
     for (const point of this.baseDecor.infoPoints) point.type = 'info';
     this.suitport = new SuitportStation(this.scene, colliders);
@@ -1362,6 +1364,15 @@ export class GameEngine {
     return true;
   }
 
+  // Polling do DONKI (pollSpaceWeather, em main.ts): guarda a resposta ao vivo e, se a historia
+  // ja soltou as tempestades, poe na fila as que estao acontecendo agora na vida real.
+  // Nunca e chamado dentro do loop.
+  applyLiveSpaceWeather(spaceWeather) {
+    if (!spaceWeather?.live) return [];
+    this._liveSpaceWeather = spaceWeather;
+    return this.mission.queueLiveStorms(spaceWeather);
+  }
+
   _updateBaseDisplays(dt) {
     this._displayTimer += dt;
     if (this._displayTimer < 0.5) return;
@@ -1624,6 +1635,8 @@ export class GameEngine {
       else if (event.type === 'step-done') this._playGymTone(440, 0.16, 660);
       else if (event.type === 'start-storms') {
         this.mission.startStorms(s.hours);
+        // Depois da tempestade do tutorial, so as reais: o que o DONKI ja mostrou acontecendo agora entra na fila
+        this.mission.queueLiveStorms(this._liveSpaceWeather);
         this.events.start(s.hours); // eventos aleatorios so depois do tutorial (issue #107)
         if (this.mission.noStormData) this.hud.showToast(`Space weather is calm. ${NO_STORM_DATA_TEXT}`, 6000);
       }

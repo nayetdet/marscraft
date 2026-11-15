@@ -2,7 +2,8 @@
 // Clima espacial do NASA DONKI. O navegador so chama nossa rota /api/space-weather;
 // a chave NASA_API_KEY e usada exclusivamente no servidor Next.js. Qualquer falha cai no
 // JSON embutido, e entao nada no jogo diz "LIVE".
-// Chamado uma vez em main.js, antes do primeiro Play. Nunca dentro do loop do jogo.
+// `loadSpaceWeather` e chamado uma vez em main.ts, antes do primeiro Play; `pollSpaceWeather`
+// repete a pergunta de tempos em tempos (tempestades ao vivo depois do tutorial). Nunca dentro do loop do jogo.
 import donkiCme from './donkiCme.json';
 import { SPACE_WEATHER_CONFIG } from '../config/constants.ts';
 import { latestBulletin, summarizeCmes, summarizeSeps } from './donkiNormalize.ts';
@@ -128,4 +129,30 @@ export async function loadSpaceWeather({
     console.info('NASA DONKI live data unavailable, using the data saved in the game:', error?.message ?? error);
     return EMBEDDED_SPACE_WEATHER;
   }
+}
+
+// Polling do clima espacial ao vivo: a cada LIVE_POLL_MINUTES pergunta a /api/space-weather e
+// entrega a resposta a `onLive` so quando o fetch funcionou (nunca o dado embutido: so isso e
+// "ao vivo"). Uma resposta com `cmes: []` tambem vale: quer dizer que o Sol esta calmo agora.
+// Devolve a funcao que para o polling.
+export function pollSpaceWeather(onLive, {
+  fetchImpl = globalThis.fetch?.bind(globalThis),
+  intervalMs = SPACE_WEATHER_CONFIG.LIVE_POLL_MINUTES * 60 * 1000,
+  setIntervalImpl = globalThis.setInterval?.bind(globalThis),
+  clearIntervalImpl = globalThis.clearInterval?.bind(globalThis),
+} = {}) {
+  if (typeof fetchImpl !== 'function' || typeof setIntervalImpl !== 'function') return () => {};
+  const tick = async () => {
+    try {
+      const response = await fetchImpl(SPACE_WEATHER_ENDPOINT, { cache: 'no-store' });
+      if (response.status !== 200) return;
+      const result = await response.json();
+      if (!result?.live || !Array.isArray(result.cmes)) return;
+      onLive({ ...result, seps: result.seps ?? [] });
+    } catch (error) {
+      console.info('NASA DONKI live check failed, trying again later:', error?.message ?? error);
+    }
+  };
+  const id = setIntervalImpl(tick, intervalMs);
+  return () => clearIntervalImpl?.(id);
 }

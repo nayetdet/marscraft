@@ -409,6 +409,17 @@ export const SPACE_WEATHER_CONFIG = {
   // o pico usa a menor tempestade que o Curiosity mediu (RADIATION_CONFIG.STORM_DOSE_MIN_UGY).
   SEP_EVERY_N_STORMS: 3,
   SEP_WARNING_HOURS: 0.3,
+  // Depois da tempestade do tutorial, so ha tempestade solar quando o DONKI mostra uma de verdade
+  // agora (liveStormEvents). O jogo pergunta a /api/space-weather a cada LIVE_POLL_MINUTES reais;
+  // a rota guarda a resposta na CDN pelo mesmo tempo, entao todos os jogadores dividem os pedidos.
+  LIVE_POLL_MINUTES: 10,
+  // Uma CME conta como "acontecendo agora" da saida do Sol ate este tempo depois da chegada
+  // prevista em Marte. [Ref] a tempestade de setembro de 2017 deixou a radiacao alta em Marte
+  // por mais de 2 dias (NASA JPL, MAVEN e Curiosity RAD).
+  CME_ACTIVE_AFTER_ARRIVAL_HOURS: 48,
+  // Uma SEP conta como "acontecendo agora" ate este tempo depois de medida (escala de jogo:
+  // o DONKI da so o inicio do evento, nao o fim)
+  SEP_ACTIVE_HOURS: 24,
 };
 
 export const MAV_CONFIG = {
@@ -420,7 +431,9 @@ export const MAV_CONFIG = {
   // Horas de jogo para a fabrica transformar 1 bloco de gelo em combustivel: 0,15 h = 7,5 s
   // reais (era 0,6 h = 30 s; teste com jogadores de 15/11/2026). Escala de jogo.
   ISRU_HOURS_PER_ICE_BLOCK: 0.15,
-  STORMS_TO_SURVIVE: 3,
+  // So a tempestade do tutorial conta (15/11/2026): depois dela, tempestade so vem quando o DONKI
+  // mostra uma de verdade, e um dia calmo no Sol nao pode travar a decolagem.
+  STORMS_TO_SURVIVE: 1,
   // [Ref] um astronauta consome ~0,84 kg de O2 por dia (NASA BVAD), usado para converter
   // os pontos de O2 do jogo em kg no resumo da vitoria
   OXYGEN_KG_PER_DAY: 0.84,
