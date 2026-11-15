@@ -20,7 +20,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
 }
 
 .damage-overlay {
@@ -1556,6 +1556,20 @@
   display: block;
 }
 
+.mobile-pause-button {
+  position: absolute;
+  top: calc(50% + 8px);
+  right: calc(max(14px, env(safe-area-inset-right)) + 162px);
+  left: auto;
+  width: 48px;
+  min-width: 48px;
+  min-height: 44px;
+  padding: 0;
+  transform: translateY(-50%);
+  font-size: 16px;
+  pointer-events: auto;
+}
+
 .touch-mode.game-paused .mobile-controls,
 .touch-mode.inventory-open .mobile-controls {
   display: none;
@@ -1563,7 +1577,9 @@
 
 .touch-mode.rover-active [data-touch-action="jump"],
 .touch-mode.rover-active [data-touch-action="use"],
-.touch-mode.rover-active [data-touch-action="zoom"] {
+.touch-mode.rover-active [data-touch-action="view"],
+.touch-mode.rover-active [data-touch-action="drop"],
+.touch-mode.rover-active [data-touch-action="send"] {
   display: none;
 }
 
@@ -1652,6 +1668,12 @@
   background: rgba(145, 145, 145, .92);
 }
 
+.touch-button:focus-visible,
+.mobile-pause-button:focus-visible {
+  outline: 3px solid #ffe27a;
+  outline-offset: 2px;
+}
+
 .touch-mode #game-container canvas {
   touch-action: none;
 }
@@ -1691,13 +1713,13 @@
 }
 
 .touch-mode .mc-slot {
-  width: clamp(29px, 9.5vw, 36px);
-  height: clamp(29px, 9.5vw, 36px);
+  width: clamp(44px, 8vw, 46px);
+  height: clamp(44px, 8vw, 46px);
 }
 
 .touch-mode .mc-slot-icon {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
 }
 
 .touch-mode #hotbar {
@@ -1743,6 +1765,24 @@
 
   .touch-mode .touch-control-caption {
     width: 96px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 700px) {
+  .touch-mode .mobile-joystick {
+    bottom: calc(118px + env(safe-area-inset-bottom));
+  }
+
+  .touch-mode .mobile-action-buttons {
+    right: max(14px, env(safe-area-inset-right));
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    grid-template-columns: repeat(2, 48px);
+    gap: 5px;
+  }
+
+  .touch-mode .mobile-sprint-button {
+    left: calc(max(14px, env(safe-area-inset-left)) + 104px);
+    bottom: calc(160px + env(safe-area-inset-bottom));
   }
 }
 

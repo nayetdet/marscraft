@@ -103,7 +103,62 @@ export class InputController {
     this.lookPointerId = null;
     this.touchHeldActions = new Map();
 
+    this._updateTouchActionLabels();
     this._bindEvents();
+  }
+
+  _clearTouchInput() {
+    this.keys = {};
+    this.isBreakButtonHeld = false;
+    this._releaseScopeScan();
+    this._cancelBreaking();
+    this.touchHeldActions.clear();
+    this.joystickPointerId = null;
+    this.lookPointerId = null;
+    document.querySelectorAll('[data-touch-action].is-active').forEach((button) => {
+      button.classList.remove('is-active');
+      if (button.dataset.touchAction === 'sprint') button.setAttribute('aria-pressed', 'false');
+    });
+    this._setJoystick(0, 0);
+    if (this.player) this.player.isMoving = false;
+  }
+
+  _updateTouchActionLabels() {
+    const mineLabel = document.getElementById('touch-mine-label');
+    const useLabel = document.getElementById('touch-use-label');
+    if (mineLabel) {
+      mineLabel.textContent = this.isRoverActive()
+        ? 'DRILL'
+        : this._isScopeSelected() ? 'SCAN' : 'MINE';
+      const mineButton = mineLabel.closest('button');
+      mineButton?.setAttribute('aria-label', this.isRoverActive()
+        ? 'Drill with the rover'
+        : this._isScopeSelected() ? 'Hold to scan with the scope' : 'Hold to mine or break blocks');
+    }
+    if (useLabel) {
+      useLabel.textContent = this._isScopeSelected()
+        ? this.isScannerOpen ? (this.isZoomed ? 'CLOSE' : 'ZOOM') : 'SCOPE'
+        : 'USE';
+      const useButton = useLabel.closest('button');
+      useButton?.setAttribute('aria-label', this._isScopeSelected()
+        ? this.isScannerOpen ? (this.isZoomed ? 'Close scope view' : 'Zoom in with scope') : 'Open scope view'
+        : 'Use item or place selected block');
+    }
+  }
+
+  _pauseTouchGame() {
+    if (!this.isTouchMode || !this.isLocked) return;
+    this._showPauseMenu?.();
+  }
+
+  _dropSelectedItem() {
+    const slot = this.survival.slots[this.hud.selectedSlot];
+    if (slot?.equipment) return;
+    if (slot && this.survival.useBlockFromSlot(this.hud.selectedSlot)) {
+      this.world.spawnPlayerDrop(this.player.pos, this.player.yaw, slot.id);
+      this.hud.renderHotbar(this.survival.slots);
+      this._syncHandWithSlot();
+    }
   }
 
   _updateOrientationMode() {
@@ -114,18 +169,7 @@ export class InputController {
     this.isPortraitRequired = isPortrait;
     document.body.classList.toggle('portrait-required', isPortrait);
     if (!isPortrait) return;
-
-    this.keys = {};
-    this.isBreakButtonHeld = false;
-    this._releaseScopeScan();
-    this._cancelBreaking();
-    this.touchHeldActions.clear();
-    this.joystickPointerId = null;
-    this.lookPointerId = null;
-    document.querySelectorAll('[data-touch-action].is-active').forEach((button) => {
-      button.classList.remove('is-active');
-    });
-    this._setJoystick(0, 0);
+    this._clearTouchInput();
   }
 
   _startTouchMode() {
@@ -135,6 +179,7 @@ export class InputController {
     document.getElementById('overlay').classList.add('hidden');
     document.getElementById('pause-overlay').classList.add('hidden');
     document.body.classList.remove('pause-menu-open');
+    document.body.classList.remove('game-paused');
   }
 
   _toggleInventory() {
@@ -144,17 +189,7 @@ export class InputController {
     }
 
     if (this.isLocked) {
-      this.keys = {};
-      this.isBreakButtonHeld = false;
-      this._releaseScopeScan();
-      this._cancelBreaking();
-      this.touchHeldActions.clear();
-      this.joystickPointerId = null;
-      this.lookPointerId = null;
-      document.querySelectorAll('[data-touch-action].is-active').forEach((button) => {
-        button.classList.remove('is-active');
-      });
-      this._setJoystick(0, 0);
+      this._clearTouchInput();
       this.hud.openInventory(this.survival.inventorySlots);
       this.onUiClick?.();
       if (!this.isTouchMode) document.exitPointerLock();
@@ -185,10 +220,7 @@ export class InputController {
   }
 
   openJournal() {
-    this.keys = {};
-    this.touchHeldActions.clear();
-    this._cancelBreaking();
-    this._setJoystick(0, 0);
+    this._clearTouchInput();
     this.onToggleJournal(true);
     this.onUiClick?.();
     if (!this.isTouchMode && document.pointerLockElement) document.exitPointerLock();
@@ -242,8 +274,17 @@ export class InputController {
   }
 
   _handleTouchAction(action, button, pointerId) {
-    if (!this.isTouchMode || !this.isLocked || this.survival.isDead || this.hud.isInventoryOpen || this.isJournalOpen?.() || this.isStationOpen?.()) return;
-    if (this.isInputBlocked?.()) return;
+    if (!this.isTouchMode || !this.isLocked || this.survival.isDead) return;
+    if (this.isPortraitRequired || this.isInputBlocked?.()) return;
+    if (action === 'pause') {
+      this._pauseTouchGame();
+      return;
+    }
+    if (this.hud.isInventoryOpen || this.isJournalOpen?.() || this.isStationOpen?.()) return;
+    if (this.isMissionModalOpen?.()) {
+      if (action === 'interact') this.onInteract?.();
+      return;
+    }
 
     if (this.isGymActive?.()) {
       if (action === 'jump' || action === 'mine' || action === 'use') {
@@ -272,17 +313,28 @@ export class InputController {
     } else if (action === 'use') {
       if (this.isRoverActive()) this.onRoverAction();
       else if (this.getInteraction?.()?.type === 'greenhouse') this.onInteract();
-      else if (!this._handleScopeMouseButton(2)) this._useSelectedItem();
+      else if (this._isScopeSelected()) {
+        if (!this.isScannerOpen || !this.isZoomed) this._setScope(true, true);
+        else this._setScope(false, false);
+      } else this._useSelectedItem();
     } else if (action === 'interact') {
       this.onInteract();
     } else if (action === 'sprint') {
       if (!this.isRoverActive()) {
         this.keys.Sprint = !this.keys.Sprint;
         button.classList.toggle('is-active', this.keys.Sprint);
+        button.setAttribute('aria-pressed', String(this.keys.Sprint));
       }
     } else if (action === 'inventory') {
       this._toggleInventory();
+    } else if (action === 'view') {
+      if (!this.isRoverActive()) this.onToggleThirdPerson();
+    } else if (action === 'drop') {
+      if (!this.isRoverActive()) this._dropSelectedItem();
+    } else if (action === 'send') {
+      if (!this.isRoverActive()) this.onSendData();
     }
+    this._updateTouchActionLabels();
   }
 
   _releaseTouchPointer(pointerId) {
@@ -318,7 +370,7 @@ export class InputController {
   }
 
   _moveJoystick(event) {
-    if (event.pointerId !== this.joystickPointerId || this.survival.isDead || this.hud.isInventoryOpen || this.isStationOpen?.()) return;
+    if (event.pointerId !== this.joystickPointerId || this.isPortraitRequired || this.survival.isDead || this.hud.isInventoryOpen || this.isStationOpen?.()) return;
     const rect = document.getElementById('mobile-joystick').getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + 56;
@@ -333,6 +385,7 @@ export class InputController {
     const slot = this.survival.slots[this.hud.selectedSlot];
     this.playerHand.setHeldBlock(slot?.id, slot?.count ?? 0);
     if (slot?.id !== BLOCK_IDS.SCOPE && this.isScannerOpen) this._setScope(false, false);
+    this._updateTouchActionLabels();
   }
 
   _isScopeSelected() {
@@ -466,10 +519,19 @@ export class InputController {
       overlay.classList.add('hidden');
       pauseOverlay.classList.remove('hidden');
       document.body.classList.add('pause-menu-open');
+      if (this.isTouchMode) {
+        this.isLocked = false;
+        this._clearTouchInput();
+        document.body.classList.add('game-paused');
+      }
     };
 
     this._showPauseMenu = showPauseMenu;
     this.hud.inventoryCloseBtn?.addEventListener('click', () => this._closeInventory({ silent: true }));
+    document.getElementById('mobile-pause-button')?.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      this._handleTouchAction('pause', event.currentTarget, event.pointerId);
+    });
 
     controlsBtn.addEventListener('click', () => {
       menuMain.classList.add('hidden');
@@ -562,6 +624,7 @@ export class InputController {
       this.player.isMoving = false;
       this._cancelBreaking();
       document.body.classList.remove('touch-mode');
+      document.body.classList.remove('game-paused');
       if (document.pointerLockElement === this.domElement) document.exitPointerLock();
       else {
         menuCardHome.append(menuCard);
@@ -588,7 +651,9 @@ export class InputController {
     }
 
     document.addEventListener('pointerlockchange', () => {
-      this.isLocked = this.isTouchMode || document.pointerLockElement === this.domElement;
+      this.isLocked = this.isTouchMode
+        ? this.hasStarted && !document.body.classList.contains('game-paused')
+        : document.pointerLockElement === this.domElement;
       if (this.isLocked) this._awaitingPointerLock = false;
       if (!this.isLocked) {
         // Sem pointer lock o jogador para: sem teclas presas e sem animacao de caminhada.
@@ -616,7 +681,7 @@ export class InputController {
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (!this.isLocked || this.survival.isDead || this.isInputBlocked()) return;
+      if (!this.isLocked || this.isPortraitRequired || this.survival.isDead || this.isInputBlocked()) return;
       if (this.isRoverActive()) {
         this.onRoverLook(e.movementX, e.movementY);
         return;
@@ -629,7 +694,7 @@ export class InputController {
     });
 
     window.addEventListener('keydown', (e) => {
-      if (this.survival.isDead || this.isStationOpen?.() || this.isInputBlocked()) return;
+      if (this.isPortraitRequired || this.survival.isDead || this.isStationOpen?.() || this.isInputBlocked()) return;
       // Painel do MAV ou tela de vitoria abertos: so [F] continua ativo.
       if (this.isMissionModalOpen()) {
         if (e.code === 'KeyF' && !e.repeat) this.onInteract();
@@ -703,13 +768,7 @@ export class InputController {
       }
 
       if (e.code === 'KeyQ' && this.isLocked && !e.repeat) {
-        const slot = this.survival.slots[this.hud.selectedSlot];
-        if (slot?.equipment) return;
-        if (slot && this.survival.useBlockFromSlot(this.hud.selectedSlot)) {
-          this.world.spawnPlayerDrop(this.player.pos, this.player.yaw, slot.id);
-          this.hud.renderHotbar(this.survival.slots);
-          this._syncHandWithSlot();
-        }
+        this._dropSelectedItem();
         return;
       }
       // A tecla T nao avanca mais o tempo no jogo normal (issue #109): para passar o tempo,
@@ -721,10 +780,8 @@ export class InputController {
       if (e.code === 'KeyW') this.keys.Sprint = false;
     });
 
-    window.addEventListener('blur', () => { this.keys = {}; });
-
     window.addEventListener('wheel', (e) => {
-      if (this.survival.isDead || this.isInputBlocked()) return;
+      if (this.isPortraitRequired || this.survival.isDead || this.isInputBlocked()) return;
       const dir = Math.sign(e.deltaY);
       // Only an active zoom claims the wheel; an unzoomed scanner must not block hotbar selection.
       if (this._handleScopeWheel(e)) return;
@@ -738,7 +795,7 @@ export class InputController {
         requestRawPointerLock(this.domElement);
         return;
       }
-      if (!this.isLocked || this.survival.isDead || this.isRoverActive() || this.isInputBlocked()) return;
+      if (!this.isLocked || this.isPortraitRequired || this.survival.isDead || this.isRoverActive() || this.isInputBlocked()) return;
 
       if (this.isGymActive?.()) {
         if (e.button === 0) this.onGymAction?.();
@@ -771,18 +828,16 @@ export class InputController {
       }
     });
 
-    window.addEventListener('blur', () => {
-      this.isBreakButtonHeld = false;
-      this._releaseScopeScan();
-      this._cancelBreaking();
-      this.keys = {};
+    window.addEventListener('blur', () => this._clearTouchInput());
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this._clearTouchInput();
     });
 
     window.addEventListener('contextmenu', (e) => e.preventDefault());
 
     const joystick = document.getElementById('mobile-joystick');
     joystick.addEventListener('pointerdown', (e) => {
-      if (!this.isTouchMode || this.survival.isDead || this.hud.isInventoryOpen || this.isInputBlocked()) return;
+      if (!this.isTouchMode || this.isPortraitRequired || this.survival.isDead || this.hud.isInventoryOpen || this.isInputBlocked()) return;
       e.preventDefault();
       this.joystickPointerId = e.pointerId;
       joystick.setPointerCapture(e.pointerId);
@@ -791,7 +846,7 @@ export class InputController {
 
     window.addEventListener('pointermove', (e) => {
       if (e.pointerId === this.joystickPointerId) this._moveJoystick(e);
-      if (e.pointerId !== this.lookPointerId || this.survival.isDead || this.hud.isInventoryOpen) return;
+      if (e.pointerId !== this.lookPointerId || this.isPortraitRequired || this.survival.isDead || this.hud.isInventoryOpen) return;
       const dx = e.clientX - this.lastTouchLookX;
       const dy = e.clientY - this.lastTouchLookY;
       this.lastTouchLookX = e.clientX;
@@ -808,7 +863,7 @@ export class InputController {
 
     this.domElement.addEventListener('pointerdown', (e) => {
       if (!this.isTouchMode || e.pointerType === 'mouse' || e.clientX < window.innerWidth * 0.4) return;
-      if (this.survival.isDead || this.hud.isInventoryOpen || this.isInputBlocked()) return;
+      if (this.isPortraitRequired || this.survival.isDead || this.hud.isInventoryOpen || this.isInputBlocked() || this.isMissionModalOpen?.()) return;
       e.preventDefault();
       this.lookPointerId = e.pointerId;
       this.lastTouchLookX = e.clientX;
@@ -819,12 +874,13 @@ export class InputController {
     document.querySelectorAll('[data-touch-action]').forEach((button) => {
       button.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+        this._updateTouchActionLabels();
         this._handleTouchAction(button.dataset.touchAction, button, e.pointerId);
       });
     });
 
     document.getElementById('hotbar').addEventListener('click', (e) => {
-      if (!this.isTouchMode) return;
+      if (!this.isTouchMode || this.isPortraitRequired || !this.isLocked) return;
       const slot = e.target.closest('.mc-slot');
       if (!slot) return;
       this.hud.selectSlot(Number(slot.dataset.slotIndex), this.survival.slots);
@@ -842,6 +898,7 @@ export class InputController {
     this.onToggleZoom(this.isScannerOpen, this.isZoomed);
     this.hud.updateZoomState(this.isScannerOpen, this.isZoomed);
     this.onUiClick?.();
+    this._updateTouchActionLabels();
   }
 
   // Com o diário aberto, só J (volta ao jogo) e Esc (fecha e mostra o menu) fazem algo.

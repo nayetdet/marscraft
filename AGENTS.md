@@ -30,6 +30,7 @@ O desafio, em uma frase: um jogo em que **crianças de 7 a 12 anos** administram
 6. **Poucos recursos centrais (2 ou 3)** para não sobrecarregar a criança. Proposta atual: **Energia, O2 e Radiação**.
 7. **Linguagem para 7 a 12 anos:** termos técnicos (sol, dose, CME) sempre com explicação curta no contexto.
 8. **Sem logo da NASA** em texturas ou UI geradas. Asset gerado por IA precisa de marca d'água; código assistido por IA precisa ser declarado nos créditos.
+9. **Mobile é plataforma de primeira classe.** Toda mecânica, tela, modal, HUD ou mudança de input deve considerar toque e telas pequenas desde o desenho inicial; não deixe a compatibilidade mobile para uma etapa posterior.
 
 ## Stack e comandos
 
@@ -70,7 +71,7 @@ src/world/
                            (pedras + facho de luz, 2 draw calls); tipos, fatos reais e fontes em src/data/sampleTypes.ts
 src/player/
   PlayerPhysics.ts         movimento, gravidade, colisão AABB × voxels
-  InputController.ts       teclado/mouse/pointer lock e controles touch em paisagem (joystick, câmera por arrasto, ações, hotbar e atalhos de missão/tripulação)
+  InputController.ts       teclado/mouse/pointer lock e controles touch em paisagem (joystick, câmera por arrasto, ações contextuais, pausa e hotbar)
   SurvivalSystem.ts        barras O2/vida/água/comida, áreas pressurizadas, inventário (9 slots de hotbar + 27 de mochila)
   PlayerHand.ts            mão/bloco em 1ª pessoa
 src/base/                  organizacao visual da base: posteres e placas (basePosters),
@@ -95,11 +96,13 @@ src/ui/                    HudManager (barras, hotbar, inventário, toasts, rót
 docs/                      contexto do desafio, APIs e dados reais
 ```
 
-## Requisitos para mobile
+## Requisitos permanentes para mobile
+
+Considere mobile em toda mudança futura de gameplay e interface. Preserve a paridade entre toque e teclado/mouse para cada ação relevante, planeje espaço para os controles e HUD juntos e confira como modais, inventário, tutoriais, estações e eventos se comportam em tela touch. Se uma ação não puder ser usada no mobile, documente a exceção e ofereça um caminho equivalente quando fizer sentido.
 
 - **A experiência mobile é em paisagem (landscape).** Em retrato, mostre a orientação para girar o aparelho e pause a jogabilidade; não tente forçar a rotação via API do navegador.
 - **Preserve paridade de ações:** toda ação relevante disponível no teclado/mouse deve ter um controle touch equivalente, salvo quando for explicitamente exclusiva do desktop.
-- **Controles atuais:** joystick virtual à esquerda; RUN acima do joystick; arrasto na metade direita da tela para olhar; ações à direita (pular, minerar/perfurar, usar/colocar, interagir, luneta e inventário); hotbar selecionável por toque.
+- **Controles atuais:** joystick virtual à esquerda; RUN acima do joystick; arrasto na metade direita da tela para olhar; ações à direita (pular, minerar/perfurar, usar/colocar, interagir, inventário, câmera, soltar item e enviar ciência); botão de pausa; hotbar selecionável por toque. A luneta usa os botões de minerar e usar; no rover eles viram DRILL e sair/interagir.
 - **Rover:** mantenha os controles contextuais touch (joystick para dirigir, arrasto à direita para olhar, DRILL para ação e interação para sair). O sprint não se aplica ao rover; esconda esse botão nesse modo e não reintroduza a antiga troca de câmera `CAM`.
 - **Alvos touch:** mantenha botões confortáveis para toque (mínimo aproximado de 44 px), respeite `safe-area-inset-*` e evite sobrepor joystick, hotbar, HUD ou controles de ação.
 - **Implementação:** reutilize `InputController.ts`, os elementos em `public/game.html` e os estilos existentes em `src/ui/styles/`. Mantenha teclado/mouse funcionando e pause corretamente durante inventário e orientação retrato.

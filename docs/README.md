@@ -2,6 +2,8 @@
 
 Contexto geral do **MarsCraft**, nossa resposta ao desafio *Build a Junior Astronaut Mission Trainer* do NASA Space Apps Challenge 2026.
 
+Mobile é uma plataforma de primeira classe: considere toque, telas pequenas, orientação paisagem e áreas seguras em toda mudança de jogo ou interface. Consulte os [requisitos permanentes do projeto](../AGENTS.md) e o [estado da experiência mobile](game/estado-atual-e-gaps.md#mobile-como-requisito-permanente).
+
 | Arquivo | Para quê |
 |---|---|
 | [`challenge/desafio.md`](challenge/desafio.md) | Texto oficial do desafio (verbatim) e resumo em PT |
