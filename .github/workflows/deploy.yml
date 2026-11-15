@@ -27,23 +27,24 @@ jobs:
         run: npm ci
       - name: Run tests
         run: npm test
+      - name: Check TypeScript
+        run: npm run typecheck
+      - name: Link Vercel project
+        run: npx vercel@latest link --yes --project marscraft --scope="$VERCEL_SCOPE" --token="${VERCEL_TOKEN}"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_SCOPE: ${{ secrets.VERCEL_SCOPE }}
       - name: Pull Vercel environment
         run: npx vercel@latest pull --yes --environment=production --token="${VERCEL_TOKEN}"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       - name: Build Vercel output
         run: npx vercel@latest build --prod --token="${VERCEL_TOKEN}" --build-env NASA_API_KEY="${NASA_API_KEY}"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
       - name: Deploy production
         run: npx vercel@latest deploy --prebuilt --prod --token="${VERCEL_TOKEN}" --env NASA_API_KEY="${NASA_API_KEY}"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
