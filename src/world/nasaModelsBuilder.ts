@@ -203,6 +203,8 @@ export function buildNasaCustomModels(scene) {
 
   // 8. Doca e Usina Externa de Recepção de Gelo e Conversão em Água
   const iceDepot = createIceProcessingDepotModel(mats, 5.5, groundTopY, 9.5);
+  // O rover fica estacionado sobre a doca; ela continua sólida para o astronauta.
+  iceDepot.userData.roverNoCollide = true;
   iceDepot.userData.scanId = 'ice-depot';
   group.add(iceDepot);
   solidObjects.push(iceDepot);
@@ -268,6 +270,7 @@ export function buildNasaCustomModels(scene) {
       // Usado pelo scanner da luneta (scanTargeting); sem scanId, o alvo vem do módulo da base.
       if (plants.includes(obj)) collider.scanId = 'greenhouse';
       else if (obj.userData.scanId) collider.scanId = obj.userData.scanId;
+      if (obj.userData.roverNoCollide) collider.roverNoCollide = true;
       colliders.push(collider);
       if (plants.includes(obj)) obj.userData.collider = collider;
     }
