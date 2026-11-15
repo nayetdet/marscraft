@@ -1143,6 +1143,15 @@ export const ACT2_CONFIG = {
   CREW_HELP_DEFAULT_SECONDS: 20, // sem resposta neste tempo (segundos reais), vem a opcao padrao
   CREW_HELP_HOURS: 1, // horas de jogo que a maquina de quem ajuda fica parada (50 s reais)
   REPAIR_REACH: 4.5, // blocos: distancia maxima para trocar a janela rachada
+  // Fichas raras que so existem na tempestade (issue #419, act2StormScans.ts). Regra de jogo.
+  // Caixa de mira do redemoinho, em blocos: meia largura e altura (o funil desenhado tem 11 de
+  // altura e cerca de 2,3 de raio no topo, em MarsEventEffects.ts)
+  STORM_SCAN_DEVIL_HALF_WIDTH: 2.5,
+  STORM_SCAN_DEVIL_HEIGHT: 11,
+  STORM_SCAN_NOTICE_MS: 9000, // tempo do aviso "Rare scan outside" na tela
+  // O aviso sai este tempo (segundos reais) depois de o evento comecar, para nao ser trocado
+  // na mesma hora pelo aviso da propria tempestade ("The dust storm is here")
+  STORM_SCAN_NOTICE_DELAY_SECONDS: 4,
 };
 
 // Ato 3 (issue #409): abrigo na tempestade solar, planta, racao e academia.

@@ -13,6 +13,7 @@ const TARGET_IDS = [
   'base', 'habitat', 'airlock', 'tunnel', 'greenhouse', 'cupola', 'gym',
   'solar-panels', 'antenna', 'ice-depot', 'rover', 'lander', 'mav-panel',
   'crater-rim', 'atmosphere',
+  'dust-storm-wall', 'dust-devil', // so na tempestade (issue #419)
 ];
 
 describe('scan catalog', () => {

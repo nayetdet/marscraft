@@ -9,6 +9,7 @@ import { ACT2_ENGINEER_NAME, ACT2_PLACES } from './act2Steps.ts';
 import { ACT2_CARDS, ACT2_TEXT, JournalLesson, WINDOW_SCAN_ENTRIES } from './act2Text.ts';
 import { SUIT_CHOICE_CARD, shouldShowSuitChoice } from './act2SuitChoice.ts';
 import { CREW_HELP_CARD, CREW_HELPERS, CrewHelp, DEFAULT_HELPER_ID, type CrewHelper } from './act2CrewHelp.ts';
+import { StormScans, type ScanTarget, type StormScanId } from './act2StormScans.ts';
 
 // Ato 2 (issue #408): liga os passos de act2Steps.ts ao jogo. Ver actTypes.ts.
 //   clean-panels   comeca a tempestade de poeira roteirizada; no meio dela o redemoinho cruza o
@@ -70,6 +71,7 @@ export class Act2Controller extends ActController {
   private lessonHud: { isVisible: boolean; onNext: () => void; show: Function; hide: Function; reposition: Function } | null = null;
   private lessonClock = 0;
   suitChoiceShown = false; // card SUIT OR EARTH? (#417)
+  stormScans = new StormScans(); // fichas raras que so existem na tempestade (#419)
 
   // Luneta num vidro
   private windowState = { targetId: 'act2-window', entry: WINDOW_SCAN_ENTRIES.scanning, progress: 0, done: false, known: false, completed: null };
@@ -184,6 +186,7 @@ export class Act2Controller extends ActController {
     const back = this.crewHelp.update(s.hours ?? 0);
     if (back) this.resumeStation(back);
     this.updateLesson(dt);
+    this.updateStormScans(dt);
   }
 
   // ---------- Tempestade de poeira roteirizada ----------
@@ -583,5 +586,46 @@ export class Act2Controller extends ActController {
     this.engineerWaypoint.y = avatar.position.y + 2.6;
     this.engineerWaypoint.z = avatar.position.z;
     return this.engineerWaypoint;
+  }
+
+  // ---------- Fichas raras que so existem na tempestade (#419, act2StormScans.ts) ----------
+
+  // Le do jogo se a tempestade de poeira e o redemoinho estao acontecendo e se a crianca esta la fora
+  private syncStormScans(): void {
+    const engine = this.engine;
+    const effects = engine.eventEffects;
+    this.stormScans.sync(
+      engine.mission?.dustWeather?.phase === 'storm',
+      effects?.type === 'dustDevil' ? effects.devilPos : null,
+      Boolean(engine.survival) && !engine.survival.insidePressurizedShip,
+    );
+  }
+
+  // Aviso da chance, uma vez por evento e so para quem ja tem a luneta
+  private updateStormScans(dt: number): void {
+    const scans = this.stormScans;
+    this.syncStormScans();
+    if (!scans.stormActive && !scans.devilActive) {
+      scans.notice(false, null);
+      return;
+    }
+    const notice = scans.notice(this.hasItem(BLOCK_IDS.SCOPE), this.engine.scanJournal?.missionScans, dt);
+    if (notice) this.engine.hud?.showToast(notice, C.STORM_SCAN_NOTICE_MS);
+  }
+
+  // GameEngine._updateScanner: a caixa de mira do redemoinho (fora do evento ela fica fora de alcance)
+  stormScanBox() {
+    this.syncStormScans();
+    return this.stormScans.devilBox;
+  }
+
+  // GameEngine._updateScanner: o alvo da luneta ja com a regra das fichas de tempestade
+  stormScanTarget(target: ScanTarget | null): ScanTarget | null {
+    return this.stormScans.retarget(target);
+  }
+
+  // Boletim final: fichas de tempestade que a crianca pode pegar e deixou passar nesta partida
+  stormScansMissed(): StormScanId[] {
+    return this.stormScans.missed(this.engine.scanJournal?.missionScans);
   }
 }

@@ -965,14 +965,15 @@ export class GameEngine {
     box.minY = rp.y; box.maxY = rp.y + 2.7;
     box.minZ = rp.z - 1.6; box.maxZ = rp.z + 1.6;
 
-    const target = resolveScanTarget({
+    // Ato 2 (#419): o redemoinho e alvo so enquanto existe; na tempestade, la fora, o ceu e a parede de poeira
+    const target = this.act2.stormScanTarget(resolveScanTarget({
       world: this.world,
       origin,
       dir,
-      objects: [...this.customColliders, box],
+      objects: [...this.customColliders, box, this.act2.stormScanBox()],
       skyBodies: this._skyBodies,
       maxDist: this.scanJournal.scanRange(),
-    });
+    }));
     const isScanning = this.input.isScanButtonHeld;
     // Ato 2 (#408): procurando o vazamento, um vidro na mira responde se esta inteiro ou rachado
     const windowScan = this.act2.scanWindow(dt, target, isScanning);
@@ -1015,6 +1016,7 @@ export class GameEngine {
       if (c.scanId === id || (id === 'base' && !c.scanId)) boxes.push(c);
     }
     if (id === 'rover') boxes.push({ ...this._roverScanBox });
+    if (id === 'dust-devil') boxes.push({ ...this.act2.stormScans.devilBox }); // #419
     return boxes.length ? { boxes } : null;
   }
 
@@ -1515,6 +1517,7 @@ export class GameEngine {
       baseHandover: this.act5.handoverStats(),
       firstIceChoice: this._firstIceChoice ?? null, // ato 1 (#413)
       walkedToRocket: this._walkedToRocket ?? null, // ato 3 (#421)
+      stormScansMissed: this.act2.stormScansMissed(), // ato 2 (#419)
       ...this._scienceReportStats(),
     };
   }

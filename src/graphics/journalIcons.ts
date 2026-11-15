@@ -535,6 +535,31 @@ const ICON_BUILDERS = {
       <circle cx="32" cy="32" r="20" fill="none" stroke="#7dd3fc" stroke-width="1.3" opacity="0.8"/>
     `,
   }),
+
+  // Fichas que so existem na tempestade (issue #419)
+  // Parede de poeira: uma frente alta e escura que tapa o Sol e avanca sobre o chao
+  'dust-storm-wall': () =>
+    MARS_BG +
+    r('#fde68a', 3, 3, 3, 3) + r('#fef3c7', 4, 4, 1, 1) +
+    r('#7c2d12', 8, 4, 16, 14) +
+    r('#9a3412', 10, 3, 14, 3) + r('#9a3412', 7, 8, 3, 10) +
+    r('#c2410c', 12, 6, 12, 4) + r('#c2410c', 9, 12, 15, 6) +
+    r('#ea580c', 15, 9, 9, 3) + r('#ea580c', 11, 15, 8, 2) +
+    r('#fdba74', 18, 5, 4, 1) + r('#fdba74', 13, 13, 3, 1) +
+    r('#451a03', 0, 20, 24, 4),
+
+  // Redemoinho: funil fino no chao e largo no alto
+  'dust-devil': () =>
+    MARS_BG +
+    r('#fdba74', 6, 3, 12, 2) +
+    r('#fb923c', 7, 5, 10, 2) + r('#fed7aa', 9, 5, 3, 1) +
+    r('#ea580c', 8, 7, 8, 2) + r('#fdba74', 12, 8, 3, 1) +
+    r('#fb923c', 9, 9, 6, 2) +
+    r('#ea580c', 10, 11, 5, 2) + r('#fed7aa', 10, 12, 2, 1) +
+    r('#c2410c', 10, 13, 4, 2) +
+    r('#ea580c', 11, 15, 3, 2) +
+    r('#c2410c', 11, 17, 2, 2) +
+    r('#fdba74', 8, 19, 2, 1) + r('#fdba74', 14, 19, 3, 1) + r('#fb923c', 6, 20, 2, 1),
 };
 
 // ---------- SAMPLES (issue #270): a pedra do item, sobre o chao de Marte ----------
