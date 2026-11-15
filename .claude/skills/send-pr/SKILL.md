@@ -12,13 +12,13 @@ Argumento opcional (`$ARGUMENTS`): descrição curta do que foi feito / número 
 
 ## Regra de conta do GitHub (obrigatória)
 
-O repo é **privado** e só a conta pessoal `DerickBessa` tem acesso. A conta ativa da máquina é a da empresa e **não deve ser trocada** (nada de `gh auth switch`).
+Use a identidade GitHub configurada no ambiente. Confira `gh auth status` se a autenticação falhar; não busque tokens vinculados a contas específicas nem troque a conta ativa automaticamente.
 
-- Todo comando `gh` roda com o token pessoal, no mesmo comando (estado do shell não persiste entre chamadas):
+- Use a sessão `gh auth` já configurada no ambiente para os comandos GitHub:
   ```bash
-  export GH_TOKEN=$(gh auth token --user DerickBessa) && gh ... -R nayetdet/nasa-space-apps
+  gh ... -R nayetdet/nasa-space-apps
   ```
-- `git fetch/pull/push` já usam a conta pessoal via credential helper local do repo (`git config --local credential.https://github.com.helper`). Se der erro de autenticação, verifique se esse helper ainda existe antes de qualquer outra coisa.
+- `git fetch/pull/push` usam as credenciais configuradas para o repositório. Se der erro de autenticação, confira `gh auth status` e o acesso remoto antes de prosseguir.
 
 ## 1. Preparar a branch
 
@@ -75,7 +75,7 @@ Rode `npm test` até ficar verde e commite (`test: ...`).
 ## 5. Issue vinculada
 
 ```bash
-export GH_TOKEN=$(gh auth token --user DerickBessa) && gh issue list -R nayetdet/nasa-space-apps --state open --limit 50
+gh issue list -R nayetdet/nasa-space-apps --state open --limit 50
 ```
 
 - **Branch com número da issue** (padrão do `/start-issue`: `feat/N-<slug>`) ou usuário passou `#N` → use essa issue.
@@ -91,7 +91,7 @@ export GH_TOKEN=$(gh auth token --user DerickBessa) && gh issue list -R nayetdet
 
 ```bash
 git push -u origin <branch>            # ou --force-with-lease se reescreveu após rebase
-export GH_TOKEN=$(gh auth token --user DerickBessa) && gh pr create -R nayetdet/nasa-space-apps --base main --head <branch> --title "<tipo>: <resumo>" --body "..."
+gh pr create -R nayetdet/nasa-space-apps --base main --head <branch> --title "<tipo>: <resumo>" --body "..."
 ```
 
 Corpo do PR:

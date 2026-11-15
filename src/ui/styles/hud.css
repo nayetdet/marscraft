@@ -1455,7 +1455,7 @@
   border-radius: 3px;
   background: rgba(83, 83, 83, .86);
   color: #fff;
-  font: 700 10px 'Courier New', Courier, monospace;
+  font: 700 10px 'Monocraft', monospace;
   text-shadow: 1px 1px #222;
   box-shadow: 0 2px 4px rgba(0, 0, 0, .45);
   touch-action: none;
@@ -1573,7 +1573,7 @@
   background: rgba(20, 20, 20, .86);
   border: 2px solid #777;
   box-shadow: inset 2px 2px #333, 3px 3px rgba(0, 0, 0, .5);
-  font: 700 10px 'Courier New', monospace;
+  font: 700 10px 'Monocraft', monospace;
 }
 .rover-gps-title { display: flex; justify-content: space-between; color: #f5cf4d; }
 .rover-gps-title span { color: #fff; }
@@ -1627,6 +1627,6 @@
   position: absolute;
   bottom: -12px;
   color: #b4f187;
-  font: bold 10px 'Courier New', monospace;
+  font: bold 10px 'Monocraft', monospace;
   text-shadow: 1px 1px #000;
 }

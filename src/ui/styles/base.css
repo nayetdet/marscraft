@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../../assets/fonts/Monocraft.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -12,7 +20,7 @@ html {
   height: 100%;
   overflow: hidden;
   background: #1e140c;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'Monocraft', monospace;
   font-weight: 700;
   color: #ffffff;
   text-shadow: 2px 2px 0px #3f3f3f;
