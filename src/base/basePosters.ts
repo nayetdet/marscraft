@@ -12,6 +12,8 @@ export const ZONE_COLORS = {
   gym: '#22d3ee',
   airlock: '#fb923c',
   shelter: '#f472b6',
+  powerRoom: '#facc15',
+  kitchen: '#4ade80',
 };
 
 export const SIGNS = {
@@ -25,7 +27,7 @@ export const SIGNS = {
   mainHab: { name: 'MAIN HAB', color: ZONE_COLORS.quarters },
   airlock: { name: 'AIRLOCK', color: ZONE_COLORS.airlock },
   shelter: { name: 'STORM SHELTER', color: ZONE_COLORS.shelter },
-  powerRoom: { name: 'POWER & HEAT', color: '#facc15' },
-  kitchen: { name: 'KITCHEN', color: '#4ade80' },
+  powerRoom: { name: 'POWER & HEAT', color: ZONE_COLORS.powerRoom },
+  kitchen: { name: 'KITCHEN', color: ZONE_COLORS.kitchen },
 };
 

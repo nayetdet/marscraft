@@ -87,10 +87,34 @@ export function buildBaseDecor(scene, colliders) {
 
   // Linhas-guia a partir do airlock: branca ate o comando, verde ate a estufa, amarela ate o suporte de vida
   const guideY = F - 0.003;
-  box(0.09, 0.04, 13.6, mats.white, 0.5, guideY, -1.2);
-  box(3.5, 0.04, 0.09, mats.white, 2.25, guideY, -8.0);
-  box(14.5, 0.04, 0.09, zoneMats.greenhouse, -6.75, guideY, 0.5);
-  box(8.3, 0.04, 0.09, zoneMats.lifeSupport, 4.65, guideY, 0.5);
+  const guideX = (x1, x2, z, mat) => box(Math.abs(x2 - x1), 0.04, 0.09, mat, (x1 + x2) / 2, guideY, z);
+  const guideZ = (x, z1, z2, mat) => box(0.09, 0.04, Math.abs(z2 - z1), mat, x, guideY, (z1 + z2) / 2);
+  guideZ(0.5, -10.5, 5.6, mats.white);
+  guideX(0.5, 4.0, -8.0, mats.white);
+  guideX(-14.0, 0.5, 0.5, zoneMats.greenhouse);
+  guideX(0.5, 8.8, 0.5, zoneMats.lifeSupport);
+
+  // Ramificacoes para salas especiais: cada faixa parte da rota principal e termina na porta.
+  // Academia e enfermaria ficam no sudoeste; o abrigo fica junto ao airlock.
+  guideZ(-5.5, 0.5, 9.5, zoneMats.gym);
+  guideX(-2.5, 0.5, 3.8, zoneMats.medical);
+  guideZ(-2.5, 3.8, 5.5, zoneMats.medical);
+  guideX(0.5, 2.8, 4.8, zoneMats.shelter);
+
+  // Alojamentos: contorna o suporte de vida e entra pelo corredor leste.
+  guideX(0.5, 6.5, -1.2, zoneMats.quarters);
+  guideZ(6.5, -7.5, -1.2, zoneMats.quarters);
+  guideX(6.5, 18.0, -7.5, zoneMats.quarters);
+
+  // Ala norte: um acesso comum se divide no corredor central para energia e cozinha.
+  guideX(-2.5, 0.5, -10.5, mats.white);
+  guideZ(-2.5, -11.5, -10.5, mats.white);
+  guideX(-3.25, -2.5, -11.5, zoneMats.powerRoom);
+  guideX(-2.5, -1.75, -11.5, zoneMats.kitchen);
+  guideZ(-3.25, -21.5, -11.5, zoneMats.powerRoom);
+  guideX(-16.0, -3.25, -21.5, zoneMats.powerRoom);
+  guideZ(-1.75, -21.5, -11.5, zoneMats.kitchen);
+  guideX(-1.75, 11.5, -21.5, zoneMats.kitchen);
 
   // Soleira do airlock com faixa de aviso
   const sill = plane(hazardTexture(10), 3.0, 0.3, 0.5, F + 0.026, 5.82, '+z');
