@@ -16,7 +16,7 @@ export class SleepHud {
     this.panel.innerHTML = `
       <div class="sleep-card">
         <h2 id="sleep-title">Bunk</h2>
-        <p class="sleep-note">Sleeping makes time pass fast. While you sleep your body still uses food and water, and the base keeps using power. Alarms will wake you up.</p>
+        <p class="sleep-note">Sleeping makes time pass fast. Your body still uses food and water. Life support has backup power, so an empty battery will not wake you. Critical alarms will.</p>
         <button type="button" class="mc-btn sleep-btn" data-sleep="sunrise"></button>
         <button type="button" class="mc-btn sleep-btn" data-sleep="nap"></button>
         <button type="button" class="mc-btn secondary sleep-btn" data-sleep="cancel">Stay awake</button>

@@ -24,8 +24,9 @@ const cmes = [{
 }];
 
 // Liga o sono puro a uma missao de verdade e as barras do jogador, como o GameEngine faz
-function sleepingWorld({ startHours, food = 20, water = 20 }) {
+function sleepingWorld({ startHours, food = 20, water = 20, batteryCharge = 80 }) {
   const mission = new MissionSystem({ cmes, startHours });
+  mission.battery.charge = batteryCharge;
   const state = { hours: startHours, food, water, mission };
   state.step = (h) => {
     state.hours += h;
@@ -36,7 +37,6 @@ function sleepingWorld({ startHours, food = 20, water = 20 }) {
     state.water = Math.max(0, state.water - cost.water);
     return wakeReason({
       events: mission.events.slice(before).map((e) => e.type),
-      batteryCharge: mission.battery.charge,
       food: state.food,
       water: state.water,
     });
@@ -93,6 +93,19 @@ describe('sleep cost', () => {
     advanceSleep(createSleepSession(4), 100, world);
     expect(world.mission.battery.charge).toBeLessThan(before);
   });
+
+  it('lets the player sleep through the night when the battery is already empty', () => {
+    const world = sleepingWorld({ startHours: 21, batteryCharge: 0 });
+    world.mission.schedule = [];
+    const session = createSleepSession(plannedSleepHours(SLEEP_MODES.SUNRISE, 21));
+
+    advanceSleep(session, 100, world);
+
+    expect(session.done).toBe(true);
+    expect(session.wakeReason).toBe(null);
+    expect(session.sleptHours).toBeCloseTo(9);
+    expect(world.hours).toBeCloseTo(30); // 6 a.m.; the panels begin charging after sunrise
+  });
 });
 
 describe('waking up early', () => {
@@ -127,8 +140,8 @@ describe('waking up early', () => {
     expect(session.sleptHours).toBeCloseTo(2.5);
   });
 
-  it('wakes for an empty battery, a breach, a crew alarm, hunger or thirst', () => {
-    expect(wakeReason({ batteryCharge: 0 })).toBe('battery');
+  it('does not wake for an empty battery, but still wakes for critical hazards', () => {
+    expect(wakeReason({ batteryCharge: 0 })).toBe(null);
     expect(wakeReason({ baseBreached: true })).toBe('breach');
     expect(wakeReason({ crewAlert: true })).toBe('crew');
     expect(wakeReason({ food: SLEEP_CONFIG.WAKE_NEED_LEVEL })).toBe('hungry');
@@ -158,10 +171,10 @@ describe('who can sleep', () => {
     expect(sleepBlocker({ ...ok, baseOxygen: SLEEP_CONFIG.MIN_BASE_OXYGEN - 1 })).toBe('no-air');
   });
 
-  it('not during a storm warning, with an empty battery, an alarm, or an empty stomach', () => {
+  it('not during a storm warning, with an alarm, or an empty stomach', () => {
     expect(sleepBlocker({ ...ok, stormPhase: 'warning' })).toBe('storm');
     expect(sleepBlocker({ ...ok, stormPhase: 'active' })).toBe('storm');
-    expect(sleepBlocker({ ...ok, batteryCharge: 0 })).toBe('battery');
+    expect(sleepBlocker({ ...ok, batteryCharge: 0 })).toBe(null);
     expect(sleepBlocker({ ...ok, alarm: true })).toBe('alarm');
     expect(sleepBlocker({ ...ok, food: 2 })).toBe('hungry');
     expect(sleepBlocker({ ...ok, water: 2 })).toBe('thirsty');

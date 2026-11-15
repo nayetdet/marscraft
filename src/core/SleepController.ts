@@ -31,8 +31,8 @@ export const BUNK_INTERACTIONS = EAST_WING.BUNKS.map(({ x, z }) => Object.freeze
 
 // Dormir no beliche (issue #109): substitui a tecla T. Liga as regras puras de src/player/sleep.js
 // ao relogio do ceu, a missao, ao modulo norte e as estacoes da base. Enquanto o jogador dorme,
-// tudo que anda pelo relogio do jogo continua andando, em passos pequenos, e um evento grave
-// (aviso de tempestade, bateria vazia, vazamento ou alarme) acorda o jogador naquele passo.
+// tudo que anda pelo relogio do jogo continua andando, em passos pequenos, e um perigo critico
+// (aviso de tempestade, vazamento ou alarme) acorda o jogador naquele passo.
 export class SleepController {
   constructor(engine) {
     this.engine = engine;
@@ -67,8 +67,10 @@ export class SleepController {
   }
 
   _alarm() {
-    const { stations, utility } = this.engine;
-    if (utility.cold) return 'The base is freezing: turn the heater on before you sleep.';
+    const { stations, utility, mission } = this.engine;
+    // With an empty battery the heater cannot prevent the habitat from getting cold. That
+    // condition should not keep the crew awake when sleeping is the only way to reach sunrise.
+    if (utility.cold && mission.battery.charge > 0) return 'The base is freezing: turn the heater on before you sleep.';
     if (stations.co2 >= SLEEP_CONFIG.CO2_ALARM) return 'The CO2 alarm is on: replace the air filter before you sleep.';
     if (stations.contaminated) return 'There is dust in the habitat: clean it before you sleep.';
     return null;
@@ -81,7 +83,6 @@ export class SleepController {
       baseBreached: this.engine.world.brokenBaseBlocks.size > 0,
       baseOxygen: survival.baseOxygen,
       stormPhase: mission.storm.phase,
-      batteryCharge: mission.battery.charge,
       alarm: Boolean(this._alarm()),
       food: survival.food,
       water: survival.water,
@@ -192,7 +193,6 @@ export class SleepController {
     if (!stormSkip) for (let i = eventsBefore; i < mission.events.length; i++) events.push(mission.events[i].type);
     return wakeReason({
       events,
-      batteryCharge: mission.battery.charge,
       baseBreached: world.brokenBaseBlocks.size > 0,
       crewAlert: Boolean(this._alarm()) && !this.session?.alarmAtStart,
       food: survival.food,
