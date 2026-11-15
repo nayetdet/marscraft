@@ -201,8 +201,9 @@ export class SurvivalSystem {
     this.food = Math.max(0, this.food - SURVIVAL_CONFIG.FOOD_DRAIN_RATE * dt);
 
     // Regeneração natural se comida e água estiverem altas (estilo Minecraft)
-    if (this.food >= 16 && this.water >= 12 && this.canHeal() && this.health < this.maxStat) {
-      this.health = Math.min(this.maxStat, this.health + 0.35 * dt);
+    // Corpo fraco (issue #421): a vida so se recupera ate `healCap` (StationSystem.update)
+    if (this.food >= 16 && this.water >= 12 && this.canHeal() && this.health < (this.healCap ?? this.maxStat)) {
+      this.health = Math.min(this.healCap ?? this.maxStat, this.health + 0.35 * dt);
     }
 
     // Apply hazards separately so the one that removes the last health point is recorded.
@@ -392,13 +393,13 @@ export class SurvivalSystem {
     }
 
     if (slot.consumable.type === 'food') {
-      const heals = Boolean(slot.consumable.heal) && this.canHeal() && this.health < this.maxStat - 0.5;
+      const heals = Boolean(slot.consumable.heal) && this.canHeal() && this.health < (this.healCap ?? this.maxStat) - 0.5;
       if (this.food >= this.maxStat - 0.5 && !heals) {
         return 'Your food level is already full';
       }
       this.food = Math.min(this.maxStat, this.food + slot.consumable.amount);
       if (heals) {
-        this.health = Math.min(this.maxStat, this.health + slot.consumable.heal);
+        this.health = Math.min(this.healCap ?? this.maxStat, this.health + slot.consumable.heal);
       }
       slot.count--;
       if (slot.count <= 0) this._clearInventorySlot(slotIndex);

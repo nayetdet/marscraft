@@ -3,7 +3,7 @@ import { BLOCK_IDS, CROP_ITEM_IDS } from '../config/blockTypes.ts';
 import { STATION_CONFIG as C, CROP_CONFIG, SCIENCE_CONFIG, WATER_SYSTEM_CONFIG, CREW_CONFIG } from '../config/constants.ts';
 import { SAMPLE_TYPES } from '../data/sampleTypes.ts';
 import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.ts';
-import { WORKOUT_COST, workoutBlocker, workoutNeeds } from '../story/acts/act3Gym.ts';
+import { WORKOUT_COST, healCapFor, workoutBlocker, workoutNeeds } from '../story/acts/act3Gym.ts';
 
 const RADIO_SILENT = 'Radio silent: the Sun is between Mars and Earth (solar conjunction). You must decide on your own until it passes.';
 
@@ -106,6 +106,8 @@ export class StationSystem {
     this.boneDensity = Math.max(0, this.boneDensity - C.FITNESS_DECAY * 1.15 * dt);
     this.muscleStrength = Math.max(0, this.muscleStrength - C.FITNESS_DECAY * dt);
     this.fitness = Math.max(0, this.fitness - C.FITNESS_DECAY * dt);
+    // Pular o treino (issue #421): com o corpo fraco a vida so se recupera ate um teto
+    if (survival) survival.healCap = healCapFor(this, survival.maxStat);
     if (this.mission.greenhousePowered && !this.contaminated) this.growCrops(dt, survival);
     else this.cropsThirsty = false; // parado por luz ou poeira, nao por sede
     if (inside && (this.contaminated || this.co2 >= 80)) {
@@ -164,7 +166,8 @@ export class StationSystem {
   }
   treat(survival) {
     if (!this.mission.spend(C.TREATMENT_COST)) return 'Not enough power.';
-    survival.health = Math.min(survival.maxStat, survival.health + 5);
+    // Corpo fraco (issue #421): o tratamento tambem para no teto, sem tirar a vida que ja existe
+    survival.health = Math.max(survival.health, Math.min(survival.healCap ?? survival.maxStat, survival.health + 5));
     this.treatmentCount = (this.treatmentCount ?? 0) + 1; // diario de bordo (issue #106)
     return 'Treatment restored health. Radiation dose cannot be erased.';
   }
