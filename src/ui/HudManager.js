@@ -73,8 +73,8 @@ export class HudManager {
     this.healthBarEl = document.getElementById('health-bar');
     this.radiationBarEl = document.getElementById('radiation-bar');
     this.oxygenBarEl = document.getElementById('oxygen-bar');
-    this.suitThermalRowEl = document.getElementById('suit-thermal-row');
-    this.suitThermalEl = document.getElementById('suit-thermal');
+    this.suitIntegrityRowEl = document.getElementById('suit-integrity-row');
+    this.suitIntegrityEl = document.getElementById('suit-integrity');
     this.waterBarEl = document.getElementById('water-bar');
     this.foodBarEl = document.getElementById('food-bar');
 
@@ -85,7 +85,7 @@ export class HudManager {
       this._createIconBar(this.foodBarEl, 'food'),
     ];
     this.radiationDoseBar = this._createIconBar(this.radiationBarEl, 'radiation');
-    this.suitThermalBar = this._createIconBar(document.getElementById('suit-thermal-icons'), 'fire');
+    this.suitIntegrityBar = this._createIconBar(document.getElementById('suit-integrity-icons'), 'fire');
     this.airlockEl = document.getElementById('airlock-progress');
     this.airlockTitleEl = this.airlockEl.querySelector('.airlock-progress-title');
     this.airlockFillEl = this.airlockEl.querySelector('.airlock-progress-track i');
@@ -771,21 +771,21 @@ export class HudManager {
     this._updateRadiationDoseBar(mission);
     this._updateIconBar(oxygenBar, survival.oxygen);
     const suitEquipped = Boolean(survival.suitEquipped);
-    const thermalPct = Math.max(0, Math.min(100, Math.ceil(survival.suitThermal ?? 100)));
-    this.suitThermalRowEl.hidden = !suitEquipped;
-    this._updateIconBar(this.suitThermalBar, suitEquipped ? thermalPct / 5 : 0);
-    this.suitThermalEl.title = suitEquipped ? `Suit heat: ${thermalPct}%` : 'EVA suit docked';
-    this.suitThermalEl.classList.toggle('low', suitEquipped && thermalPct <= 25);
+    const integrityPct = Math.max(0, Math.min(100, Math.ceil(survival.suitIntegrity ?? 100)));
+    this.suitIntegrityRowEl.hidden = !suitEquipped;
+    this._updateIconBar(this.suitIntegrityBar, suitEquipped ? integrityPct / 5 : 0);
+    this.suitIntegrityEl.title = suitEquipped ? `Suit integrity: ${integrityPct}%` : 'EVA suit docked';
+    this.suitIntegrityEl.classList.toggle('low', suitEquipped && integrityPct <= 25);
     if (suitEquipped) {
-      this.suitThermalEl.setAttribute('role', 'meter');
-      this.suitThermalEl.setAttribute('aria-valuenow', String(thermalPct));
-      this.suitThermalEl.setAttribute('aria-valuetext', `${thermalPct}% suit heat`);
-      this.suitThermalEl.setAttribute('aria-label', 'Suit heat');
+      this.suitIntegrityEl.setAttribute('role', 'meter');
+      this.suitIntegrityEl.setAttribute('aria-valuenow', String(integrityPct));
+      this.suitIntegrityEl.setAttribute('aria-valuetext', `${integrityPct}% suit integrity`);
+      this.suitIntegrityEl.setAttribute('aria-label', 'Suit integrity');
     } else {
-      this.suitThermalEl.setAttribute('role', 'status');
-      this.suitThermalEl.setAttribute('aria-label', 'EVA suit docked');
-      this.suitThermalEl.removeAttribute('aria-valuenow');
-      this.suitThermalEl.removeAttribute('aria-valuetext');
+      this.suitIntegrityEl.setAttribute('role', 'status');
+      this.suitIntegrityEl.setAttribute('aria-label', 'EVA suit docked');
+      this.suitIntegrityEl.removeAttribute('aria-valuenow');
+      this.suitIntegrityEl.removeAttribute('aria-valuetext');
     }
     this._updateIconBar(waterBar, survival.water);
     this._updateIconBar(foodBar, survival.food);
