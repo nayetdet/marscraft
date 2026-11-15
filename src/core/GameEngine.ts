@@ -173,7 +173,12 @@ export class GameEngine {
     this.survival = new SurvivalSystem();
     try {
       const saved = JSON.parse(window.localStorage.getItem('marscraft-save-v1') || 'null');
-      if (saved?.survival) Object.assign(this.survival, saved.survival);
+      if (saved?.survival) {
+        Object.assign(this.survival, saved.survival);
+        if (Array.isArray(saved.survival.inventorySlots)) {
+          this.survival.slots = this.survival.inventorySlots.slice(0, 9);
+        }
+      }
       if (saved?.player) this.player.pos.set(saved.player.x, saved.player.y, saved.player.z);
     } catch { /* Ignore unavailable or malformed saves. */ }
     this._saveTimer = 0;
