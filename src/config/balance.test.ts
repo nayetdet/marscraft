@@ -168,8 +168,12 @@ describe('base energy pacing (issue #81)', () => {
 describe('base water pacing (issue #81)', () => {
   // Meio sol = 20 minutos reais: cabe o ato 1 inteiro e a primeira viagem do rover ate o gelo
   const HOURS_WITHOUT_HELP = 12;
-  // Pior caso para a agua: a despensa do inicio da partida, com espaco para a estufa produzir sem parar
-  const start = () => makeBase({ water: WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER, food: CREW_CONFIG.START_FOOD });
+  // Pior caso para a agua: tripulacao comendo e trabalhando o tempo todo, com espaco na despensa
+  // para a estufa produzir sem parar. A partida agora comeca com a despensa vazia
+  // (CREW_CONFIG.START_FOOD = 0, as racoes saem da cozinha); sem comida a tripulacao para e gasta
+  // menos agua, o que esconderia o ritmo da agua. Por isso a despensa aqui e fixa.
+  const PANTRY_FOOD = 15;
+  const start = () => makeBase({ water: WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER, food: PANTRY_FOOD });
 
   it('the starting tank lasts at least half a sol with nobody at the recycler and no ice', () => {
     const sim = start();
