@@ -1,8 +1,3 @@
-import './ui/styles/base.css';
-import './ui/styles/hud.css';
-import './ui/styles/modal.css';
-import './ui/styles/story.css';
-import './ui/styles/journal.css';
 import { GameEngine } from './core/GameEngine.js';
 import { loadSpaceWeather } from './data/spaceWeather.js';
 
@@ -10,7 +5,7 @@ import { loadSpaceWeather } from './data/spaceWeather.js';
 // com a construcao do mundo. Nunca rejeita: sem rede, devolve o dado embutido no jogo.
 const spaceWeatherPromise = loadSpaceWeather();
 
-window.addEventListener('DOMContentLoaded', async () => {
+export async function startGame() {
   const container = document.getElementById('game-container');
   const loadingOverlay = document.getElementById('loading-overlay');
 
@@ -25,7 +20,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         // So vale se chegar antes do primeiro Play; depois, fica no cache para a proxima partida
         spaceWeatherPromise.then((spaceWeather) => engine.applySpaceWeather(spaceWeather));
         // So no `npm run dev`: deixa o motor acessivel no console para testar a historia e as animacoes
-        if (import.meta.env.DEV) window.__marscraft = engine;
+        if (process.env.NODE_ENV === 'development') window.__marscraft = engine;
         requestAnimationFrame(() => {
           loadingOverlay.classList.add('is-leaving');
           setTimeout(() => {
@@ -39,4 +34,4 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     }, 80);
   });
-});
+}

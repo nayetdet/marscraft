@@ -4,17 +4,20 @@
   "description": "Minecraft-inspired Mars voxel survival game with a NASA habitat and astronomical sky",
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
-    "build": "vite build",
-    "preview": "vite preview --host",
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
+    "preview": "next start --hostname 0.0.0.0",
     "test": "vitest run",
     "fetch:donki": "node scripts/fetch-donki-cme.mjs"
   },
   "dependencies": {
+    "next": "^15.5.29",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "three": "^0.181.1"
   },
   "devDependencies": {
-    "vite": "^6.2.0",
     "vitest": "^5.1.0"
   }
 }

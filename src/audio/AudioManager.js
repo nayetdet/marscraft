@@ -1,4 +1,4 @@
-const AUDIO_BASE_URL = `${import.meta.env.BASE_URL}audio/`;
+const AUDIO_BASE_URL = '/audio/';
 const LOOP_VOLUME = 0.45;
 const ROCKET_VOLUME = 0.7;
 const DOOR_VOLUME = 0.12;
