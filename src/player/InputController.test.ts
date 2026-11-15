@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { InputController } from './InputController.ts';
+import { InputController, isPauseMenuOpen } from './InputController.ts';
 import { BLOCK_IDS, SHIP_BLOCK_IDS } from '../config/blockTypes.ts';
 import { BLOCK_INTERACTION_CONFIG } from '../config/constants.ts';
 
@@ -10,6 +10,18 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe('pause menu keyboard input', () => {
+  it('blocks gameplay keys while the pause menu is visible', () => {
+    const pauseOverlay = { classList: { contains: () => false } };
+    expect(isPauseMenuOpen(pauseOverlay)).toBe(true);
+  });
+
+  it('allows gameplay keys after the pause menu closes', () => {
+    const pauseOverlay = { classList: { contains: () => true } };
+    expect(isPauseMenuOpen(pauseOverlay)).toBe(false);
+  });
 });
 
 describe('scope equipment', () => {
@@ -42,6 +54,7 @@ describe('scope equipment', () => {
 
   it('toggles scanning only while using the selected Scope', () => {
     const input = Object.create(InputController.prototype);
+    input.isRoverActive = () => false;
     input.isScannerOpen = false;
     input.isZoomed = false;
     input.hud = { selectedSlot: 1, showToast: vi.fn(), renderHotbar: vi.fn() };
@@ -60,6 +73,7 @@ describe('scope equipment', () => {
 
   it('starts scanning with left-click without zooming', () => {
     const input = Object.create(InputController.prototype);
+    input.isRoverActive = () => false;
     input.isScannerOpen = false;
     input.isZoomed = false;
     input.isScanButtonHeld = false;
@@ -74,6 +88,7 @@ describe('scope equipment', () => {
 
   it('closes the scanner overlay when left-click is released without zoom', () => {
     const input = Object.create(InputController.prototype);
+    input.isRoverActive = () => false;
     input.isScannerOpen = false;
     input.isZoomed = false;
     input.isScanButtonHeld = false;
@@ -128,6 +143,7 @@ describe('scope equipment', () => {
 
   it('opens the scope with right-click and closes it on the next right-click', () => {
     const input = Object.create(InputController.prototype);
+    input.isRoverActive = () => false;
     input.isScannerOpen = false;
     input.isZoomed = false;
     input.isScanButtonHeld = false;
@@ -204,6 +220,7 @@ describe('block audio feedback', () => {
 describe('interface sound feedback', () => {
   it('plays one click when the scanner opens or closes, not while its state is unchanged', () => {
     const input = Object.create(InputController.prototype);
+    input.isRoverActive = () => false;
     input.isScannerOpen = false;
     input.isZoomed = false;
     input.isScanButtonHeld = false;

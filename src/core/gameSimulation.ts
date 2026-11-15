@@ -26,3 +26,11 @@ export function isGameSimulationRunning(state: GameSimulationState): boolean {
     && !state.sleeping
     && !state.tradeoffOpen;
 }
+
+export function shouldUpdateCrewAvatar({ active, cutsceneActive, cutsceneControlled }: {
+  active: boolean;
+  cutsceneActive: boolean;
+  cutsceneControlled: boolean;
+}): boolean {
+  return !cutsceneControlled && (active || cutsceneActive);
+}
