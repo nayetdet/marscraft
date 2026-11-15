@@ -5,10 +5,11 @@ import '../ui/styles/story.css';
 import '../ui/styles/journal.css';
 import '../ui/styles/admin.css';
 import './game.css';
+import { assetPath } from '../config/assetPath.ts';
 
 export const metadata = {
   title: 'MarsCraft',
-  icons: { icon: '/favicon.svg' },
+  icons: { icon: assetPath('/favicon.svg') },
 };
 
 export const viewport = {

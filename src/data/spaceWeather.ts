@@ -6,10 +6,11 @@
 // a pergunta de tempos em tempos. Nenhum deles roda dentro do loop do jogo.
 import donkiCme from './donkiCme.json';
 import { SPACE_WEATHER_CONFIG } from '../config/constants.ts';
+import { assetPath } from '../config/assetPath.ts';
 import { latestBulletin, summarizeCmes, summarizeSeps } from './donkiNormalize.ts';
 
 const API_BASE = 'https://api.nasa.gov/DONKI';
-const SPACE_WEATHER_ENDPOINT = '/api/space-weather';
+const SPACE_WEATHER_ENDPOINT = assetPath('/api/space-weather');
 const CACHE_KEY = 'marscraft.spaceWeather.v1';
 const DAY_MS = 24 * 3600 * 1000;
 
