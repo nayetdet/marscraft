@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { GymEquipmentController } from './GymEquipmentController.ts';
 import { ExpeditionState } from '../core/ExpeditionState.ts';
 import { StationSystem as HabitatStationSystem } from '../core/StationSystem.ts';
+import { buildPlayerCadetProfile } from '../crew/playerAppearance.ts';
 
 describe('GymEquipmentController (in-world 3D treadmill & exercise bike)', () => {
   function createSetup() {
@@ -110,5 +111,26 @@ describe('GymEquipmentController (in-world 3D treadmill & exercise bike)', () =>
     expect(controller.evaRig.bodyGroup.visible).toBe(true);
     expect(controller.ivaRig.bodyGroup.visible).toBe(false);
     controller.dismount();
+  });
+
+  it('rebuilds IVA and EVA gym rigs when setAppearance updates the player profile', () => {
+    const { controller } = createSetup();
+    const initialIva = controller.ivaRig;
+    const initialEva = controller.evaRig;
+
+    const customProfile = buildPlayerCadetProfile({
+      gender: 'man',
+      skinTone: 'brown',
+      hairType: 'curly',
+      hairLength: 'long',
+      hairColor: 'silver',
+    });
+    controller.setAppearance(customProfile);
+
+    expect(controller.ivaRig).not.toBe(initialIva);
+    expect(controller.evaRig).not.toBe(initialEva);
+    expect(controller.evaRig.visorMat.transparent).toBe(true);
+    expect(controller.ivaRig.bodyGroup.visible).toBe(true);
+    expect(controller.evaRig.bodyGroup.visible).toBe(false);
   });
 });

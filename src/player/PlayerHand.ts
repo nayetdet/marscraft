@@ -77,6 +77,37 @@ export class PlayerHand {
     this.camera.add(this.handGroup);
   }
 
+  _createIvaArmTexture(skin = '#eab696', skinShade = '#d49a79') {
+    const { texture } = makeCanvasTexture((ctx) => {
+      ctx.fillStyle = '#1e3a5f';
+      ctx.fillRect(0, 0, 16, 10);
+      ctx.fillStyle = '#2563eb';
+      ctx.fillRect(0, 0, 2, 10);
+      ctx.fillRect(14, 0, 2, 10);
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect(0, 4, 16, 2);
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(0, 9, 16, 1);
+      // Natural hand inside the habitat
+      ctx.fillStyle = skin;
+      ctx.fillRect(0, 10, 16, 6);
+      ctx.fillStyle = skinShade;
+      ctx.fillRect(0, 14, 16, 2);
+    });
+    return texture;
+  }
+
+  setAppearance(profile) {
+    if (!profile) return;
+    if (this.ivaArmMat) {
+      const oldMap = this.ivaArmMat.map;
+      this.ivaArmMat.map = this._createIvaArmTexture(profile.skin, profile.skinShade);
+      this.ivaArmMat.needsUpdate = true;
+      oldMap?.dispose?.();
+    }
+    this.ivaThumbMat?.color?.set?.(profile.skinShade);
+  }
+
   _buildArmMesh() {
     // Textura pixelada da manga pressurizada e luva EVA do astronauta NASA
     const { texture } = makeCanvasTexture((ctx) => {
@@ -99,22 +130,7 @@ export class PlayerHand {
     });
 
     // Sleek navy flight suit sleeve for inside the pressurized habitat (IVA)
-    const { texture: ivaTexture } = makeCanvasTexture((ctx) => {
-      ctx.fillStyle = '#1e3a5f';
-      ctx.fillRect(0, 0, 16, 10);
-      ctx.fillStyle = '#2563eb';
-      ctx.fillRect(0, 0, 2, 10);
-      ctx.fillRect(14, 0, 2, 10);
-      ctx.fillStyle = '#ea580c';
-      ctx.fillRect(0, 4, 16, 2);
-      ctx.fillStyle = '#f1f5f9';
-      ctx.fillRect(0, 9, 16, 1);
-      // Natural hand inside the habitat
-      ctx.fillStyle = '#eab696';
-      ctx.fillRect(0, 10, 16, 6);
-      ctx.fillStyle = '#d49a79';
-      ctx.fillRect(0, 14, 16, 2);
-    });
+    const ivaTexture = this._createIvaArmTexture('#eab696', '#d49a79');
 
     this.evaArmMat = new THREE.MeshLambertMaterial({
       map: texture,
@@ -438,6 +454,10 @@ export class PlayerHand {
   }
 
   attachThirdPersonHeldItems(handJoint) {
+    if (this.thirdPersonItemGroup) {
+      handJoint.add(this.thirdPersonItemGroup);
+      return;
+    }
     this.thirdPersonItemGroup = new THREE.Group();
     this.thirdPersonItemGroup.position.set(0, -0.35, 0.14);
     this.thirdPersonItemGroup.rotation.x = 0.25;

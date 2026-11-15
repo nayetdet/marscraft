@@ -195,7 +195,109 @@ const HELMET_HAIR_STYLES = {
     { dims: [0.17, 0.034, 0.042], pos: [-0.045, 0.314, 0.124], rz: 0.12, hi: false },
     { dims: [0.09, 0.030, 0.042], pos: [0.088, 0.318, 0.122], rz: -0.14, hi: true },
   ],
+  straight_short: [
+    { dims: [0.274, 0.032, 0.242], pos: [0, 0.330, 0.005], hi: false },
+    { dims: [0.22, 0.024, 0.036], pos: [0, 0.315, 0.123], hi: false },
+    { dims: [0.14, 0.016, 0.034], pos: [0.02, 0.328, 0.118], hi: true },
+  ],
+  straight_medium: [
+    { dims: [0.276, 0.034, 0.245], pos: [0, 0.331, 0.005], hi: false },
+    { dims: [0.21, 0.026, 0.038], pos: [-0.01, 0.314, 0.124], hi: false },
+    { dims: [0.028, 0.145, 0.064], pos: [-0.133, 0.245, 0.065], hi: false },
+    { dims: [0.028, 0.145, 0.064], pos: [0.133, 0.245, 0.065], hi: true },
+  ],
+  straight_long: [
+    { dims: [0.276, 0.034, 0.245], pos: [0, 0.331, 0.005], hi: false },
+    { dims: [0.21, 0.026, 0.038], pos: [-0.01, 0.314, 0.124], hi: false },
+    { dims: [0.030, 0.225, 0.072], pos: [-0.133, 0.205, 0.062], hi: false },
+    { dims: [0.030, 0.225, 0.072], pos: [0.133, 0.205, 0.062], hi: true },
+  ],
+  wavy_short: [
+    { dims: [0.276, 0.038, 0.245], pos: [0, 0.333, 0.005], hi: false },
+    { dims: [0.155, 0.036, 0.048], pos: [-0.045, 0.315, 0.124], rz: 0.20, hi: false },
+    { dims: [0.095, 0.030, 0.046], pos: [0.080, 0.323, 0.120], rz: -0.18, hi: true },
+  ],
+  wavy_medium: [
+    { dims: [0.278, 0.038, 0.246], pos: [0, 0.333, 0.005], hi: false },
+    { dims: [0.16, 0.036, 0.048], pos: [-0.045, 0.315, 0.124], rz: 0.18, hi: false },
+    { dims: [0.09, 0.028, 0.046], pos: [0.082, 0.322, 0.120], rz: -0.16, hi: true },
+    { dims: [0.032, 0.08, 0.062], pos: [-0.132, 0.275, 0.062], rz: 0.12, hi: false },
+    { dims: [0.032, 0.08, 0.062], pos: [0.132, 0.275, 0.062], rz: -0.12, hi: false },
+    { dims: [0.036, 0.08, 0.066], pos: [-0.138, 0.205, 0.066], rz: -0.15, hi: true },
+    { dims: [0.036, 0.08, 0.066], pos: [0.138, 0.205, 0.066], rz: 0.15, hi: true },
+  ],
+  wavy_long: [
+    { dims: [0.278, 0.038, 0.246], pos: [0, 0.333, 0.005], hi: false },
+    { dims: [0.16, 0.036, 0.048], pos: [-0.045, 0.315, 0.124], rz: 0.18, hi: false },
+    { dims: [0.09, 0.028, 0.046], pos: [0.082, 0.322, 0.120], rz: -0.16, hi: true },
+    { dims: [0.032, 0.09, 0.064], pos: [-0.132, 0.272, 0.062], rz: 0.14, hi: false },
+    { dims: [0.032, 0.09, 0.064], pos: [0.132, 0.272, 0.062], rz: -0.14, hi: false },
+    { dims: [0.038, 0.11, 0.070], pos: [-0.139, 0.185, 0.066], rz: -0.16, hi: true },
+    { dims: [0.038, 0.11, 0.070], pos: [0.139, 0.185, 0.066], rz: 0.16, hi: true },
+  ],
+  curly_short: [
+    { dims: [0.278, 0.042, 0.246], pos: [0, 0.334, 0.005], hi: false },
+    { dims: [0.075, 0.040, 0.052], pos: [-0.092, 0.319, 0.118], hi: false },
+    { dims: [0.075, 0.042, 0.054], pos: [0.0, 0.325, 0.122], hi: true },
+    { dims: [0.075, 0.040, 0.052], pos: [0.092, 0.319, 0.118], hi: false },
+  ],
+  curly_medium: [
+    { dims: [0.28, 0.044, 0.248], pos: [0, 0.334, 0.005], hi: false },
+    { dims: [0.078, 0.042, 0.054], pos: [-0.09, 0.318, 0.118], hi: false },
+    { dims: [0.078, 0.044, 0.056], pos: [0.0, 0.324, 0.122], hi: true },
+    { dims: [0.078, 0.042, 0.054], pos: [0.09, 0.318, 0.118], hi: false },
+    { dims: [0.046, 0.062, 0.068], pos: [-0.132, 0.268, 0.06], hi: true },
+    { dims: [0.046, 0.062, 0.068], pos: [0.132, 0.268, 0.06], hi: true },
+    { dims: [0.050, 0.065, 0.070], pos: [-0.138, 0.208, 0.058], hi: false },
+    { dims: [0.050, 0.065, 0.070], pos: [0.138, 0.208, 0.058], hi: false },
+  ],
+  curly_long: [
+    { dims: [0.28, 0.044, 0.248], pos: [0, 0.334, 0.005], hi: false },
+    { dims: [0.078, 0.042, 0.054], pos: [-0.09, 0.318, 0.118], hi: false },
+    { dims: [0.078, 0.044, 0.056], pos: [0.0, 0.324, 0.122], hi: true },
+    { dims: [0.078, 0.042, 0.054], pos: [0.09, 0.318, 0.118], hi: false },
+    { dims: [0.048, 0.064, 0.070], pos: [-0.132, 0.270, 0.06], hi: true },
+    { dims: [0.048, 0.064, 0.070], pos: [0.132, 0.270, 0.06], hi: true },
+    { dims: [0.052, 0.068, 0.072], pos: [-0.140, 0.205, 0.058], hi: false },
+    { dims: [0.052, 0.068, 0.072], pos: [0.140, 0.205, 0.058], hi: false },
+    { dims: [0.048, 0.064, 0.070], pos: [-0.134, 0.145, 0.058], hi: true },
+    { dims: [0.048, 0.064, 0.070], pos: [0.134, 0.145, 0.058], hi: true },
+  ],
+  coily_short: [
+    { dims: [0.26, 0.055, 0.236], pos: [0, 0.340, 0.002], hi: false },
+    { dims: [0.21, 0.025, 0.20], pos: [0, 0.362, 0.002], hi: true },
+  ],
+  coily_medium: [
+    { dims: [0.305, 0.056, 0.272], pos: [0, 0.340, 0.004], hi: false },
+    { dims: [0.24, 0.028, 0.22], pos: [0, 0.364, 0.004], hi: true },
+    { dims: [0.064, 0.145, 0.115], pos: [-0.138, 0.245, 0.025], hi: false },
+    { dims: [0.064, 0.145, 0.115], pos: [0.138, 0.245, 0.025], hi: true },
+  ],
+  coily_long: [
+    { dims: [0.312, 0.058, 0.276], pos: [0, 0.342, 0.004], hi: false },
+    { dims: [0.245, 0.030, 0.225], pos: [0, 0.366, 0.004], hi: true },
+    { dims: [0.072, 0.215, 0.13], pos: [-0.140, 0.21, 0.02], hi: false },
+    { dims: [0.072, 0.215, 0.13], pos: [0.140, 0.21, 0.02], hi: true },
+  ],
 };
+
+/**
+ * Safely detaches a spacesuit or IVA rig group and disposes its geometries, materials, and textures.
+ */
+export function disposeSpacesuitRig(group) {
+  if (!group) return;
+  group.removeFromParent?.();
+  const materials = new Set();
+  group.traverse?.((obj) => {
+    obj.geometry?.dispose?.();
+    const mats = Array.isArray(obj.material) ? obj.material : obj.material ? [obj.material] : [];
+    for (const mat of mats) materials.add(mat);
+  });
+  for (const mat of materials) {
+    mat.map?.dispose?.();
+    mat.dispose?.();
+  }
+}
 
 /**
  * Builds an articulated voxel NASA xEMU spacesuit rig shared by crew avatars and the Suitport dock.
@@ -516,6 +618,95 @@ const HAIRLINE_PATTERNS = {
     [0, 7, 3, 4],
     [29, 7, 3, 4],
   ],
+  straight_short: [
+    [0, 0, 32, 5],
+    [0, 5, 11, 2],
+    [22, 5, 10, 2],
+    [0, 7, 2, 4],
+    [30, 7, 2, 4],
+  ],
+  straight_medium: [
+    [0, 0, 32, 6],
+    [0, 6, 12, 2],
+    [21, 6, 11, 2],
+    [0, 8, 3, 12],
+    [29, 8, 3, 12],
+  ],
+  straight_long: [
+    [0, 0, 32, 6],
+    [0, 6, 12, 2],
+    [21, 6, 11, 2],
+    [0, 8, 3, 22],
+    [29, 8, 3, 22],
+  ],
+  wavy_short: [
+    [0, 0, 32, 5],
+    [0, 5, 14, 2],
+    [20, 5, 12, 2],
+    [5, 7, 5, 1],
+    [0, 7, 3, 4],
+    [29, 7, 3, 4],
+  ],
+  wavy_medium: [
+    [0, 0, 32, 6],
+    [0, 6, 15, 2],
+    [24, 6, 8, 2],
+    [0, 8, 3, 12],
+    [29, 8, 3, 12],
+  ],
+  wavy_long: [
+    [0, 0, 32, 6],
+    [0, 6, 15, 2],
+    [24, 6, 8, 2],
+    [0, 8, 3, 22],
+    [29, 8, 3, 22],
+  ],
+  curly_short: [
+    [0, 0, 32, 5],
+    [2, 5, 6, 2],
+    [10, 5, 6, 2],
+    [18, 5, 6, 2],
+    [26, 5, 6, 2],
+    [0, 7, 3, 5],
+    [29, 7, 3, 5],
+  ],
+  curly_medium: [
+    [0, 0, 32, 6],
+    [1, 6, 6, 2],
+    [9, 6, 5, 2],
+    [19, 6, 5, 2],
+    [26, 6, 6, 2],
+    [0, 8, 3, 13],
+    [29, 8, 3, 13],
+  ],
+  curly_long: [
+    [0, 0, 32, 6],
+    [1, 6, 6, 2],
+    [9, 6, 5, 2],
+    [19, 6, 5, 2],
+    [26, 6, 6, 2],
+    [0, 8, 3, 22],
+    [29, 8, 3, 22],
+  ],
+  coily_short: [
+    [0, 0, 32, 5],
+    [0, 5, 2, 4],
+    [30, 5, 2, 4],
+  ],
+  coily_medium: [
+    [0, 0, 32, 5],
+    [0, 5, 8, 3],
+    [24, 5, 8, 3],
+    [0, 8, 3, 14],
+    [29, 8, 3, 14],
+  ],
+  coily_long: [
+    [0, 0, 32, 5],
+    [0, 5, 8, 3],
+    [24, 5, 8, 3],
+    [0, 8, 3, 22],
+    [29, 8, 3, 22],
+  ],
 };
 
 function createCadetHeadMaterials(profile = DEFAULT_CADET_PROFILE) {
@@ -531,6 +722,8 @@ function createCadetHeadMaterials(profile = DEFAULT_CADET_PROFILE) {
     eyeGlint: EYE_GLINT,
     mouth: MOUTH,
     hairStyle = 'swept',
+    hairType,
+    hairLength,
     brows = 'arched',
     lashes = false,
     freckles = false,
@@ -543,10 +736,34 @@ function createCadetHeadMaterials(profile = DEFAULT_CADET_PROFILE) {
 
   const paintHair = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
     px(ctx, 0, 0, HAIR, w, h);
-    px(ctx, 3, 4, HAIR_DARK, 6, 3);
-    px(ctx, 17, 7, HAIR_HI, 7, 3);
-    px(ctx, 8, 16, HAIR_HI, 5, 4);
-    px(ctx, 21, 20, HAIR_DARK, 6, 4);
+    if (hairType === 'coily') {
+      for (let y = 0; y < h; y += 3) {
+        for (let x = (y % 2) * 2; x < w; x += 4) {
+          px(ctx, x, y, (x + y) % 3 === 0 ? HAIR_HI : HAIR_DARK, 2, 2);
+        }
+      }
+      return;
+    }
+    if (hairType === 'curly') {
+      for (let y = 1; y < h - 2; y += 6) {
+        for (let x = (y % 4) + 1; x < w - 3; x += 7) {
+          px(ctx, x, y, HAIR_DARK, 4, 4);
+          px(ctx, x + 1, y + 1, HAIR_HI, 2, 2);
+        }
+      }
+      return;
+    }
+    if (hairType === 'wavy') {
+      for (let y = 2; y < h - 2; y += 6) {
+        px(ctx, 0, y, HAIR_HI, w, 2);
+        px(ctx, 4, y + 2, HAIR_DARK, w - 8, 2);
+      }
+      return;
+    }
+    // Straight (and legacy NPC styles): sleek streaks
+    px(ctx, 5, 0, HAIR_HI, 3, h);
+    px(ctx, 14, 0, HAIR_DARK, 2, h);
+    px(ctx, 22, 0, HAIR_HI, 3, h);
   };
 
   const paintEye = (ctx: CanvasRenderingContext2D, x: number, y: number, isRight: boolean) => {
@@ -562,19 +779,22 @@ function createCadetHeadMaterials(profile = DEFAULT_CADET_PROFILE) {
     }
   };
 
+  const sideBackExtent = hairLength === 'short' ? 8 : hairLength === 'long' ? 22 : 14;
+  const sideHairWidth = hairLength === 'long' ? 18 : 14;
+
   // Three.js BoxGeometry material order: +x, -x, +y, -y, +z (front), -z (back)
   const rightSide = makePixelFaceMaterial(32, 32, (ctx) => {
     px(ctx, 0, 0, SKIN, 32, 32);
-    px(ctx, 0, 0, HAIR, 32, 10);
-    px(ctx, 18, 10, HAIR, 14, 14);
+    px(ctx, 0, 0, HAIR, 32, hairLength === 'short' ? 8 : 10);
+    px(ctx, 32 - sideHairWidth, 8, HAIR, sideHairWidth, sideBackExtent);
     px(ctx, 21, 4, HAIR_HI, 6, 3);
     px(ctx, 0, 29, SKIN_SHADE, 32, 3);
   }, HAIR);
 
   const leftSide = makePixelFaceMaterial(32, 32, (ctx) => {
     px(ctx, 0, 0, SKIN, 32, 32);
-    px(ctx, 0, 0, HAIR, 32, 10);
-    px(ctx, 0, 10, HAIR, 14, 14);
+    px(ctx, 0, 0, HAIR, 32, hairLength === 'short' ? 8 : 10);
+    px(ctx, 0, 8, HAIR, sideHairWidth, sideBackExtent);
     px(ctx, 5, 4, HAIR_HI, 6, 3);
     px(ctx, 0, 29, SKIN_SHADE, 32, 3);
   }, HAIR);
@@ -627,11 +847,178 @@ function createCadetHeadMaterials(profile = DEFAULT_CADET_PROFILE) {
 
   const back = makePixelFaceMaterial(32, 32, (ctx) => {
     paintHair(ctx, 32, 32);
-    px(ctx, 4, 28, SKIN_SHADE, 24, 4);
+    if (hairLength === 'short') {
+      px(ctx, 2, 22, SKIN_SHADE, 28, 10);
+    } else if (hairLength === 'long') {
+      px(ctx, 0, 28, HAIR_DARK, 32, 4);
+    } else {
+      px(ctx, 4, 28, SKIN_SHADE, 24, 4);
+    }
   }, HAIR);
 
   return [rightSide, leftSide, top, bottom, front, back];
 }
+
+const IVA_HAIR_STYLES = {
+  default: [
+    { dims: [0.33, 0.065, 0.31], pos: [0, 0.345, -0.008] },
+    { dims: [0.16, 0.045, 0.18], pos: [-0.04, 0.382, 0.02], rot: [-0.08, 0, 0.12], tone: 'hi' },
+    { dims: [0.21, 0.06, 0.055], pos: [-0.05, 0.305, 0.138], rot: [0, 0, 0.14] },
+    { dims: [0.1, 0.05, 0.05], pos: [0.105, 0.312, 0.136], rot: [0, 0, -0.16] },
+    { dims: [0.328, 0.24, 0.055], pos: [0, 0.22, -0.142] },
+    { dims: [0.042, 0.13, 0.22], pos: [-0.152, 0.265, -0.02] },
+    { dims: [0.042, 0.13, 0.22], pos: [0.152, 0.265, -0.02] },
+  ],
+  straight_short: [
+    { dims: [0.35, 0.048, 0.315], pos: [0, 0.342, -0.005] },
+    { dims: [0.16, 0.020, 0.16], pos: [0, 0.362, 0.02], tone: 'hi' },
+    { dims: [0.32, 0.042, 0.042], pos: [0, 0.312, 0.144] },
+    { dims: [0.344, 0.15, 0.046], pos: [0, 0.262, -0.145] },
+    { dims: [0.032, 0.08, 0.20], pos: [-0.166, 0.285, -0.02] },
+    { dims: [0.032, 0.08, 0.20], pos: [0.166, 0.285, -0.02] },
+  ],
+  straight_medium: [
+    { dims: [0.354, 0.050, 0.32], pos: [0, 0.342, -0.006] },
+    { dims: [0.18, 0.020, 0.18], pos: [0, 0.363, 0.01], tone: 'hi' },
+    { dims: [0.325, 0.044, 0.044], pos: [0, 0.312, 0.144] },
+    { dims: [0.354, 0.30, 0.050], pos: [0, 0.182, -0.15] },
+    { dims: [0.044, 0.26, 0.11], pos: [-0.170, 0.192, 0.06] },
+    { dims: [0.044, 0.26, 0.11], pos: [0.170, 0.192, 0.06] },
+    { dims: [0.042, 0.24, 0.17], pos: [-0.166, 0.202, -0.06] },
+    { dims: [0.042, 0.24, 0.17], pos: [0.166, 0.202, -0.06] },
+  ],
+  straight_long: [
+    { dims: [0.356, 0.052, 0.322], pos: [0, 0.342, -0.008] },
+    { dims: [0.18, 0.022, 0.20], pos: [0, 0.364, 0.01], tone: 'hi' },
+    { dims: [0.325, 0.044, 0.044], pos: [0, 0.312, 0.144] },
+    { dims: [0.362, 0.54, 0.054], pos: [0, 0.065, -0.154] },
+    { dims: [0.30, 0.18, 0.044], pos: [0, -0.14, -0.152], tone: 'dark' },
+    { dims: [0.052, 0.44, 0.095], pos: [-0.170, 0.08, 0.075] },
+    { dims: [0.052, 0.44, 0.095], pos: [0.170, 0.08, 0.075] },
+    { dims: [0.046, 0.42, 0.15], pos: [-0.168, 0.09, -0.06] },
+    { dims: [0.046, 0.42, 0.15], pos: [0.168, 0.09, -0.06] },
+  ],
+  wavy_short: [
+    { dims: [0.356, 0.066, 0.322], pos: [0, 0.344, -0.006] },
+    { dims: [0.20, 0.046, 0.19], pos: [-0.045, 0.378, 0.02], rot: [-0.08, 0, 0.16], tone: 'hi' },
+    { dims: [0.23, 0.058, 0.056], pos: [-0.05, 0.304, 0.144], rot: [0, 0, 0.20] },
+    { dims: [0.12, 0.048, 0.050], pos: [0.105, 0.312, 0.140], rot: [0, 0, -0.22], tone: 'hi' },
+    { dims: [0.354, 0.17, 0.052], pos: [0, 0.252, -0.148] },
+    { dims: [0.054, 0.10, 0.19], pos: [-0.174, 0.272, -0.015], rot: [0, 0, -0.16] },
+    { dims: [0.054, 0.10, 0.19], pos: [0.174, 0.272, -0.015], rot: [0, 0, 0.16] },
+  ],
+  wavy_medium: [
+    { dims: [0.36, 0.068, 0.326], pos: [0, 0.344, -0.006] },
+    { dims: [0.20, 0.046, 0.19], pos: [-0.045, 0.378, 0.02], rot: [-0.08, 0, 0.16], tone: 'hi' },
+    { dims: [0.23, 0.058, 0.056], pos: [-0.05, 0.304, 0.144], rot: [0, 0, 0.20] },
+    { dims: [0.12, 0.045, 0.050], pos: [0.108, 0.312, 0.140], rot: [0, 0, -0.20], tone: 'hi' },
+    { dims: [0.364, 0.28, 0.058], pos: [0, 0.188, -0.151] },
+    { dims: [0.40, 0.11, 0.054], pos: [0, 0.08, -0.154], rot: [0, 0, 0.06], tone: 'hi' },
+    // Bold S-curve side waves visible from the front
+    { dims: [0.060, 0.13, 0.13], pos: [-0.172, 0.242, 0.038], rot: [0, 0, 0.18] },
+    { dims: [0.060, 0.13, 0.13], pos: [0.172, 0.242, 0.038], rot: [0, 0, -0.18] },
+    { dims: [0.070, 0.13, 0.13], pos: [-0.198, 0.122, 0.028], rot: [0, 0, -0.24], tone: 'hi' },
+    { dims: [0.070, 0.13, 0.13], pos: [0.198, 0.122, 0.028], rot: [0, 0, 0.24], tone: 'hi' },
+  ],
+  wavy_long: [
+    { dims: [0.364, 0.070, 0.328], pos: [0, 0.344, -0.008] },
+    { dims: [0.20, 0.046, 0.19], pos: [-0.045, 0.378, 0.02], rot: [-0.08, 0, 0.16], tone: 'hi' },
+    { dims: [0.23, 0.058, 0.056], pos: [-0.05, 0.304, 0.144], rot: [0, 0, 0.20] },
+    { dims: [0.12, 0.045, 0.050], pos: [0.108, 0.312, 0.140], rot: [0, 0, -0.20], tone: 'hi' },
+    { dims: [0.368, 0.34, 0.060], pos: [0, 0.165, -0.154] },
+    { dims: [0.41, 0.17, 0.058], pos: [0.014, -0.04, -0.156], rot: [0, 0, 0.07], tone: 'hi' },
+    { dims: [0.36, 0.17, 0.055], pos: [-0.014, -0.15, -0.152], rot: [0, 0, -0.07], tone: 'dark' },
+    // 3-tier S-wave cascade clearly extending outside torso/shoulders
+    { dims: [0.060, 0.15, 0.12], pos: [-0.172, 0.24, 0.048], rot: [0, 0, 0.18] },
+    { dims: [0.060, 0.15, 0.12], pos: [0.172, 0.24, 0.048], rot: [0, 0, -0.18] },
+    { dims: [0.072, 0.16, 0.12], pos: [-0.206, 0.095, 0.058], rot: [0, 0, -0.24], tone: 'hi' },
+    { dims: [0.072, 0.16, 0.12], pos: [0.206, 0.095, 0.058], rot: [0, 0, 0.24], tone: 'hi' },
+    { dims: [0.062, 0.16, 0.11], pos: [-0.174, -0.055, 0.068], rot: [0, 0, 0.22], tone: 'dark' },
+    { dims: [0.062, 0.16, 0.11], pos: [0.174, -0.055, 0.068], rot: [0, 0, -0.22], tone: 'dark' },
+  ],
+  curly_short: [
+    { dims: [0.366, 0.080, 0.332], pos: [0, 0.350, -0.006] },
+    { dims: [0.14, 0.064, 0.14], pos: [-0.095, 0.390, 0.04], tone: 'hi' },
+    { dims: [0.14, 0.064, 0.14], pos: [0.09, 0.386, -0.02] },
+    { dims: [0.12, 0.058, 0.12], pos: [0, 0.398, 0.02], tone: 'dark' },
+    // 3 bouncy forehead curl puffs
+    { dims: [0.10, 0.056, 0.070], pos: [-0.11, 0.314, 0.138] },
+    { dims: [0.10, 0.060, 0.070], pos: [0.0, 0.322, 0.144], tone: 'hi' },
+    { dims: [0.10, 0.056, 0.070], pos: [0.11, 0.314, 0.138] },
+    // Temple curl tufts
+    { dims: [0.082, 0.095, 0.11], pos: [-0.186, 0.282, 0.03], tone: 'hi' },
+    { dims: [0.082, 0.095, 0.11], pos: [0.186, 0.282, 0.03], tone: 'hi' },
+    { dims: [0.356, 0.18, 0.058], pos: [0, 0.248, -0.148] },
+  ],
+  curly_medium: [
+    { dims: [0.374, 0.084, 0.336], pos: [0, 0.350, -0.008] },
+    { dims: [0.15, 0.066, 0.15], pos: [-0.10, 0.392, 0.04], tone: 'hi' },
+    { dims: [0.15, 0.066, 0.15], pos: [0.095, 0.388, -0.02] },
+    { dims: [0.13, 0.060, 0.13], pos: [0, 0.400, 0.02], tone: 'dark' },
+    { dims: [0.104, 0.058, 0.072], pos: [-0.11, 0.314, 0.138] },
+    { dims: [0.104, 0.062, 0.072], pos: [0.0, 0.322, 0.144], tone: 'hi' },
+    { dims: [0.104, 0.058, 0.072], pos: [0.11, 0.314, 0.138] },
+    // Distinct gapped alternating ringlet clusters down to chin
+    { dims: [0.088, 0.082, 0.11], pos: [-0.186, 0.284, 0.03], tone: 'hi' },
+    { dims: [0.088, 0.082, 0.11], pos: [0.186, 0.284, 0.03], tone: 'hi' },
+    { dims: [0.096, 0.084, 0.12], pos: [-0.210, 0.194, 0.015] },
+    { dims: [0.096, 0.084, 0.12], pos: [0.210, 0.194, 0.015] },
+    { dims: [0.088, 0.082, 0.11], pos: [-0.186, 0.104, 0.038], tone: 'dark' },
+    { dims: [0.088, 0.082, 0.11], pos: [0.186, 0.104, 0.038], tone: 'dark' },
+    { dims: [0.385, 0.29, 0.074], pos: [0, 0.188, -0.154] },
+  ],
+  curly_long: [
+    { dims: [0.378, 0.086, 0.34], pos: [0, 0.350, -0.008] },
+    { dims: [0.15, 0.066, 0.15], pos: [-0.10, 0.392, 0.04], tone: 'hi' },
+    { dims: [0.15, 0.066, 0.15], pos: [0.095, 0.388, -0.02] },
+    { dims: [0.13, 0.060, 0.13], pos: [0, 0.400, 0.02], tone: 'dark' },
+    { dims: [0.104, 0.058, 0.072], pos: [-0.11, 0.314, 0.138] },
+    { dims: [0.104, 0.062, 0.072], pos: [0.0, 0.322, 0.144], tone: 'hi' },
+    { dims: [0.104, 0.058, 0.072], pos: [0.11, 0.314, 0.138] },
+    // Cascading gapped 5-cluster ringlets down onto the chest/shoulders
+    { dims: [0.088, 0.080, 0.11], pos: [-0.186, 0.284, 0.03], tone: 'hi' },
+    { dims: [0.088, 0.080, 0.11], pos: [0.186, 0.284, 0.03], tone: 'hi' },
+    { dims: [0.098, 0.082, 0.12], pos: [-0.212, 0.194, 0.02] },
+    { dims: [0.098, 0.082, 0.12], pos: [0.212, 0.194, 0.02] },
+    { dims: [0.090, 0.082, 0.11], pos: [-0.188, 0.104, 0.04], tone: 'dark' },
+    { dims: [0.090, 0.082, 0.11], pos: [0.188, 0.104, 0.04], tone: 'dark' },
+    { dims: [0.098, 0.082, 0.11], pos: [-0.210, 0.014, 0.055], tone: 'hi' },
+    { dims: [0.098, 0.082, 0.11], pos: [0.210, 0.014, 0.055], tone: 'hi' },
+    { dims: [0.086, 0.082, 0.10], pos: [-0.184, -0.076, 0.065] },
+    { dims: [0.086, 0.082, 0.10], pos: [0.184, -0.076, 0.065] },
+    { dims: [0.39, 0.34, 0.076], pos: [0, 0.165, -0.156] },
+    { dims: [0.41, 0.22, 0.080], pos: [0, -0.09, -0.160], tone: 'dark' },
+  ],
+  coily_short: [
+    // Crisp high tapered coily flat-top / mini-fro
+    { dims: [0.35, 0.095, 0.32], pos: [0, 0.368, -0.005] },
+    { dims: [0.30, 0.050, 0.27], pos: [0, 0.420, -0.004], tone: 'hi' },
+    { dims: [0.336, 0.12, 0.045], pos: [0, 0.278, -0.144] },
+  ],
+  coily_medium: [
+    // Classic rounded Afro dome with textured coil rim
+    { dims: [0.48, 0.14, 0.41], pos: [0, 0.374, -0.01] },
+    { dims: [0.38, 0.072, 0.33], pos: [0, 0.452, -0.01], tone: 'hi' },
+    { dims: [0.26, 0.036, 0.24], pos: [0, 0.494, -0.01], tone: 'dark' },
+    { dims: [0.46, 0.27, 0.09], pos: [0, 0.208, -0.16] },
+    { dims: [0.115, 0.24, 0.28], pos: [-0.214, 0.26, -0.005] },
+    { dims: [0.115, 0.24, 0.28], pos: [0.214, 0.26, -0.005] },
+  ],
+  coily_long: [
+    // Huge voluminous rounded coily Afro cloud flaring wide & tall past shoulders
+    { dims: [0.54, 0.15, 0.44], pos: [0, 0.380, -0.01] },
+    { dims: [0.43, 0.075, 0.36], pos: [0, 0.462, -0.01], tone: 'hi' },
+    { dims: [0.28, 0.040, 0.25], pos: [0, 0.506, -0.01], tone: 'dark' },
+    { dims: [0.50, 0.34, 0.11], pos: [0, 0.18, -0.165] },
+    { dims: [0.44, 0.22, 0.10], pos: [0, -0.05, -0.165], tone: 'dark' },
+    { dims: [0.13, 0.25, 0.30], pos: [-0.228, 0.255, -0.005] },
+    { dims: [0.13, 0.25, 0.30], pos: [0.228, 0.255, -0.005] },
+    { dims: [0.125, 0.21, 0.25], pos: [-0.238, 0.05, 0.01], tone: 'hi' },
+    { dims: [0.125, 0.21, 0.25], pos: [0.238, 0.05, 0.01], tone: 'hi' },
+    { dims: [0.06, 0.08, 0.16], pos: [-0.275, 0.35, -0.01], tone: 'dark' },
+    { dims: [0.06, 0.08, 0.16], pos: [0.275, 0.35, -0.01], tone: 'dark' },
+  ],
+};
 
 function createIvaTorsoMaterials(accentColor) {
   const accentHex = `#${new THREE.Color(accentColor).getHexString()}`;
@@ -692,15 +1079,17 @@ function createIvaTorsoMaterials(accentColor) {
  * Builds an unarmored NASA IVA flight-suit astronaut rig (no helmet or PLSS backpack)
  * with a sculpted multi-part head, mission comms headset, and original pixel-art face.
  */
-export function buildIvaAstronautRig({ accentColor = 0xea580c } = {}) {
+export function buildIvaAstronautRig({ accentColor = 0xea580c, crewProfile = null } = {}) {
   const bodyGroup = new THREE.Group();
+  const profile = crewProfile ?? DEFAULT_CADET_PROFILE;
 
   const suitBlue = new THREE.MeshLambertMaterial({ color: 0x1e3a5f });
   const accentMat = new THREE.MeshLambertMaterial({ color: accentColor });
-  const skinMat = new THREE.MeshLambertMaterial({ color: 0xf2c2a2 });
-  const skinShadeMat = new THREE.MeshLambertMaterial({ color: 0xdca07e });
-  const hairMat = new THREE.MeshLambertMaterial({ color: 0x2d1e17 });
-  const hairHiMat = new THREE.MeshLambertMaterial({ color: 0x462f24 });
+  const skinMat = new THREE.MeshLambertMaterial({ color: profile.skin });
+  const skinShadeMat = new THREE.MeshLambertMaterial({ color: profile.skinShade });
+  const hairMat = new THREE.MeshLambertMaterial({ color: profile.hair });
+  const hairHiMat = new THREE.MeshLambertMaterial({ color: profile.hairHi });
+  const hairDarkMat = new THREE.MeshLambertMaterial({ color: profile.hairDark });
   const whiteMat = new THREE.MeshLambertMaterial({ color: 0xf8fafc });
   const darkMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
   const headsetMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
@@ -719,87 +1108,99 @@ export function buildIvaAstronautRig({ accentColor = 0xea580c } = {}) {
     return mesh;
   };
 
-  // Slim flight-suit legs + gym sneakers
+  // Blocky flight-suit legs + gym sneakers
   const createLeg = (x) => {
     const hip = new THREE.Group();
     hip.position.set(x, 0.72, 0);
-    addPart(hip, 0.18, 0.3, 0.19, suitBlue, 0, -0.15, 0);
-    addPart(hip, 0.185, 0.04, 0.195, accentMat, 0, -0.26, 0);
+    addPart(hip, 0.195, 0.3, 0.20, suitBlue, 0, -0.15, 0);
+    addPart(hip, 0.20, 0.04, 0.205, accentMat, 0, -0.26, 0);
 
     const knee = new THREE.Group();
     knee.position.set(0, -0.32, 0);
     hip.add(knee);
 
-    addPart(knee, 0.17, 0.26, 0.18, suitBlue, 0, -0.14, 0);
-    addPart(knee, 0.18, 0.07, 0.23, darkMat, 0, -0.31, 0.02);
-    addPart(knee, 0.185, 0.03, 0.24, whiteMat, 0, -0.36, 0.02);
+    addPart(knee, 0.185, 0.26, 0.19, suitBlue, 0, -0.14, 0);
+    addPart(knee, 0.195, 0.07, 0.24, darkMat, 0, -0.31, 0.02);
+    addPart(knee, 0.20, 0.03, 0.25, whiteMat, 0, -0.36, 0.02);
 
     bodyGroup.add(hip);
     return { hip, knee };
   };
 
-  const leftLeg = createLeg(-0.095);
-  const rightLeg = createLeg(0.095);
+  const leftLeg = createLeg(-0.105);
+  const rightLeg = createLeg(0.105);
 
-  // Flight jacket torso (single textured box, no bulky armor or backpack)
+  // Flight jacket torso (blockier proportions matching voxel astronaut rig)
   const upperBody = new THREE.Group();
   upperBody.position.set(0, 0.72, 0);
   bodyGroup.add(upperBody);
 
-  addPart(upperBody, 0.4, 0.56, 0.22, createIvaTorsoMaterials(accentColor), 0, 0.31, 0);
-  addPart(upperBody, 0.22, 0.035, 0.2, whiteMat, 0, 0.595, 0);
-  addPart(upperBody, 0.12, 0.055, 0.12, skinMat, 0, 0.615, 0);
+  addPart(upperBody, 0.45, 0.54, 0.24, createIvaTorsoMaterials(accentColor), 0, 0.31, 0);
+  addPart(upperBody, 0.24, 0.035, 0.21, whiteMat, 0, 0.585, 0);
+  addPart(upperBody, 0.13, 0.055, 0.13, skinMat, 0, 0.605, 0);
 
-  // Slim flight-suit arms + bare hands
+  // Flight-suit arms + bare hands
   const createArm = (x) => {
     const shoulder = new THREE.Group();
-    shoulder.position.set(x, 0.55, 0);
-    addPart(shoulder, 0.14, 0.22, 0.14, suitBlue, 0, -0.1, 0);
-    addPart(shoulder, 0.145, 0.05, 0.145, accentMat, 0, -0.12, 0);
+    shoulder.position.set(x, 0.54, 0);
+    addPart(shoulder, 0.165, 0.22, 0.165, suitBlue, 0, -0.1, 0);
+    addPart(shoulder, 0.17, 0.05, 0.17, accentMat, 0, -0.12, 0);
 
     const elbow = new THREE.Group();
     elbow.position.set(0, -0.23, 0);
     shoulder.add(elbow);
 
-    addPart(elbow, 0.14, 0.21, 0.14, suitBlue, 0, -0.1, 0);
-    addPart(elbow, 0.145, 0.03, 0.145, whiteMat, 0, -0.21, 0);
-    addPart(elbow, 0.14, 0.12, 0.14, skinMat, 0, -0.28, 0);
+    addPart(elbow, 0.16, 0.21, 0.16, suitBlue, 0, -0.1, 0);
+    addPart(elbow, 0.165, 0.03, 0.165, whiteMat, 0, -0.21, 0);
+    addPart(elbow, 0.16, 0.12, 0.16, skinMat, 0, -0.28, 0);
 
     upperBody.add(shoulder);
     return { shoulder, elbow };
   };
 
-  const leftArm = createArm(-0.265);
-  const rightArm = createArm(0.265);
+  const leftArm = createArm(-0.31);
+  const rightArm = createArm(0.31);
 
   // Sculpted multi-part cadet head with 3D hair, 3D nose, and mission comms headset
   const headGroup = new THREE.Group();
-  headGroup.position.set(0, 0.63, 0);
+  headGroup.position.set(0, 0.62, 0);
   upperBody.add(headGroup);
 
-  // Slightly non-cubic head silhouette + 3D nose
-  addPart(headGroup, 0.31, 0.33, 0.29, createCadetHeadMaterials(), 0, 0.185, 0);
-  addPart(headGroup, 0.042, 0.052, 0.03, skinShadeMat, 0, 0.155, 0.156);
+  // Non-cubic boxy cadet head silhouette + 3D nose
+  addPart(headGroup, 0.33, 0.32, 0.30, createCadetHeadMaterials(profile), 0, 0.18, 0);
+  addPart(headGroup, 0.044, 0.050, 0.03, skinShadeMat, 0, 0.15, 0.162);
 
-  // 3D layered asymmetric hair
-  addPart(headGroup, 0.33, 0.065, 0.31, hairMat, 0, 0.345, -0.008);
-  addPart(headGroup, 0.16, 0.045, 0.18, hairHiMat, -0.04, 0.382, 0.02, -0.08, 0, 0.12);
-  addPart(headGroup, 0.21, 0.06, 0.055, hairMat, -0.05, 0.305, 0.138, 0, 0, 0.14);
-  addPart(headGroup, 0.1, 0.05, 0.05, hairMat, 0.105, 0.312, 0.136, 0, 0, -0.16);
-  addPart(headGroup, 0.328, 0.24, 0.055, hairMat, 0, 0.22, -0.142);
-  for (const sx of [-0.152, 0.152]) {
-    addPart(headGroup, 0.042, 0.13, 0.22, hairMat, sx, 0.265, -0.02);
+  // 3D layered hair matching hairType + hairLength
+  const ivaHairKey = profile.hairType && profile.hairLength
+    ? `${profile.hairType}_${profile.hairLength}`
+    : 'default';
+  const ivaHairPieces = IVA_HAIR_STYLES[ivaHairKey] ?? IVA_HAIR_STYLES.default;
+  for (const piece of ivaHairPieces) {
+    const mat = piece.tone === 'hi' ? hairHiMat : piece.tone === 'dark' ? hairDarkMat : hairMat;
+    const rot = piece.rot ?? [0, 0, 0];
+    addPart(
+      headGroup,
+      piece.dims[0], piece.dims[1], piece.dims[2],
+      mat,
+      piece.pos[0], piece.pos[1], piece.pos[2],
+      rot[0], rot[1], rot[2]
+    );
   }
 
-  // Mission comms headset + boom mic
-  addPart(headGroup, 0.365, 0.032, 0.055, headsetMat, 0, 0.392, -0.01);
+  // Mission comms headset + boom mic (clearance adapts to taller/wider coily/curly crowns)
+  const wideCrown = profile.hairType === 'coily' && (profile.hairLength === 'medium' || profile.hairLength === 'long');
+  const tallCrown = profile.hairType === 'coily' || profile.hairType === 'curly';
+  const bandY = wideCrown ? 0.535 : tallCrown ? 0.438 : 0.395;
+  const sideSpanX = wideCrown ? 0.305 : profile.hairType === 'curly' ? 0.255 : profile.hairType === 'wavy' && profile.hairLength !== 'short' ? 0.218 : 0.192;
+  const strutHeight = bandY - 0.19;
+  addPart(headGroup, sideSpanX * 2 + 0.02, 0.032, 0.055, headsetMat, 0, bandY, -0.01);
   for (const sx of [-1, 1]) {
-    addPart(headGroup, 0.03, 0.19, 0.048, headsetMat, sx * 0.175, 0.29, -0.01);
-    addPart(headGroup, 0.03, 0.125, 0.125, headsetPadMat, sx * 0.165, 0.185, -0.01);
-    addPart(headGroup, 0.035, 0.11, 0.11, headsetMat, sx * 0.185, 0.185, -0.01);
-    addPart(headGroup, 0.016, 0.065, 0.065, accentMat, sx * 0.202, 0.185, -0.01);
+    addPart(headGroup, 0.03, strutHeight, 0.048, headsetMat, sx * sideSpanX, 0.19 + strutHeight * 0.5, -0.01);
+    addPart(headGroup, 0.03, 0.125, 0.125, headsetPadMat, sx * (sideSpanX - 0.01), 0.185, -0.01);
+    addPart(headGroup, 0.035, 0.11, 0.11, headsetMat, sx * (sideSpanX + 0.01), 0.185, -0.01);
+    addPart(headGroup, 0.016, 0.065, 0.065, accentMat, sx * (sideSpanX + 0.027), 0.185, -0.01);
   }
-  addPart(headGroup, 0.018, 0.018, 0.155, headsetMat, -0.158, 0.128, 0.068, 0.16, 0.48, 0);
+  addPart(headGroup, 0.018, 0.018, 0.155, headsetMat, -(sideSpanX - 0.012), 0.128, 0.068, 0.16, 0.48, 0);
   addPart(headGroup, 0.028, 0.024, 0.034, headsetMat, -0.115, 0.112, 0.142);
   addPart(headGroup, 0.012, 0.012, 0.012, micLedMat, -0.105, 0.112, 0.158);
 

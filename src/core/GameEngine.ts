@@ -15,7 +15,8 @@ import { separateCrew } from '../crew/separateCrew.ts';
 import { CrewManager } from '../crew/CrewManager.ts';
 import { CrewAvatar } from '../crew/CrewAvatar.ts';
 import { CrewInstances } from '../crew/crewInstances.ts';
-import { buildIvaAstronautRig, buildSpacesuitRig } from '../graphics/spacesuitModel.ts';
+import { buildPlayerCadetProfile, normalizePlayerAppearance } from '../crew/playerAppearance.ts';
+import { buildIvaAstronautRig, buildSpacesuitRig, disposeSpacesuitRig } from '../graphics/spacesuitModel.ts';
 import { createBaseStock } from '../crew/baseStock.ts';
 import { createStations, problemText } from '../crew/stations.ts';
 import { EMBEDDED_SPACE_WEATHER } from '../data/spaceWeather.ts';
@@ -91,6 +92,7 @@ import { FirstTimeHud } from '../ui/FirstTimeHud.ts';
 import { TradeoffHud } from '../ui/TradeoffHud.ts';
 import { FirstTimeMoments, momentLogText } from '../story/firstTimeMoments.ts';
 import { MenuScreens } from '../ui/MenuScreens.ts';
+import { CharacterCreator } from '../ui/CharacterCreator.ts';
 import { StoryDirector } from '../story/StoryDirector.ts';
 import { createActControllers } from '../story/acts/index.ts';
 import { Act5Controller } from '../story/acts/Act5Controller.ts';
@@ -237,10 +239,12 @@ export class GameEngine {
     this.playerFootprints = new PlayerFootprints(this.scene);
     this.survival = new SurvivalSystem();
     this._savedArrivalPlayed = false;
+    this.playerAppearance = normalizePlayerAppearance(null);
     try {
       const saved = JSON.parse(window.localStorage.getItem('marscraft-save-v1') || 'null');
       this._savedArrivalPlayed = saved?.arrivalPlayed === true;
       this._savedFreePlay = saved?.freePlay === true; // ja decolou nesta partida (ato 5, #411)
+      if (saved?.playerAppearance) this.playerAppearance = normalizePlayerAppearance(saved.playerAppearance);
       // Trade-offs que valem para a partida inteira: o primeiro gelo (#413) e a maquina parada (#415)
       const firstIce = restoreFirstIce(saved?.firstIce);
       this._firstIceAsked = firstIce.asked;
@@ -254,6 +258,7 @@ export class GameEngine {
       }
       if (saved?.player) this.player.pos.set(saved.player.x, saved.player.y, saved.player.z);
     } catch { /* Ignore unavailable or malformed saves. */ }
+    this.playerProfile = buildPlayerCadetProfile(this.playerAppearance);
     this._saveTimer = 0;
     this._wasSuitEquipped = this.survival.suitEquipped;
     // As tempestades solares so comecam no ato 2 da historia (StoryDirector)
@@ -310,6 +315,7 @@ export class GameEngine {
 
     // Maozinha 3D do jogador em primeira pessoa
     this.playerHand = new PlayerHand(this.camera, materials, carrot.texture);
+    this.playerHand.setAppearance(this.playerProfile);
     this.playerHand.setSuitEquipped(this.survival.suitEquipped);
     this.suitport.setEquipped(this.survival.suitEquipped, false);
     const firstSlot = this.survival.slots[0];
@@ -330,6 +336,12 @@ export class GameEngine {
         return inventorySlots;
       },
     });
+    this.hud.setPlayerAppearance(this.playerProfile);
+
+    this.characterCreator = new CharacterCreator({
+      initialAppearance: this.playerAppearance,
+      onUiClick: () => this.audio.playUiClick(),
+    });
 
     this.gymController = new GymEquipmentController({
       scene: this.scene,
@@ -339,6 +351,7 @@ export class GameEngine {
       expedition: this.expedition,
       survival: this.survival,
       hud: this.hud,
+      playerProfile: this.playerProfile,
       onPlaySound: (mode, completed) => {
         if (completed) this.audio.playUiConfirm();
         else this.audio.playGymRep(mode);
@@ -467,6 +480,15 @@ export class GameEngine {
       getInteraction: () => this._getInteraction(),
       isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen || Boolean(this.sleep?.isPanelOpen),
       getWorkSpeed: () => (isBodyWeak(this.stations) || this.sleep?.isTired ? ACT3_CONFIG.WEAK_WORK_SPEED : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
+      onRequestCharacterSetup: (confirmAndStart) => {
+        this.characterCreator.open(this.playerAppearance, (chosen) => {
+          this._setPlayerAppearance(chosen);
+          this._saveGame();
+          confirmAndStart();
+        });
+        return true;
+      },
+      onReturnToStartMenu: () => this.characterCreator.close(),
     });
     // Dormir no beliche (issue #109): passa o tempo com custo, no lugar da antiga tecla T
     this.sleep = new SleepController(this);
@@ -476,18 +498,7 @@ export class GameEngine {
 
     this.debug = new DebugOverlay(this.renderer);
     this.crewInstances = CrewInstances.for(this.scene);
-    this.playerAvatar = new CrewAvatar(this.scene, {
-      id: 99,
-      name: '',
-      state: 'idle',
-      route: [],
-      distance: 0,
-      routeLength: 0,
-      stationary: true,
-    }, CREW_CONFIG.SUIT_COLORS[0]);
-    this.playerAvatar.label.visible = false;
-    this.playerAvatar.group.visible = false;
-    this.playerHand.attachThirdPersonHeldItems(this.playerAvatar.elbowR);
+    this._rebuildPlayerAvatar();
     this.playerHand.onThirdPersonAction = (action) => {
       if (this.isThirdPerson && !this.roverController.isActive && !this.gymController.isActive) {
         this.playerAvatar.triggerPlayerAction(action);
@@ -2183,17 +2194,60 @@ export class GameEngine {
     this.story.start(this._storySnapshot);
   }
 
-  _initRationVisuals() {
-    this._wasInsideRationKitchen = false;
-    this._rationKitchenWaitingForCrop = false;
-    this._rationObserver = new THREE.Group();
-    this._rationObserver.visible = false;
+  _setPlayerAppearance(appearance) {
+    this.playerAppearance = normalizePlayerAppearance(appearance);
+    this.playerProfile = buildPlayerCadetProfile(this.playerAppearance);
+    this.playerHand?.setAppearance(this.playerProfile);
+    this.hud?.setPlayerAppearance(this.playerProfile);
+    this.gymController?.setAppearance(this.playerProfile);
+    this._rebuildPlayerAvatar();
+    this._rebuildRationObserver();
+  }
+
+  _rebuildPlayerAvatar() {
+    const oldAvatar = this.playerAvatar;
+    const wasVisible = oldAvatar ? oldAvatar.group.visible : false;
+    const newAvatar = new CrewAvatar(this.scene, {
+      id: 99,
+      name: '',
+      state: 'idle',
+      route: [],
+      distance: 0,
+      routeLength: 0,
+      stationary: true,
+    }, CREW_CONFIG.SUIT_COLORS[0], this.playerProfile);
+    newAvatar.label.visible = false;
+    newAvatar.group.visible = wasVisible;
+    if (oldAvatar) {
+      newAvatar.group.position.copy(oldAvatar.group.position);
+      newAvatar.group.rotation.copy(oldAvatar.group.rotation);
+    }
+    // Reparent held third-person items before disposing old avatar's elbowR
+    this.playerHand.attachThirdPersonHeldItems(newAvatar.elbowR);
+    oldAvatar?.dispose?.();
+    this.playerAvatar = newAvatar;
+  }
+
+  _rebuildRationObserver() {
+    if (!this._rationObserver) return;
+    if (this._rationObserverEva) {
+      this._rationObserver.remove(this._rationObserverEva.bodyGroup);
+      disposeSpacesuitRig(this._rationObserverEva);
+    }
+    if (this._rationObserverIva) {
+      this._rationObserver.remove(this._rationObserverIva.bodyGroup);
+      disposeSpacesuitRig(this._rationObserverIva);
+    }
     this._rationObserverEva = buildSpacesuitRig({
       accentColor: 0xea580c,
       suitColor: 0xf8fafc,
       includeUpgradeTrim: true,
+      crewProfile: this.playerProfile,
     });
-    this._rationObserverIva = buildIvaAstronautRig({ accentColor: 0xea580c });
+    this._rationObserverIva = buildIvaAstronautRig({
+      accentColor: 0xea580c,
+      crewProfile: this.playerProfile,
+    });
     for (const rig of [this._rationObserverEva, this._rationObserverIva]) {
       rig.armL.rotation.set(-0.08, 0, -0.1);
       rig.armR.rotation.set(-0.08, 0, 0.1);
@@ -2202,8 +2256,16 @@ export class GameEngine {
       this._rationObserver.add(rig.bodyGroup);
     }
     this._syncRationObserverAppearance();
-    // Os dois bonecos da crianca, para a cena da ida ate o foguete (#421, boardingCutscene.ts)
+    // Os dois bonecos da crianca para a cena de embarque acompanham a aparencia escolhida.
     this._boardingRigs = [this._rationObserverEva, this._rationObserverIva];
+  }
+
+  _initRationVisuals() {
+    this._wasInsideRationKitchen = false;
+    this._rationKitchenWaitingForCrop = false;
+    this._rationObserver = new THREE.Group();
+    this._rationObserver.visible = false;
+    this._rebuildRationObserver();
     this.scene.add(this._rationObserver);
     this._rationDeliveryCropProps = Object.fromEntries(
       ['potato', 'lettuce', 'soy'].map((type) => {
@@ -3041,7 +3103,7 @@ export class GameEngine {
     try {
       const survival = {};
       for (const key of ['health','oxygen','suitEquipped','suitThermal','suitOxygen','suitScrubber','suitDust','suitIntegrity','baseOxygen','baseBreached','water','food','baseWater','maxBaseWater','graywater','inventorySlots','isDead']) survival[key] = this.survival[key];
-      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed, freePlay: this.mission.launched, firstIce: saveFirstIce(this._firstIceAsked, this._firstIceChoice), crewHelp: this.act2.saveState() }));
+      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed, freePlay: this.mission.launched, playerAppearance: this.playerAppearance, firstIce: saveFirstIce(this._firstIceAsked, this._firstIceChoice), crewHelp: this.act2.saveState() }));
       return true;
     } catch { return false; }
   }

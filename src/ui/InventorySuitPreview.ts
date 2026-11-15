@@ -1,6 +1,7 @@
 // @ts-nocheck
 import * as THREE from 'three';
-import { buildIvaAstronautRig, buildSpacesuitRig } from '../graphics/spacesuitModel.ts';
+import { DEFAULT_CADET_PROFILE } from '../crew/crewProfiles.ts';
+import { buildIvaAstronautRig, buildSpacesuitRig, disposeSpacesuitRig } from '../graphics/spacesuitModel.ts';
 
 const CLEAN_SUIT_COLOR = new THREE.Color(0xf8fafc);
 const DUSTY_SUIT_COLOR = new THREE.Color(0xd6a68c);
@@ -17,9 +18,10 @@ const LED_COLORS = {
  * Renders an interactive vertical astronaut preview alongside the inventory.
  */
 export class InventorySuitPreview {
-  constructor(canvas, container = null) {
+  constructor(canvas, container = null, crewProfile = null) {
     this.canvas = canvas;
     this.container = container ?? canvas?.parentElement ?? null;
+    this._profile = crewProfile ?? DEFAULT_CADET_PROFILE;
     this.active = false;
     this._raf = null;
     this._glFailed = false;
@@ -95,19 +97,38 @@ export class InventorySuitPreview {
 
       this.pivot = new THREE.Group();
       this.scene.add(this.pivot);
-
-      this.evaRig = buildSpacesuitRig({
-        accentColor: 0xea580c,
-        suitColor: 0xf8fafc,
-        includeUpgradeTrim: true,
-      });
-      this.ivaRig = buildIvaAstronautRig({
-        accentColor: 0xea580c,
-      });
-      this.pivot.add(this.evaRig.bodyGroup);
-      this.pivot.add(this.ivaRig.bodyGroup);
+      this._buildRigs();
     } catch {
       this._glFailed = true;
+    }
+  }
+
+  _buildRigs() {
+    if (!this.pivot || this._glFailed) return;
+    disposeSpacesuitRig(this.evaRig?.bodyGroup);
+    disposeSpacesuitRig(this.ivaRig?.bodyGroup);
+    this.evaRig = buildSpacesuitRig({
+      accentColor: 0xea580c,
+      suitColor: 0xf8fafc,
+      includeUpgradeTrim: true,
+      crewProfile: this._profile,
+    });
+    this.ivaRig = buildIvaAstronautRig({
+      accentColor: 0xea580c,
+      crewProfile: this._profile,
+    });
+    this.pivot.add(this.evaRig.bodyGroup);
+    this.pivot.add(this.ivaRig.bodyGroup);
+  }
+
+  setAppearance(profile) {
+    this._profile = profile ?? DEFAULT_CADET_PROFILE;
+    if (this._initialized && !this._glFailed) {
+      this._buildRigs();
+      this._applyVisualState();
+    }
+    if (this.active && this._glFailed) {
+      this._drawFallback2d();
     }
   }
 
@@ -142,14 +163,14 @@ export class InventorySuitPreview {
 
   _resizeRenderer() {
     if (!this.renderer || !this.canvas) return;
-    const width = Math.max(120, Math.round(this.canvas.clientWidth || 160));
-    const height = Math.max(150, Math.round(this.canvas.clientHeight || 224));
+    const width = Math.max(100, Math.round(this.canvas.clientWidth || 160));
+    const height = Math.max(110, Math.round(this.canvas.clientHeight || 224));
     if (this._w === width && this._h === height) return;
     this._w = width;
     this._h = height;
     this.renderer.setSize(width, height, false);
     const aspect = width / height;
-    const halfHeight = Math.max(1.12, 0.65 / aspect);
+    const halfHeight = Math.max(1.04, 0.54 / aspect);
     this.camera.left = -halfHeight * aspect;
     this.camera.right = halfHeight * aspect;
     this.camera.top = halfHeight;
@@ -160,26 +181,61 @@ export class InventorySuitPreview {
   _drawFallback2d() {
     const ctx = this.canvas?.getContext?.('2d');
     if (!ctx) return;
-    const w = this.canvas.width = this.canvas.clientWidth || 160;
-    const h = this.canvas.height = this.canvas.clientHeight || 220;
+    const w = this.canvas.width = this.canvas.clientWidth || this.canvas.width || 160;
+    const h = this.canvas.height = this.canvas.clientHeight || this.canvas.height || 220;
     ctx.clearRect(0, 0, w, h);
     const cx = Math.floor(w / 2);
     const cy = Math.floor(h / 2) - 4;
     const { equipped } = this._state;
-    ctx.fillStyle = equipped ? '#f8fafc' : '#2d1e17';
-    ctx.fillRect(cx - 18, cy - 54, 36, 36); // helmet or hair/head
+    const p = this._profile ?? DEFAULT_CADET_PROFILE;
+    const isLong = p.hairLength === 'long';
+    const isMedium = p.hairLength === 'medium';
+
     if (equipped) {
-      ctx.fillStyle = '#f59e0b';
-      ctx.fillRect(cx - 12, cy - 42, 24, 14); // reflective gold visor
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(cx - 18, cy - 54, 36, 36); // helmet
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(cx - 14, cy - 46, 28, 22); // open window rim
+      ctx.fillStyle = p.skin;
+      ctx.fillRect(cx - 12, cy - 44, 24, 18); // face inside visor
+      ctx.fillStyle = p.hair;
+      ctx.fillRect(cx - 12, cy - 46, 24, 5); // hair top
+      if (isMedium || isLong) {
+        ctx.fillRect(cx - 13, cy - 42, 3, isLong ? 16 : 10);
+        ctx.fillRect(cx + 10, cy - 42, 3, isLong ? 16 : 10);
+      }
+      ctx.fillStyle = p.eyeDark;
+      ctx.fillRect(cx - 7, cy - 38, 3, 5);
+      ctx.fillRect(cx + 4, cy - 38, 3, 5);
+      ctx.fillStyle = 'rgba(186, 230, 253, 0.24)';
+      ctx.fillRect(cx - 12, cy - 44, 24, 18); // clear glass sheen
     } else {
-      ctx.fillStyle = '#f2c2a2';
+      ctx.fillStyle = p.hair;
+      if (isLong) {
+        ctx.fillRect(cx - 19, cy - 52, 38, 56);
+      } else if (isMedium) {
+        ctx.fillRect(cx - 18, cy - 52, 36, 38);
+      } else {
+        ctx.fillRect(cx - 16, cy - 52, 32, 22);
+      }
+      if (p.hairType === 'coily' && !isLong) {
+        ctx.fillRect(cx - 20, cy - 56, 40, 14);
+      }
+      ctx.fillStyle = p.skin;
       ctx.fillRect(cx - 14, cy - 44, 28, 24); // face
-      ctx.fillStyle = '#2d1e17';
-      ctx.fillRect(cx - 14, cy - 48, 22, 6); // asymmetric bangs
-      ctx.fillStyle = '#1c2541';
+      ctx.fillStyle = p.hair;
+      ctx.fillRect(cx - 14, cy - 48, 22, 6); // bangs
+      ctx.fillStyle = p.hairDark;
+      ctx.fillRect(cx - 10, cy - 40, 6, 2); // left brow
+      ctx.fillRect(cx + 4, cy - 40, 6, 2); // right brow
+      ctx.fillStyle = p.eyeDark;
       ctx.fillRect(cx - 8, cy - 37, 4, 6); // left vertical eye
       ctx.fillRect(cx + 4, cy - 37, 4, 6); // right vertical eye
-      ctx.fillStyle = '#9c4f3d';
+      if (p.lashes) {
+        ctx.fillRect(cx - 9, cy - 36, 1, 2);
+        ctx.fillRect(cx + 8, cy - 36, 1, 2);
+      }
+      ctx.fillStyle = p.mouth;
       ctx.fillRect(cx - 5, cy - 26, 10, 2); // smile
       ctx.fillStyle = '#1e293b';
       ctx.fillRect(cx - 20, cy - 42, 5, 12); // left headset cup

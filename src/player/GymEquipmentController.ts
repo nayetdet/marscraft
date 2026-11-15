@@ -2,7 +2,8 @@
 import * as THREE from 'three';
 import { STATION_CONFIG as C } from '../config/constants.ts';
 import { workoutBlocker } from '../story/acts/act3Gym.ts';
-import { buildIvaAstronautRig, buildSpacesuitRig } from '../graphics/spacesuitModel.ts';
+import { buildIvaAstronautRig, buildSpacesuitRig, disposeSpacesuitRig } from '../graphics/spacesuitModel.ts';
+import { DEFAULT_CADET_PROFILE } from '../crew/crewProfiles.ts';
 
 const EQUIPMENT_SPECS = {
   treadmill: {
@@ -30,7 +31,7 @@ const EQUIPMENT_SPECS = {
 };
 
 export class GymEquipmentController {
-  constructor({ scene, camera, player, stations, expedition, survival = null, hud, onPlaySound, onDismount }) {
+  constructor({ scene, camera, player, stations, expedition, survival = null, hud, playerProfile = null, onPlaySound, onDismount }) {
     this.scene = scene;
     this.camera = camera;
     this.player = player;
@@ -38,6 +39,7 @@ export class GymEquipmentController {
     this.expedition = expedition;
     this.survival = survival;
     this.hud = hud;
+    this.playerProfile = playerProfile ?? DEFAULT_CADET_PROFILE;
     this.onPlaySound = onPlaySound;
     this.onDismount = onDismount;
 
@@ -57,17 +59,32 @@ export class GymEquipmentController {
     const group = new THREE.Group();
     group.visible = false;
     this.scene.add(group);
-    this.evaRig = buildSpacesuitRig({ accentColor: 0xea580c, includeUpgradeTrim: true });
-    this.ivaRig = buildIvaAstronautRig({ accentColor: 0xea580c });
-    group.add(this.evaRig.bodyGroup, this.ivaRig.bodyGroup);
-
-    this.avatar = {
-      group,
-      ...this.ivaRig,
-    };
+    this.avatar = { group };
+    this._buildRigs();
     this._syncAvatarAppearance();
 
     this._buildHudOverlay();
+  }
+
+  _buildRigs() {
+    disposeSpacesuitRig(this.evaRig?.bodyGroup);
+    disposeSpacesuitRig(this.ivaRig?.bodyGroup);
+    this.evaRig = buildSpacesuitRig({
+      accentColor: 0xea580c,
+      includeUpgradeTrim: true,
+      crewProfile: this.playerProfile,
+    });
+    this.ivaRig = buildIvaAstronautRig({
+      accentColor: 0xea580c,
+      crewProfile: this.playerProfile,
+    });
+    this.avatar.group.add(this.evaRig.bodyGroup, this.ivaRig.bodyGroup);
+  }
+
+  setAppearance(profile) {
+    this.playerProfile = profile ?? DEFAULT_CADET_PROFILE;
+    this._buildRigs();
+    this._syncAvatarAppearance();
   }
 
   _syncAvatarAppearance() {
