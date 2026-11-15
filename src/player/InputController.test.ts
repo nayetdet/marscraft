@@ -64,6 +64,39 @@ describe('scope equipment', () => {
     expect(input.onToggleZoom).toHaveBeenCalledWith(true, false);
   });
 
+  it('closes the scanner overlay when left-click is released without zoom', () => {
+    const input = Object.create(InputController.prototype);
+    input.isScannerOpen = false;
+    input.isZoomed = false;
+    input.isScanButtonHeld = false;
+    input.hud = { selectedSlot: 0, updateZoomState: vi.fn() };
+    input.survival = { slots: [{ id: BLOCK_IDS.SCOPE, count: 1 }] };
+    input.onToggleZoom = vi.fn();
+
+    input._handleScopeMouseButton(0);
+    input._releaseScopeScan();
+
+    expect(input.isScanButtonHeld).toBe(false);
+    expect(input.isScannerOpen).toBe(false);
+    expect(input.isZoomed).toBe(false);
+    expect(input.onToggleZoom).toHaveBeenLastCalledWith(false, false);
+  });
+
+  it('keeps the scanner overlay open when left-click is released during zoom', () => {
+    const input = Object.create(InputController.prototype);
+    input.isScannerOpen = true;
+    input.isZoomed = true;
+    input.isScanButtonHeld = true;
+    input.onToggleZoom = vi.fn();
+
+    input._releaseScopeScan();
+
+    expect(input.isScanButtonHeld).toBe(false);
+    expect(input.isScannerOpen).toBe(true);
+    expect(input.isZoomed).toBe(true);
+    expect(input.onToggleZoom).not.toHaveBeenCalled();
+  });
+
   it('opens the scope with right-click and closes it on the next right-click', () => {
     const input = Object.create(InputController.prototype);
     input.isScannerOpen = false;

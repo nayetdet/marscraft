@@ -109,7 +109,7 @@ export class InputController {
 
     this.keys = {};
     this.isBreakButtonHeld = false;
-    this.isScanButtonHeld = false;
+    this._releaseScopeScan();
     this._cancelBreaking();
     this.touchHeldActions.clear();
     this.joystickPointerId = null;
@@ -138,7 +138,7 @@ export class InputController {
     if (this.isLocked) {
       this.keys = {};
       this.isBreakButtonHeld = false;
-      this.isScanButtonHeld = false;
+      this._releaseScopeScan();
       this._cancelBreaking();
       this.touchHeldActions.clear();
       this.joystickPointerId = null;
@@ -277,7 +277,7 @@ export class InputController {
       this.touchHeldActions.delete(pointerId);
       if (action === 'jump') this.keys.Space = false;
       if (action === 'mine') {
-        this.isScanButtonHeld = false;
+        this._releaseScopeScan();
         this.isBreakButtonHeld = false;
         this._cancelBreaking();
       }
@@ -323,6 +323,11 @@ export class InputController {
 
   _isScopeSelected() {
     return this.survival.slots[this.hud.selectedSlot]?.id === BLOCK_IDS.SCOPE;
+  }
+
+  _releaseScopeScan() {
+    this.isScanButtonHeld = false;
+    if (!this.isZoomed && this.isScannerOpen) this._setScope(false, false);
   }
 
   _handleScopeMouseButton(button) {
@@ -560,7 +565,7 @@ export class InputController {
       if (!this.isLocked) {
         // Sem pointer lock o jogador para: sem teclas presas e sem animacao de caminhada.
         this._cancelBreaking();
-        this.isScanButtonHeld = false;
+        this._releaseScopeScan();
         this.keys = {};
         this.player.isMoving = false;
       }
@@ -731,7 +736,7 @@ export class InputController {
 
     window.addEventListener('mouseup', (e) => {
       if (e.button === 0) {
-        this.isScanButtonHeld = false;
+        this._releaseScopeScan();
         this.isBreakButtonHeld = false;
         this._cancelBreaking();
       }
@@ -739,7 +744,7 @@ export class InputController {
 
     window.addEventListener('blur', () => {
       this.isBreakButtonHeld = false;
-      this.isScanButtonHeld = false;
+      this._releaseScopeScan();
       this._cancelBreaking();
       this.keys = {};
     });
