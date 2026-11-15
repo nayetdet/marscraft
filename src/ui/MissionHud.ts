@@ -245,7 +245,8 @@ export class MissionHud {
     this.mavOverlayEl.classList.add('hidden');
   }
 
-  // `analyzedSamples`: amostras analisadas no laboratorio (as que podem virar tubos);
+  // `analyzedSamples`: amostras cruas da mochila que podem ir num tubo (issue #422: a amostra do
+  // tubo nao e analisada; as de pista nao entram);
   // `science`: pontos de ciencia desta partida ({ pendingPoints, sentPoints }, sciencePackage.scienceStatus)
   updateMavPanel(mission, iceInBag, analyzedSamples = 0, science = { pendingPoints: 0, sentPoints: 0 }) {
     if (!this.isMavPanelOpen) return;
@@ -311,7 +312,7 @@ export class MissionHud {
     setClass(this.pillDataEl, `mav-check-tile${vm.dataSent ? ' is-ok' : ''}`);
 
     setText(this.tubesEl, `${tubes}/${vm.maxSampleTubes}`);
-    this.tubeLoadBtn.disabled = tubes >= vm.maxSampleTubes || tubes >= analyzedSamples;
+    this.tubeLoadBtn.disabled = tubes >= vm.maxSampleTubes || analyzedSamples <= 0;
     this.tubeUnloadBtn.disabled = tubes <= 0;
 
     this.igniteBtn.disabled = !progress.ready;

@@ -227,21 +227,47 @@ describe('MissionSystem science points (issues #105 and #269)', () => {
 });
 
 describe('MissionSystem sample tubes on the MAV', () => {
-  const { ICE_PER_SAMPLE_TUBE, MAX_SAMPLE_TUBES } = SCIENCE_CONFIG;
+  const { ICE_PER_SAMPLE_TUBE, MAX_SAMPLE_TUBES, TUBE_POINTS_FACTOR, POINTS_TO_LAUNCH } = SCIENCE_CONFIG;
+  // Amostra crua, ainda sem analise (issue #422)
+  const raw = { typeId: 'sample-meteorite', name: 'Iron Meteorite', points: 3 };
 
-  it('only loads analyzed samples, up to the rack size', () => {
+  it('only loads a raw sample, up to the rack size', () => {
     const mission = createMission(0);
-    expect(mission.loadSampleTube(0)).toBe('no-samples');
-    for (let i = 0; i < MAX_SAMPLE_TUBES; i++) expect(mission.loadSampleTube(99)).toBe('loaded');
-    expect(mission.loadSampleTube(99)).toBe('full');
+    expect(mission.loadSampleTube(null)).toBe('no-samples');
+    for (let i = 0; i < MAX_SAMPLE_TUBES; i++) expect(mission.loadSampleTube(raw)).toBe('loaded');
+    expect(mission.loadSampleTube(raw)).toBe('full');
     expect(mission.sampleTubes).toBe(MAX_SAMPLE_TUBES);
+    expect(mission.tubeSamples).toHaveLength(MAX_SAMPLE_TUBES);
+  });
+
+  it('counts the tube for more points, but never for the launch goal or the upgrades (issue #422)', () => {
+    const mission = createMission(0);
+    mission.battery.charge = 100;
+    mission.loadSampleTube(raw);
+    mission.loadSampleTube({ typeId: 'sample-dune-sand', name: 'Dark Dune Sand', points: 2 });
+    expect(mission.tubePoints).toBe((3 + 2) * TUBE_POINTS_FACTOR);
+    expect(TUBE_POINTS_FACTOR).toBeGreaterThan(1);
+    // O tubo nao e um item de ciencia: nao ha o que enviar nem o que gastar
+    expect(mission.scienceStatus([])).toMatchObject({ pendingPoints: 0, sentPoints: 0, met: false });
+    expect(mission.sendData([]).status).toBe('empty');
+    expect(mission.spendScience([], 4)).toBe(0);
+    expect(mission.sentPoints).toBeLessThan(POINTS_TO_LAUNCH);
+    expect(mission.dataSent).toBe(false);
+    // Tirar o tubo devolve a amostra, que volta a poder ser analisada
+    expect(mission.unloadSampleTube()).toBe('unloaded');
+    expect(mission.lastUnloadedTube).toMatchObject({ typeId: 'sample-dune-sand', points: 2 });
+    expect(mission.tubePoints).toBe(3 * TUBE_POINTS_FACTOR);
+    mission.unloadSampleTube();
+    expect(mission.unloadSampleTube()).toBe('empty');
+    expect(mission.lastUnloadedTube).toBeNull();
+    expect(mission.tubePoints).toBe(0);
   });
 
   it('asks for more ice for every tube loaded', () => {
     const mission = createMission(0);
     expect(mission.iceNeeded()).toBe(MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK);
-    mission.loadSampleTube(2);
-    mission.loadSampleTube(2);
+    mission.loadSampleTube(raw);
+    mission.loadSampleTube(raw);
     expect(mission.iceForFullTank()).toBe(MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK + 2 * ICE_PER_SAMPLE_TUBE);
     expect(mission.iceNeeded()).toBe(MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK + 2 * ICE_PER_SAMPLE_TUBE);
   });
@@ -249,7 +275,7 @@ describe('MissionSystem sample tubes on the MAV', () => {
   it('turns a full tank into a partly full one, and gives the fuel back when the tube comes out', () => {
     const mission = createMission(0);
     mission.propellant = 100;
-    mission.loadSampleTube(1);
+    mission.loadSampleTube(raw);
     const full = MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
     expect(mission.propellant).toBeCloseTo((100 * full) / (full + ICE_PER_SAMPLE_TUBE));
     expect(mission.iceNeeded()).toBe(ICE_PER_SAMPLE_TUBE);
@@ -262,7 +288,7 @@ describe('MissionSystem sample tubes on the MAV', () => {
   it('fills the heavier rocket with the extra ice through the factory', () => {
     const mission = createMission(12);
     mission.battery.charge = 100;
-    mission.loadSampleTube(1);
+    mission.loadSampleTube(raw);
     const need = mission.iceNeeded();
     expect(mission.deliverIce(need + 3)).toBe(need);
     mission.update(12 + need * MAV_CONFIG.ISRU_HOURS_PER_ICE_BLOCK + 0.1);

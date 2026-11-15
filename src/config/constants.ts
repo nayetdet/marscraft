@@ -970,6 +970,9 @@ export const SCIENCE_CONFIG = {
   // verdade pesa: regra de jogo, para a escolha "levar mais ciencia x buscar mais gelo" aparecer.
   ICE_PER_SAMPLE_TUBE: 1,
   MAX_SAMPLE_TUBES: 4,
+  // Trade-off do ato 4 (issue #422, src/mission/sampleTubes.ts): a amostra que viaja no tubo nao
+  // e analisada aqui e vale este tanto a mais, contado so no boletim final. Regra de jogo.
+  TUBE_POINTS_FACTOR: 2,
   // Pistas da missao (issue #344, src/mission/clues.ts): a seta manda buscar uma pista a cada
   // tantos blocos de gelo entregues, para a ciencia e o combustivel andarem juntos. Regra de jogo.
   ICE_PER_CLUE_TRIP: 2,

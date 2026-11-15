@@ -15,6 +15,7 @@ import { BASE_DOSE_MSV_PER_HOUR } from './radiation.ts';
 //   discoveries, scanTotal,                          // scanner: alvos desta partida / alvos que existem
 //   sampleTypes, samplesAnalyzed,                    // amostras do mapa analisadas no laboratorio
 //   sciencePointsSent, sciencePointsGoal,            // pontos de ciencia enviados / meta do foguete
+//   scienceTubePoints,                               // pontos nos tubos de amostra (issue #422): so contam aqui
 //   journalFound, journalTotal, journalRank,         // diario [J]: fichas abertas e patente
 //   topFinds: [{ name, points }],                    // as descobertas que valem mais
 // }
@@ -122,10 +123,12 @@ export const REPORT_CATEGORIES = [
     score(s) {
       const scans = Math.min(1, num(s.discoveries) / Math.max(1, num(s.scanTotal) * FULL_SCAN_SHARE));
       const samples = Math.min(1, num(s.sampleTypes) / FULL_SAMPLE_TYPES);
-      const sent = Math.min(1, num(s.sciencePointsSent) / Math.max(1, num(s.sciencePointsGoal) * FULL_SENT_FACTOR));
+      // Radio e tubos de amostra juntos: os pontos dos tubos (issue #422) so contam aqui, no boletim
+      const home = num(s.sciencePointsSent) + num(s.scienceTubePoints);
+      const sent = Math.min(1, home / Math.max(1, num(s.sciencePointsGoal) * FULL_SENT_FACTOR));
       return clamp01(SCIENCE_WEIGHTS.scans * scans + SCIENCE_WEIGHTS.samples * samples + SCIENCE_WEIGHTS.sent * sent);
     },
-    detail: (s) => `${num(s.discoveries)} scans, ${num(s.samplesAnalyzed)} samples, ${num(s.sciencePointsSent)} pts sent`,
+    detail: (s) => `${num(s.discoveries)} scans, ${num(s.samplesAnalyzed)} samples, ${num(s.sciencePointsSent)} pts sent${num(s.scienceTubePoints) > 0 ? `, ${num(s.scienceTubePoints)} pts in tubes` : ''}`,
   },
 ];
 
