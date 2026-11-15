@@ -434,11 +434,11 @@ function buildDormModule(world, groundY) {
 
 export function buildNasaSpaceshipAndBase(world) {
   const groundY = WORLD_CONFIG.GROUND_LEVEL; // 8
-  world.recordBaseWindows = true;
+  world.recordBaseBlocks = true;
   buildMainWhiteHabitat(world, groundY);
   buildGreenhouseDome(world, groundY);
   buildGymModule(world, groundY);
   buildNorthModule(world, groundY);
   buildDormModule(world, groundY);
-  world.recordBaseWindows = false;
+  world.recordBaseBlocks = false;
 }

@@ -35,30 +35,31 @@ describe('SurvivalSystem', () => {
     cold.updateSuitThermal(10, { x: 0, y: 11.7, z: 0 }, -120, power);
     expect(cold.suitThermal).toBe(before);
   });
-  it('refills a docked suit while the astronaut breathes base air', () => {
+  it('rapidly drains personal oxygen without a suit during a breach and causes damage when empty', () => {
     const survival = new SurvivalSystem();
     survival.suitEquipped = false;
-    survival.oxygen = 0;
-    survival.update(1, { x: 0, y: 11.7, z: 0 }, 2);
-    expect(survival.oxygen).toBe(2);
-    expect(survival.health).toBe(survival.maxStat);
-    expect(survival.lastOxygenRefilled).toBe(2);
+    const inside = { x: 0, y: 11.7, z: 0 };
+    survival.update(5, inside, 100, true);
+    expect(survival.oxygen).toBe(10);
+    survival.update(5, inside, 100, true);
+    expect(survival.oxygen).toBe(0);
+    expect(survival.health).toBeLessThan(survival.maxStat);
   });
-  it('leaks base and personal oxygen during a breach when suit is docked, then restores them using power after sealing', () => {
+  it('restores personal oxygen after a breach is sealed without a suit', () => {
     const survival = new SurvivalSystem();
     survival.suitEquipped = false;
     const inside = { x: 0, y: 11.7, z: 0 };
     survival.update(4, inside, 100, true);
     expect(survival.baseOxygen).toBe(80);
-    expect(survival.oxygen).toBe(16);
+    expect(survival.oxygen).toBe(12);
     expect(survival.lastOxygenRefilled).toBe(0);
     survival.update(1, inside, 0, false);
     expect(survival.baseOxygen).toBe(80);
-    expect(survival.oxygen).toBe(16);
+    expect(survival.oxygen).toBe(12);
     survival.update(1, inside, 100, false);
     expect(survival.baseOxygen).toBe(82);
-    expect(survival.oxygen).toBe(20);
-    expect(survival.lastOxygenRefilled).toBeCloseTo(4.4);
+    expect(survival.oxygen).toBe(16.5);
+    expect(survival.lastOxygenRefilled).toBeCloseTo(4.9);
   });
 
   it('standing at the map edge or in the dust does not hurt: intact suit takes the drain and wears down (issue #103, #167)', () => {

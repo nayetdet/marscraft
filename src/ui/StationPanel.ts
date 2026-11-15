@@ -46,7 +46,7 @@ const SHELTER_SOURCES = {
 const GH_ICONS = {
   water: '<svg class="gh-mini-icon water" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M3 0h2v1h1v1h1v1h1v3H7v1H6v1H2V7H1V6H0V3h1V2h1V1h1Z"/></svg>',
   power: '<svg class="gh-mini-icon power" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M4 0h3v1H6v2h2v1H7v1H6v1H5v1H4v1H3V6h1V5H1V4h1V3h1V2h1Z"/></svg>',
-  food: '<svg class="gh-mini-icon food" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M1 0h3v1h1v1h1v2H5v2H4v1H2V5H1V3H0V1h1Z M6 5h2v3H6Z"/></svg>',
+  food: '<svg class="gh-mini-icon food" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M4 0h1v1h1V0h1v1h1v1H6v2H5v1H4v1H3v1H1v1H0V5h1V3h1V2h2Z"/></svg>',
   sprout: '<svg class="gh-mini-icon sprout" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M1 1h2v1h1v2H2V3H1ZM5 0h2v2H6v1H4V1h1ZM3 4h2v3H3ZM1 7h6v1H1Z"/></svg>',
 };
 

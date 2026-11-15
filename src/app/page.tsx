@@ -9,7 +9,7 @@ export default function GamePage() {
     let disposed = false;
     async function mount() {
       try {
-        const response = await fetch('/game.html');
+        const response = await fetch('/game.html', { cache: 'no-store' });
         if (!response.ok) throw new Error(`Game shell HTTP ${response.status}`);
         const documentText = await response.text();
         const body = documentText.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] ?? documentText;

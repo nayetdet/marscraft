@@ -118,7 +118,7 @@ export class SurvivalSystem {
     }
 
     const pointsPerPct = this.maxStat / 100;
-    if ((!this.suitEquipped || this.insidePressurizedShip) && !baseBreached) {
+    if (this.insidePressurizedShip && !baseBreached) {
       const personalRefill = Math.max(0, Math.min(
         this.maxStat - this.oxygen,
         SURVIVAL_CONFIG.OXYGEN_REFILL_RATE * dt,
@@ -138,6 +138,7 @@ export class SurvivalSystem {
       if (!this.suitEquipped) {
         this.suitScrubber = Math.min(100, this.suitScrubber + SURVIVAL_CONFIG.SUIT_SCRUBBER_CLEAN_PER_SECOND * dt);
       }
+
       if (this.suitOxygen > SURVIVAL_CONFIG.SUIT_OXYGEN_WARN_THRESHOLD + 5) {
         this.suitO2Warned30 = false;
       }
@@ -180,8 +181,8 @@ export class SurvivalSystem {
         }
       } else {
         this.suitO2DrainRate = SURVIVAL_CONFIG.SUIT_OXYGEN_DRAIN_PER_SECOND;
-        const personalDrain = this.insidePressurizedShip && baseBreached
-          ? SURVIVAL_CONFIG.BREACH_OXYGEN_DRAIN_RATE
+        const personalDrain = this.insidePressurizedShip
+          ? SURVIVAL_CONFIG.NO_SUIT_BASE_OXYGEN_DRAIN_RATE
           : SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE * SURVIVAL_CONFIG.SUIT_NO_SUIT_O2_DRAIN_MULTIPLIER;
         this.oxygen = Math.max(0, this.oxygen - personalDrain * dt);
       }

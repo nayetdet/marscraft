@@ -9,6 +9,7 @@ import { raycastVoxel } from './voxelRaycaster.ts';
 import { makeCanvasTexture } from '../graphics/textureGenerator.ts';
 import { OCCLUSION_BRIGHTNESS, naturalTint, vertexOcclusion } from './voxelShading.ts';
 import { createSurfaceRocks, removeSurfaceRocksSupportedBy } from './surfaceRocks.ts';
+import { HABITAT_LAYOUT } from './habitatLayout.ts';
 
 const CHUNK_SIZE = 16;
 
@@ -121,13 +122,13 @@ export class VoxelWorld {
       }
     }
     this.dirtyChunks = new Set();
-    this.baseWindows = new Set();
-    this.brokenBaseWindows = new Set();
+    this.baseBlocks = new Set();
+    this.brokenBaseBlocks = new Set();
 
     generateMartianTerrain(this);
     buildNasaSpaceshipAndBase(this);
-    for (const idx of this.baseWindows) {
-      if (this.data[idx] !== BLOCK_IDS.HAB_GLASS) this.baseWindows.delete(idx);
+    for (const idx of this.baseBlocks) {
+      if (this.data[idx] === BLOCK_IDS.AIR) this.baseBlocks.delete(idx);
     }
     this.rebuildMeshes();
     // Pedras decorativas sobre o terreno natural (sem colisao)
@@ -160,12 +161,12 @@ export class VoxelWorld {
     const idx = this._index(x, y, z);
     if (idx === -1) return false;
     this.data[idx] = id;
-    if (this.recordBaseWindows) {
-      if (id === BLOCK_IDS.HAB_GLASS) this.baseWindows.add(idx);
-      else this.baseWindows.delete(idx);
-    } else if (this.baseWindows.has(idx)) {
-      if (id === BLOCK_IDS.AIR) this.brokenBaseWindows.add(idx);
-      else this.brokenBaseWindows.delete(idx);
+    if (this.recordBaseBlocks) {
+      if (id !== BLOCK_IDS.AIR && Math.floor(y) > HABITAT_LAYOUT.FLOOR_Y) this.baseBlocks.add(idx);
+      else this.baseBlocks.delete(idx);
+    } else if (this.baseBlocks.has(idx)) {
+      if (id === BLOCK_IDS.AIR) this.brokenBaseBlocks.add(idx);
+      else this.brokenBaseBlocks.delete(idx);
     }
     if (rebuild) {
       this._markDirtyAround(Math.floor(x) + this.halfX, Math.floor(z) + this.halfZ);

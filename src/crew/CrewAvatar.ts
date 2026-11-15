@@ -16,9 +16,21 @@ const NODE_FACING = {
 };
 // Cadencia da passada: sincronizada com CREW_CONFIG.WALK_SPEED (~2.2 blocos/s) para nao patinar no piso
 const WALK_RATE = 6.8;
-const WALK_SWING = 0.54;
+const WALK_SWING = 0.56;
 const SUIT_COLOR = new THREE.Color(0xf8fafc);
 const WEAK_COLOR = new THREE.Color(0xb8c0cc);
+
+function hipWave(phase) {
+  // Asymmetric stride: brisker forward leg swing, steadier planted stance sweep
+  return Math.sin(phase) - 0.08 * Math.sin(2 * phase);
+}
+
+function kneeFlex(phase) {
+  // Smooth two-phase bend: swing clearance before reach + gentle shock absorption after heel strike
+  const swingLift = Math.pow(0.5 - 0.5 * Math.cos(phase + 0.25), 1.35);
+  const landingCushion = Math.pow(0.5 - 0.5 * Math.cos(phase - 0.65 * Math.PI), 2.5);
+  return 0.04 + 0.72 * swingLift + 0.14 * landingCushion;
+}
 
 function shortestAngleDiff(from, to) {
   let diff = to - from;
@@ -31,19 +43,19 @@ function dampAlpha(rate, dt) {
   return dt > 0 ? 1 - Math.exp(-rate * dt) : 1;
 }
 
-// Suaviza curvas em rotas com varios trechos usando media de 3 pontos ao redor da distancia atual.
+// Suaviza curvas em rotas com varios trechos usando media ponderada ao redor da distancia atual.
 // Em trechos retos e nas pontas (inicio/fim) retorna exatamente a posicao do trilho.
 function sampleSmoothRoute(route, distance, routeLen) {
   const center = pointAlong(route, distance);
   if (!route || route.length <= 2 || routeLen <= 0.1) return center;
 
-  const w = Math.min(0.45, distance, routeLen - distance);
+  const w = Math.min(0.75, distance, routeLen - distance);
   if (w <= 0.04) return center;
 
   const behind = pointAlong(route, distance - w);
   const ahead = pointAlong(route, distance + w);
-  const x = (behind.x + center.x + ahead.x) / 3;
-  const z = (behind.z + center.z + ahead.z) / 3;
+  const x = (behind.x + center.x * 2 + ahead.x) * 0.25;
+  const z = (behind.z + center.z * 2 + ahead.z) * 0.25;
   const dx = ahead.x - behind.x;
   const dz = ahead.z - behind.z;
   const heading = Math.hypot(dx, dz) > 1e-4 ? Math.atan2(dx, dz) : center.heading;
@@ -132,8 +144,9 @@ export class CrewAvatar {
     this._tempo = 0.94 + (member.id % 3) * 0.05;
     this._walkBlend = member.state === 'walking' ? 1 : 0;
     this._heading = null;
+    this._posInit = false;
     this._pose = {
-      bobY: 0, legL: 0, legR: 0, kneeL: 0, kneeR: 0,
+      bobY: 0, swayX: 0, legL: 0, legR: 0, kneeL: 0, kneeR: 0,
       armL: 0, armR: 0, elbowL: 0, elbowR: 0, armSplay: 0.06,
       torsoLean: 0, torsoTwist: 0, torsoRoll: 0, headPitch: 0, headYaw: 0,
     };
@@ -143,22 +156,27 @@ export class CrewAvatar {
     return this.group.position;
   }
 
-  _setWalkPose(out, phase, weight, turnBank = 0) {
+  _setWalkPose(out, phase, weight, turnBank = 0, lookAhead = 0) {
     const s = Math.sin(phase);
-    const hipL = s * WALK_SWING * weight;
-    const hipR = -hipL;
+    const c = Math.cos(phase);
+    const doubleC = Math.cos(2 * phase);
+    const hipL = hipWave(phase) * WALK_SWING * weight;
+    const hipR = hipWave(phase + Math.PI) * WALK_SWING * weight;
 
-    // Joelho dobra somente para tras (> 0) durante o avanco da passada e na impulsionada do pe
-    const kneeL = (0.08 + 0.64 * Math.max(0, -Math.cos(phase - 0.35))) * weight;
-    const kneeR = (0.08 + 0.64 * Math.max(0, -Math.cos(phase + Math.PI - 0.35))) * weight;
+    // Joelho dobra para tras (> 0): eleva no avanco da passada e amortece a pisada
+    const kneeL = kneeFlex(phase) * weight;
+    const kneeR = kneeFlex(phase + Math.PI) * weight;
 
-    // Bracos balancam opostos as pernas com cotovelo flexionado para frente (< 0)
-    const armL = -hipL * 0.74;
-    const armR = -hipR * 0.74;
-    const elbowL = (-0.34 - s * 0.22) * weight;
-    const elbowR = (-0.34 + s * 0.22) * weight;
+    // Bracos contrabalancam as pernas com atraso fluido de cotovelo (<= 0)
+    const armL = -hipL * 0.84 - 0.05 * weight;
+    const armR = -hipR * 0.84 - 0.05 * weight;
+    const elbowFollow = Math.sin(phase - 0.4);
+    const elbowL = (-0.26 - 0.28 * (0.5 + 0.5 * elbowFollow)) * weight;
+    const elbowR = (-0.26 - 0.28 * (0.5 - 0.5 * elbowFollow)) * weight;
 
-    out.bobY = Math.abs(s) * 0.044 * weight;
+    // Arco suave de passada: mais alto na passagem da perna de apoio, assentando no toque do pe
+    out.bobY = (0.004 + 0.018 * (1 + doubleC)) * weight;
+    out.swayX = -0.022 * c * weight;
     out.legL = hipL;
     out.legR = hipR;
     out.kneeL = kneeL;
@@ -167,12 +185,12 @@ export class CrewAvatar {
     out.armR = armR;
     out.elbowL = elbowL;
     out.elbowR = elbowR;
-    out.armSplay = 0.06 * weight;
-    out.torsoLean = 0.085 * weight;
-    out.torsoTwist = -s * 0.11 * weight;
-    out.torsoRoll = (s * 0.032 + turnBank) * weight;
-    out.headPitch = -0.03 * weight;
-    out.headYaw = s * 0.055 * weight;
+    out.armSplay = (0.075 + 0.02 * Math.sin(2 * phase)) * weight;
+    out.torsoLean = (0.095 + 0.024 * doubleC) * weight;
+    out.torsoTwist = s * 0.125 * weight;
+    out.torsoRoll = (0.036 * c + turnBank) * weight;
+    out.headPitch = (-0.045 - 0.018 * doubleC) * weight;
+    out.headYaw = (-s * 0.05 + lookAhead) * weight;
   }
 
   _addIdlePose(out, state, idleW) {
@@ -245,6 +263,7 @@ export class CrewAvatar {
   }
 
   _applyJoints(p) {
+    this.bodyGroup.position.x = p.swayX;
     this.bodyGroup.position.y = p.bobY;
     this.legL.rotation.x = p.legL;
     this.legR.rotation.x = p.legR;
@@ -272,7 +291,17 @@ export class CrewAvatar {
     const p = sampleSmoothRoute(m.route, m.distance, m.routeLength);
     // Keep ambient walkers in separate lanes so they do not overlap at shared rail nodes.
     const lane = m.stationary ? 0 : (m.id % 2 === 0 ? -0.22 : 0.22);
-    this.group.position.set(p.x + Math.cos(p.heading) * lane, FLOOR_Y, p.z - Math.sin(p.heading) * lane);
+    const targetX = p.x + Math.cos(p.heading) * lane;
+    const targetZ = p.z - Math.sin(p.heading) * lane;
+    if (!this._posInit || dt <= 0) {
+      this._posInit = true;
+      this.group.position.set(targetX, FLOOR_Y, targetZ);
+    } else {
+      const posAlpha = dampAlpha(16, dt);
+      this.group.position.x += (targetX - this.group.position.x) * posAlpha;
+      this.group.position.y = FLOOR_Y;
+      this.group.position.z += (targetZ - this.group.position.z) * posAlpha;
+    }
 
     const targetHeading = m.state === 'walking' ? p.heading : (NODE_FACING[m.node] ?? p.heading);
     if (this._heading === null || dt <= 0) {
@@ -282,19 +311,20 @@ export class CrewAvatar {
     this._heading += angleDiff * dampAlpha(7.5, dt);
     this.group.rotation.y = this._heading;
 
-    // Transicao suave entre caminhar e parar (evita estalo brusco das pernas)
+    // Transicao suave entre caminhar e parar (desacelera a cadencia junto com o passo)
     const targetWalk = m.state === 'walking' ? 1 : 0;
-    this._walkBlend += (targetWalk - this._walkBlend) * dampAlpha(10, dt);
-    if (this._walkBlend > 0.01) {
-      this._walkPhase += dt * WALK_RATE * this._tempo;
+    this._walkBlend += (targetWalk - this._walkBlend) * dampAlpha(7.5, dt);
+    if (this._walkBlend > 0.005) {
+      this._walkPhase += dt * WALK_RATE * this._tempo * (0.35 + 0.65 * this._walkBlend);
     }
 
-    const turnBank = THREE.MathUtils.clamp(angleDiff * 0.16, -0.09, 0.09);
+    const turnBank = THREE.MathUtils.clamp(angleDiff * 0.2, -0.11, 0.11);
+    const lookAhead = THREE.MathUtils.clamp(angleDiff * 0.42, -0.35, 0.35);
     const pose = this._pose;
-    this._setWalkPose(pose, this._walkPhase, this._walkBlend, turnBank);
+    this._setWalkPose(pose, this._walkPhase, this._walkBlend, turnBank, lookAhead);
     this._addIdlePose(pose, m.state, 1 - this._walkBlend);
     if (this._walkBlend > 0.02) {
-      pose.headYaw += Math.sin(this._time * 1.9) * 0.08 * this._walkBlend;
+      pose.headYaw += Math.sin(this._time * 1.35) * 0.065 * this._walkBlend;
     }
     this._applyJoints(pose);
 
@@ -311,11 +341,12 @@ export class CrewAvatar {
     this._walkPhase += dt * WALK_RATE * this._tempo;
     this._walkBlend = 1;
     this._heading = heading;
+    this._posInit = true;
     this.group.visible = true;
     this.group.position.set(x, y, z);
     this.group.rotation.y = heading;
 
-    this._setWalkPose(this._pose, this._walkPhase, 1, 0);
+    this._setWalkPose(this._pose, this._walkPhase, 1, 0, 0);
     this._applyJoints(this._pose);
   }
 

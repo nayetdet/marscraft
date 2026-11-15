@@ -1,7 +1,7 @@
 // @ts-nocheck
 import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.ts';
-import { PHYSICS_CONFIG } from '../config/constants.ts';
+import { CREW_CONFIG, PHYSICS_CONFIG } from '../config/constants.ts';
 
 const _lookEuler = new THREE.Euler(0, 0, 0, 'YXZ');
 
@@ -9,6 +9,7 @@ export class PlayerPhysics {
   constructor(world, customColliders = []) {
     this.world = world;
     this.customColliders = customColliders;
+    this.crewAvatars = [];
 
     this.pos = new THREE.Vector3(
       PHYSICS_CONFIG.SPAWN_POS.x,
@@ -124,6 +125,22 @@ export class PlayerPhysics {
     return false;
   }
 
+  _hitsCrew(pos) {
+    for (const avatar of this.crewAvatars) {
+      if (!avatar.group.visible) continue;
+      const crew = avatar.position;
+      if (pos.y - this.height >= crew.y + PHYSICS_CONFIG.PLAYER_HEIGHT || pos.y + 0.1 <= crew.y) continue;
+      const dx = pos.x - crew.x;
+      const dz = pos.z - crew.z;
+      const distanceSq = dx * dx + dz * dz;
+      const oldDx = this.pos.x - crew.x;
+      const oldDz = this.pos.z - crew.z;
+      // Allow a player already overlapping a moving crew member to move away.
+      if (distanceSq < CREW_CONFIG.COLLISION_DISTANCE ** 2 && distanceSq < oldDx * oldDx + oldDz * oldDz) return true;
+    }
+    return false;
+  }
+
   update(dt, keys) {
     this.justLandedFromJump = false;
     const forward = this._forward.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
@@ -154,14 +171,14 @@ export class PlayerPhysics {
 
     // X axis
     nextPos.x += this.vel.x * dt;
-    if (!this._checkCollision(nextPos)) {
+    if (!this._checkCollision(nextPos) && !this._hitsCrew(nextPos)) {
       this.pos.x = nextPos.x;
     }
 
     // Z axis
     nextPos.copy(this.pos);
     nextPos.z += this.vel.z * dt;
-    if (!this._checkCollision(nextPos)) {
+    if (!this._checkCollision(nextPos) && !this._hitsCrew(nextPos)) {
       this.pos.z = nextPos.z;
     }
 

@@ -84,7 +84,7 @@ export function missionStatus(mission, source, base = {}) {
     });
   }
   if (brokenWindows) {
-    alerts.push({ id: 'breach', icon: 'air', tone: 'danger', title: 'BASE WINDOW BROKEN!', text: 'Oxygen is leaking! Follow the marker and seal the broken window with a block.', target: 'brokenWindow' });
+    alerts.push({ id: 'breach', icon: 'air', tone: 'danger', title: 'BASE BREACH!', text: 'Oxygen is leaking! Follow the marker and seal the opening with a block.', target: 'brokenWindow' });
   }
   if (phase === 'active') {
     alerts.push({

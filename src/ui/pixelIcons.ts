@@ -1,6 +1,26 @@
 // @ts-nocheck
 // Icones 8x8 em pixel art para os cards do HUD. Cada 'X' vira um pixel preenchido com currentColor.
 const ICONS = {
+  temperature: [
+    '...XX...',
+    '..X..X..',
+    '..X.XX..',
+    '..X.XX..',
+    '..X.XX..',
+    '.XXXXXX.',
+    '.XXXXXX.',
+    '..XXXX..',
+  ],
+  dust: [
+    '..X...X.',
+    'X...X...',
+    '...XXX..',
+    '.XXXXXX.',
+    'XXXXXXXX',
+    '.XXXXXX.',
+    '...X..X.',
+    '.X......',
+  ],
   bolt: [
     '....XXX.',
     '...XXX..',
@@ -213,16 +233,16 @@ ICONS.heart = [
   '........',
 ];
 
-// Prato de comida (boletim do cadete, issue #90)
+// Mars carrot (boletim do cadete, issue #90)
 ICONS.food = [
-  '...XX...',
-  '..X..X..',
-  '...XX...',
-  '........',
-  'XXXXXXXX',
-  '.X....X.',
+  '....X.X.',
+  '....XXXX',
   '..XXXX..',
-  '........',
+  '.XXXXX..',
+  '.XXXX...',
+  'XXXX....',
+  'XXX.....',
+  'X.......',
 ];
 
 // Luneta do scanner (lupa): escanear coisas para o pacote de ciencia

@@ -952,7 +952,7 @@ export class GameEngine {
       dt,
       this.player.pos,
       this.mission.oxygenRefillBudget(this.crewStock),
-      this.world.brokenBaseWindows.size > 0,
+      this.world.brokenBaseBlocks.size > 0,
       { isMoving: this.player.isMoving }
     );
     this.survival.oxygenShortage = this.mission.oxygenPlant.limitedBy;
@@ -1381,7 +1381,7 @@ export class GameEngine {
     // Setas do objetivo: uma flutua no mundo e a outra fica na tela (aponta mesmo atraves das paredes)
     this.waypoints = this._buildWaypoints();
     this._brokenWindowIndex = null;
-    this._brokenWindowWaypoint = { x: 0, y: 0, z: 0, label: 'BROKEN WINDOW' };
+    this._brokenWindowWaypoint = { x: 0, y: 0, z: 0, label: 'BASE BREACH' };
     this.waypointBeacon = new WaypointBeacon(this.scene);
     this.waypointHud = new WaypointHud();
 
@@ -1569,7 +1569,7 @@ export class GameEngine {
     const place = alertPlace ?? (this._finishedStory() ? null : routeWaypoint(objectiveTarget(this.story.objectiveId, s), inside));
     let target = place ? this.waypoints[place] : null;
     if (place === 'brokenWindow') {
-      const windows = this.world.brokenBaseWindows;
+      const windows = this.world.brokenBaseBlocks;
       if (this._brokenWindowIndex === null || !windows.has(this._brokenWindowIndex)) {
         this._brokenWindowIndex = null;
         for (const index of windows) {
@@ -1603,6 +1603,7 @@ export class GameEngine {
     this.crewAvatars = this.crew.members.map(
       (member, i) => new CrewAvatar(this.scene, member, CREW_CONFIG.SUIT_COLORS[i])
     );
+    this.player.crewAvatars = this.crewAvatars;
   }
 
   // Tripulante para quem o jogador esta olhando, dentro do raio de conversa.
@@ -1646,7 +1647,7 @@ export class GameEngine {
     this.mission.oxygenCostMultiplier = 1;
     // Numa animacao quem posiciona a tripulacao e a propria animacao (o embarque no foguete)
     for (const avatar of this.crewAvatars) avatar.update(dt);
-    separateCrew(this.crewAvatars);
+    separateCrew(this.crewAvatars, active && !this.roverController.isActive && !this.gymController.isActive ? this.player : null);
     if (active) {
       this._crewChatterTimer = (this._crewChatterTimer ?? 0) + dt;
       if (this._crewChatterTimer >= 35 && this.crew.members.length > 1) {

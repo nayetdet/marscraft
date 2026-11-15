@@ -350,6 +350,19 @@ body.pause-menu-open .crew-picker { display: none; }
 .inv-suit-preview-wrap:active { cursor: grabbing; }
 .inv-suit-canvas { display: block; width: 100%; height: 100%; }
 .inv-suit-status { color: #fff; text-align: center; font-size: 12px; text-shadow: 1px 1px #333; }
+.inv-suit-telemetry { color: #fff; font: 700 12px/1.25 'Monocraft', monospace; text-shadow: 2px 2px 0 #3f3f3f; }
+.inv-suit-armor-head, .inv-suit-stat { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.inv-suit-label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.inv-suit-telemetry strong { font: inherit; white-space: nowrap; }
+.inv-suit-icon { width: 15px; height: 15px; flex: 0 0 15px; fill: currentColor; shape-rendering: crispEdges; filter: drop-shadow(1px 1px #333); }
+.inv-suit-icon.suit { color: #b4dc8b; }
+.inv-suit-icon.air { color: #8de1f3; }
+.inv-suit-icon.heat { color: #ffb66f; }
+.inv-suit-icon.filter { color: #b6d4ec; }
+.inv-suit-icon.dust { color: #e4bb89; }
+.inv-suit-armor-track { height: 6px; margin: 3px 0 6px; background: #333; }
+.inv-suit-armor-track i { display: block; height: 100%; background: #8bd35e; }
+.inv-suit-stats { display: grid; gap: 3px; }
 .inventory-window {
   width: min(552px, 96vw);
   padding: 16px;

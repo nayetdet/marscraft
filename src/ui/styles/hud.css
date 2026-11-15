@@ -688,9 +688,11 @@
   text-shadow: 1px 1px #000;
   white-space: nowrap;
 }
-.suit-integrity .mc-stat-icon.fire.full { color: #ff9b32; }
+.suit-integrity .mc-stat-icon.fire.full,
+.suit-integrity .mc-stat-icon.fire.half { color: #ff9b32; }
 .suit-integrity.low { color: #ff7777; }
-.suit-integrity.low .mc-stat-icon.fire.full { color: #ff4b4b; }
+.suit-integrity.low .mc-stat-icon.fire.full,
+.suit-integrity.low .mc-stat-icon.fire.half { color: #ff4b4b; }
 
 .mc-bar-row {
   display: flex;
@@ -721,38 +723,28 @@
   gap: 3px;
 }
 
-/* Clear survival glyphs instead of plain status squares */
+/* Crisp pixel-art survival glyphs */
 .mc-stat-icon {
   width: 14px;
   height: 14px;
   display: inline-block;
-  filter:
-    drop-shadow(1px 0 0 #171717)
-    drop-shadow(-1px 0 0 #171717)
-    drop-shadow(0 1px 0 #171717)
-    drop-shadow(0 -1px 0 #171717)
-    drop-shadow(1px 1px 0 rgba(0, 0, 0, .8));
+  filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, .38));
 }
 
 .mc-stat-icon svg {
+  display: block;
   width: 100%;
   height: 100%;
 }
 
-.mc-stat-icon svg path {
-  fill: currentColor;
-  stroke: none;
-}
-
-.mc-stat-icon svg rect { fill: currentColor; }
-
+.mc-stat-icon.empty .px-fill { display: none; }
+.mc-stat-icon.half .px-fill { clip-path: inset(0 50% 0 0); }
 .mc-stat-icon.empty { color: #55514b; }
-.mc-stat-icon.half { opacity: .62; }
-.mc-stat-icon.heart.full { color: #dc3540; }
-.mc-stat-icon.oxygen.full { color: #43b5dc; }
-.mc-stat-icon.water.full { color: #3982df; }
-.mc-stat-icon.food.full { color: #d98738; }
-.mc-stat-icon.energy.full { color: #f2d43d; }
+.mc-stat-icon.heart.full, .mc-stat-icon.heart.half { color: #dc3540; }
+.mc-stat-icon.oxygen.full, .mc-stat-icon.oxygen.half { color: #43b5dc; }
+.mc-stat-icon.water.full, .mc-stat-icon.water.half { color: #3982df; }
+.mc-stat-icon.food.full, .mc-stat-icon.food.half { color: #d98738; }
+.mc-stat-icon.energy.full, .mc-stat-icon.energy.half { color: #f2d43d; }
 #radiation-bar[data-tone="ok"] .mc-stat-icon.radiation:not(.empty) { color: var(--hud-good); }
 #radiation-bar[data-tone="warn"] .mc-stat-icon.radiation:not(.empty) { color: var(--hud-warn); }
 #radiation-bar[data-tone="danger"] .mc-stat-icon.radiation:not(.empty) { color: var(--hud-danger); }
@@ -984,7 +976,9 @@
 .mc-slot-icon {
   width: 32px;
   height: 32px;
-  background-size: cover;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
   image-rendering: pixelated;
   border: 0;
 }

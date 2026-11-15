@@ -322,78 +322,99 @@ function makePixelFaceMaterial(width, height, drawFn, fallbackColor) {
   return new THREE.MeshLambertMaterial({ map: texture });
 }
 
-function createMinecraftHeadMaterials() {
-  const SKIN = '#eab696';
-  const SKIN_SHADE = '#d49a79';
-  const HAIR = '#3b2314';
-  const HAIR_DARK = '#2a170c';
-  const HAIR_HI = '#543420';
-  const EYE_WHITE = '#f8fafc';
-  const EYE_IRIS = '#1e3a8a';
-  const MOUTH = '#b46b4c';
+function createCadetHeadMaterials() {
+  const SKIN = '#f2c2a2';
+  const SKIN_SHADE = '#dca07e';
+  const CHEEK = 'rgba(229, 115, 104, 0.3)';
+  const HAIR = '#2d1e17';
+  const HAIR_DARK = '#1f140f';
+  const HAIR_HI = '#462f24';
+  const EYE_DARK = '#1c2541';
+  const EYE_IRIS = '#2b4570';
+  const EYE_GLINT = '#f8fafc';
+  const MOUTH = '#9c4f3d';
 
-  const px = (ctx, x, y, color, w = 1, h = 1) => {
+  const px = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, w = 1, h = 1) => {
     ctx.fillStyle = color;
     ctx.fillRect(x, y, w, h);
   };
 
-  const paintHair = (ctx, w, h) => {
+  const paintHair = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
     px(ctx, 0, 0, HAIR, w, h);
-    px(ctx, 1, 1, HAIR_DARK, 2, 1);
-    px(ctx, 5, 2, HAIR_HI, 2, 1);
-    px(ctx, 2, 4, HAIR_HI, 1, 2);
-    px(ctx, 6, 5, HAIR_DARK, 1, 2);
+    px(ctx, 3, 4, HAIR_DARK, 6, 3);
+    px(ctx, 17, 7, HAIR_HI, 7, 3);
+    px(ctx, 8, 16, HAIR_HI, 5, 4);
+    px(ctx, 21, 20, HAIR_DARK, 6, 4);
+  };
+
+  const paintEye = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+    // Tall rounded vertical eye with catchlight (distinct MarsCraft cadet style)
+    px(ctx, x, y + 1, EYE_DARK, 4, 5);
+    px(ctx, x + 1, y, EYE_DARK, 2, 7);
+    px(ctx, x, y + 4, EYE_IRIS, 4, 2);
+    px(ctx, x + 1, y + 5, EYE_IRIS, 2, 2);
+    px(ctx, x, y + 1, EYE_GLINT, 2, 2);
+    px(ctx, x + 2, y + 4, EYE_GLINT, 1, 1);
   };
 
   // Three.js BoxGeometry material order: +x, -x, +y, -y, +z (front), -z (back)
-  const rightSide = makePixelFaceMaterial(8, 8, (ctx) => {
-    px(ctx, 0, 0, SKIN, 8, 8);
-    px(ctx, 0, 0, HAIR, 8, 3);
-    px(ctx, 4, 3, HAIR, 4, 4);
-    px(ctx, 5, 1, HAIR_HI, 2, 1);
-    px(ctx, 6, 4, HAIR_DARK, 1, 2);
-    px(ctx, 2, 4, SKIN_SHADE, 1, 2); // ear
-    px(ctx, 0, 7, SKIN_SHADE, 8, 1);
-  }, 0x3b2314);
+  const rightSide = makePixelFaceMaterial(32, 32, (ctx) => {
+    px(ctx, 0, 0, SKIN, 32, 32);
+    px(ctx, 0, 0, HAIR, 32, 10);
+    px(ctx, 18, 10, HAIR, 14, 14);
+    px(ctx, 21, 4, HAIR_HI, 6, 3);
+    px(ctx, 0, 29, SKIN_SHADE, 32, 3);
+  }, 0x2d1e17);
 
-  const leftSide = makePixelFaceMaterial(8, 8, (ctx) => {
-    px(ctx, 0, 0, SKIN, 8, 8);
-    px(ctx, 0, 0, HAIR, 8, 3);
-    px(ctx, 0, 3, HAIR, 4, 4);
-    px(ctx, 1, 1, HAIR_HI, 2, 1);
-    px(ctx, 1, 4, HAIR_DARK, 1, 2);
-    px(ctx, 5, 4, SKIN_SHADE, 1, 2); // ear
-    px(ctx, 0, 7, SKIN_SHADE, 8, 1);
-  }, 0x3b2314);
+  const leftSide = makePixelFaceMaterial(32, 32, (ctx) => {
+    px(ctx, 0, 0, SKIN, 32, 32);
+    px(ctx, 0, 0, HAIR, 32, 10);
+    px(ctx, 0, 10, HAIR, 14, 14);
+    px(ctx, 5, 4, HAIR_HI, 6, 3);
+    px(ctx, 0, 29, SKIN_SHADE, 32, 3);
+  }, 0x2d1e17);
 
-  const top = makePixelFaceMaterial(8, 8, (ctx) => paintHair(ctx, 8, 8), 0x3b2314);
-  const bottom = makePixelFaceMaterial(8, 8, (ctx) => px(ctx, 0, 0, SKIN_SHADE, 8, 8), 0xd49a79);
+  const top = makePixelFaceMaterial(32, 32, (ctx) => paintHair(ctx, 32, 32), 0x2d1e17);
+  const bottom = makePixelFaceMaterial(32, 32, (ctx) => px(ctx, 0, 0, SKIN_SHADE, 32, 32), 0xdca07e);
 
-  const front = makePixelFaceMaterial(8, 8, (ctx) => {
-    px(ctx, 0, 0, SKIN, 8, 8);
-    // Hair cap + bangs
-    px(ctx, 0, 0, HAIR, 8, 1);
-    px(ctx, 0, 1, HAIR, 3, 1);
-    px(ctx, 5, 1, HAIR, 3, 1);
-    px(ctx, 0, 2, HAIR, 1, 1);
-    px(ctx, 7, 2, HAIR, 1, 1);
-    px(ctx, 2, 0, HAIR_HI, 2, 1);
-    // Minecraft-style eyes (white + iris)
-    px(ctx, 1, 4, EYE_WHITE, 1, 1);
-    px(ctx, 2, 4, EYE_IRIS, 1, 1);
-    px(ctx, 5, 4, EYE_IRIS, 1, 1);
-    px(ctx, 6, 4, EYE_WHITE, 1, 1);
-    // Nose & warm smile
-    px(ctx, 3, 5, SKIN_SHADE, 2, 1);
-    px(ctx, 3, 6, MOUTH, 2, 1);
-    px(ctx, 0, 7, SKIN_SHADE, 1, 1);
-    px(ctx, 7, 7, SKIN_SHADE, 1, 1);
-  }, 0xeab696);
+  const front = makePixelFaceMaterial(32, 32, (ctx) => {
+    px(ctx, 0, 0, SKIN, 32, 32);
+    // Asymmetric swept hairline under the 3D hair tuft
+    px(ctx, 0, 0, HAIR, 32, 6);
+    px(ctx, 0, 6, HAIR, 13, 2);
+    px(ctx, 26, 6, HAIR, 6, 2);
+    px(ctx, 0, 8, HAIR, 3, 4);
+    px(ctx, 29, 8, HAIR, 3, 4);
 
-  const back = makePixelFaceMaterial(8, 8, (ctx) => {
-    paintHair(ctx, 8, 8);
-    px(ctx, 1, 7, SKIN_SHADE, 6, 1);
-  }, 0x3b2314);
+    // Arched eyebrows
+    px(ctx, 7, 9, HAIR, 5, 2);
+    px(ctx, 8, 8, HAIR, 3, 1);
+    px(ctx, 20, 9, HAIR, 5, 2);
+    px(ctx, 21, 8, HAIR, 3, 1);
+
+    // Tall expressive eyes
+    paintEye(ctx, 8, 12);
+    paintEye(ctx, 20, 12);
+
+    // Soft cheek warmth + subtle under-nose shadow
+    px(ctx, 5, 19, CHEEK, 4, 2);
+    px(ctx, 23, 19, CHEEK, 4, 2);
+    px(ctx, 15, 20, SKIN_SHADE, 2, 1);
+
+    // Friendly curved smile
+    px(ctx, 11, 23, MOUTH, 2, 1);
+    px(ctx, 19, 23, MOUTH, 2, 1);
+    px(ctx, 12, 24, MOUTH, 8, 1);
+    px(ctx, 14, 25, MOUTH, 4, 1);
+
+    // Subtle chin shading
+    px(ctx, 2, 30, SKIN_SHADE, 28, 2);
+  }, 0xf2c2a2);
+
+  const back = makePixelFaceMaterial(32, 32, (ctx) => {
+    paintHair(ctx, 32, 32);
+    px(ctx, 4, 28, SKIN_SHADE, 24, 4);
+  }, 0x2d1e17);
 
   return [rightSide, leftSide, top, bottom, front, back];
 }
@@ -455,20 +476,31 @@ function createIvaTorsoMaterials(accentColor) {
 
 /**
  * Builds an unarmored NASA IVA flight-suit astronaut rig (no helmet or PLSS backpack)
- * with Minecraft-style pixel textures on a single-cube head and jacket.
+ * with a sculpted multi-part head, mission comms headset, and original pixel-art face.
  */
 export function buildIvaAstronautRig({ accentColor = 0xea580c } = {}) {
   const bodyGroup = new THREE.Group();
 
   const suitBlue = new THREE.MeshLambertMaterial({ color: 0x1e3a5f });
   const accentMat = new THREE.MeshLambertMaterial({ color: accentColor });
-  const skinMat = new THREE.MeshLambertMaterial({ color: 0xeab696 });
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0xf2c2a2 });
+  const skinShadeMat = new THREE.MeshLambertMaterial({ color: 0xdca07e });
+  const hairMat = new THREE.MeshLambertMaterial({ color: 0x2d1e17 });
+  const hairHiMat = new THREE.MeshLambertMaterial({ color: 0x462f24 });
   const whiteMat = new THREE.MeshLambertMaterial({ color: 0xf8fafc });
   const darkMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
+  const headsetMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+  const headsetPadMat = new THREE.MeshLambertMaterial({ color: 0x475569 });
+  const micLedMat = new THREE.MeshLambertMaterial({
+    color: 0x38bdf8,
+    emissive: 0x0284c7,
+    emissiveIntensity: 0.7,
+  });
 
-  const addPart = (parent, w, h, d, mat, x, y, z) => {
+  const addPart = (parent, w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
     mesh.position.set(x, y, z);
+    if (rx || ry || rz) mesh.rotation.set(rx, ry, rz);
     parent.add(mesh);
     return mesh;
   };
@@ -501,9 +533,10 @@ export function buildIvaAstronautRig({ accentColor = 0xea580c } = {}) {
   bodyGroup.add(upperBody);
 
   addPart(upperBody, 0.4, 0.56, 0.22, createIvaTorsoMaterials(accentColor), 0, 0.31, 0);
-  addPart(upperBody, 0.14, 0.05, 0.14, skinMat, 0, 0.61, 0);
+  addPart(upperBody, 0.22, 0.035, 0.2, whiteMat, 0, 0.595, 0);
+  addPart(upperBody, 0.12, 0.055, 0.12, skinMat, 0, 0.615, 0);
 
-  // Slim flight-suit arms + bare hands flush against the torso (Minecraft proportions)
+  // Slim flight-suit arms + bare hands
   const createArm = (x) => {
     const shoulder = new THREE.Group();
     shoulder.position.set(x, 0.55, 0);
@@ -525,12 +558,36 @@ export function buildIvaAstronautRig({ accentColor = 0xea580c } = {}) {
   const leftArm = createArm(-0.265);
   const rightArm = createArm(0.265);
 
-  // Single-cube Minecraft-style head with 8x8 pixel face & hair textures
+  // Sculpted multi-part cadet head with 3D hair, 3D nose, and mission comms headset
   const headGroup = new THREE.Group();
   headGroup.position.set(0, 0.63, 0);
   upperBody.add(headGroup);
 
-  addPart(headGroup, 0.36, 0.36, 0.36, createMinecraftHeadMaterials(), 0, 0.18, 0);
+  // Slightly non-cubic head silhouette + 3D nose
+  addPart(headGroup, 0.31, 0.33, 0.29, createCadetHeadMaterials(), 0, 0.185, 0);
+  addPart(headGroup, 0.042, 0.052, 0.03, skinShadeMat, 0, 0.155, 0.156);
+
+  // 3D layered asymmetric hair
+  addPart(headGroup, 0.33, 0.065, 0.31, hairMat, 0, 0.345, -0.008);
+  addPart(headGroup, 0.16, 0.045, 0.18, hairHiMat, -0.04, 0.382, 0.02, -0.08, 0, 0.12);
+  addPart(headGroup, 0.21, 0.06, 0.055, hairMat, -0.05, 0.305, 0.138, 0, 0, 0.14);
+  addPart(headGroup, 0.1, 0.05, 0.05, hairMat, 0.105, 0.312, 0.136, 0, 0, -0.16);
+  addPart(headGroup, 0.328, 0.24, 0.055, hairMat, 0, 0.22, -0.142);
+  for (const sx of [-0.152, 0.152]) {
+    addPart(headGroup, 0.042, 0.13, 0.22, hairMat, sx, 0.265, -0.02);
+  }
+
+  // Mission comms headset + boom mic
+  addPart(headGroup, 0.365, 0.032, 0.055, headsetMat, 0, 0.392, -0.01);
+  for (const sx of [-1, 1]) {
+    addPart(headGroup, 0.03, 0.19, 0.048, headsetMat, sx * 0.175, 0.29, -0.01);
+    addPart(headGroup, 0.03, 0.125, 0.125, headsetPadMat, sx * 0.165, 0.185, -0.01);
+    addPart(headGroup, 0.035, 0.11, 0.11, headsetMat, sx * 0.185, 0.185, -0.01);
+    addPart(headGroup, 0.016, 0.065, 0.065, accentMat, sx * 0.202, 0.185, -0.01);
+  }
+  addPart(headGroup, 0.018, 0.018, 0.155, headsetMat, -0.158, 0.128, 0.068, 0.16, 0.48, 0);
+  addPart(headGroup, 0.028, 0.024, 0.034, headsetMat, -0.115, 0.112, 0.142);
+  addPart(headGroup, 0.012, 0.012, 0.012, micLedMat, -0.105, 0.112, 0.158);
 
   return {
     bodyGroup,
