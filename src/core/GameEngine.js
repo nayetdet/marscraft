@@ -38,6 +38,7 @@ import { StationSystem } from './StationSystem.js';
 import { StationPanel } from '../ui/StationPanel.js';
 import { AdminPanel } from '../ui/AdminPanel.js';
 import { UtilityModule } from './UtilityModule.js';
+import { BUNK_INTERACTIONS, SleepController } from './SleepController.js';
 import { CommsLink } from '../mission/commsLink.js';
 import { passiveDemandFactor } from '../mission/pacing.js';
 import { oxygenModeWarning } from '../mission/oxygenPlant.js';
@@ -295,11 +296,13 @@ export class GameEngine {
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown
         || this.storyHud.isWindowClosedShown,
-      isInputBlocked: () => this.cutscenes.isActive,
+      isInputBlocked: () => this.cutscenes.isActive || Boolean(this.sleep?.isSleeping),
       getInteraction: () => this._getInteraction(),
-      isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen,
-      getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || !this.stations.freshFood ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
+      isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen || Boolean(this.sleep?.isPanelOpen),
+      getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || !this.stations.freshFood || this.sleep?.isTired ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
     });
+    // Dormir no beliche (issue #109): passa o tempo com custo, no lugar da antiga tecla T
+    this.sleep = new SleepController(this);
 
     this._lookDir = new THREE.Vector3();
 
@@ -328,7 +331,8 @@ export class GameEngine {
     document.getElementById('interaction-hint').textContent = (hasPriorityInteraction || this.gymController.isActive) ? '' : (this._getInteraction()?.label ?? '');
     document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
-    document.getElementById('station-warning').textContent = this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : '';
+    const tiredWarning = this.sleep.updateWarning();
+    document.getElementById('station-warning').textContent = this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : tiredWarning;
   }
 
   // Avanca o modulo norte no relogio do ceu e repassa o estado para a tripulacao
@@ -412,6 +416,7 @@ export class GameEngine {
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
       { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
+      ...BUNK_INTERACTIONS,
     ];
     for (const candidate of candidates) {
       this._interactionPoint.set(candidate.x, candidate.y, candidate.z);
@@ -439,6 +444,7 @@ export class GameEngine {
     let message;
     if (target.type === 'info') { this.hud.showToast(target.text(this._baseState()), 8000); return; }
     if (target.type === 'basket') { this.hud.showToast(this.stations.collectBasket(target.cropType, this.survival)); return; }
+    if (target.type === 'bunk') { this.sleep.openChooser(); return; }
     if (target.type === 'door') message = this.airlock.request(target.door, this.player.pos);
     else if (target.type === 'treadmill' || target.type === 'bike') {
       this.mountGym(target.type);
@@ -1692,7 +1698,9 @@ export class GameEngine {
         && !this.stationPanel.isOpen
         && !this.missionHud.isVictoryShown
         && !cutsceneActive
-        && !this.storyHud.isWindowClosedShown;
+        && !this.storyHud.isWindowClosedShown
+        && !this.sleep.isPanelOpen
+        && !this.sleep.isSleeping;
       if (isGameRunning) {
         if (this.roverController.isActive) {
           if (this.scanHighlight.mesh) this.scanHighlight.clear();
@@ -1744,6 +1752,11 @@ export class GameEngine {
           this.cutscenes.update(dt);
         }
         this.sky.update(dt, this.camera.position);
+      } else if (this.sleep.isSleeping) {
+        // Dormindo: o relogio anda pelo sono (em passos), nao pelo quadro
+        this.sleep.update(dt);
+        this._updateCamera();
+        this.sky.update(0, this.player.pos);
       } else {
         if (this.roverController.isActive) this.roverController.update(dt, {});
         else if (this.gymController.isActive) this.gymController.update(dt);

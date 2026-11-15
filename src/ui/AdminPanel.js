@@ -70,8 +70,17 @@ export class AdminPanel {
         this.toggle();
       } else if (e.code === 'Escape' && this.isOpen) {
         this.close();
+      } else if (e.code === 'KeyT' && !e.repeat && !this.isOpen && this._isPlaying()) {
+        // Atalho de teste: o jogo normal passa o tempo dormindo no beliche (issue #109)
+        this.engine.sky.advanceTime(1.5);
+        this.engine.hud.showToast('Admin: time advanced (+1h 30m on Mars)');
       }
     });
+  }
+
+  _isPlaying() {
+    const { input, survival, sleep, cutscenes } = this.engine;
+    return Boolean(input?.isLocked) && !survival.isDead && !sleep?.isSleeping && !sleep?.isPanelOpen && !cutscenes?.isActive;
   }
 
   toggle() {
@@ -114,7 +123,7 @@ export class AdminPanel {
       ${group('Astronaut', [['me:refill', 'Refill astronaut'], ['me:dose', 'Reset radiation dose'], ['me:doseLimit', 'Dose over the limit'], ['me:hurt', 'Health to 25%']])}
       ${group('Base', [['base:dirtySuit', 'Dusty suit'], ['base:contaminate', 'Dust in habitat'], ['base:clean', 'Clean suit + habitat'], ['base:filter', 'CO2 filter 0%']])}
       ${group('North module', [['north:waterFilter', 'Water filter 10%'], ['north:pantry', 'Pantry +10 rations'], ['north:wear', 'Crew stations 30%'], ['north:regolith', '+6 regolith'], ['north:carrot', '+3 carrots']])}
-      ${group('Time', [['time:1', '+1 hour'], ['time:day', 'Skip to 08:00'], ['time:night', 'Skip to 21:00']])}
+      ${group('Time', [['time:1', '+1 hour [T: +1.5 h]'], ['time:day', 'Skip to 08:00'], ['time:night', 'Skip to 21:00'], ['time:tired', 'Awake 25 h (tired)']])}
       ${group('Teleport', TELEPORTS.map(([name], i) => [`tp:${i}`, name]))}
     `;
   }
@@ -179,6 +188,10 @@ export class AdminPanel {
         return 'North module state changed.';
       }
       case 'time': {
+        if (arg === 'tired') {
+          this.engine.sleep.awakeSinceHours = this.engine._skyHours() - 25;
+          return 'You have been awake for 25 h: work is slower until you sleep.';
+        }
         const target = arg === 'day' ? 8 : arg === 'night' ? 21 : null;
         const delta = target === null ? 1 : ((target - sky.timeOfDay) % 24 + 24) % 24;
         sky.advanceTime(delta);

@@ -218,6 +218,21 @@ O tripulante no gerador de O2 avisa quando o modo está gastando o recurso que e
 
 Com a razão real a água do ar é pouca perto da que se bebe: ~0,14 L por recarga completa do traje do jogador e ~1,9 L por sol para 2 tripulantes. O peso da escolha aparece quando o tanque está baixo (a água também vai para beber, para as plantas e para a parede do abrigo) ou à noite, quando cada ponto de bateria conta.
 
+### Sono no beliche (issue #109)
+
+| Número | Valor | Fonte |
+|---|---|---|
+| Sono real de astronautas | **~6 h por noite**, com **8,5 h** reservadas na agenda (64 astronautas do ônibus espacial e 21 da Estação Espacial) | Barger et al., *The Lancet Neurology* 13(9), 2014; resumo em https://www.space.com/26829-astronauts-space-station-sleep-deprivation.html |
+| Gasto de energia dormindo | taxa de atividade do sono = **1,0× o metabolismo basal**; um dia moderadamente ativo fica em **~1,7–2,0×** | FAO/WHO/UNU, *Human energy requirements* (2004) |
+| Ritmo do corpo e erros | dormir fora do ritmo do relógio do corpo piora o sono; cansaço leva a erros | NASA, ritmo circadiano e iluminação para astronautas (2016): https://phys.org/news/2016-12-nasa-effects-circadian-solution-astronauts.pdf |
+
+Escala de jogo (`SLEEP_CONFIG` em `src/config/constants.js`, regras em `src/player/sleep.js`):
+
+- Dormindo, o relógio corre 3 h de jogo por segundo real, em passos de 0,1 h. A missão, o aquecedor, a luz da estufa, o filtro de CO2 e as plantas andam como acordado.
+- Fome e sede caem **1,2 e 0,8 pontos (de 20) por hora dormida**. Acordado a barra de comida dura ~1,8 h de jogo, então a mesma taxa matava quem dormisse; o corpo gasta menos dormindo (FAO acima), e o jogo arredonda isso para "uma noite de 9 h gasta metade da comida e um terço da água".
+- Aviso de tempestade, bateria vazia, vazamento de ar, alarme da base (frio, CO2 ≥ 40 %, poeira) ou fome/sede ≤ 4 acordam o jogador; o relógio para naquele passo.
+- Mais de 1 sol (24 h de jogo) acordado deixa o trabalho mais lento (o mesmo 0,6× de `getWorkSpeed`). Cada hora dormida paga 3 h acordado.
+
 ## Calibração atual do jogo vs. realidade
 
 A aba **REAL VS GAME** do diário [J] (`src/data/realVsGame.js`, issue #106) mostra para a criança onde o jogo muda a realidade: gravidade, duração do sol, airlock, bateria, tempestade, parede do abrigo, plantas, rádio e conjunção. Os valores do jogo vêm de `constants.js`; os reais, das tabelas deste arquivo.

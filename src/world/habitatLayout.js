@@ -82,6 +82,8 @@ export const SOLAR_FIELD_CENTER = Object.freeze({
 export const EAST_WING = {
   LINK: { xMin: 13, xMax: 17, zMin: -9, zMax: -6 },
   ROOM: { id: 'dorm', name: 'CREW QUARTERS', xMin: 18, xMax: 28, zMin: -10, zMax: -2 },
+  // Centro (x, z) dos tres beliches, com a cabeceira na parede sul. O jogador dorme neles (issue #109).
+  BUNKS: [{ x: 21, z: -2.2 }, { x: 24, z: -2.2 }, { x: 27, z: -2.2 }],
 };
 
 // Ar do corredor curto de um modulo: vai da parede do corredor central ate a parede do modulo
