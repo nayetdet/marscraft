@@ -1,50 +1,97 @@
 import { describe, it, expect } from 'vitest';
-import { buildStormSchedule, leadTimeHours, rescheduleStorms, stormMultiplier, stormStateAt } from './solarStorms.js';
-import { STORM_CONFIG } from '../config/constants.js';
+import {
+  buildStormSchedule, leadTimeHours, marsBoundCmes, rescheduleStorms, stormStateAt, stormTotalDoseUGy,
+} from './solarStorms.js';
+import { RADIATION_CONFIG, STORM_CONFIG } from '../config/constants.js';
 import donki from '../data/donkiCme.json';
 
+const toMars = (id, startTime, marsArrivalTime, speedKmS, isGlancingBlow = false) =>
+  ({ id, startTime, marsArrivalTime, speedKmS, isGlancingBlow, headedToMars: true });
+
 const cmes = [
-  { id: 'slow', startTime: '2026-11-01T00:00Z', speedKmS: 300 },
-  { id: 'fast', startTime: '2026-11-02T00:00Z', speedKmS: 900 },
-  { id: 'medium', startTime: '2026-11-03T00:00Z', speedKmS: 600 },
+  { id: 'to-earth', startTime: '2026-11-01T00:00Z', speedKmS: 1500, headedToMars: false },
+  toMars('fast', '2026-11-02T00:00Z', '2026-11-04T12:00Z', 900),
+  { id: 'no-arrival', startTime: '2026-11-02T12:00Z', speedKmS: 800, headedToMars: true },
+  toMars('slow', '2026-11-03T00:00Z', '2026-11-08T00:00Z', 350, true),
 ];
 
 describe('leadTimeHours', () => {
-  it('faster CMEs arrive sooner (Sun-Mars distance / speed, 1 real day = 1 game hour)', () => {
-    // 227.9e6 km / 900 km/s = 70.3 h reais = ~2.9 h de jogo
-    expect(leadTimeHours(900)).toBeCloseTo(227.9e6 / 900 / 3600 / 24, 6);
-    expect(leadTimeHours(900)).toBeLessThan(leadTimeHours(500));
+  it('is the trip NASA predicted for that CME, with 1 real day = 1 game hour', () => {
+    expect(leadTimeHours(cmes[1])).toBeCloseTo(2.5); // 2 dias e 12 h
+    expect(leadTimeHours(cmes[3])).toBeCloseTo(5); // 5 dias
+  });
+
+  it('matches the real prediction saved from DONKI: left 01/11 19:00Z, Mars on 07/11 06:00Z', () => {
+    const cme = donki.cmes.find((c) => c.id === '2026-11-01T19:00:00-CME-001');
+    expect(cme.marsArrivalTime).toBe('2026-11-07T06:00Z');
+    // 5 dias e 11 horas reais = 131 h -> 131 / 24 horas de jogo
+    expect(leadTimeHours(cme)).toBeCloseTo(131 / STORM_CONFIG.REAL_HOURS_PER_GAME_HOUR, 6);
   });
 });
 
-describe('stormMultiplier', () => {
-  it('stays in the hundreds-to-a-thousand range', () => {
-    expect(stormMultiplier(100)).toBe(250);
-    expect(stormMultiplier(894)).toBe(894);
-    expect(stormMultiplier(3000)).toBe(1000);
+describe('stormTotalDoseUGy', () => {
+  it('is a game rule that grows with the CME speed and is weaker for a glancing blow', () => {
+    const slow = stormTotalDoseUGy({ speedKmS: 400 });
+    const fast = stormTotalDoseUGy({ speedKmS: 1000 });
+    expect(fast).toBeGreaterThan(slow);
+    expect(stormTotalDoseUGy({ speedKmS: 1000, isGlancingBlow: true })).toBeLessThan(fast);
+  });
+
+  it('never goes above the biggest storm Curiosity ever measured: 8,100 uGy (NASA, 20/05/2024)', () => {
+    const RECORD_STORM_DOSE_UGY = 8100;
+    expect(RADIATION_CONFIG.STORM_DOSE_MAX_UGY).toBe(RECORD_STORM_DOSE_UGY);
+    for (const speedKmS of [100, 357, 726, 1200, 2500, 5000]) {
+      expect(stormTotalDoseUGy({ speedKmS })).toBeLessThanOrEqual(RECORD_STORM_DOSE_UGY);
+    }
+    for (const storm of buildStormSchedule(donki.cmes, 0)) {
+      // A dose total la fora, sem protecao: taxa x duracao
+      expect(storm.doseUGyPerHour * (storm.end - storm.arrival)).toBeLessThanOrEqual(RECORD_STORM_DOSE_UGY + 1e-6);
+    }
+  });
+
+  it('never goes below the storm that doubled the surface dose for two days (NASA JPL, 11/09/2017)', () => {
+    const doubledForTwoDays = 2 * RADIATION_CONFIG.MARS_SURFACE_DOSE_UGY_PER_HOUR * 48;
+    expect(RADIATION_CONFIG.STORM_DOSE_MIN_UGY).toBeCloseTo(doubledForTwoDays, 0);
+    expect(stormTotalDoseUGy({ speedKmS: 50 })).toBe(RADIATION_CONFIG.STORM_DOSE_MIN_UGY);
   });
 });
 
 describe('buildStormSchedule', () => {
-  it('skips slow CMEs and chains storms without overlap', () => {
+  it('uses only CMEs that NASA predicted would reach Mars', () => {
+    expect(marsBoundCmes(cmes).map((c) => c.id)).toEqual(['fast', 'slow']);
     const schedule = buildStormSchedule(cmes, 10, 4);
-    expect(schedule.map((s) => s.cme.id)).toEqual(['fast', 'medium', 'fast', 'medium']);
+    expect(schedule.map((s) => s.cme.id)).toEqual(['fast', 'slow', 'fast', 'slow']);
+    expect(schedule.every((s) => s.cme.headedToMars)).toBe(true);
+  });
+
+  it('warns for as long as the predicted trip and chains storms without overlap', () => {
+    const schedule = buildStormSchedule(cmes, 10, 4);
     expect(schedule[0].warningStart).toBe(10 + STORM_CONFIG.FIRST_WARNING_AFTER_HOURS);
-    for (let i = 1; i < schedule.length; i++) {
-      expect(schedule[i].warningStart).toBeCloseTo(schedule[i - 1].end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS);
-      expect(schedule[i].arrival).toBeGreaterThan(schedule[i].warningStart);
+    for (const [i, storm] of schedule.entries()) {
+      expect(storm.arrival - storm.warningStart).toBeCloseTo(leadTimeHours(storm.cme));
+      expect(storm.end - storm.arrival).toBeCloseTo(STORM_CONFIG.DURATION_HOURS);
+      if (i > 0) expect(storm.warningStart).toBeCloseTo(schedule[i - 1].end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS);
     }
   });
 
-  it('returns no storms when no CME is fast enough', () => {
-    expect(buildStormSchedule([{ speedKmS: 300 }], 0)).toEqual([]);
+  it('stays empty when no CME was headed to Mars, instead of using the others', () => {
+    const fastButElsewhere = [{ speedKmS: 2000, startTime: '2026-11-01T00:00Z', headedToMars: false }];
+    expect(buildStormSchedule(fastButElsewhere, 0)).toEqual([]);
+    expect(buildStormSchedule([], 0)).toEqual([]);
   });
 
-  it('three storms fit in a reasonable session with the real embedded DONKI data', () => {
+  it('the embedded DONKI data has the Mars arrival of every CME and gives a queue of real Mars storms', () => {
+    expect(donki.cmes.length).toBeGreaterThan(0);
+    for (const cme of donki.cmes) {
+      expect(cme.headedToMars).toBe(true);
+      expect(Date.parse(cme.marsArrivalTime)).toBeGreaterThan(Date.parse(cme.startTime));
+      expect(typeof cme.isGlancingBlow).toBe('boolean');
+    }
     const schedule = buildStormSchedule(donki.cmes, 15.2);
     expect(schedule.length).toBeGreaterThan(3);
-    // fim da 3a tempestade em menos de 2 sols de jogo (~40 min reais sem usar a tecla T)
-    expect(schedule[2].end - 15.2).toBeLessThan(48);
+    expect(schedule.every((s) => s.cme.headedToMars)).toBe(true);
+    // fim da 3a tempestade em menos de 2,5 sols de jogo
+    expect(schedule[2].end - 15.2).toBeLessThan(60);
   });
 });
 
@@ -62,7 +109,6 @@ describe('stormStateAt', () => {
 
 describe('admin storm controls', () => {
   it('moves the next storm so the chosen phase starts now', () => {
-    const cmes = [{ speedKmS: 900, startTime: '2026-11-01T00:00Z' }];
     const schedule = buildStormSchedule(cmes, 0, 3);
     for (const [target, phase] of [['warning', 'warning'], ['active', 'active'], ['end', 'calm']]) {
       const moved = rescheduleStorms(schedule, 0.5, target);

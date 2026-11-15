@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { formatDateDMY, formatDose, formatHours, radiationStatusText, stormEventMessage, stormStatusText } from './missionText.js';
+import {
+  NO_STORM_DATA_TEXT, formatDateDMY, formatDose, formatHours, radiationStatusText, stormEventMessage, stormStatusText,
+} from './missionText.js';
 
 describe('missionText', () => {
   it('formats dates as DD/MM/YYYY', () => {
@@ -19,7 +21,7 @@ describe('missionText', () => {
   });
 
   it('storm warnings cite the real CME and say "real data", never "live"', () => {
-    const storm = { leadHours: 2.9, cme: { startTime: '2026-11-01T00:00Z', speedKmS: 894 } };
+    const storm = { leadHours: 2.9, cme: { startTime: '2026-11-01T00:00Z', speedKmS: 894, marsArrivalTime: '2026-11-03T21:36Z' } };
     const msg = stormEventMessage({ type: 'storm-warning', storm }, '2026-11-14');
     expect(msg).toContain('01/11/2026');
     expect(msg).toContain('894 km/s');
@@ -27,10 +29,35 @@ describe('missionText', () => {
     expect(msg.toLowerCase()).not.toContain('live');
   });
 
+  it('storm warnings give the arrival NASA predicted and the game time left (issue #99)', () => {
+    const storm = { leadHours: 5.46, cme: { startTime: '2026-11-01T19:00Z', speedKmS: 357, marsArrivalTime: '2026-11-07T06:00Z' } };
+    const msg = stormEventMessage({ type: 'storm-warning', storm, hoursUntil: 5.46 }, '2026-11-14');
+    expect(msg).toContain("NASA's model said it would reach Mars on 07/11/2026");
+    expect(msg).toContain('5h 28m');
+    expect(msg).toContain('headed to Mars');
+    // Tempestade adiantada pelo controle de demo: vale o tempo de jogo que falta de verdade
+    const demo = stormEventMessage({ type: 'storm-warning', storm, hoursUntil: 0.2 }, '2026-11-14');
+    expect(demo).toContain('0h 12m');
+  });
+
+  it('no storm message claims a dose without a source (issue #99)', () => {
+    const storm = { leadHours: 3, cme: { startTime: '2026-11-01T19:00Z', speedKmS: 357, marsArrivalTime: '2026-11-07T06:00Z' } };
+    for (const type of ['storm-warning', 'storm-start', 'storm-survived', 'storm-failed', 'storm-missed']) {
+      expect(stormEventMessage({ type, storm }, '2026-11-14')).not.toMatch(/hundreds|thousand|times higher/i);
+    }
+  });
+
+  it('says so when the data has no storm headed to Mars (issue #99)', () => {
+    const text = stormStatusText({ phase: 'calm', storm: null, hoursUntil: Infinity }, '2026-11-14', true);
+    expect(text).toContain(NO_STORM_DATA_TEXT);
+    expect(NO_STORM_DATA_TEXT).toBe('No storms headed to Mars in this data.');
+  });
+
   it('the mission computer shows the same storm as the HUD, with its source (issue #110)', () => {
-    const storm = { cme: { startTime: '2026-11-09T05:00Z', speedKmS: 726 } };
+    const storm = { cme: { startTime: '2026-11-09T05:00Z', speedKmS: 726, marsArrivalTime: '2026-11-12T08:00Z' } };
     const warning = stormStatusText({ phase: 'warning', storm, hoursUntil: 1.5 }, '2026-11-14');
     expect(warning).toContain('reaches Mars in 1h 30m');
+    expect(warning).toContain('12/11/2026');
     expect(warning).toContain('09/11/2026');
     expect(warning).toContain('726 km/s');
     const active = stormStatusText({ phase: 'active', storm, hoursUntil: 0, hoursLeft: 2 }, '2026-11-14');

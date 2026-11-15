@@ -19,9 +19,15 @@ export function shelterDoseFactor(waterL) {
   return curve[curve.length - 1][1];
 }
 
+// uGy -> mSv com o fator de qualidade medio medido na superficie de Marte
+export function uGyToMsv(uGy) {
+  return (uGy * RADIATION_CONFIG.QUALITY_FACTOR) / 1000;
+}
+
+// `stormDoseUGyPerHour` = dose da tempestade ativa la fora (0 em calmaria: fica a dose normal).
 // `shelterWaterL` so conta quando o jogador esta dentro do abrigo (0 fora dele).
-export function doseRateMsvPerHour({ stormMultiplier = 1, insideHabitat = false, shieldOn = false, shelterWaterL = 0 } = {}) {
-  let rate = BASE_DOSE_MSV_PER_HOUR * stormMultiplier;
+export function doseRateMsvPerHour({ stormDoseUGyPerHour = 0, insideHabitat = false, shieldOn = false, shelterWaterL = 0 } = {}) {
+  let rate = Math.max(BASE_DOSE_MSV_PER_HOUR, uGyToMsv(stormDoseUGyPerHour));
   if (insideHabitat) rate *= RADIATION_CONFIG.HABITAT_FACTOR;
   if (shieldOn) rate *= RADIATION_CONFIG.SHIELD_FACTOR;
   if (shelterWaterL > 0) rate *= shelterDoseFactor(shelterWaterL);

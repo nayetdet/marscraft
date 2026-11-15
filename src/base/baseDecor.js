@@ -249,7 +249,7 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
     },
     {
       x: meterX, y: F + 1.6, z: meterZ - 0.06, label: '[F] Check the radiation meter',
-      text: (s) => `You are getting ${formatRate(s.doseRate)}. Above ${RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR} mSv/h it hurts. `
+      text: (s) => `You are getting ${formatRate(s.doseRate)}. In this game, above ${RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR} mSv/h it hurts. `
         + 'More water in the shelter wall stops more radiation, but that water is no longer there to drink or grow food.',
     },
     {

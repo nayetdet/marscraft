@@ -41,7 +41,7 @@ export const CARDS = {
     title: 'SOLAR STORM COMING',
     lines: [{ icon: 'storm', text: `Survive ${STORY_CONFIG.STORMS_FOR_WINDOW} storms, then you can launch` }],
     choices: [
-      { icon: 'home', name: 'HIDE', good: 'Safest spot', bad: 'No work outside' },
+      { icon: 'home', name: 'HIDE', good: 'Shelter with water wall', bad: 'No work outside' },
       { icon: 'shield', name: 'SHIELD', good: 'Keep working', bad: 'Eats battery' },
     ],
   },
@@ -88,7 +88,7 @@ export const OBJECTIVES = {
   report: 'Call Earth at the command console',
   'collect-ice': 'Get 1 block of ice from the ice crater',
   act2: 'Get the rocket ready to go home',
-  'storm-guide': 'Get safe: hide inside or use the Shield Remote',
+  'storm-guide': 'Get safe: storm shelter with water in its wall, or the Shield Remote',
   fuel: 'Fill the rocket with ice',
   'send-data': 'Send your science data to Earth [G]',
   ignite: 'Go to the rocket and press IGNITE',

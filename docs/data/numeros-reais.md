@@ -17,9 +17,20 @@ Arquivo: [`samples/radlab-dose-rate-summary.json`](samples/radlab-dose-rate-summ
 
 Proporções úteis para crianças (pela mediana):
 - Marte ≈ **1,5×** a Estação Espacial; Lua ≈ **1,9×**; viagem no espaço profundo ≈ **3,5×**.
-- Um pico de tempestade ou de cinturão chega a ser **centenas a mil vezes** a dose normal. É por isso que existe o "abrigo de tempestade" nas bases.
+- Os picos da tabela (Orion: 8.012; Estação: 510) são de **cinturões de radiação da Terra** (Van Allen e Anomalia do Atlântico Sul). Não servem para calibrar uma tempestade solar na superfície de Marte: para isso use a seção abaixo.
 
-Sugestão de mecânica: uma barra de "dose acumulada" que sobe com `taxa_base × multiplicador`. A taxa base vem da tabela, conforme o local escolhido. O multiplicador sobe durante um evento do DONKI (SEP/CME) e cai quando o jogador está dentro do habitat blindado.
+### Tempestade solar na superfície de Marte: o que foi medido (issue #99)
+
+| Fato | Valor | Fonte |
+|---|---|---|
+| Maior tempestade já medida pelo Curiosity (RAD), 20/05/2024, flare X12 | **8.100 µGy** no total, "equivalente a 30 raios-X de tórax", "não letal"; as partículas chegaram a Marte "em dezenas de minutos" | [NASA, 2024](https://www.nasa.gov/missions/maven/nasa-watches-mars-light-up-during-epic-solar-storm/) |
+| Tempestade de 11/09/2017 | níveis de radiação na superfície **mais que o dobro** de qualquer medida anterior do RAD; as leituras altas duraram **mais de dois dias** | [NASA JPL, 2017](https://www.jpl.nasa.gov/news/large-solar-storm-sparks-global-aurora-and-doubles-radiation-levels-on-the-martian-surface/) |
+| Quando a nuvem da CME passa por Marte | a dose de raios cósmicos **cai** (queda de Forbush); o RAD registrou 424 dessas de 2012 a 2016 | [Guo et al.](https://arxiv.org/abs/1712.06885); [Papaioannou et al., 2019](https://doi.org/10.1007/s11207-019-1454-2) |
+| O que traz o perigo | partículas energéticas solares (SEP), que viajam quase à velocidade da luz e chegam em minutos; a nuvem da CME leva de 1 a 4 dias até a Terra | [NASA SVS, "Travel Time"](https://svs.gsfc.nasa.gov/vis/a010000/a010900/a010941/10941_Travel_Time_HTML_Transcript.html) |
+
+Simplificação do jogo, a explicar: o jogo usa a **chegada da nuvem da CME** prevista pela NASA como relógio da tempestade (aviso → chegada → radiação alta). Na vida real as partículas perigosas chegam antes da nuvem, em minutos. Eventos SEP separados ficam para a issue #100. Nenhum texto do jogo diz quantas vezes a dose sobe.
+
+Mecânica: a dose acumulada sobe com a taxa do momento (dose normal ou dose da tempestade), reduzida pelo habitat, pela blindagem e pela parede de água do abrigo.
 
 [Ref] Para dar escala: o limite de carreira de astronautas da NASA é **600 mSv** (NASA-STD-3001, 2022).
 
@@ -81,9 +92,10 @@ Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG
 | Dose normal na superfície | **6,93 µGy/h** | [API, RadLab] Curiosity MSL-RAD, mediana |
 | Conversão µGy → µSv (fator de qualidade) | **3,05** (0,21 mGy/dia → 0,64 mSv/dia) | [Ref] Hassler et al., *Science* 343 (2014), MSL-RAD |
 | Dose normal resultante | **0,021 mSv/h** | conta acima |
-| Multiplicador na tempestade | velocidade da CME em km/s, limitada a **250–1000×** | mapeamento do jogo dentro da faixa "centenas a mil vezes" desta página |
-| Tempo de aviso da tempestade | 227,9 milhões de km ÷ velocidade da CME | [Ref] semieixo maior de Marte, Mars Fact Sheet; 1 dia real de viagem = 1 hora de jogo |
-| Tempestades usadas | CMEs reais ≥ 500 km/s de 01/11 a 13/11/2026 | [API, DONKI] `src/data/donkiCme.json`, gerado por `node scripts/fetch-donki-cme.mjs` |
+| Dose total de uma tempestade, lá fora e sem proteção (`RADIATION_CONFIG.STORM_DOSE_MIN_UGY` / `_MAX_UGY`) | de **665 µGy** (o dobro da dose normal por 2 dias: 2 × 6,93 µGy/h × 48 h) até **8.100 µGy** (o recorde). Nenhuma tempestade do jogo passa do recorde (teste em `solarStorms.test.js`) | [Ref] os dois eventos reais da tabela "Tempestade solar na superfície de Marte" acima |
+| Força de cada tempestade (`stormTotalDoseUGy`) | **regra do jogo**: cresce com a velocidade da CME, do mínimo em 300 km/s ao recorde em 1.200 km/s; golpe de raspão em Marte vale 75 % | A velocidade e o "golpe de raspão" vêm do DONKI; o mapeamento para dose não é medida da NASA, e a tela "NASA Data" diz isso |
+| Tempo de aviso da tempestade | chegada prevista em Marte − saída do Sol, da própria CME (`marsArrivalTime − startTime`); 1 dia real de viagem = 1 hora de jogo | [API, DONKI] modelo WSA-ENLIL, `cmeAnalyses[].enlilList[].impactList[]` com `location: "Mars"`. Exemplo: CME de 01/11/2026 19:00Z, chegada em 07/11 06:00Z = 5 dias e 11 h = 5,46 h de jogo |
+| Tempestades usadas | só CMEs reais com **impacto previsto em Marte**; se não houver nenhuma, a fila fica vazia ("No storms headed to Mars in this data") | [API, DONKI] `src/data/donkiCme.json`, gerado por `node scripts/fetch-donki-cme.mjs`. **Pendente:** o arquivo embutido tem 1 CME (a de 01/11/2026), montado da amostra salva; a janela de 01 a 13/11 tinha 2 para Marte, e a outra (09/11, 726 km/s) ficou de fora porque a amostra não guarda a chegada. Regravar com `NASA_API_KEY` e uma janela de 12 meses |
 | Relevo do mundo (`src/data/marsTerrain.js`) | recorte de **224 × 224 pixels a 1,0118 m por pixel** de uma cratera de ~180 m em Aeolis Palus, cratera Gale (**4,4743°S, 137,4032°E**, ~7 km ao norte do pouso do Curiosity); **12,7 m** de relevo, de −4.448,1 m a −4.435,5 m; 1 bloco ≈ 1 m | [API, HiRISE DTM `DTEEC_010573_1755_010639_1755_U01`](https://www.uahirise.org/dtm/PSP_010573_1755), NASA/JPL-Caltech/University of Arizona; `src/data/marsTerrain.json`, gerado por `node scripts/fetch-mars-terrain.mjs`. Nivelados para as construções: base, alas norte e leste, estufa e plataforma do MAV. Com a cratera de gelo, que é do jogo, só **~5 % das colunas** diferem do dado real depois do arredondamento para blocos. |
 | Limite de carreira exibido na vitória | **600 mSv** | [Ref] NASA-STD-3001 (2022) |
 | O2 em kg no resumo da vitória | 1 sol respirando lá fora = **0,84 kg** | [Ref] NASA BVAD |
@@ -104,7 +116,7 @@ Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG
 
 Os textos dos pôsteres ficam em `src/base/basePosters.js`; a tela "NASA Data" do menu (`index.html`) lista as mesmas fontes.
 
-Escala de jogo (não é dado real): capacidade da bateria, custos de energia em %, duração da tempestade (3 h de jogo), dano por mSv e o limite de 3 mSv/h a partir do qual a radiação machuca.
+Escala de jogo (não é dado real): capacidade da bateria, custos de energia em %, duração da tempestade (3 h de jogo), dano por mSv e o limite de 0,5 mSv por hora de jogo a partir do qual a radiação machuca. O limite foi calibrado para que toda tempestade machuque lá fora, as fortes machuquem dentro do habitat sem abrigo, e o abrigo com a parede cheia ou a blindagem dentro do habitat protejam em qualquer tempestade (testes em `radiation.test.js`). A conversão µGy → mSv usa o mesmo fator de qualidade 3,05 da dose normal; para partículas de tempestade o fator real é outro, e o jogo não mostra essa conta como dado.
 
 Simplificação a explicar: a "blindagem ligada" (tecla R) é um escudo ativo que gasta energia e só protege dentro da bolha em volta da base. Escudos magnéticos ativos ainda são pesquisa; nas bases reais, o abrigo de tempestade usa massa (água, regolito). Detalhes e fontes em [`protecao-radiacao.md`](protecao-radiacao.md).
 

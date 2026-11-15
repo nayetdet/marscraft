@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { RADIATION_CONFIG } from '../config/constants.js';
 import { missionStatus, radiationTone, stormSourceShort } from './missionCards.js';
 
 const STORM = { warningStart: 10, arrival: 14, end: 18, cme: { startTime: '2026-11-01T12:00Z', speedKmS: 894.4 } };
@@ -18,10 +19,11 @@ function fakeMission(overrides = {}) {
 }
 
 describe('radiationTone', () => {
-  it('keeps the thresholds of the old mission box', () => {
+  it('turns red exactly when the dose starts to hurt', () => {
     expect(radiationTone(0.02)).toBe('ok');
-    expect(radiationTone(0.5)).toBe('warn');
-    expect(radiationTone(3)).toBe('danger');
+    expect(radiationTone(RADIATION_CONFIG.WARN_MSV_PER_HOUR)).toBe('warn');
+    expect(radiationTone(RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR - 0.01)).toBe('warn');
+    expect(radiationTone(RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR)).toBe('danger');
   });
 });
 
@@ -68,7 +70,7 @@ describe('missionStatus', () => {
   });
 
   it('warns when the shield is on but the player left the bubble', () => {
-    const s = missionStatus(fakeMission({ shieldOn: true, insideShield: false, doseRate: 0.3 }), FETCHED);
+    const s = missionStatus(fakeMission({ shieldOn: true, insideShield: false, doseRate: 0.05 }), FETCHED);
     expect(s.radiation.word).toBe('LOW');
     expect(s.alerts.map((a) => a.id)).toEqual(['bubble']);
   });

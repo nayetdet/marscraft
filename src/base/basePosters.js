@@ -61,10 +61,10 @@ export function buildPosters(donkiDate) {
       lines: [
         'The Sun sometimes throws out a giant cloud of particles.',
         'Scientists call it a CME (coronal mass ejection).',
-        'When it hits Mars, radiation can be hundreds of times higher.',
+        'The biggest storm Curiosity measured on Mars gave as much radiation as 30 chest X-rays in one go.',
       ],
-      fact: `Every storm in this game is a real CME that NASA saw, faster than 500 km/s. Real data from ${donkiDate}.`,
-      source: 'NASA DONKI space weather database',
+      fact: `Every storm in this game is a real CME that NASA predicted would reach Mars. Real data from ${donkiDate}.`,
+      source: 'NASA DONKI space weather database; NASA Curiosity RAD (2024)',
     },
     mars: {
       title: 'MARS vs EARTH',
