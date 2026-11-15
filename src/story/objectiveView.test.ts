@@ -78,7 +78,7 @@ describe('objectiveView', () => {
     expect(view.steps).toBeNull();
     expect(view.loop).toBe(false);
     // A meta e o foguete vazio aparecem desde o primeiro passo
-    expect(view.goal).toBe('GOAL: 3 CLUES, FLY HOME');
+    expect(view.goal).toBe('GOAL: FLY HOME');
     expect(view.rocket).toEqual({ total: 6, loaded: 0, fuel: 0 });
     expect(view.goals).toBeNull();
     expect(view.timer).toBeNull();

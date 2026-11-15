@@ -84,7 +84,7 @@ describe('clues in the objective panel and the arrow (issue #344)', () => {
   it('shows the 3 clue boxes next to the rocket from act 2 on', () => {
     const story = { act: 2, objectiveId: 'fuel', stormsNeeded: 1, windowHoursLeft: null, replySecondsLeft: null };
     const view = objectiveView(story, { iceNeeded: 4, clueDue: true, nextClue: 0, clueStates: ['todo', 'todo', 'todo'], stormsSurvived: 0 });
-    expect(view.goal).toBe('GOAL: 3 CLUES, FLY HOME');
+    expect(view.goal).toBe('GOAL: FLY HOME');
     expect(view.task.label).toBe('FIND CLUE: WATER NOW');
     expect(view.goals.clues).toEqual(['todo', 'todo', 'todo']);
     expect(view.loop).toBe(false);

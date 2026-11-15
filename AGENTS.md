@@ -51,7 +51,7 @@ src/core/GameEngine.ts     loop principal; instancia e conecta todos os sistemas
 src/mission/               missao: bateria e paineis (energy), tempestades solares do DONKI (solarStorms), radiacao,
                            radio Terra-Marte (commsLink, earthMars), MAV e textos (MissionSystem, missionText),
                            gerador de O2 eletrolise x MOXIE (oxygenPlant, oxygenText)
-                           ciencia em pontos (sciencePackage: itens, meta para decolar, envio e melhorias), boletim final (missionReport)
+                           ciencia em pontos (sciencePackage: itens, meta para decolar, envio e melhorias), as 3 pistas da missao (clues: quais amostras, estado de cada uma, quando buscar), boletim final (missionReport)
                            espera rapida da tempestade no abrigo, so com a parede de agua cheia (stormSkip; quem faz o relogio correr e o SleepController)
                            tempestade de poeira e poeira nos paineis (dustWeather, weatherText)
 src/data/marsWeather.ts    clima real do InSight por sol (insightWeather.tson): temperatura la fora e relatorio do tempo

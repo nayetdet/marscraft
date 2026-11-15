@@ -12,7 +12,7 @@ import { STEP_COLORS, tutorialStepById } from './tutorialSteps.ts';
 //   3. onde a crianca esta: "STEP 4/5" no tutorial ou a volta de trabalho que se repete.
 // Funcoes puras: o StoryHud so pinta o resultado.
 
-export const GOAL_TITLE = 'GOAL: 3 CLUES, FLY HOME';
+export const GOAL_TITLE = 'GOAL: FLY HOME';
 
 // A volta de trabalho (atos 2 e 3), que se repete ate o tanque encher: buscar gelo, levar ao
 // foguete e voltar a base para recarregar o ar
