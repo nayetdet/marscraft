@@ -211,8 +211,20 @@ export const MAV_CONFIG = {
   OXYGEN_KG_PER_DAY: 0.84,
 };
 
+// Ritmo do jogo (issue #81). Escala de jogo, nao e dado real.
+// O primeiro sol e mais brando: os consumos passivos da base (ar, agua e comida da tripulacao,
+// trabalho nas estacoes, aquecedor e luz da estufa) comecam em FIRST_SOL_DEMAND_FACTOR do normal
+// e sobem em linha reta ate 100 % ao longo de RAMP_SOLS sols depois do primeiro.
+// A producao nao muda: so o que a base gasta parada.
+export const PACING_CONFIG = {
+  FIRST_SOL_DEMAND_FACTOR: 0.6,
+  RAMP_SOLS: 1,
+  HOURS_PER_SOL: 24,
+};
+
 // Tripulacao NPC (issue #47). Taxas por hora de jogo (1 hora de jogo = 100 s reais).
 // Agua : comida por tripulante segue o NASA BVAD (~3 kg : ~1,8 kg por pessoa/dia).
+// Issue #81: ar, agua e comida cortados em 40-50 % (eram 1,5 / 0,5 / 0,3), mantendo a proporcao.
 // O O2 do tripulante e pago em energia, como o O2 do jogador no habitat (reciclagem + MOXIE).
 export const CREW_CONFIG = {
   MAX_CREW: 3,
@@ -227,9 +239,9 @@ export const CREW_CONFIG = {
   ],
   SPECIALIST_EFFORT: 1.5,
   SUIT_COLORS: [0xf97316, 0x22c55e, 0x3b82f6],
-  OXYGEN_ENERGY_PER_HOUR: 1.5, // % de bateria por tripulante
-  WATER_L_PER_HOUR: 0.5,
-  FOOD_PER_HOUR: 0.3, // racoes
+  OXYGEN_ENERGY_PER_HOUR: 0.75, // % de bateria por tripulante
+  WATER_L_PER_HOUR: 0.3,
+  FOOD_PER_HOUR: 0.18, // racoes
   START_FOOD: 15,
   MAX_FOOD: 40,
   // Horas seguidas sem ar, agua ou comida ate o tripulante ficar de repouso na enfermaria.
@@ -254,10 +266,11 @@ export const CREW_CONFIG = {
 export const UTILITY_CONFIG = {
   // B2 aquecedor: gasta mais a noite, quando faz mais frio la fora e os paineis nao geram.
   // [Ref] InSight: media ~-62 C, minima -97,7 C (Elysium Planitia). Potencia em escala de jogo.
-  HEATER_DAY_PER_HOUR: 1,
-  HEATER_NIGHT_PER_HOUR: 4,
-  // Luz de cultivo da estufa: so gasta com a luz ligada (escala de jogo)
-  GREENHOUSE_LIGHTS_PER_HOUR: 2.5,
+  // Issue #81: cortado pela metade (era 1 / 4) para a bateria cheia aguentar a noite.
+  HEATER_DAY_PER_HOUR: 0.5,
+  HEATER_NIGHT_PER_HOUR: 2,
+  // Luz de cultivo da estufa: so gasta com a luz ligada (escala de jogo; era 2,5 antes da #81)
+  GREENHOUSE_LIGHTS_PER_HOUR: 1.25,
   // B3 cozinha: racao da despensa (compartilhada com a tripulacao) x refeicao fresca da estufa
   RATION_FOOD: 6,
   MEAL_WATER_L: 1,
@@ -294,14 +307,14 @@ export const COMMS_CONFIG = {
 };
 
 export const STATION_CONFIG = {
-  WORK_ENERGY_PER_HOUR: 2, // % de bateria por estacao operada
+  WORK_ENERGY_PER_HOUR: 1, // % de bateria por estacao operada (era 2 antes da #81)
   DEGRADE_PER_HOUR: 0.08, // sem operador a estacao estraga devagar
   REPAIR_PER_HOUR: 0.5,
   LOW_HEALTH: 0.5,
   GREENHOUSE_FOOD_PER_HOUR: 1.2,
-  // Litros do tanque que a estufa da tripulacao usa por racao (escala de jogo). Abaixo disso
-  // no tanque ela para: a ultima agua fica para beber.
-  GREENHOUSE_WATER_L_PER_FOOD: 1,
+  // Litros do tanque que a estufa da tripulacao usa por racao (escala de jogo; era 1 antes da
+  // #81). Abaixo disso no tanque ela para: a ultima agua fica para beber.
+  GREENHOUSE_WATER_L_PER_FOOD: 0.5,
   // [Ref] O sistema de recuperacao de agua da ISS recupera ~98% da agua (NASA, 2023)
   WATER_RECOVERY: 0.98,
   WATER_RECYCLE_L_PER_HOUR: 3,

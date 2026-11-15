@@ -116,16 +116,16 @@ export class CrewManager {
     for (const member of this.members) {
       const lacking = [];
 
-      const energyNeed = CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR * this.oxygenCostMultiplier() * h;
+      const energyNeed = CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR * this.oxygenCostMultiplier() * h * (base.demandFactor ?? 1);
       if (base.battery.drain(energyNeed) + 1e-9 < energyNeed) lacking.push('air');
 
-      const waterNeed = CREW_CONFIG.WATER_L_PER_HOUR * h;
+      const waterNeed = CREW_CONFIG.WATER_L_PER_HOUR * h * (base.demandFactor ?? 1);
       const water = Math.min(base.water, waterNeed);
       base.water -= water;
       base.graywater += water;
       if (water + 1e-9 < waterNeed) lacking.push('water');
 
-      const foodNeed = CREW_CONFIG.FOOD_PER_HOUR * h;
+      const foodNeed = CREW_CONFIG.FOOD_PER_HOUR * h * (base.demandFactor ?? 1);
       const food = Math.min(base.food, foodNeed);
       base.food -= food;
       if (food + 1e-9 < foodNeed) lacking.push('food');

@@ -38,6 +38,19 @@ describe('station maintenance', () => {
     expect(base.battery.charge).toBeCloseTo(100 - STATION_CONFIG.WORK_ENERGY_PER_HOUR);
   });
 
+  it('on the gentle first sol the work costs less power but repairs and produces the same (issue #81)', () => {
+    const normal = new Greenhouse();
+    const gentle = new Greenhouse();
+    normal.health = gentle.health = 0.2;
+    const a = makeBase();
+    const b = makeBase({ demandFactor: 0.6 });
+    normal.update(1, 1, a);
+    gentle.update(1, 1, b);
+    expect(100 - b.battery.charge).toBeCloseTo(0.6 * STATION_CONFIG.WORK_ENERGY_PER_HOUR);
+    expect(gentle.health).toBeCloseTo(normal.health);
+    expect(b.food).toBeCloseTo(a.food);
+  });
+
   it('a specialist (more effort) repairs and produces faster', () => {
     const normal = new Greenhouse();
     const expert = new Greenhouse();

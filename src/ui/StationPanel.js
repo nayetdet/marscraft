@@ -622,7 +622,8 @@ export class StationPanel {
     const used = loads.reduce((sum, [, rate, on]) => sum + (on ? rate : 0), 0);
     return `BATTERY: ${Math.round(mission.battery.percent)}%\n` +
       `SOLAR PANELS NOW: +${mission.chargeRate.toFixed(1)}%/h ${utility.isNight ? '(night: no sun)' : ''}\n` +
-      `USING ABOUT: -${used.toFixed(1)}%/h (plus your own oxygen)\n\n` +
+      `USING ABOUT: -${used.toFixed(1)}%/h (plus your own oxygen)\n` +
+      `${utility.demandFactor < 1 ? `EASY START: the base uses ${Math.round(utility.demandFactor * 100)}% of its normal power for now. It will need more each sol.\n` : ''}\n` +
       `WHERE THE POWER GOES:\n${lines.join('\n')}\n\n` +
       `HEATER: ${utility.heaterOn ? 'ON' : 'OFF'}${utility.cold ? '   FREEZING! Pipes and plants stopped.' : ''}\n\n` +
       'Mars nights get down to about -98 C (NASA InSight). At night the panels make nothing and the heater needs more power. ' +

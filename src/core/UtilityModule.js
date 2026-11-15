@@ -18,10 +18,17 @@ export class UtilityModule {
     this.waterFilter = 100;
     this.cold = false; // aquecedor desligado de noite: canos e estufa congelam
     this.heaterDrawPerHour = 0;
+    // Ritmo (issue #81): fracao do consumo passivo normal (src/mission/pacing.js)
+    this.demandFactor = 1;
   }
 
   get isNight() {
     return this.mission.chargeRate <= 0;
+  }
+
+  // % de bateria por hora de jogo que o aquecedor gasta agora (mais a noite)
+  get heaterRatePerHour() {
+    return (this.isNight ? U.HEATER_NIGHT_PER_HOUR : U.HEATER_DAY_PER_HOUR) * this.demandFactor;
   }
 
   // Taxa real de recuperacao de agua: 98 % com filtro bom, menos com filtro gasto
@@ -34,7 +41,7 @@ export class UtilityModule {
     this.waterFilter = Math.max(0, this.waterFilter - U.FILTER_WEAR_PER_HOUR * hours);
     this.heaterDrawPerHour = 0;
     if (this.heaterOn) {
-      const rate = this.isNight ? U.HEATER_NIGHT_PER_HOUR : U.HEATER_DAY_PER_HOUR;
+      const rate = this.heaterRatePerHour;
       const need = rate * hours;
       const got = this.mission.battery.drain(need);
       this.heaterDrawPerHour = rate;
@@ -68,18 +75,19 @@ export class UtilityModule {
   // % de bateria que a luz da estufa gasta em `seconds` segundos reais. E o unico lugar que
   // converte a taxa por hora de jogo para o relogio real (MISSION_CONFIG.GAME_HOURS_PER_SECOND).
   greenhouseLightsCost(seconds) {
-    return U.GREENHOUSE_LIGHTS_PER_HOUR * seconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND;
+    return U.GREENHOUSE_LIGHTS_PER_HOUR * this.demandFactor * seconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND;
   }
 
   // Lista de consumidores em % de bateria por hora de jogo, para o painel de distribuicao
   loads({ crewSize = 0, operatingStations = 0 } = {}) {
     const m = this.mission;
     const factoryRunning = m.factoryOn && m.iceStock > 0 && m.propellant < 100;
+    const f = this.demandFactor; // o painel mostra o que a base gasta de verdade agora
     return [
-      ['Crew oxygen', crewSize * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR, true],
-      ['Crew at work', operatingStations * STATION_CONFIG.WORK_ENERGY_PER_HOUR, true],
-      ['Greenhouse lights', U.GREENHOUSE_LIGHTS_PER_HOUR, this.greenhouseLightsOn],
-      ['Heater', this.isNight ? U.HEATER_NIGHT_PER_HOUR : U.HEATER_DAY_PER_HOUR, this.heaterOn],
+      ['Crew oxygen', crewSize * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR * f, true],
+      ['Crew at work', operatingStations * STATION_CONFIG.WORK_ENERGY_PER_HOUR * f, true],
+      ['Greenhouse lights', U.GREENHOUSE_LIGHTS_PER_HOUR * f, this.greenhouseLightsOn],
+      ['Heater', this.heaterRatePerHour, this.heaterOn],
       ['Radiation shield', ENERGY_CONFIG.SHIELD_DRAIN_PER_HOUR, m.shieldOn],
       ['Fuel factory', factoryRunning ? ENERGY_CONFIG.ISRU_DRAIN_PER_HOUR : 0, m.factoryOn],
     ];

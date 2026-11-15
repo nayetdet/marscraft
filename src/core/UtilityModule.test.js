@@ -53,7 +53,6 @@ describe('north module (issue #56, part B)', () => {
     const { utility } = setup();
     const loads = utility.loads({ crewSize: 2, operatingStations: 1 });
     const lights = loads.find(([name]) => name === 'Greenhouse lights');
-    expect(lights[1]).toBe(2.5);
     expect(lights[1]).toBe(U.GREENHOUSE_LIGHTS_PER_HOUR);
     // O que o motor desconta em 1 hora de jogo (100 s reais) e o que o painel mostra
     const secondsPerGameHour = 1 / MISSION_CONFIG.GAME_HOURS_PER_SECOND;
@@ -83,6 +82,21 @@ describe('north module (issue #56, part B)', () => {
     // O Sol volta e a bateria carrega de novo; os sistemas podem ser religados
     mission.battery.add(30);
     expect(utility.toggle('heater')).toMatch(/Heater ON/);
+  });
+
+  it('on the gentle first sol the base draws less and the panel shows what it really draws (issue #81)', () => {
+    const { utility, mission } = setup({ night: true });
+    utility.demandFactor = 0.6;
+    utility.update(1);
+    expect(mission.battery.charge).toBeCloseTo(80 - 0.6 * U.HEATER_NIGHT_PER_HOUR);
+    const loads = Object.fromEntries(utility.loads({ crewSize: 2, operatingStations: 2 }).map(([name, rate]) => [name, rate]));
+    expect(loads.Heater).toBeCloseTo(0.6 * U.HEATER_NIGHT_PER_HOUR);
+    expect(loads['Greenhouse lights']).toBeCloseTo(0.6 * U.GREENHOUSE_LIGHTS_PER_HOUR);
+    expect(loads['Crew oxygen']).toBeCloseTo(0.6 * 2 * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR);
+    expect(loads['Crew at work']).toBeCloseTo(0.6 * 2 * STATION_CONFIG.WORK_ENERGY_PER_HOUR);
+    expect(utility.greenhouseLightsCost(100)).toBeCloseTo(0.6 * U.GREENHOUSE_LIGHTS_PER_HOUR);
+    // As escolhas do jogador custam o mesmo: so o consumo passivo e mais brando
+    expect(loads['Radiation shield']).toBe(12.5);
   });
 
   it('the 3D printer spends regolith and power to fix the most worn station', () => {

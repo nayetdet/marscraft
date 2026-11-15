@@ -17,6 +17,8 @@ export function createBaseStock({ survival, mission }) {
     frozen: false,
     greenhouseDark: false,
     waterRecovery: STATION_CONFIG.WATER_RECOVERY,
+    // Ritmo (issue #81): fracao do consumo passivo normal; o motor atualiza a cada frame
+    demandFactor: 1,
     get playerDoseRate() { return mission.doseRate; },
     get playerHealth() { return survival.health; },
     playerHeal: 0,
