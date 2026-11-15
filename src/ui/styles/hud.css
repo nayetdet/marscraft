@@ -1,3 +1,17 @@
+/* Shared HUD palette: calm resource colors, with warm accents for attention. */
+:root {
+  --hud-panel: rgba(24, 29, 35, 0.92);
+  --hud-border: #59636a;
+  --hud-text: #f1eee5;
+  --hud-muted: #c3c9c7;
+  --hud-accent: #ffc94a;
+  --hud-blue: #65d3ed;
+  --hud-water: #58b8ee;
+  --hud-good: #78d99b;
+  --hud-warn: #ffc451;
+  --hud-danger: #ff6860;
+}
+
 .hud {
   position: fixed;
   inset: 0;
@@ -498,13 +512,13 @@
   width: min(360px, calc(100vw - 32px));
   padding: 8px 12px 9px;
   text-align: center;
-  background: rgba(16, 4, 16, 0.86);
-  border: 2px solid #1a031a;
-  box-shadow: inset 0 0 0 2px #4f1f8c, 3px 3px 0 rgba(0, 0, 0, 0.45);
+  background: var(--hud-panel);
+  border: 2px solid #11171b;
+  box-shadow: inset 0 0 0 2px var(--hud-border), 3px 3px 0 rgba(0, 0, 0, 0.45);
 }
 .airlock-progress.hidden { display: none; }
 .airlock-progress.warn { box-shadow: inset 0 0 0 2px #c9a227, 3px 3px 0 rgba(0, 0, 0, 0.45); }
-.airlock-progress-title { font-size: 13px; color: #cfcfcf; letter-spacing: 1px; text-shadow: 1px 1px 0 #000; }
+.airlock-progress-title { font-size: 13px; color: var(--hud-muted); letter-spacing: 1px; text-shadow: 1px 1px 0 #000; }
 .airlock-progress-track { height: 12px; margin: 6px 0; background: #2a2a2a; border: 2px solid #000; position: relative; }
 .airlock-progress-track::after {
   content: '';
@@ -512,12 +526,12 @@
   inset: 0;
   background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), #000 calc(10% - 2px) 10%);
 }
-.airlock-progress-track i { display: block; height: 100%; width: 0; background: #7cfc00; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
-.airlock-progress.warn .airlock-progress-track i { background: #ffd23f; }
+.airlock-progress-track i { display: block; height: 100%; width: 0; background: var(--hud-good); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
+.airlock-progress.warn .airlock-progress-track i { background: var(--hud-warn); }
 .airlock-progress-text { font-size: 13px; line-height: 1.3; color: #ececec; text-shadow: 1px 1px 0 #000; }
-.airlock-progress.warn .airlock-progress-text { color: #ffd23f; }
+.airlock-progress.warn .airlock-progress-text { color: var(--hud-warn); }
 .airlock-progress.clean { box-shadow: inset 0 0 0 2px #2f8fd8, 3px 3px 0 rgba(0, 0, 0, 0.45); }
-.airlock-progress.clean .airlock-progress-track i { background: #6fd3ff; }
+.airlock-progress.clean .airlock-progress-track i { background: var(--hud-blue); }
 .airlock-progress.clean .airlock-progress-text { color: #9fe3ff; }
 
 /* Parte Inferior da HUD (Estilo Minecraft Survival). margin-top: auto prende a area no rodape
@@ -697,9 +711,9 @@
 
 .base-panel,
 .mission-alert {
-  background: rgba(16, 4, 16, 0.86);
-  border: 2px solid #1a031a;
-  box-shadow: inset 0 0 0 2px #4f1f8c, 3px 3px 0 rgba(0, 0, 0, 0.45);
+  background: var(--hud-panel);
+  border: 2px solid #11171b;
+  box-shadow: inset 0 0 0 2px var(--hud-border), 3px 3px 0 rgba(0, 0, 0, 0.45);
 }
 
 .base-panel {
@@ -727,7 +741,7 @@
 .res-trend { width: 12px; height: 12px; }
 .res-icon svg, .res-trend svg, .alert-icon svg { display: block; width: 100%; height: 100%; }
 
-.res-name { font-size: 12px; color: #cfcfcf; letter-spacing: 0.5px; text-shadow: 1px 1px 0 #000; }
+.res-name { font-size: 12px; color: var(--hud-muted); letter-spacing: 0.5px; text-shadow: 1px 1px 0 #000; }
 .res-value { font-size: 15px; text-align: right; text-shadow: 2px 2px 0 #000; }
 
 /* Barra em 10 blocos, como as barras do Minecraft */
@@ -744,14 +758,14 @@
   inset: 0;
   background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), #000 calc(10% - 1px) 10%);
 }
-.res-fill { display: block; height: 100%; width: 0; background: #f2d43d; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
+.res-fill { display: block; height: 100%; width: 0; background: var(--hud-accent); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
 
 /* Radiacao como semaforo de 3 niveis */
 .res-levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; height: 10px; }
 .res-levels i { background: #2a2a2a; border: 1px solid #000; }
-.res-levels i.on.l1 { background: #7cfc00; }
-.res-levels i.on.l2 { background: #ffd23f; }
-.res-levels i.on.l3 { background: #ff4b4b; }
+.res-levels i.on.l1 { background: var(--hud-good); }
+.res-levels i.on.l2 { background: var(--hud-warn); }
+.res-levels i.on.l3 { background: var(--hud-danger); }
 
 .res-key {
   width: 14px;
@@ -768,23 +782,23 @@
 .res-key.on { color: #ffffff; background: #2f8fd8; }
 
 /* Cores por estado */
-#res-power .res-value { color: #f2d43d; }
-#res-power.warn .res-fill { background: #ff9f1c; }
-#res-power.warn .res-value { color: #ff9f1c; }
-#res-power.danger .res-fill { background: #ff4b4b; }
+#res-power .res-value { color: var(--hud-accent); }
+#res-power.warn .res-fill { background: var(--hud-warn); }
+#res-power.warn .res-value { color: var(--hud-warn); }
+#res-power.danger .res-fill { background: var(--hud-danger); }
 #res-power.danger .res-value,
-#res-power.danger .res-icon { color: #ff4b4b; animation: mission-blink 1s steps(2, end) infinite; }
-.res-trend.up { color: #7cfc00; }
-.res-trend.down { color: #ff6b6b; }
+#res-power.danger .res-icon { color: var(--hud-danger); animation: mission-blink 1s steps(2, end) infinite; }
+.res-trend.up { color: var(--hud-good); }
+.res-trend.down { color: var(--hud-danger); }
 
-#res-water .res-icon, #res-water .res-value { color: #4aa8ff; }
-#res-water .res-fill { background: #3b8fe0; }
-#res-air .res-icon, #res-air .res-value { color: #9fe7ff; }
-#res-air .res-fill { background: #8fdcf2; }
-#res-water.warn .res-value, #res-air.warn .res-value { color: #ffd23f; }
-#res-water.warn .res-fill, #res-air.warn .res-fill { background: #ffd23f; }
-#res-water.danger .res-value, #res-air.danger .res-value { color: #ff4b4b; animation: mission-blink 1s steps(2, end) infinite; }
-#res-water.danger .res-fill, #res-air.danger .res-fill { background: #ff4b4b; }
+#res-water .res-icon, #res-water .res-value { color: var(--hud-water); }
+#res-water .res-fill { background: var(--hud-water); }
+#res-air .res-icon, #res-air .res-value { color: var(--hud-blue); }
+#res-air .res-fill { background: var(--hud-blue); }
+#res-water.warn .res-value, #res-air.warn .res-value { color: var(--hud-warn); }
+#res-water.warn .res-fill, #res-air.warn .res-fill { background: var(--hud-warn); }
+#res-water.danger .res-value, #res-air.danger .res-value { color: var(--hud-danger); animation: mission-blink 1s steps(2, end) infinite; }
+#res-water.danger .res-fill, #res-air.danger .res-fill { background: var(--hud-danger); }
 .res-trend.dry { color: #c7743a; animation: mission-blink 1s steps(2, end) infinite; }
 
 /* "+12 L" / "-2 L" saindo da linha da agua, para a esquerda do painel */
@@ -801,7 +815,7 @@
 }
 .res-delta.show { animation: res-delta 1.8s steps(12) forwards; }
 .res-delta.up { color: #6fc3ff; }
-.res-delta.down { color: #ff8a8a; }
+.res-delta.down { color: var(--hud-danger); }
 @keyframes res-delta {
   0% { opacity: 1; transform: translateY(-50%); }
   70% { opacity: 1; transform: translateY(-140%); }
@@ -811,17 +825,17 @@
   .res-delta.show { animation: none; opacity: 1; }
 }
 
-#res-radiation.ok .res-icon, #res-radiation.ok .res-value { color: #7cfc00; }
-#res-radiation.warn .res-icon, #res-radiation.warn .res-value { color: #ffd23f; }
-#res-radiation.danger .res-icon, #res-radiation.danger .res-value { color: #ff4b4b; animation: mission-blink 1s steps(2, end) infinite; }
-#res-radiation.shield .res-icon, #res-radiation.shield .res-value { color: #6fd3ff; }
+#res-radiation.ok .res-icon, #res-radiation.ok .res-value { color: var(--hud-good); }
+#res-radiation.warn .res-icon, #res-radiation.warn .res-value { color: var(--hud-warn); }
+#res-radiation.danger .res-icon, #res-radiation.danger .res-value { color: var(--hud-danger); animation: mission-blink 1s steps(2, end) infinite; }
+#res-radiation.shield .res-icon, #res-radiation.shield .res-value { color: var(--hud-blue); }
 #res-radiation.shield .res-levels i { background: #1d4f73; }
 
 #res-rocket .res-icon { color: #e8e8e8; }
-#res-rocket .res-fill { background: #cfcfcf; }
+#res-rocket .res-fill { background: var(--hud-muted); }
 #res-rocket .res-value { color: #e8e8e8; }
-#res-rocket.ok .res-icon, #res-rocket.ok .res-value { color: #7cfc00; }
-#res-rocket.ok .res-fill { background: #7cfc00; }
+#res-rocket.ok .res-icon, #res-rocket.ok .res-value { color: var(--hud-good); }
+#res-rocket.ok .res-fill { background: var(--hud-good); }
 
 /* Alertas (estilo Oxygen Not Included): titulo curto, o que fazer, contagem e fonte do dado */
 .mission-alerts { display: flex; flex-direction: column; gap: 6px; }
@@ -838,10 +852,10 @@
 .mission-alert.ok { box-shadow: inset 0 0 0 2px #4caf2a, 3px 3px 0 rgba(0, 0, 0, 0.45); }
 
 .alert-icon { flex: 0 0 26px; width: 26px; height: 26px; }
-.mission-alert.warn .alert-icon, .mission-alert.warn .alert-title { color: #ffd23f; }
+.mission-alert.warn .alert-icon, .mission-alert.warn .alert-title { color: var(--hud-warn); }
 .mission-alert.danger .alert-icon, .mission-alert.danger .alert-title { color: #ff5555; }
 .mission-alert.danger .alert-title { animation: mission-blink 1s steps(2, end) infinite; }
-.mission-alert.ok .alert-icon, .mission-alert.ok .alert-title { color: #7cfc00; }
+.mission-alert.ok .alert-icon, .mission-alert.ok .alert-title { color: var(--hud-good); }
 
 .alert-body { flex: 1; min-width: 0; }
 .alert-title { font-size: 14px; text-shadow: 2px 2px 0 #000; }
@@ -849,7 +863,7 @@
 .alert-timer { margin-top: 6px; height: 6px; background: #2a2a2a; border: 1px solid #000; }
 .alert-timer.hidden { display: none; }
 .alert-timer i { display: block; height: 100%; width: 0; background: currentColor; }
-.mission-alert.warn .alert-timer { color: #ffd23f; }
+.mission-alert.warn .alert-timer { color: var(--hud-warn); }
 .mission-alert.danger .alert-timer { color: #ff5555; }
 .alert-source { margin-top: 5px; font-size: 10px; line-height: 1.3; color: #a9a9a9; text-shadow: none; }
 .alert-source:empty { display: none; }
@@ -1717,9 +1731,18 @@
 }
 
 /* Fluxo liquido da bateria ao lado do nome POWER (issue #85) */
-.res-rate { font-size: 10px; color: #cfcfcf; }
-.res-rate.up { color: #7cfc00; }
-.res-rate.down { color: #ff8a8a; }
+.res-rate { font-size: 10px; color: var(--hud-muted); }
+.res-rate.up { color: var(--hud-good); }
+.res-rate.down { color: var(--hud-danger); }
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
   .res-rate { font-size: 8px; }
 }
+
+/* Keep resource glyphs familiar while the surrounding HUD stays subdued. */
+#res-water .res-icon { color: #4aa8ff; }
+#res-air .res-icon { color: #9fe7ff; }
+#res-radiation.ok .res-icon { color: #7cfc00; }
+#res-radiation.warn .res-icon { color: #ffd23f; }
+#res-radiation.danger .res-icon, #res-power.danger .res-icon { color: #ff4b4b; }
+#res-radiation.shield .res-icon { color: #6fd3ff; }
+#res-rocket.ok .res-icon { color: #7cfc00; }

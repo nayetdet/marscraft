@@ -402,10 +402,12 @@ export class GameEngine {
   _interact() {
     const target = this._getInteraction();
     if (!target) return;
-    let message;
     if (target.type === 'info') { this.hud.showToast(target.text(this._baseState()), 8000); return; }
     if (target.type === 'basket') { this.hud.showToast(this.stations.collectBasket(target.cropType, this.survival)); return; }
-    if (target.type === 'door') message = this.airlock.request(target.door, this.player.pos);
+    if (target.type === 'door') {
+      this.airlock.request(target.door, this.player.pos);
+      return;
+    }
     else if (target.type === 'treadmill' || target.type === 'bike') {
       this.mountGym(target.type);
       return;
@@ -413,7 +415,6 @@ export class GameEngine {
       this.stationPanel.open(target.type);
       return;
     }
-    this.hud.showSystemNotice(message, 'AIRLOCK');
   }
 
   mountGym(mode) {
@@ -450,7 +451,6 @@ export class GameEngine {
     oscillator.stop(audio.currentTime + duration);
   }
 
-  // Fim da limpeza do traje no airlock: um fato real na primeira vez, aviso quando falta energia
   _onAirlockEvent(type) {
     if (type === 'door-open') {
       this.audio.playDoorOpen();
@@ -460,11 +460,6 @@ export class GameEngine {
       this.audio.playDecompression();
     } else if (type === 'manual-open') {
       this.audio.playManualCrank();
-    } else if (type === 'clean-skipped') {
-      this.hud.showSystemNotice('No power to clean your suit: Mars dust came inside with you!', 'AIRLOCK');
-    } else if (type === 'suit-cleaned' && !this._dustFactShown) {
-      this._dustFactShown = true;
-      this.hud.showSystemNotice('Suit clean! Apollo astronauts got "lunar hay fever" from dust that came inside on their suits.', 'AIRLOCK', 6000);
     }
   }
 
