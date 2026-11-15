@@ -1,5 +1,5 @@
 import { CROP_ITEM_IDS } from '../config/blockTypes.js';
-import { STATION_CONFIG as C, CROP_CONFIG } from '../config/constants.js';
+import { STATION_CONFIG as C, CROP_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.js';
 
 const RADIO_SILENT = 'Radio silent: the Sun is between Mars and Earth (solar conjunction). You must decide on your own until it passes.';
@@ -27,6 +27,8 @@ export class StationSystem {
     // Um cultivo por campo da estufa (GREENHOUSE_PLOTS). `crop` e o do campo selecionado no monitor.
     this.plots = GREENHOUSE_PLOTS.map(() => ({ crop: null }));
     this.selectedPlot = 0;
+    // Algum campo parou de crescer por falta de agua no tanque da base
+    this.cropsThirsty = false;
     this.harvestCount = 0;
     this.cropCollection = new Set();
     this.discoveryIndex = -1;
@@ -43,7 +45,8 @@ export class StationSystem {
   selectPlot(index) {
     if (this.plots[index]) this.selectedPlot = index;
   }
-  // Agua e energia para plantar `type` no campo: a receita vezes o tamanho do campo
+  // Agua (litros do tanque da base, bebidos enquanto a planta cresce) e energia (% de bateria,
+  // ao plantar) de `type` no campo: a receita vezes o tamanho do campo
   plotCost(type, plotIndex = this.selectedPlot) {
     const size = GREENHOUSE_PLOTS[plotIndex].yield;
     return { water: CROP_CONFIG[type].water * size, energy: CROP_CONFIG[type].energy * size, items: size };
@@ -57,11 +60,26 @@ export class StationSystem {
   plantedPlotCount() {
     return this.plots.filter(({ crop }) => crop).length;
   }
-  // Todos os campos crescem juntos (quem chama ja checou energia e poeira)
-  growCrops(dt) {
-    for (const { crop } of this.plots) {
-      if (crop) crop.progress = Math.min(CROP_CONFIG[crop.type].seconds, crop.progress + dt);
-    }
+  // Todos os campos crescem juntos (quem chama ja checou energia e poeira). A planta bebe do
+  // tanque da base (`tank.baseWater`) so enquanto cresce, e a maior parte dessa agua volta pelo
+  // ar e vira agua cinza (`tank.graywater`); o resto fica na comida. Com o tanque vazio o campo
+  // para de crescer ate a agua voltar.
+  growCrops(dt, tank) {
+    this.cropsThirsty = false;
+    this.plots.forEach(({ crop }, index) => {
+      if (!crop) return;
+      const recipe = CROP_CONFIG[crop.type];
+      const seconds = Math.min(dt, recipe.seconds - crop.progress);
+      if (seconds <= 0) return;
+      const need = this.plotCost(crop.type, index).water * (seconds / recipe.seconds);
+      const drunk = Math.min(need, Math.max(0, tank.baseWater));
+      if (drunk + 1e-9 < need) this.cropsThirsty = true;
+      if (drunk <= 0) return;
+      tank.baseWater -= drunk;
+      tank.graywater += drunk * WATER_SYSTEM_CONFIG.CROP_WATER_RETURN;
+      const progress = crop.progress + seconds * (drunk / need);
+      crop.progress = progress >= recipe.seconds - 1e-9 ? recipe.seconds : progress;
+    });
   }
   update(dt, inside, survival, outside = !inside) {
     if (outside) this.dirtySuit = true;
@@ -73,7 +91,8 @@ export class StationSystem {
     this.boneDensity = Math.max(0, this.boneDensity - C.FITNESS_DECAY * 1.15 * dt);
     this.muscleStrength = Math.max(0, this.muscleStrength - C.FITNESS_DECAY * dt);
     this.fitness = Math.max(0, this.fitness - C.FITNESS_DECAY * dt);
-    if (this.mission.greenhousePowered && !this.contaminated) this.growCrops(dt);
+    if (this.mission.greenhousePowered && !this.contaminated) this.growCrops(dt, survival);
+    else this.cropsThirsty = false; // parado por luz ou poeira, nao por sede
     if (inside && (this.contaminated || this.co2 >= 80)) survival.health = Math.max(0, survival.health - C.DUST_DAMAGE * dt);
     if (this.messageTimer > 0) {
       this.messageTimer = Math.max(0, this.messageTimer - dt);
@@ -141,11 +160,11 @@ export class StationSystem {
     if (!plot) return 'Unknown field.';
     if (plot.crop) return 'Harvest the current crop first.';
     const cost = this.plotCost(type, plotIndex);
-    if (survival.water < cost.water) return 'Not enough water.';
+    // A agua sai do tanque da base, nao da sede do jogador (issue #101)
+    if (survival.baseWater < cost.water) return 'Not enough water in the base tank.';
     if (!this.mission.spend(cost.energy)) return 'Not enough power.';
-    survival.water -= cost.water;
     plot.crop = { type, progress: 0 };
-    return `Planted ${type}. Growth needs power and a clean greenhouse.`;
+    return `Planted ${type}. It drinks ${cost.water} L from the base tank while it grows, and needs light and a clean greenhouse.`;
   }
   harvest(survival, spawnDrop, plotIndex = this.selectedPlot) {
     const plot = this.plots[plotIndex];

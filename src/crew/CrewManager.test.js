@@ -10,7 +10,6 @@ function makeBase(overrides = {}) {
     battery: new Battery(100),
     water: 50,
     maxWater: 100,
-    hydration: 100,
     food: 20,
     maxFood: 40,
     graywater: 0,
@@ -166,7 +165,8 @@ describe('CrewManager orders and movement', () => {
 
 describe('CrewManager alerts', () => {
   it('only a staffed station sends radio alerts, with a cooldown', () => {
-    const { crew } = makeCrew(1, { hydration: 0 });
+    // Agua que ainda da para o tripulante beber, mas nao para regar as plantas
+    const { crew } = makeCrew(1, { water: STATION_CONFIG.GREENHOUSE_WATER_L_PER_FOOD / 2 });
     crew.update(0.1, 0);
     expect(crew.drainEvents().filter((e) => e.type === 'alert')).toHaveLength(0);
 

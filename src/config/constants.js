@@ -77,7 +77,11 @@ export const WATER_SYSTEM_CONFIG = {
   ICE_CARGO_MAX: 50, // kg de gelo na caçamba do rover
   ICE_PER_DRILL: 10, // kg coletados por perfuração
   LITERS_PER_KG_ICE: 1.0, // 1 kg de gelo = 1 L de água purificada
-  GREENHOUSE_WATER_CONSUMPTION: 0.04, // L/s de irrigação na estufa
+  // Estufa (issue #101): a planta bebe do tanque so enquanto cresce e devolve quase tudo pelo ar
+  // (transpiracao), que vira agua cinza para o reciclador. So o que fica na comida sai do ciclo.
+  // [Ref] No Advanced Plant Habitat da ISS a agua transpirada e recuperada por condensacao e
+  // volta ao reservatorio (Monje et al., 2020). A fracao de 90 % e escala de jogo.
+  CROP_WATER_RETURN: 0.9,
   DRINK_AMOUNT_FROM_DISPENSER: 2.0, // L consumidos por gole no purificador da base
   ICE_CRATER_CENTER: { x: 30, z: -22 },
   ICE_DEPOT_POS: { x: 5.5, y: 9.0, z: 9.5 },
@@ -251,7 +255,9 @@ export const STATION_CONFIG = {
   REPAIR_PER_HOUR: 0.5,
   LOW_HEALTH: 0.5,
   GREENHOUSE_FOOD_PER_HOUR: 1.2,
-  GREENHOUSE_MIN_HYDRATION: 20,
+  // Litros do tanque que a estufa da tripulacao usa por racao (escala de jogo). Abaixo disso
+  // no tanque ela para: a ultima agua fica para beber.
+  GREENHOUSE_WATER_L_PER_FOOD: 1,
   // [Ref] O sistema de recuperacao de agua da ISS recupera ~98% da agua (NASA, 2023)
   WATER_RECOVERY: 0.98,
   WATER_RECYCLE_L_PER_HOUR: 3,
@@ -305,6 +311,8 @@ export const CUTSCENE_CONFIG = {
 export const GREENHOUSE_PLOT_YIELD = Object.freeze({ garden: 1, inner: 2, outer: 3 });
 
 // Design choices, not NASA agronomic measurements. Seconds are accelerated.
+// `water` = litros do tanque da base que a planta bebe ate ficar pronta, por unidade de tamanho
+// do campo (GREENHOUSE_PLOT_YIELD); `energy` = % de bateria ao plantar.
 export const CROP_CONFIG = Object.freeze({
   lettuce: { water: 1, energy: 2, seconds: 5, nutrition: 3, strategy: 'Quick snack, small harvest' },
   potato: { water: 2, energy: 3, seconds: 7, nutrition: 6, strategy: 'Balanced meal, longer wait' },

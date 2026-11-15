@@ -36,6 +36,8 @@ describe('north module (issue #56, part B)', () => {
     utility.cookMeal();
     expect(items[BLOCK_IDS.HYDRO_PLANT]).toBe(0);
     expect(survival.baseWater).toBe(10 - U.MEAL_WATER_L);
+    // A agua de cozinhar entra no ciclo, como a de lavar (issue #101)
+    expect(base.graywater).toBe(U.MEAL_WATER_L);
     expect(stations.freshFood).toBe(STATION_CONFIG.FRESH_FOOD_DURATION);
   });
 

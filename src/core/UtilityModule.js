@@ -5,7 +5,7 @@ import { CREW_CONFIG, ENERGY_CONFIG, MISSION_CONFIG, STATION_CONFIG, UTILITY_CON
 // Nenhuma acao e de graca: tudo cobra energia, agua, comida da despensa ou regolito.
 //   B1/B2 energia e aquecimento: aquecedor, luz da estufa e corte de carga
 //   B3 cozinha: racao (acaba, e a tripulacao come da mesma despensa) x refeicao fresca
-//   B4 banheiro: lavar vira agua cinza; o filtro do processador se gasta
+//   B4 banheiro: lavar e cozinhar viram agua cinza; o filtro do processador se gasta
 //   B5 oficina: impressora 3D usa regolito para consertar estacoes
 export class UtilityModule {
   constructor({ mission, survival, stations, base }) {
@@ -102,6 +102,7 @@ export class UtilityModule {
     if (!this.mission.battery.spend(U.MEAL_POWER)) return 'Not enough power to cook.';
     s.removeItems(BLOCK_IDS.HYDRO_PLANT, 1);
     s.baseWater -= U.MEAL_WATER_L;
+    this.base.graywater += U.MEAL_WATER_L;
     s.food = s.maxStat;
     s.health = Math.min(s.maxStat, s.health + U.MEAL_HEAL);
     this.stations.freshFood = STATION_CONFIG.FRESH_FOOD_DURATION;

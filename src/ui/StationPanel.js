@@ -160,14 +160,18 @@ export class StationPanel {
       const dt = Math.min(0.05, (now - this._lastGhTick) / 1000);
       this._lastGhTick = now;
 
-      const { expedition: m, stations: s, utility } = this.engine;
+      const { expedition: m, stations: s, survival, utility } = this.engine;
       if (s.hasGrowingCrops()) {
         const lit = utility.greenhouseLightsOn && !utility.cold;
         m.greenhousePowered = lit && m.spend(utility.greenhouseLightsCost(dt));
         const readyBefore = s.readyPlotCount();
-        if (m.greenhousePowered && !s.contaminated) s.growCrops(dt);
+        const thirstyBefore = s.cropsThirsty;
+        if (m.greenhousePowered && !s.contaminated) s.growCrops(dt, survival);
+        else s.cropsThirsty = false;
         this.engine.updateCropVisuals?.();
-        if (s.readyPlotCount() !== readyBefore) {
+        if (s.cropsThirsty !== thirstyBefore) {
+          this.render();
+        } else if (s.readyPlotCount() !== readyBefore) {
           this._playGymSound(440, 0.14, 660);
           this.render();
         } else {
@@ -182,10 +186,12 @@ export class StationPanel {
 
   // Atualiza so os numeros que mudam a cada instante, sem redesenhar o painel (nao atrapalha o clique)
   _refreshGreenhouseProgress() {
-    const { expedition: m, stations: s } = this.engine;
+    const { expedition: m, stations: s, survival } = this.engine;
     const root = this.greenhouseContainer;
     if (!root) return;
     const selected = plotStatus(s.plots[s.selectedPlot]);
+    const waterEl = root.querySelector('#gh-res-water');
+    if (waterEl) waterEl.textContent = `${Math.floor(survival.baseWater)} L`;
     const fillEl = root.querySelector('#gh-progress-fill');
     if (fillEl) fillEl.style.width = `${selected.pct}%`;
     const pctEl = root.querySelector('#gh-progress-pct');
@@ -652,7 +658,8 @@ export class StationPanel {
       `GRAY WATER (used, waiting to clean): ${crewStock.graywater.toFixed(1)} L\n` +
       `WATER FILTER: ${Math.round(utility.waterFilter)}%\n` +
       `WATER WE GET BACK: ${Math.round(utility.waterRecovery * 100)}%${utility.cold ? '   (PIPES FROZEN)' : ''}\n\n` +
-      'Drink -> use -> recycle -> drink again. The recycler cleans used water, even sweat and urine, so the crew can drink it again. ' +
+      'Drink -> use -> recycle -> drink again. Water you drink, cook with or wash with becomes gray water, and so does the water the plants breathe out. ' +
+      'The recycler cleans it, even sweat and urine, so everyone can drink it again, but only while a crew member runs it. ' +
       'A dirty filter gets back less water.\n' +
       "Real case: the Space Station gets back 98% of its water. Yesterday's coffee becomes tomorrow's coffee!";
   }
@@ -703,14 +710,16 @@ export class StationPanel {
     const pct = crop ? Math.floor(crop.progress / recipe.seconds * 100) : 0;
     const bar = '[' + '#'.repeat(Math.floor(pct / 10)) + '.'.repeat(10 - Math.floor(pct / 10)) + ']';
     const study = plantDiscovery(s.discoveryIndex);
-    const state = !crop ? 'Pick your next crop!' : pct === 100 ? 'READY! Harvest your meal and open a science discovery.' : s.contaminated ? 'PAUSED: clean the habitat first.' : !m.greenhousePowered ? 'PAUSED: waiting for power.' : 'Growing! Close this panel to keep the garden running.';
+    const state = !crop ? 'Pick your next crop!' : pct === 100 ? 'READY! Harvest your meal and open a science discovery.' : s.contaminated ? 'PAUSED: clean the habitat first.' : !m.greenhousePowered ? 'PAUSED: waiting for power.' : s.cropsThirsty ? 'PAUSED: the base water tank is empty.' : 'Growing! Close this panel to keep the garden running.';
     return [
       'GARDEN CHALLENGE: harvest all 3 crops! ' + s.cropCollection.size + '/3',
       'Collected: ' + ([...s.cropCollection].join(', ') || 'none yet') + ' | Harvests: ' + s.harvestCount,
-      '', 'WATER: ' + v.water.toFixed(1) + ' | POWER: ' + Math.round(m.energy) + '%',
+      '', 'BASE WATER TANK: ' + Math.floor(v.baseWater) + ' L | POWER: ' + Math.round(m.energy) + '%',
       crop ? crop.type.toUpperCase() + ' ' + bar + ' ' + pct + '%' : 'BED: EMPTY', state,
       '', ...Object.entries(CROP_CONFIG).map(([name, r]) => name.toUpperCase() + ': ' + r.strategy + '.'),
-      '', 'Planting uses water and shared power. Harvest drops a food item: pick it up and use it to eat.',
+      '', 'Plants drink from the base water tank while they grow, and planting uses shared power.',
+      'Most of that water comes back: plants breathe it out and the recycler cleans it again.',
+      'Harvest drops a food item: pick it up and use it to eat.',
       'Times, yields and costs below are game rules, not measured crop requirements.',
       '', 'FIELD NOTEBOOK — Real NASA data from ' + formatDateDMY(plantResearch.retrieved.slice(0, 10)),
       study ? study.id + ': ' + study.title : 'Harvest a crop to discover a real space-biology study!',
@@ -731,7 +740,7 @@ export class StationPanel {
 
     const cardsHtml = Object.entries(CROP_CONFIG).map(([type, r]) => {
       const cost = s.plotCost(type);
-      const byWater = Math.floor(v.water / cost.water);
+      const byWater = Math.floor(v.baseWater / cost.water);
       const byPower = Math.floor(m.energy / cost.energy);
       const canBuy = Math.max(0, Math.min(byWater, byPower));
       const isThisCrop = crop?.type === type;
@@ -765,9 +774,9 @@ export class StationPanel {
           <img class="gh-crop-art" src="${this.cropIcons[type]}" alt="${type}" />
           <h3>${type.toUpperCase()}</h3>
           <span class="gh-food-gain">${GH_ICONS.food} +${r.nutrition}${cost.items > 1 ? ` x${cost.items}` : ''}</span>
-          <span class="gh-cost">${GH_ICONS.water} ${cost.water} ${GH_ICONS.power} ${cost.energy}</span>
+          <span class="gh-cost">${GH_ICONS.water} ${cost.water} L ${GH_ICONS.power} ${cost.energy}%</span>
           <div class="gh-can-buy ${canBuy > 0 ? 'ok' : 'zero'}">
-            ${canBuy > 0 ? 'You can plant it' : 'Not enough water or power'}
+            ${canBuy > 0 ? 'You can plant it' : 'Not enough tank water or power'}
           </div>
           ${bottomHtml}
         </article>`;
@@ -781,12 +790,13 @@ export class StationPanel {
 
     this.greenhouseContainer.innerHTML = `
       <div class="gh-top-bar">
-        <div class="gh-res-pill water" title="Water">${GH_ICONS.water} <strong>${Math.floor(v.water)}</strong></div>
+        <div class="gh-res-pill water" title="Base water tank">${GH_ICONS.water} <strong id="gh-res-water">${Math.floor(v.baseWater)} L</strong></div>
         <div class="gh-res-pill power" title="Power">${GH_ICONS.power} <strong id="gh-res-power">${Math.round(m.energy)}%</strong></div>
         ${s.contaminated ? `<button type="button" class="mc-btn gh-clean-btn" data-action="cleanBase">CLEAN</button>` : ''}
         <details class="gym-learn"><summary aria-label="NASA info" title="NASA info">i</summary><p>${study ? `${study.id}: ${study.explanation}` : `Real NASA OSDR data (${formatDateDMY(plantResearch.retrieved.slice(0, 10))}).`}<br/>${ghLinks}</p></details>
       </div>
-      <p class="gh-time-note">Plants grow faster in this game. NASA grew salad plants in 28 days on the space station.</p>
+      <p class="gh-time-note">Plants drink from the base water tank while they grow, then breathe most of it out. The recycler cleans that water to use again. Times, costs and harvests are game rules: NASA grew salad plants in 28 days on the Space Station.</p>
+      ${s.cropsThirsty ? '<p class="gh-time-note gh-dry" role="status">PAUSED: the base water tank is empty, so the plants stopped growing. Bring ice with the rover or recycle the used water.</p>' : ''}
       <div class="gh-body">
         <div class="gh-map-wrap">
           ${greenhouseMapSvg(s.plots, s.selectedPlot)}
@@ -794,7 +804,7 @@ export class StationPanel {
         </div>
         <div class="gh-side">
           <div class="gh-plot-title">FIELD ${plotDef.id}: ${plotDef.name.toUpperCase()}<small>${plotDef.yield > 1
-            ? `Big field: costs ${plotDef.yield}x the water and power, gives ${plotDef.yield} meals.`
+            ? `Big field: drinks ${plotDef.yield}x the water, costs ${plotDef.yield}x the power, gives ${plotDef.yield} meals.`
             : 'Small bed: 1 meal per harvest.'} ${s.plantedPlotCount()}/${s.plots.length} fields planted.</small></div>
           <div class="gh-cards">${cardsHtml}</div>
         </div>
@@ -836,7 +846,7 @@ export class StationPanel {
       console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nFILTER: ${Math.round(s.filter)}%   SCIENCE POINTS: ${s.science}\n\n${radiationStatusText(mission)}\n\n${stormStatusText(mission.storm, donkiCme.fetched)}\n\nThe NASA data is saved inside the game, it is not live. Storm length and damage are game rules.`, [['mission', 'Show mission objective'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
       power: ['LIFE SUPPORT / ECLSS', `BATTERY: ${Math.round(m.energy)}%\nCO2 FILTER: ${Math.round(s.filter)}%\nCO2: ${Math.round(s.co2)}%\n\nThe oxygen system and greenhouse need power. A worn filter lets CO2 build up.`, [['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
       greenhouse: ['MARS GARDEN / FIELD NOTEBOOK', this.gardenText(s, m, v), [
-        ...Object.entries(CROP_CONFIG).map(([type, r]) => ['plant:' + type, type.toUpperCase() + ' | ' + r.water + ' water / ' + r.energy + '% power / ' + r.seconds + 's / +' + r.nutrition + ' food']),
+        ...Object.entries(CROP_CONFIG).map(([type, r]) => ['plant:' + type, type.toUpperCase() + ' | ' + s.plotCost(type).water + ' L water / ' + s.plotCost(type).energy + '% power / ' + r.seconds + 's / +' + r.nutrition + ' food']),
         ['harvest', 'Harvest & discover NASA research'], ['cleanBase', 'Clean habitat'],
       ]],
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\nRADIATION DOSE SO FAR: ${formatDose(mission.totalDoseMsv)}\n\nIn Mars's 0.38g gravity, astronauts lose bone mineral density and muscle mass. Use the treadmill and bike in the Gym Wing!`, [['treat', 'Use medical station']]],
@@ -868,8 +878,8 @@ export class StationPanel {
       const button = document.createElement('button'); button.className = 'mc-btn'; button.dataset.action = action; button.textContent = label;
       if (this.type === 'greenhouse') {
         if (action.startsWith('plant:')) {
-          const recipe = CROP_CONFIG[action.slice(6)];
-          button.disabled = !!s.crop || v.water < recipe.water || m.energy < recipe.energy;
+          const cost = s.plotCost(action.slice(6));
+          button.disabled = !!s.crop || v.baseWater < cost.water || m.energy < cost.energy;
         }
         if (action === 'harvest') button.disabled = !s.crop || s.crop.progress < CROP_CONFIG[s.crop.type].seconds;
       }

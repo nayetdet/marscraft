@@ -1,7 +1,7 @@
-import { RADIATION_CONFIG, STATION_CONFIG } from '../config/constants.js';
+import { RADIATION_CONFIG, STATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 
 // Estacoes da base que a tripulacao opera. Sem Three.js nem DOM, para testar com Vitest.
-// `base` e o estoque compartilhado: { battery, water, maxWater, hydration, food, maxFood, graywater }
+// `base` e o estoque compartilhado: { battery, water, maxWater, food, maxFood, graywater }
 // mais o estado do comandante para a enfermaria: { playerDoseRate, playerHealth, playerHeal }.
 // Modelo de manutencao: sem operador a estacao estraga devagar (health cai); com operador ela
 // e consertada e produz, mas o trabalho gasta energia da bateria. Nenhuma ordem e de graca.
@@ -52,16 +52,28 @@ export class Greenhouse extends Station {
     super({ id: 'greenhouse', kind: 'greenhouse', name: 'greenhouse', workNode: 'greenhouse' });
   }
 
+  // As plantas da tripulacao bebem do mesmo tanque que os campos do jogador (issue #101):
+  // cada racao gasta agua, e a maior parte volta como agua cinza (transpiracao condensada).
+  hasWater(base) {
+    return base.water >= STATION_CONFIG.GREENHOUSE_WATER_L_PER_FOOD;
+  }
+
   produce(hours, base) {
-    if (base.hydration < STATION_CONFIG.GREENHOUSE_MIN_HYDRATION) return;
+    if (!this.hasWater(base)) return;
     if (base.frozen || base.greenhouseDark) return; // modulo norte: frio ou luz cortada
-    const grown = STATION_CONFIG.GREENHOUSE_FOOD_PER_HOUR * this.health * hours;
+    const perFood = STATION_CONFIG.GREENHOUSE_WATER_L_PER_FOOD;
+    const wanted = STATION_CONFIG.GREENHOUSE_FOOD_PER_HOUR * this.health * hours;
+    const grown = Math.min(wanted, Math.max(0, base.maxFood - base.food), base.water / perFood);
+    if (grown <= 0) return;
+    const water = grown * perFood;
+    base.water -= water;
+    base.graywater += water * WATER_SYSTEM_CONFIG.CROP_WATER_RETURN;
     base.food = Math.min(base.maxFood, base.food + grown);
   }
 
   problems(base) {
     const list = super.problems(base);
-    if (base.hydration < STATION_CONFIG.GREENHOUSE_MIN_HYDRATION) list.push('no-water');
+    if (!this.hasWater(base)) list.push('no-water');
     if (base.frozen) list.push('frozen');
     else if (base.greenhouseDark) list.push('lights-off');
     return list;

@@ -118,7 +118,8 @@ export class MissionHud {
     const view = missionStatus(mission, this.donkiFetched, {
       water: survival?.baseWater,
       maxWater: survival?.maxBaseWater,
-      hydration: survival?.greenhouseHydration,
+      graywater: survival?.graywater,
+      greenhouseDry: stations?.cropsThirsty,
       co2: stations?.co2,
       baseOxygen: survival?.baseOxygen,
       contaminated: stations?.contaminated,

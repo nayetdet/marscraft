@@ -609,6 +609,7 @@ body.pause-menu-open .crew-picker { display: none; }
 }
 
 .gh-time-note { color: #d4e8cf; font-size: 12px; line-height: 1.35; margin: 4px 0; }
+.gh-time-note.gh-dry { color: #fecaca; border-left: 3px solid #ef4444; padding-left: 8px; }
 
 .gh-cards {
   display: grid;
