@@ -44,9 +44,10 @@ export class MarsSkySystem {
     this.sunMesh = sunMesh;
     this.celestialGroup.add(this.sunGroup);
 
-    const { earthSystemGroup, earthMesh, moonMesh } = createEarthAndMoonSystem();
+    const { earthSystemGroup, earthMesh, earthCloudMesh, moonMesh } = createEarthAndMoonSystem();
     this.earthSystemGroup = earthSystemGroup;
     this.earthMesh = earthMesh;
+    this.earthCloudMesh = earthCloudMesh;
     this.moonMesh = moonMesh;
     this.celestialGroup.add(this.earthSystemGroup);
 
@@ -122,8 +123,13 @@ export class MarsSkySystem {
 
     this.starMaterial.opacity = THREE.MathUtils.clamp(1.0 - dayStrength * 0.65, 0.28, 0.95);
 
-    this.earthMesh.rotation.y += dt * 0.35;
+    this.earthMesh.rotation.y += dt * 0.14;
+    this.earthCloudMesh.rotation.y += dt * 0.18;
+    this.moonMesh.rotation.y += dt * 0.015;
     this.earthSystemGroup.lookAt(playerPos);
+    if (this.sunMesh.material.uniforms?.uTime) {
+      this.sunMesh.material.uniforms.uTime.value += dt;
+    }
 
     // Fobos e Deimos em altura fácil de observar no horizonte norte/leste/oeste
     const phobosAngle = this.timeOfDay * 0.55;
@@ -133,6 +139,7 @@ export class MarsSkySystem {
       -Math.abs(Math.sin(phobosAngle * 0.8)) * 240 - 60
     );
     this.phobosGroup.rotation.y += dt * 0.2;
+    this.phobosGroup.rotation.z = 0.18;
 
     const deimosAngle = this.timeOfDay * 0.2 + 1.2;
     this.deimosGroup.position.set(
@@ -140,6 +147,8 @@ export class MarsSkySystem {
       Math.abs(Math.cos(deimosAngle * 0.7)) * 105 + 65,
       -Math.abs(Math.cos(deimosAngle)) * 260 - 80
     );
+    this.deimosGroup.rotation.y += dt * 0.14;
+    this.deimosGroup.rotation.x += dt * 0.04;
   }
 
   getEarthWorldPosition(target = new THREE.Vector3()) {

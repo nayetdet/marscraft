@@ -78,7 +78,7 @@ const KID_CARD_META = {
     title: 'OUTPOST',
     stat: '-98 TO -4°C',
     pills: ['0.7% Earth air', '-98 to -4 °C outside', '6.9 µGy/h radiation'],
-    tip: 'Your Mars base! Keeps air, heat, water, and power running.',
+    tip: 'Your Mars home gives the crew air, water and power.',
   },
   habitat: {
     title: 'HABITAT',
@@ -262,18 +262,16 @@ export class ScannerHud {
 
   showCard(entry, discovery) {
     const badge = discovery.isNew
-      ? `<span class="scan-badge new">New! ${discovery.count}/${discovery.total}</span>`
-      : '<span class="scan-badge">In journal</span>';
+      ? `<span class="scan-badge new">NEW ${discovery.count}/${discovery.total}</span>`
+      : '<span class="scan-badge">FOUND</span>';
+    const message = KID_CARD_META[entry.id]?.tip ?? entry.summary;
     this.cardEl.innerHTML = `
       <div class="scan-card-head">
         <h3 class="scan-title">${escapeHtml(entry.title)}</h3>
         ${badge}
       </div>
-      <p class="scan-category">${escapeHtml(getCategoryLabel(entry.category))}</p>
-      <p class="scan-summary">${escapeHtml(entry.summary)}</p>
-      ${renderFacts(entry.facts)}
-      <p class="scan-why">Why it matters: ${escapeHtml(entry.why)}</p>
-      ${renderSourceLine(entry)}
+      <p class="scan-summary">${escapeHtml(message)}</p>
+      <p class="scan-more">More in your journal</p>
     `;
     this._slideIn(this.cardEl, CARD_DURATION_MS);
   }
