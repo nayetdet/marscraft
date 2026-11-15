@@ -45,6 +45,8 @@ export class HudManager {
     this.skyLabelsEl = document.getElementById('sky-labels');
     this.zoomOverlayEl = document.getElementById('zoom-overlay');
     this.toastEl = document.getElementById('toast');
+    this._toastQueue = [];
+    this._activeToast = null;
     this.dangerVignetteEl = document.getElementById('danger-vignette');
     this.damageSourceEl = document.getElementById('damage-source');
     this._damageSourceText = '';
@@ -286,13 +288,37 @@ export class HudManager {
     this.zoomOverlayEl.classList.toggle('is-zoomed', isZoomed);
   }
 
-  showToast(msg, durationMs = 2400) {
-    this.toastEl.textContent = msg;
-    this.toastEl.classList.add('visible');
-    clearTimeout(this._toastTimer);
-    this._toastTimer = setTimeout(() => {
+  showToast(msg, durationMs = 3500) {
+    const text = String(msg ?? '').trim();
+    if (!text || this._activeToast?.text === text || this._toastQueue.some((item) => item.text === text)) return;
+    this._toastQueue.push({ text, durationMs });
+    if (!this._activeToast) this._showNextToast();
+  }
+
+  _showNextToast() {
+    const next = this._toastQueue.shift();
+    if (!next) {
+      this._activeToast = null;
       this.toastEl.classList.remove('visible');
-    }, durationMs);
+      return;
+    }
+
+    this._activeToast = next;
+    const match = next.text.match(/^(Ana|Leo|Maya|Sam|Noor|Kai|Iris|Ravi|SYSTEM|AIRLOCK):\s*(.*)$/s);
+    this.toastEl.replaceChildren();
+    if (match) {
+      const speaker = document.createElement('span');
+      speaker.className = `mc-toast-speaker ${match[1].toLowerCase()}`;
+      speaker.textContent = `${match[1]}:`;
+      const message = document.createElement('span');
+      message.className = 'mc-toast-message';
+      message.textContent = match[2];
+      this.toastEl.append(speaker, message);
+    } else {
+      this.toastEl.textContent = next.text;
+    }
+    this.toastEl.classList.add('visible');
+    this._toastTimer = setTimeout(() => this._showNextToast(), next.durationMs);
   }
 
   showDeathScreen(survival = {}) {

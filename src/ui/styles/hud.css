@@ -531,6 +531,11 @@
 }
 
 .mc-toast {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0 5px;
+  max-width: min(90vw, 680px);
   font-size: 15px;
   color: #ffff55;
   background: rgba(0, 0, 0, 0.55);
@@ -538,11 +543,19 @@
   opacity: 0;
   transition: opacity 0.15s;
   margin-bottom: 2px;
+  text-align: center;
 }
 
 .mc-toast.visible {
   opacity: 1;
 }
+
+.mc-toast-speaker { color: #e0e0e0; }
+.mc-toast-speaker.ravi { color: #ffff55; }
+.mc-toast-speaker.iris { color: #55ffff; }
+.mc-toast-speaker.system,
+.mc-toast-speaker.airlock { color: #b8b8b8; }
+.mc-toast-message { overflow-wrap: anywhere; }
 
 .mc-item-name {
   font-size: 15px;
