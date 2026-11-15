@@ -59,6 +59,14 @@ export function renderReportCard(container, report) {
     container.append(launch);
   }
 
+  // Como a base ficou para a proxima tripulacao (ato 5, #423)
+  if (report.handover) {
+    const handover = document.createElement('p');
+    handover.className = report.handover.allReady ? 'report-launch' : 'report-launch is-late';
+    handover.textContent = report.handover.text;
+    container.append(handover);
+  }
+
   const profile = document.createElement('p');
   profile.className = 'report-profile';
   const title = document.createElement('b');

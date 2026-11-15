@@ -239,6 +239,15 @@ export class StoryDirector {
     return true;
   }
 
+  // Gasta horas da janela de lancamento (ato 5, #423: arrumar a base antes de decolar). Devolve
+  // false, sem gastar nada, se a janela nao esta aberta ou nao tem essa folga.
+  spendWindow(hours) {
+    if (this.act !== 2 || this._finished || this.windowHoursLeft === null || this.windowHoursLeft <= hours) return false;
+    this._windowClosesAt -= hours;
+    this.windowHoursLeft -= hours;
+    return true;
+  }
+
   // Continue na tela de vitoria, ou partida reaberta depois da decolagem (ato 5, #411): modo
   // livre. A historia para de guiar: sem objetivo, sem janela e sem prazo.
   enterFreePlay() {

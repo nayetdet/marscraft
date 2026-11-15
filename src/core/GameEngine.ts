@@ -1220,6 +1220,8 @@ export class GameEngine {
   // Escolha feita num card de radio sem parar o jogo (issue #135). Devolve false para o card
   // continuar aberto. O escudo liga pelo mesmo caminho do Shield Remote: gasta a mesma bateria.
   _onCardChoice(id) {
+    const act5Choice = this.act5.onCardChoice(id); // ato 5 (#423): como deixar a base
+    if (act5Choice !== null) return act5Choice;
     if (id === 'hide') {
       this.hud.showToast('Follow the arrow to the base. Hide in the storm shelter and fill its water wall!', 6000);
       return true;
@@ -1336,6 +1338,7 @@ export class GameEngine {
       standbyHours: m.standbyHours,
       launched: m.launched,
       launchWindow: this.story.launchWindow,
+      baseHandover: this.act5.handoverStats(),
       ...this._scienceReportStats(),
     };
   }

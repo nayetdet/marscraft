@@ -1116,4 +1116,14 @@ export const ACT5_CONFIG = {
   // (NASA Mars Fact Sheet; docs/data/numeros-reais.md). Aparece no boletim de quem decolou numa
   // janela depois da primeira.
   WINDOW_WAIT_MONTHS: 26,
+  // Como deixar a base (issue #423). Arrumar a base antes do IGNITE (a tripulacao limpa os
+  // paineis) gasta estas horas da janela de lancamento. Regra de jogo.
+  HANDOVER_WINDOW_HOURS: 2,
+  // Metas de "base pronta para a proxima tripulacao" no boletim: tanque de agua pelo menos nesta
+  // fracao, poeira nos paineis ate este teto (0 a 1) e esta fracao dos campos da estufa plantada
+  HANDOVER_WATER_FRACTION: 0.5,
+  HANDOVER_MAX_PANEL_DUST: 0.15,
+  HANDOVER_FIELDS_FRACTION: 0.5,
+  // Segundos reais do card de escolha na tela (mais que um card comum: tem 3 itens e 2 opcoes)
+  HANDOVER_CARD_SECONDS: 20,
 };
