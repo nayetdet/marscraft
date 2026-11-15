@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   box-sizing: border-box;
 }
 
@@ -260,6 +260,9 @@ body.pause-menu-open .crew-picker { display: none; }
   column-gap: 18px;
   row-gap: 0;
   padding: 12px;
+  max-height: calc(100dvh - 116px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   color: #eee;
   background: rgba(0, 0, 0, 0.72);
   border-top: 3px solid #373737;
@@ -279,6 +282,15 @@ body.pause-menu-open .crew-picker { display: none; }
 
 .controls-screen.hidden,
 #menu-main.hidden { display: none; }
+
+.mobile-controls-help { display: none; }
+.mobile-controls-help p { margin-top: 6px; color: #d9e9ee; font-size: 12px; line-height: 1.4; }
+body.touch-device .inventory-close { min-width: 76px; min-height: 44px; }
+body.touch-device .inventory-slot { min-width: 44px; min-height: 44px; }
+body.touch-device .mc-menu.is-controls .controls-screen { grid-template-columns: 1fr; }
+body.touch-device .mc-menu.is-controls .controls-screen .controls-section:not(.mobile-controls-help) { display: none; }
+body.touch-device .mc-menu.is-controls .mobile-controls-help { display: block; grid-column: 1 / -1; }
+body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 44px; }
 
 .controls-screen h2 {
   grid-column: 1 / -1;

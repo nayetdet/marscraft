@@ -16,6 +16,11 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Next.js, deploy na Ve
 | Consumíveis | `src/config/blockTypes.ts` | Martian Ice (+água) e as colheitas da estufa (alface, batata, soja e cenoura: +comida, +vida), usados com o botão direito |
 | Céu astronômico | `src/sky/*` | Sol, Terra e Lua vistos de Marte, Fobos e Deimos, ciclo dia/noite em "sols", luneta (tecla Z); o tempo passa mais rápido dormindo no beliche do dormitório (issue #109; a tecla T ficou só no painel de admin) |
 | HUD | `src/ui/HudManager.ts`, `public/game.html` | Barras estilo Minecraft, hotbar de 9 slots, inventário (tecla E, 36 slots), toasts, tela de morte e rótulos no céu. **UI em inglês.** |
+| Mobile/touch | `src/player/InputController.ts`, `public/game.html`, `src/ui/styles/` | Jogo em paisagem com joystick, arrasto à direita para olhar, sprint, ações touch, hotbar por toque e pausa. Ações contextuais cobrem rover e luneta; retrato bloqueia a partida e pede para girar o aparelho. |
+
+## Mobile como requisito permanente
+
+Mobile tem a mesma prioridade que desktop. Toda mecânica, tela, HUD, modal, tutorial e interação nova ou alterada deve ser pensada para toque desde o início: mantenha um caminho touch para cada ação relevante, alvos confortáveis (cerca de 44 px ou maiores), áreas seguras do aparelho e espaço para HUD e controles sem sobreposição. A partida é em paisagem; em retrato, mostre a orientação e pause a simulação. Não force rotação pelo navegador. Ao revisar uma mudança, considere pelo menos 844×390 em paisagem e 390×844 em retrato, além das interações reais por toque. As regras completas ficam no [`AGENTS.md`](../../AGENTS.md).
 
 ## Organização da base (`src/base/`)
 

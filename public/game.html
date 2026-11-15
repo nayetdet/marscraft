@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>MarsCraft</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
 </head>
@@ -19,7 +19,7 @@
   <div class="rotate-device-overlay" role="dialog" aria-modal="true" aria-labelledby="rotate-device-title">
     <div class="rotate-device-icon" aria-hidden="true"></div>
     <h2 id="rotate-device-title">Rotate your device</h2>
-    <p>MarsCraft is best played in landscape.</p>
+    <p>Turn your device sideways to continue playing.</p>
   </div>
   <div id="danger-vignette" class="danger-vignette hidden" aria-hidden="true"></div>
   <div id="danger-warning" class="danger-warning hidden" role="status" aria-live="polite" aria-hidden="true">
@@ -239,17 +239,21 @@
     <div id="interaction-hint" style="position:absolute;top:54%;width:100%;text-align:center;color:white;text-shadow:2px 2px #000;pointer-events:none"></div>
 
     <div id="mobile-controls" class="mobile-controls" aria-label="Touch controls">
+      <button id="mobile-pause-button" class="touch-button mobile-pause-button" type="button" aria-label="Pause game">II</button>
       <div id="mobile-joystick" class="mobile-joystick" role="application" aria-label="Movement joystick">
         <div class="joystick-ring"><div id="joystick-thumb" class="joystick-thumb"></div></div>
         <span class="touch-control-caption">MOVE</span>
       </div>
-      <button class="touch-button mobile-sprint-button" type="button" data-touch-action="sprint" aria-label="Toggle sprint">RUN</button>
+      <button class="touch-button mobile-sprint-button" type="button" data-touch-action="sprint" aria-label="Toggle sprint" aria-pressed="false">RUN</button>
       <div class="mobile-action-buttons">
         <button class="touch-button" type="button" data-touch-action="jump" aria-label="Jump">JUMP</button>
         <button class="touch-button" type="button" data-touch-action="mine" aria-label="Mine or drill"><span id="touch-mine-label">MINE</span></button>
         <button class="touch-button" type="button" data-touch-action="use" aria-label="Use or place block"><span id="touch-use-label">USE</span></button>
         <button class="touch-button" type="button" data-touch-action="interact" aria-label="Interact">TALK</button>
         <button class="touch-button" type="button" data-touch-action="inventory" aria-label="Open inventory">BAG</button>
+        <button class="touch-button" type="button" data-touch-action="view" aria-label="Toggle third-person view">VIEW</button>
+        <button class="touch-button" type="button" data-touch-action="drop" aria-label="Drop selected item">DROP</button>
+        <button class="touch-button" type="button" data-touch-action="send" aria-label="Send science data to Earth">SEND</button>
       </div>
     </div>
 
@@ -470,6 +474,18 @@
             <div class="control-row"><kbd>Mouse</kbd><span>Move camera</span></div>
             <div class="control-row"><kbd>Space</kbd><span>Drill or offload ice</span></div>
             <div class="control-row"><kbd>F</kbd><span>Exit rover terminal</span></div>
+          </div>
+          <div class="controls-section mobile-controls-help">
+            <h3>Touch controls</h3>
+            <div class="control-row"><kbd>Left stick</kbd><span>Move and steer</span></div>
+            <div class="control-row"><kbd>Drag right</kbd><span>Look around</span></div>
+            <div class="control-row"><kbd>RUN</kbd><span>Toggle sprint</span></div>
+            <div class="control-row"><kbd>JUMP · MINE · USE</kbd><span>Act with the selected item</span></div>
+            <div class="control-row"><kbd>TALK · BAG</kbd><span>Interact and open inventory</span></div>
+            <div class="control-row"><kbd>VIEW · DROP · SEND</kbd><span>Camera, item and science actions</span></div>
+            <div class="control-row"><kbd>Hotbar</kbd><span>Tap a slot to select it</span></div>
+            <div class="control-row"><kbd>II</kbd><span>Pause the mission</span></div>
+            <p>In the rover, steer with the stick, look by dragging, tap DRILL, then TALK to leave.</p>
           </div>
           <button id="controls-back-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-back"></use></svg><span class="menu-button-label">Back</span></button>
         </section>
