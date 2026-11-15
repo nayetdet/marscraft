@@ -77,7 +77,7 @@ function isLit(material) {
 // secundarias coloridas, bloom, raios de luz e tone mapping. Desligado, o jogo desenha exatamente
 // como antes (direto na tela, sem pos-processamento).
 export class ShaderMode {
-  constructor({ renderer, scene, camera, sky, glowMaterials = [], gpuName = '', storage = null, coarsePointer = false, onChange = () => {} }) {
+  constructor({ renderer, scene, camera, sky, glowMaterials = [], storage = null, onChange = () => {} }) {
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;
@@ -86,7 +86,7 @@ export class ShaderMode {
     this.storage = storage;
     this.onChange = onChange;
 
-    const mode = resolveShaderMode({ pref: readShaderPref(storage), gpuName, coarsePointer });
+    const mode = resolveShaderMode({ pref: readShaderPref(storage) });
     this.enabled = false;
     // Automatico = o jogador ainda nao escolheu; so nesse caso a protecao de desempenho age
     this.auto = mode.auto;

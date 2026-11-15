@@ -331,17 +331,15 @@ export class GameEngine {
     this.debug = new DebugOverlay(this.renderer);
     this.crewInstances = CrewInstances.for(this.scene);
 
-    // Modo Shaders (sombra do Sol, bloom, raios de luz): liga sozinho em GPU de verdade, e o
-    // botao do menu troca. Criado antes do compile para os shaders com sombra ja sairem prontos.
+    // Modo Shaders começa desligado; o botao do menu permite ligar. Criado antes do compile para
+    // os shaders com sombra ja sairem prontos quando o jogador escolher ativa-los.
     this.shaderMode = new ShaderMode({
       renderer: this.renderer,
       scene: this.scene,
       camera: this.camera,
       sky: this.sky,
       glowMaterials: [atlas.material],
-      gpuName: this.debug.gpuName,
       storage: getLocalStorage(),
-      coarsePointer: Boolean(window.matchMedia?.('(pointer: coarse)').matches),
       onChange: (enabled) => this.menuScreens?.setShadersEnabled(enabled),
     });
     this.menuScreens.bindShaders({
