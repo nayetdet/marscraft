@@ -208,7 +208,7 @@ export const DUST_STORM_VISUAL_CONFIG = {
   PARTICLE_COUNT: 1400,
   PARTICLE_BOX: { x: 36, y: 16, z: 36 },
   WIND_SPEED: 11, // blocos/s
-  AMBIENT_PARTICLE_OPACITY: 0.16, // poeira baixa e constante ao ar livre, mesmo sem tempestade
+  AMBIENT_PARTICLE_OPACITY: 0.22, // poeira baixa e constante ao ar livre, mesmo sem tempestade
   AMBIENT_WIND_SPEED: 1.4, // vento ambiente mais fraco que as rajadas da tempestade
 };
 
