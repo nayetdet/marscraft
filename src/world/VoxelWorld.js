@@ -106,6 +106,7 @@ export class VoxelWorld {
     this.carrotGeometry = new THREE.PlaneGeometry(0.5, 0.5);
     this.carrotMaterial = carrotTexture && new THREE.MeshLambertMaterial({ map: carrotTexture, transparent: true, alphaTest: 0.1, side: THREE.DoubleSide });
     this.particleGeometry = new THREE.BoxGeometry(0.13, 0.13, 0.13);
+    this.surfaceRockParticleGeometry = new THREE.IcosahedronGeometry(1, 0);
     this.breakOverlay = this._createBreakOverlay();
     this.scene.add(this.breakOverlay);
 
@@ -179,7 +180,7 @@ export class VoxelWorld {
     this.clearBreakCracks();
     // Reconstroi so o chunk do bloco (e o vizinho, se estiver na borda)
     this.setBlock(x, y, z, BLOCK_IDS.AIR, true);
-    removeSurfaceRocksSupportedBy(this.surfaceRocks, x, y, z);
+    removeSurfaceRocksSupportedBy(this.surfaceRocks, x, y, z, (rock) => this._spawnSurfaceRockBreakParticles(rock));
     this._spawnBreakParticles(x, y, z, blockId);
     this._spawnDrop(x, y, z, blockId);
     return blockId;
@@ -261,6 +262,33 @@ export class VoxelWorld {
           (Math.random() - 0.5) * 3.4,
           Math.random() * 2.4 + 0.6,
           (Math.random() - 0.5) * 3.4
+        ),
+      });
+    }
+  }
+
+  _spawnSurfaceRockBreakParticles(rock) {
+    for (let i = 0; i < BLOCK_INTERACTION_CONFIG.SURFACE_ROCK_BREAK_PARTICLE_COUNT; i++) {
+      const size = rock.size * (
+        BLOCK_INTERACTION_CONFIG.SURFACE_ROCK_BREAK_PARTICLE_MIN_SIZE
+        + Math.random() * BLOCK_INTERACTION_CONFIG.SURFACE_ROCK_BREAK_PARTICLE_SIZE_VARIANCE
+      );
+      const mesh = new THREE.Mesh(
+        this.surfaceRockParticleGeometry,
+        new THREE.MeshLambertMaterial({ color: rock.color, transparent: true, opacity: 0.95, depthWrite: false })
+      );
+      mesh.position.set(rock.x, rock.y, rock.z);
+      mesh.scale.set(size, size * rock.squash, size);
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+      this.dropGroup.add(mesh);
+      this.breakParticles.push({
+        mesh,
+        age: 0,
+        velocity: new THREE.Vector3(
+          (Math.random() - 0.5) * BLOCK_INTERACTION_CONFIG.SURFACE_ROCK_BREAK_PARTICLE_HORIZONTAL_SPEED,
+          Math.random() * BLOCK_INTERACTION_CONFIG.SURFACE_ROCK_BREAK_PARTICLE_UPWARD_SPEED
+            + BLOCK_INTERACTION_CONFIG.SURFACE_ROCK_BREAK_PARTICLE_MIN_UPWARD_SPEED,
+          (Math.random() - 0.5) * BLOCK_INTERACTION_CONFIG.SURFACE_ROCK_BREAK_PARTICLE_HORIZONTAL_SPEED
         ),
       });
     }
