@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ResolutionScaler, isSoftwareRenderer } from './resolutionScaler.ts';
 
-const options = { maxRatio: 1.5, steps: [1, 0.75, 0.5], minFps: 40, seconds: 2, warmupSeconds: 1 };
+const options = { maxRatio: 1.5, steps: [1, 0.75, 0.5, 0.375], minFps: 40, seconds: 2, warmupSeconds: 1 };
 
 // Roda `seconds` de quadros a `fps` e devolve as trocas de pixel ratio que aconteceram
 function run(scaler: ResolutionScaler, fps: number, seconds: number): number[] {
@@ -24,19 +24,19 @@ describe('ResolutionScaler', () => {
     const scaler = new ResolutionScaler(options);
     // aquecimento (1 s) + janela (2 s) por degrau
     expect(run(scaler, 20, 3.2)).toEqual([1]);
-    expect(run(scaler, 20, 30)).toEqual([0.75, 0.5]);
-    expect(scaler.ratio).toBe(0.5);
+    expect(run(scaler, 20, 30)).toEqual([0.75, 0.5, 0.375]);
+    expect(scaler.ratio).toBe(0.375);
   });
 
   it('skips levels above the device ratio and ignores very long frames', () => {
     const scaler = new ResolutionScaler({ ...options, maxRatio: 1 });
-    expect(scaler.levels).toEqual([1, 0.75, 0.5]);
+    expect(scaler.levels).toEqual([1, 0.75, 0.5, 0.375]);
     for (let i = 0; i < 50; i++) expect(scaler.sample(1000)).toBeNull();
     expect(scaler.ratio).toBe(1);
   });
 
   it('starts at the lowest level on a software renderer', () => {
-    expect(new ResolutionScaler({ ...options, software: true }).ratio).toBe(0.5);
+    expect(new ResolutionScaler({ ...options, software: true }).ratio).toBe(0.375);
     expect(isSoftwareRenderer('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)')).toBe(true);
     expect(isSoftwareRenderer('ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11)')).toBe(true);
     expect(isSoftwareRenderer('ANGLE (NVIDIA, NVIDIA GeForce RTX 5060 Direct3D11 vs_5_0 ps_5_0, D3D11)')).toBe(false);
