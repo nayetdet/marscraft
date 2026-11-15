@@ -316,6 +316,18 @@ describe('mission hooks', () => {
     expect(survival.countItem(iceId)).toBe(2);
     expect(survival.removeItems(iceId, 10)).toBe(2);
   });
+
+  it('counts and spends old and fresh meteor ice as the same water resource', () => {
+    const survival = new SurvivalSystem();
+    survival.addBlockToInventory(BLOCK_IDS.MARS_ICE);
+    survival.addBlockToInventory(BLOCK_IDS.METEOR_ICE);
+    survival.addBlockToInventory(BLOCK_IDS.METEOR_ICE);
+
+    expect(survival.countWaterIce()).toBe(3);
+    expect(survival.removeWaterIce(2)).toBe(2);
+    expect(survival.countItem(BLOCK_IDS.MARS_ICE)).toBe(0);
+    expect(survival.countItem(BLOCK_IDS.METEOR_ICE)).toBe(1);
+  });
 });
 
 describe('distinct crop inventory items', () => {

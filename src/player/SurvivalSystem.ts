@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { BLOCK_IDS, HOTBAR_BLOCKS, ITEM_DEFINITIONS } from '../config/blockTypes.ts';
+import { BLOCK_IDS, HOTBAR_BLOCKS, ITEM_DEFINITIONS, WATER_ICE_BLOCK_IDS } from '../config/blockTypes.ts';
 import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.ts';
 import { isInsidePressurizedVolume } from '../world/habitatLayout.ts';
 
@@ -309,6 +309,19 @@ export class SurvivalSystem {
 
   countItem(blockId) {
     return this.inventorySlots.reduce((total, item) => total + (item?.id === blockId ? item.count : 0), 0);
+  }
+
+  countWaterIce() {
+    return WATER_ICE_BLOCK_IDS.reduce((total, id) => total + this.countItem(id), 0);
+  }
+
+  removeWaterIce(count) {
+    let remaining = count;
+    for (const id of WATER_ICE_BLOCK_IDS) {
+      remaining -= this.removeItems(id, remaining);
+      if (remaining <= 0) break;
+    }
+    return count - remaining;
   }
 
   // Tira ate `count` itens do inventario (hotbar primeiro) e devolve quantos saiu

@@ -477,6 +477,13 @@ describe('MissionSystem tutorial storm and live DONKI storms', () => {
     expect(mission.drainEvents().some((e) => e.type === 'storm-warning')).toBe(false);
   });
 
+  it('keeps the guided storm attributed to the embedded snapshot', () => {
+    const snapshot = { live: false, fetchedAt: '2026-11-14' };
+    const mission = new MissionSystem({ cmes, startHours: 12, stormsStarted: false, dataSource: snapshot });
+    mission.startStorms(12);
+    expect(mission.schedule[0].source).toBe(snapshot);
+  });
+
   it('fainting in the tutorial storm still opens the way: nobody gets stuck on a calm Sun', () => {
     const mission = new MissionSystem({ cmes, startHours: 12, stormsStarted: false });
     mission.startStorms(12);

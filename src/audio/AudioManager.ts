@@ -1,7 +1,9 @@
 // @ts-nocheck
 import { AUDIO_MIX_CONFIG, WIND_AMBIENCE_CONFIG } from '../config/constants.ts';
 
-const AUDIO_BASE_URL = '/audio/';
+import { assetPath } from '../config/assetPath.ts';
+
+const AUDIO_BASE_URL = assetPath('/audio/');
 const ROCKET_FADE_OUT_SECONDS = 1;
 
 export class AudioManager {

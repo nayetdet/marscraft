@@ -58,9 +58,9 @@ export const REAL_VS_GAME = [
   },
   {
     topic: 'Crew food and water',
-    game: `${oneDecimal(crewWaterPerSol)} L of water and ${oneDecimal(crewFoodKgPerSol)} kg of food per person each sol`,
-    real: 'About 3 kg of water and 1.8 kg of food per person each day',
-    why: 'These numbers are not changed. They follow the game clock: one sol of play is one day of eating and drinking.',
+    game: `${oneDecimal(crewWaterPerSol)} L of water (drinking, cooking and washing) and ${oneDecimal(crewFoodKgPerSol)} kg of food per person each sol`,
+    real: 'About 3 kg of water to drink and cook, and 1.8 kg of food per person each day. Washing uses more water on top',
+    why: 'The food is the real number. The water for drinking and cooking is real too; the washing part is a game number, so the big tank empties at a pace you can see.',
     source: 'NASA life support baseline values (BVAD)',
   },
   {
@@ -95,7 +95,7 @@ export const REAL_VS_GAME = [
     topic: 'Storm shelter wall',
     game: `${RADIATION_CONFIG.SHELTER_WALL_MAX_L} L of water = 10 g/cm²`,
     real: 'A real wall that thick needs hundreds of liters',
-    why: 'Shrunk to fit the 100 L base tank. How much each layer blocks is real (PREDICCS). Only a full wall lets you wait out a storm with the clock running fast: that part is a game rule.',
+    why: 'The exact size is a game number, picked to fit the base tank. How much each layer blocks is real (PREDICCS). Only a full wall lets you wait out a storm with the clock running fast: that part is a game rule.',
     source: 'Quinn et al., UNH (PREDICCS)',
   },
   {

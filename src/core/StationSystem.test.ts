@@ -85,19 +85,19 @@ describe('greenhouse and science progression', () => {
     const mission = new ExpeditionState();
     const station = new StationSystem(mission);
     const survival = new SurvivalSystem();
-    survival.baseWater = 10; survival.water = 7; survival.food = 5;
+    survival.baseWater = 100; survival.water = 7; survival.food = 5;
     expect(station.plant(type, survival)).toMatch(/Planted/);
     // Plantar nao gasta a sede do jogador, e a planta ainda nao bebeu nada
     expect(survival.water).toBe(7);
-    expect(survival.baseWater).toBe(10);
+    expect(survival.baseWater).toBe(100);
     mission.greenhousePowered = false;
     station.update(60, true, survival, false);
     expect(station.crop.progress).toBe(0);
-    expect(survival.baseWater).toBe(10);
+    expect(survival.baseWater).toBe(100);
     mission.greenhousePowered = true;
     station.update(CROP_CONFIG[type].seconds, true, survival, false);
     // Crescendo, o tanque da base cai pelo custo mostrado no painel
-    expect(survival.baseWater).toBeCloseTo(10 - CROP_CONFIG[type].water);
+    expect(survival.baseWater).toBeCloseTo(100 - CROP_CONFIG[type].water);
     expect(survival.water).toBe(7);
     expect(station.harvest(survival)).toMatch(/Harvested/);
     expect(survival.food).toBe(5);
@@ -194,13 +194,13 @@ describe('greenhouse and science progression', () => {
   it('does not grow a crop in a contaminated base', () => {
     const mission = new ExpeditionState();
     const station = new StationSystem(mission);
-    const survival = { ...player(), baseWater: 10, graywater: 0, food: 5 };
+    const survival = { ...player(), baseWater: 100, graywater: 0, food: 5 };
     station.plant('soy', survival);
     mission.greenhousePowered = true;
     station.contaminated = true;
     station.update(60, true, survival, false);
     expect(station.crop.progress).toBe(0);
-    expect(survival.baseWater).toBe(10);
+    expect(survival.baseWater).toBe(100);
   });
 });
 
@@ -208,10 +208,10 @@ describe('garden choices and discoveries', () => {
   it('does not charge water or replace a crop when planting fails', () => {
     const mission = new ExpeditionState();
     const station = new StationSystem(mission);
-    const survival = { ...player(), baseWater: 10, graywater: 0, food: 0 };
+    const survival = { ...player(), baseWater: 100, graywater: 0, food: 0 };
     mission.energy = 0;
     station.plant('soy', survival);
-    expect(survival.baseWater).toBe(10);
+    expect(survival.baseWater).toBe(100);
     expect(station.crop).toBeNull();
     mission.energy = 100;
     station.plant('lettuce', survival);
@@ -224,7 +224,7 @@ describe('garden choices and discoveries', () => {
     const mission = new ExpeditionState();
     const station = new StationSystem(mission);
     const survival = new SurvivalSystem();
-    survival.baseWater = 20; survival.food = 0;
+    survival.baseWater = 200; survival.food = 0;
     for (const type of ['lettuce', 'potato', 'soy']) {
       station.plant(type, survival);
       station.harvest(survival);
@@ -259,7 +259,7 @@ describe('greenhouse fields', () => {
     const mission = new ExpeditionState();
     const station = new StationSystem(mission);
     const survival = new SurvivalSystem();
-    survival.baseWater = 20;
+    survival.baseWater = 200;
     mission.greenhousePowered = true;
     return { mission, station, survival };
   };
@@ -292,7 +292,7 @@ describe('greenhouse fields', () => {
     expect(energyBefore - mission.energy).toBeCloseTo(CROP_CONFIG.lettuce.energy * size);
 
     station.update(CROP_CONFIG.lettuce.seconds, true, survival, false);
-    expect(survival.baseWater).toBeCloseTo(20 - CROP_CONFIG.lettuce.water * size);
+    expect(survival.baseWater).toBeCloseTo(200 - CROP_CONFIG.lettuce.water * size);
     const dropped = [];
     station.harvest(survival, (id) => dropped.push(id));
     expect(dropped).toEqual(Array(size).fill(CROP_ITEM_IDS.lettuce));
@@ -301,18 +301,18 @@ describe('greenhouse fields', () => {
 
   it('refuses a big field when the water is not enough, and takes nothing', () => {
     const { mission, station, survival } = setup();
-    survival.baseWater = 2;
+    survival.baseWater = 20;
     const energyBefore = mission.energy;
     station.selectPlot(GREENHOUSE_PLOTS.findIndex((plot) => plot.kind === 'outer'));
     expect(station.plant('soy', survival)).toMatch(/water/);
-    expect(survival.baseWater).toBe(2);
+    expect(survival.baseWater).toBe(20);
     expect(mission.energy).toBe(energyBefore);
     expect(station.crop).toBeNull();
   });
 });
 
 describe('greenhouse water (issue #101)', () => {
-  const setup = (baseWater = 20) => {
+  const setup = (baseWater = 200) => {
     const mission = new ExpeditionState();
     const station = new StationSystem(mission);
     const survival = new SurvivalSystem();
@@ -324,7 +324,7 @@ describe('greenhouse water (issue #101)', () => {
   it('uses no water at all while nothing is planted', () => {
     const { station, survival } = setup();
     station.update(600, true, survival, false);
-    expect(survival.baseWater).toBe(20);
+    expect(survival.baseWater).toBe(200);
     expect(survival.graywater).toBe(0);
     expect(station.cropsThirsty).toBe(false);
   });
@@ -347,18 +347,18 @@ describe('greenhouse water (issue #101)', () => {
     expect(station.harvest(survival)).toMatch(/Harvested/);
     // A agua transpirada espera o reciclador como agua cinza; nada some alem da que ficou na comida
     expect(survival.graywater).toBeCloseTo(liters - keptInFood);
-    expect(survival.baseWater + survival.graywater).toBeCloseTo(20 - keptInFood);
+    expect(survival.baseWater + survival.graywater).toBeCloseTo(200 - keptInFood);
     // O reciclador devolve a agua cinza com a taxa da Estacao Espacial (98 %)
     const recycled = survival.graywater * STATION_CONFIG.WATER_RECOVERY;
-    expect(survival.baseWater + recycled).toBeCloseTo(20 - keptInFood - (liters - keptInFood) * (1 - STATION_CONFIG.WATER_RECOVERY));
+    expect(survival.baseWater + recycled).toBeCloseTo(200 - keptInFood - (liters - keptInFood) * (1 - STATION_CONFIG.WATER_RECOVERY));
   });
 
   it('an empty tank pauses the fields until water comes back', () => {
-    const { station, survival } = setup(3);
+    const { station, survival } = setup(30);
     const outer = GREENHOUSE_PLOTS.findIndex((plot) => plot.kind === 'outer');
     station.selectPlot(outer);
-    expect(station.plant('lettuce', survival)).toMatch(/Planted/); // 1 L x 3 = 3 L
-    survival.baseWater = 1.5; // alguem bebeu a agua antes de a planta crescer
+    expect(station.plant('lettuce', survival)).toMatch(/Planted/); // 10 L x 3 = 30 L
+    survival.baseWater = 15; // alguem bebeu a agua antes de a planta crescer
     station.update(CROP_CONFIG.lettuce.seconds, true, survival, false);
     expect(survival.baseWater).toBeCloseTo(0);
     expect(station.cropsThirsty).toBe(true);
@@ -368,7 +368,7 @@ describe('greenhouse water (issue #101)', () => {
     station.update(60, true, survival, false);
     expect(station.crop.progress).toBeCloseTo(stuck);
 
-    survival.addBaseWater(10);
+    survival.addBaseWater(100);
     station.update(CROP_CONFIG.lettuce.seconds, true, survival, false);
     expect(station.cropsThirsty).toBe(false);
     expect(station.readyPlotCount()).toBe(1);

@@ -37,8 +37,12 @@ export function mavProgress({ propellant, stormsSurvived, dataSent }) {
 
 // A tempestade do tutorial: uma so, com a primeira CME real com destino a Marte dos dados.
 // Vazia se os dados nao tem nenhuma (noStormData).
-function tutorialStorm(cmes, startHours) {
-  return buildStormSchedule(cmes, startHours, 1).map((storm) => ({ ...storm, scripted: true }));
+function tutorialStorm(cmes, startHours, dataSource) {
+  return buildStormSchedule(cmes, startHours, 1).map((storm) => ({
+    ...storm,
+    scripted: true,
+    ...(dataSource ? { source: dataSource } : {}),
+  }));
 }
 
 // Energia, tempestades solares, radiacao e o MAV. Sem DOM nem Three.js, para testar com Vitest.
@@ -49,12 +53,13 @@ export class MissionSystem {
   // A fila comeca com UMA tempestade, a do tutorial (`scripted`). Depois dela so entram as que
   // estao acontecendo agora na vida real (`queueLiveStorms`, com o polling do DONKI).
   // `seps`: SEPs reais do fetch ao vivo do DONKI (issue #100); vazio no dado embutido.
-  constructor({ cmes, seps = [], startHours, stormsStarted = true, rng = Math.random }) {
+  constructor({ cmes, seps = [], startHours, stormsStarted = true, rng = Math.random, dataSource = null }) {
     this.battery = new Battery();
     this.cmes = cmes;
     this.seps = seps;
+    this.dataSource = dataSource;
     this.stormsStarted = stormsStarted;
-    this.schedule = stormsStarted ? tutorialStorm(cmes, startHours) : [];
+    this.schedule = stormsStarted ? tutorialStorm(cmes, startHours, dataSource) : [];
     // A tempestade do tutorial ja acabou (sobrevivendo ou nao): a exigencia do foguete esta paga
     this.tutorialStormDone = false;
     // Eventos reais do DONKI que ja viraram tempestade nesta partida (cada um entra uma vez so)
@@ -264,7 +269,7 @@ export class MissionSystem {
     if (this.stormsStarted) return;
     this.stormsStarted = true;
     this.dustWeather.start(hours);
-    this.schedule = tutorialStorm(this.cmes, hours);
+    this.schedule = tutorialStorm(this.cmes, hours, this.dataSource);
     this.storm = stormStateAt(this.schedule, hours);
     this._phaseKey = this._keyFor(this.storm);
   }

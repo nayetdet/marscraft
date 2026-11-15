@@ -21,9 +21,11 @@
   width: 100%;
 }
 
-.mc-menu-card #quit-btn { display: grid; }
+body:not(.pause-menu-open) .mc-menu-card #quit-btn { display: none; }
+body.pause-menu-open .mc-menu-card #quit-btn { display: grid; }
 body:not(.pause-menu-open) .mc-menu-card #demo-btn { display: none; }
 body:not(.pause-menu-open) .mc-menu-card #sources-btn { grid-column: 1 / -1; }
+body:not(.pause-menu-open) .mc-menu-card #reset-world-btn { grid-column: 1 / -1; }
 body.pause-menu-open .crew-picker { display: none; }
 body.pause-menu-open .participants-panel { display: none; }
 

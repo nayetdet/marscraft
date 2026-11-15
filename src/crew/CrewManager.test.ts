@@ -10,8 +10,8 @@ import { findRoute, routeLength } from './crewRails.ts';
 function makeBase(overrides = {}) {
   return {
     battery: new Battery(100),
-    water: 50,
-    maxWater: 100,
+    water: 500,
+    maxWater: 1000,
     food: 20,
     maxFood: 40,
     graywater: 0,
@@ -68,7 +68,7 @@ describe('CrewManager needs', () => {
 
     expect(20 - one.base.food).toBeCloseTo(CREW_CONFIG.FOOD_PER_HOUR);
     expect(20 - three.base.food).toBeCloseTo(3 * CREW_CONFIG.FOOD_PER_HOUR);
-    expect(50 - three.base.water).toBeCloseTo(3 * CREW_CONFIG.WATER_L_PER_HOUR);
+    expect(500 - three.base.water).toBeCloseTo(3 * CREW_CONFIG.WATER_L_PER_HOUR);
     // O gerador de O2 sem operador estraga um pouco, entao compara a proporcao 3 : 1
     const oneEnergy = 100 - one.base.battery.charge;
     expect(oneEnergy).toBeGreaterThanOrEqual(CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR);
@@ -86,8 +86,8 @@ describe('CrewManager needs', () => {
     gentle.crew.update(1, 0);
 
     expect(20 - gentle.base.food).toBeCloseTo(0.6 * (20 - normal.base.food));
-    expect(50 - gentle.base.water).toBeCloseTo(0.6 * (50 - normal.base.water));
-    expect(gentle.base.graywater).toBeCloseTo(50 - gentle.base.water);
+    expect(500 - gentle.base.water).toBeCloseTo(0.6 * (500 - normal.base.water));
+    expect(gentle.base.graywater).toBeCloseTo(500 - gentle.base.water);
     expect(100 - gentle.base.battery.charge).toBeCloseTo(0.6 * (100 - normal.base.battery.charge));
     expect(gentle.base.food).toBeLessThan(20);
   });
@@ -344,20 +344,20 @@ describe('CrewManager air follows the oxygen machine mode (issue #102)', () => {
   }
 
   it('air from water spends crew water at the real ratio (~0.95 L per person per sol)', () => {
-    const { crew, base, plant } = crewWithPlant('electrolysis', { water: 50 });
+    const { crew, base, plant } = crewWithPlant('electrolysis', { water: 500 });
     crew.update(24, 0);
     expect(plant.waterUsedL).toBeCloseTo(2 * ELECTROLYSIS_WATER_L_PER_PERSON_SOL, 3);
     // A agua da eletrolise sai do ciclo; a que eles bebem vai para a agua cinza
-    expect(base.water + base.graywater + plant.waterUsedL).toBeCloseTo(50, 6);
+    expect(base.water + base.graywater + plant.waterUsedL).toBeCloseTo(500, 6);
   });
 
   it('air from Mars air spends no water but more power', () => {
-    const water = crewWithPlant('electrolysis', { water: 50 });
-    const moxie = crewWithPlant('moxie', { water: 50 });
+    const water = crewWithPlant('electrolysis', { water: 500 });
+    const moxie = crewWithPlant('moxie', { water: 500 });
     water.crew.update(10, 0);
     moxie.crew.update(10, 0);
     expect(moxie.plant.waterUsedL).toBe(0);
-    expect(moxie.base.water + moxie.base.graywater).toBeCloseTo(50, 6);
+    expect(moxie.base.water + moxie.base.graywater).toBeCloseTo(500, 6);
     // Sem operador o gerador estraga igual nos dois casos: compara a proporcao
     const waterPower = 100 - water.base.battery.charge;
     const moxiePower = 100 - moxie.base.battery.charge;

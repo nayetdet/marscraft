@@ -86,6 +86,12 @@ const KID_CARD_META = {
     pills: ['Poles & underground', 'Air avg: -62 °C', 'Water, O2 & fuel'],
     tip: 'Frozen water under the ground! Melts into drinking water.',
   },
+  'meteor-ice': {
+    title: 'METEOR ICE',
+    stat: 'FRESH IMPACT',
+    pills: ['Exposed by impact', 'Shallow water ice', 'Water, O2 & fuel'],
+    tip: 'A meteor impact uncovered fresh water ice beneath the surface.',
+  },
   base: {
     title: 'OUTPOST',
     stat: '-98 TO -4°C',

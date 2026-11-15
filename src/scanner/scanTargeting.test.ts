@@ -35,6 +35,7 @@ describe('resolveScanTarget: terrain', () => {
     [BLOCK_IDS.SANDSTONE, 'sandstone'],
     [BLOCK_IDS.BASALT, 'crater-rock'],
     [BLOCK_IDS.MARS_ICE, 'water-ice'],
+    [BLOCK_IDS.METEOR_ICE, 'meteor-ice'],
   ])('identifies block %i as %s', (block, id) => {
     const world = createMapWorld();
     world.setBlock(20, 10, 15, block);
@@ -47,10 +48,12 @@ describe('resolveScanTarget: terrain', () => {
     expect(scan(world, { x: 0.5, y: 12.5, z: -20 }, NORTH)).toBe('crater-rim');
   });
 
-  it('keeps ice as water ice even far from the center', () => {
+  it('keeps both ice types distinct even far from the center', () => {
     const world = createMapWorld();
     world.setBlock(0, 12, -45, BLOCK_IDS.MARS_ICE);
     expect(scan(world, { x: 0.5, y: 12.5, z: -20 }, NORTH)).toBe('water-ice');
+    world.setBlock(2, 12, -45, BLOCK_IDS.METEOR_ICE);
+    expect(scan(world, { x: 2.5, y: 12.5, z: -20 }, NORTH)).toBe('meteor-ice');
   });
 
   it('ignores targets beyond the scan range', () => {
@@ -243,6 +246,37 @@ describe('collectScanBlocks', () => {
     const blocks = collectScanBlocks(world, { id: 'regolith', hit: { x: 0, y: 8, z: 0 } });
     expect(blocks).toHaveLength(7 * 7 - 1);
     expect(blocks.every((b) => b.y === 8 && Math.abs(b.x) <= 3 && Math.abs(b.z) <= 3)).toBe(true);
+  });
+
+  it('collects the whole natural ice deposit, including separated sections', () => {
+    const world = createMapWorld();
+    for (let x = -5; x <= 5; x++) {
+      for (let z = -5; z <= 5; z++) world.setBlock(x, 8, z, BLOCK_IDS.MARS_ICE);
+    }
+    world.setBlock(8, 8, 0, BLOCK_IDS.MARS_ICE);
+    world.setBlock(20, 8, 0, BLOCK_IDS.MARS_ICE);
+
+    const blocks = collectScanBlocks(world, { id: 'water-ice', hit: { x: 0, y: 8, z: 0 } });
+    expect(blocks).toHaveLength(11 * 11 + 1);
+    expect(blocks.some((b) => b.x === 8)).toBe(true);
+    expect(blocks.some((b) => b.x === 20)).toBe(false);
+  });
+
+  it('collects scattered meteor ice across the impact site in one scan', () => {
+    const world = createMapWorld();
+    const impactIce = [
+      { x: 0, y: 8, z: 0 },
+      { x: 12, y: 6, z: 0 },
+      { x: 0, y: 9, z: 13 },
+    ];
+    for (const block of impactIce) world.setBlock(block.x, block.y, block.z, BLOCK_IDS.METEOR_ICE);
+    world.setBlock(21, 8, 0, BLOCK_IDS.METEOR_ICE);
+    world.setBlock(1, 8, 0, BLOCK_IDS.MARS_ICE);
+
+    const blocks = collectScanBlocks(world, { id: 'meteor-ice', hit: { x: 0, y: 8, z: 0 } });
+    expect(new Set(blocks.map(({ x, y, z }) => `${x},${y},${z}`))).toEqual(
+      new Set(impactIce.map(({ x, y, z }) => `${x},${y},${z}`))
+    );
   });
 
   it('returns nothing for targets without blocks', () => {

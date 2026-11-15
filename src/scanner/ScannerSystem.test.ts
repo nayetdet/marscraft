@@ -76,6 +76,16 @@ describe('ScannerSystem', () => {
     const state = scanner.update(0.01, 'phobos');
     expect(state).toMatchObject({ targetId: 'phobos', progress: 1, done: true, known: true, completed: null });
   });
+
+  it('tracks natural and meteor-exposed ice as separate discoveries', () => {
+    const { scanner, journal } = setup();
+    const naturalIce = scanner.update(DURATION, 'water-ice');
+    const meteorIce = scanner.update(DURATION, 'meteor-ice');
+
+    expect(naturalIce.completed.entry.id).toBe('water-ice');
+    expect(meteorIce.completed.entry.id).toBe('meteor-ice');
+    expect(journal.missionCount).toBe(2);
+  });
 });
 
 describe('applyDiscoveryReward', () => {

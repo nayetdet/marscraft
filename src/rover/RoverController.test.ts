@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { RoverController } from './RoverController.ts';
 import { ROVER_CONFIG as R, WATER_SYSTEM_CONFIG } from '../config/constants.ts';
+import { BLOCK_IDS } from '../config/blockTypes.ts';
 import { Battery } from '../mission/energy.ts';
 
 describe('RoverController', () => {
@@ -147,7 +148,7 @@ describe('RoverController', () => {
 
     const collectResult = controller.collectIce();
     expect(collectResult.success).toBe(true);
-    expect(controller.iceCargo).toBe(10);
+    expect(controller.iceCargo).toBe(WATER_SYSTEM_CONFIG.ICE_PER_DRILL);
     expect(controller.drillCooldown).toBeGreaterThan(0);
 
     // Tenta descarregar na cratera (longe da doca da base)
@@ -159,8 +160,22 @@ describe('RoverController', () => {
 
     const unloadResult = controller.unloadIce();
     expect(unloadResult.success).toBe(true);
-    expect(unloadResult.amount).toBe(10);
+    expect(unloadResult.amount).toBe(WATER_SYSTEM_CONFIG.ICE_PER_DRILL);
     expect(controller.iceCargo).toBe(0);
+  });
+
+  it('can collect fresh meteor ice as water', () => {
+    const roverGroup = new THREE.Group();
+    const world = {
+      getBlock(x, y, z) {
+        return x === 0 && y === 8 && z === 0 ? BLOCK_IDS.METEOR_ICE : BLOCK_IDS.AIR;
+      },
+    };
+    const controller = new RoverController({ roverGroup, wheels: [], world });
+    controller.pos.set(0, 9, 0);
+
+    expect(controller.canCollectIce()).toBe(true);
+    expect(controller.collectIce().success).toBe(true);
   });
 
   it('animates the drill and reports collection progress to the HUD', () => {

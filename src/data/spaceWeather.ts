@@ -1,15 +1,16 @@
 // @ts-nocheck
 // Clima espacial do NASA DONKI. O navegador so chama nossa rota /api/space-weather;
-// a chave NASA_API_KEY e usada exclusivamente no servidor Next.js. Qualquer falha cai no
-// JSON embutido, e entao nada no jogo diz "LIVE".
-// `loadSpaceWeather` e chamado uma vez em main.ts, antes do primeiro Play; `pollSpaceWeather`
-// repete a pergunta de tempos em tempos (tempestades ao vivo depois do tutorial). Nunca dentro do loop do jogo.
+// a chave NASA_API_KEY e usada exclusivamente no servidor Next.js. Falha na consulta obrigatoria
+// de CME cai no JSON embutido; o jogo so diz "LIVE" depois de uma resposta valida.
+// `loadSpaceWeather` e chamado quando a historia termina o tutorial; `pollSpaceWeather` repete
+// a pergunta de tempos em tempos. Nenhum deles roda dentro do loop do jogo.
 import donkiCme from './donkiCme.json';
 import { SPACE_WEATHER_CONFIG } from '../config/constants.ts';
+import { assetPath } from '../config/assetPath.ts';
 import { latestBulletin, summarizeCmes, summarizeSeps } from './donkiNormalize.ts';
 
 const API_BASE = 'https://api.nasa.gov/DONKI';
-const SPACE_WEATHER_ENDPOINT = '/api/space-weather';
+const SPACE_WEATHER_ENDPOINT = assetPath('/api/space-weather');
 const CACHE_KEY = 'marscraft.spaceWeather.v1';
 const DAY_MS = 24 * 3600 * 1000;
 
@@ -29,16 +30,19 @@ export function donkiUrl(type, days, nowMs, apiKey, extra = '') {
   return `${API_BASE}/${type}?startDate=${isoDay(nowMs - days * DAY_MS)}&endDate=${isoDay(nowMs)}${extra}&api_key=${encodeURIComponent(apiKey)}`;
 }
 
-// Le uma lista JSON do DONKI. Sem resultados a API devolve 200 com corpo vazio: vira [].
-// Erros (HTTP, JSON invalido, tempo esgotado) sobem como excecao.
-async function fetchList(fetchImpl, url, timeoutMs) {
+// Le uma lista JSON do DONKI. SEP e notifications podem vir com corpo vazio; CME precisa de
+// uma resposta JSON valida. Erros (HTTP, corpo CME vazio, JSON invalido ou timeout) sobem.
+async function fetchList(fetchImpl, url, timeoutMs, allowEmptyBody = false) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetchImpl(url, { signal: controller.signal });
     if (response.status !== 200) throw new Error(`DONKI HTTP ${response.status}`);
     const text = await response.text();
-    if (!text.trim()) return [];
+    if (!text.trim()) {
+      if (allowEmptyBody) return [];
+      throw new Error('DONKI returned an empty body');
+    }
     const data = JSON.parse(text);
     if (!Array.isArray(data)) throw new Error('DONKI answer is not a list');
     return data;
@@ -85,37 +89,43 @@ export async function loadSpaceWeather({
   fetchImpl = globalThis.fetch?.bind(globalThis),
   storage = defaultStorage(),
   now = () => Date.now(),
+  forceRefresh = false,
   // `apiKey` so existe para os testes unitarios da normalizacao do DONKI. O jogo nunca o passa.
   apiKey,
   timeoutMs = SPACE_WEATHER_CONFIG.FETCH_TIMEOUT_MS,
 } = {}) {
   const nowMs = now();
-  const cached = readCache(storage, nowMs);
+  const cached = forceRefresh ? null : readCache(storage, nowMs);
   if (cached) return cached;
   if (typeof fetchImpl !== 'function') return EMBEDDED_SPACE_WEATHER;
 
   try {
     // Caminho normal do cliente: uma unica chamada same-origin, sem chave no bundle nem na URL.
     if (!apiKey) {
-      const response = await fetchImpl(SPACE_WEATHER_ENDPOINT);
-      if (response.status !== 200) throw new Error(`Space weather HTTP ${response.status}`);
-      const result = await response.json();
-      if (!Array.isArray(result.cmes) || result.cmes.length === 0) throw new Error('Invalid space weather response');
-      writeCache(storage, result);
-      return result;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetchImpl(SPACE_WEATHER_ENDPOINT, { cache: 'no-store', signal: controller.signal });
+        if (response.status !== 200) throw new Error(`Space weather HTTP ${response.status}`);
+        const result = await response.json();
+        if (result?.live !== true || !Array.isArray(result.cmes)) throw new Error('Invalid space weather response');
+        const liveResult = { ...result, seps: Array.isArray(result.seps) ? result.seps : [], bulletin: result.bulletin ?? null };
+        writeCache(storage, liveResult);
+        return liveResult;
+      } finally {
+        clearTimeout(timer);
+      }
     }
 
     const W = SPACE_WEATHER_CONFIG;
-  // SEP e boletim sao extras: se falharem, a partida segue so com as CMEs ao vivo
-  const optional = (promise) => promise.catch(() => []);
+    // SEP e boletim sao extras: se falharem, a partida segue so com as CMEs ao vivo.
+    const optional = (promise) => promise.catch(() => []);
     const [cmeItems, sepItems, notificationItems] = await Promise.all([
       fetchList(fetchImpl, donkiUrl('CME', W.CME_WINDOW_DAYS, nowMs, apiKey), timeoutMs),
-      optional(fetchList(fetchImpl, donkiUrl('SEP', W.SEP_WINDOW_DAYS, nowMs, apiKey), timeoutMs)),
-      optional(fetchList(fetchImpl, donkiUrl('notifications', W.BULLETIN_WINDOW_DAYS, nowMs, apiKey, '&type=all'), timeoutMs)),
+      optional(fetchList(fetchImpl, donkiUrl('SEP', W.SEP_WINDOW_DAYS, nowMs, apiKey), timeoutMs, true)),
+      optional(fetchList(fetchImpl, donkiUrl('notifications', W.BULLETIN_WINDOW_DAYS, nowMs, apiKey, '&type=all'), timeoutMs, true)),
     ]);
     const cmes = summarizeCmes(cmeItems);
-    // O Sol pode passar dias sem mandar nada para Marte: sem tempestade ao vivo, usa o embutido
-    if (cmes.length === 0) return EMBEDDED_SPACE_WEATHER;
     const result = {
       live: true,
       fetchedAt: new Date(nowMs).toISOString(),

@@ -55,6 +55,17 @@ describe('missionStatus', () => {
     expect(s.alerts[0].source).toBe('Real NASA DONKI data from 14/11/2026: CME of 01/11/2026, 894 km/s');
   });
 
+  it('uses each storm’s own source instead of the latest global fetch', () => {
+    const latest = { live: true, fetchedAt: '2026-11-14T09:05:00Z' };
+    const scripted = { ...STORM, source: { live: false, fetchedAt: '2026-11-13' } };
+    const live = { ...STORM, source: latest };
+    const scriptedAlert = missionStatus(fakeMission({ storm: { phase: 'warning', storm: scripted, hoursUntil: 1 } }), latest);
+    const liveAlert = missionStatus(fakeMission({ storm: { phase: 'warning', storm: live, hoursUntil: 1 } }), scripted.source);
+    expect(scriptedAlert.alerts[0].source).toContain('Real NASA DONKI data from 13/11/2026');
+    expect(scriptedAlert.alerts[0].source).not.toContain('LIVE');
+    expect(liveAlert.alerts[0].source).toContain('LIVE from NASA DONKI');
+  });
+
   it('tells the kid to hide during a storm, or to stay in the bubble when shielded', () => {
     const storm = { phase: 'active', storm: STORM, hoursUntil: 0, hoursLeft: 2 };
     const open = missionStatus(fakeMission({ storm, doseRate: 5 }), FETCHED);

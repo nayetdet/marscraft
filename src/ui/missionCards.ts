@@ -37,7 +37,7 @@ const GRAYWATER_WORTH_RECYCLING = 5;
 // Fonte curta e honesta: dado embutido aparece como "real data from DD/MM/AAAA" e o ao vivo como
 // "LIVE from NASA DONKI, fetched HH:MM" (issue #100). `source`: veja donkiLabel em missionText.js.
 export function stormSourceShort(storm, source) {
-  const label = donkiLabel(source);
+  const label = donkiLabel(storm.source ?? source);
   const origin = label.startsWith('LIVE') ? label : `Real NASA DONKI data from ${label.slice('real data from '.length)}`;
   if (storm.sep) return `${origin}: SEP of ${formatDateDMY(storm.sep.eventTime)}`;
   return `${origin}: CME of ${formatDateDMY(storm.cme.startTime)}, ${Math.round(storm.cme.speedKmS)} km/s`;

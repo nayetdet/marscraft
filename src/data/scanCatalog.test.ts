@@ -9,7 +9,7 @@ import { getJournalIcon } from '../graphics/journalIcons.ts';
 // devolver precisa ter ficha no catálogo.
 const TARGET_IDS = [
   'sun', 'earth', 'moon', 'phobos', 'deimos',
-  'regolith', 'sandstone', 'crater-rock', 'water-ice',
+  'regolith', 'sandstone', 'crater-rock', 'water-ice', 'meteor-ice',
   'base', 'habitat', 'airlock', 'tunnel', 'greenhouse', 'cupola', 'gym',
   'solar-panels', 'antenna', 'ice-depot', 'rover', 'lander', 'mav-panel',
   'crater-rim', 'atmosphere',

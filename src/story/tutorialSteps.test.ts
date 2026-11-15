@@ -5,7 +5,7 @@ import { StoryDirector } from './StoryDirector.ts';
 import { objectiveView } from './objectiveView.ts';
 import { objectiveTarget, routeWaypoint } from './waypoints.ts';
 import { CERTIFICATES, certificateBadge } from './storyChapters.ts';
-import { CORE_STEPS, STEP_COLORS, TUTORIAL_STEPS, TUTORIAL_STEP_IDS, detourCard, stepCard, tutorialStepById } from './tutorialSteps.ts';
+import { ACT1_STEPS, CORE_STEPS, STEP_COLORS, TUTORIAL_STEPS, TUTORIAL_STEP_IDS, detourCard, stepCard, tutorialStepById } from './tutorialSteps.ts';
 import { PLANT_NEEDS, TUTORIAL_DETOURS, detourById, findDetours } from './tutorialDetours.ts';
 import {
   CREW_CONFIG, CROP_CONFIG, ENERGY_CONFIG, RADIATION_CONFIG, ROVER_CONFIG, STATION_CONFIG, STORY_CONFIG,
@@ -38,6 +38,7 @@ const ACTIONS = [
   ['cert-shelter', { shelterWaterL: 10 }],
   ['rover-drive', { roverDrives: 1 }],
   ['rover-ice', { roverIceKg: 10 }],
+  ['suit-up', { suitEquipped: true }],
   ['collect-ice', { iceCount: 1 }],
   ['load-rocket', { iceCount: 0, iceNeeded: 9 }],
   ['scan', { scanCount: 1 }],
@@ -157,9 +158,8 @@ describe('guided tutorial', () => {
     expect(before.skipTraining()).toBe(false);
     before.start(snap());
     expect(before.steps).toBe(CORE_STEPS);
-    before.update(snap({ insideHabitat: true }));
-    before.update(snap({ insideHabitat: true, earthCalls: 1 }));
-    expect(before.objectiveId).toBe('collect-ice');
+    before.update(snap({ earthCalls: 1 }));
+    expect(before.objectiveId).toBe('rover-drive');
   });
 
   it('shows the step, its hint and its number in the objective panel', () => {
@@ -175,7 +175,7 @@ describe('guided tutorial', () => {
 
   it('runs a simulated radiation pulse on the shielding certificate', () => {
     const shelter = CERTIFICATES.find((c) => c.id === 'cert-shelter');
-    expect(certificateBadge(shelter, { shelterWaterL: 10 }).line).toMatch(/10 L wall blocks 48%/);
+    expect(certificateBadge(shelter, { shelterWaterL: 100 }).line).toMatch(/100 L wall blocks 48%/);
   });
 });
 
@@ -212,9 +212,11 @@ describe('tutorial step texts', () => {
     });
   });
 
-  it('has unique ids and keeps the 5 core steps as the default tutorial', () => {
+  it('has unique ids and keeps the 6 steps of act 1 as the default tutorial', () => {
     expect(new Set(TUTORIAL_STEP_IDS).size).toBe(TUTORIAL_STEPS.length);
-    expect(CORE_STEPS.map((step) => step.id)).toEqual(['enter-base', 'report', 'collect-ice', 'load-rocket', 'scan']);
+    expect(ACT1_STEPS.map((step) => step.id)).toEqual(['report', 'rover-drive', 'rover-ice', 'suit-up', 'collect-ice', 'load-rocket']);
+    // Os atos 2, 3 e 4 vem depois, na mesma lista (src/story/acts/)
+    expect(CORE_STEPS.slice(0, ACT1_STEPS.length)).toEqual(ACT1_STEPS);
   });
 });
 

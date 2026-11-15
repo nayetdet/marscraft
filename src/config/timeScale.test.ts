@@ -17,8 +17,8 @@ describe('one game clock (issue #229)', () => {
     expect((24 * HOUR_SECONDS) / 60).toBe(20);
   });
 
-  it('gives the crew the real BVAD water and food per person per sol', () => {
-    expect(CREW_CONFIG.WATER_L_PER_HOUR * 24).toBeCloseTo(3); // ~3 kg de agua por pessoa/dia
+  it('gives the crew 30 L of water (all uses) and the real BVAD food per person per sol', () => {
+    expect(CREW_CONFIG.WATER_L_PER_HOUR * 24).toBeCloseTo(30); // uso total: beber, comida, higiene e lavagem (agua vezes 10)
     expect(CREW_CONFIG.FOOD_PER_HOUR * 24 * CREW_CONFIG.KG_PER_RATION).toBeCloseTo(1.8); // ~1,8 kg de comida
   });
 
@@ -81,7 +81,7 @@ describe('declared exceptions to the clock (issue #229)', () => {
     const plants = REAL_VS_GAME.find((row) => row.topic === 'Plants')!;
     expect(plants.real).toMatch(/lettuce 28, soy 90, potato 105/);
     expect(plants.why).toContain(String(TIME_SCALE_CONFIG.CROP_REAL_DAYS_PER_GAME_SECOND));
-    expect(REAL_VS_GAME.find((row) => row.topic === 'Crew food and water')!.game).toMatch(/3 L of water and 1\.8 kg of food/);
+    expect(REAL_VS_GAME.find((row) => row.topic === 'Crew food and water')!.game).toMatch(/30 L of water.*1\.8 kg of food/);
     expect(REAL_VS_GAME.find((row) => row.topic === 'Battery')!.game).toMatch(/125 kWh/);
   });
 });

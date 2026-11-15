@@ -8,7 +8,9 @@ describe('objectiveTarget', () => {
     expect(objectiveTarget('report')).toBe('science'); // radio, longe do console do rover
     expect(objectiveTarget('rover-drive')).toBe('console');
     expect(objectiveTarget('scan')).toBeNull();
-    expect(objectiveTarget('collect-ice')).toBe('ice');
+    expect(objectiveTarget('suit-up')).toBe('suitport');
+    // Gelo do meteoro do ato 1; sem a cratera nova, o GameEngine usa a cratera de gelo
+    expect(objectiveTarget('collect-ice')).toBe('meteor');
   });
 
   it('sends the player for ice, then to the rocket, while the tank needs ice', () => {

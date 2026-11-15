@@ -10,8 +10,8 @@ function baseData(over: Partial<MachineViewData> = {}): MachineViewData {
     maxStat: 100,
     health: 90,
     food: 85,
-    baseWater: 60,
-    maxBaseWater: 120,
+    baseWater: 600,
+    maxBaseWater: 1200,
     regolith: 4,
     carrots: 2,
     objective: 'Build water shield',
@@ -118,8 +118,8 @@ describe('machineViews', () => {
   });
 
   it('shows air factory pixel monitor, amounts, and exclusive toggles without text bloat', () => {
-    const normal = renderMachineMonitorHtml(baseData({ type: 'power', regolith: 4, co2: 5, filter: 88, baseWater: 60, oxygen: 95, energy: 80 }));
-    expect(normal).toContain('60.0 L');
+    const normal = renderMachineMonitorHtml(baseData({ type: 'power', regolith: 4, co2: 5, filter: 88, baseWater: 600, oxygen: 95, energy: 80 }));
+    expect(normal).toContain('600.0 L');
     expect(normal).toContain('80%');
     expect(normal).toContain('95%');
     expect(normal).toContain('WATER');

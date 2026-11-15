@@ -31,7 +31,7 @@ const isStorm = (phase: StormPhase): boolean => phase === 'warning' || phase ===
 
 export function wallMissingLiters(wallL: number): number {
   const missing = RADIATION_CONFIG.SHELTER_WALL_MAX_L - Math.max(0, wallL);
-  // Folga de ponto flutuante: 59,9999 L conta como cheia
+  // Folga de ponto flutuante: 599,9999 L conta como cheia
   return missing <= 1e-6 ? 0 : missing;
 }
 
