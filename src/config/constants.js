@@ -85,10 +85,9 @@ export const SURVIVAL_CONFIG = {
 // Visual da nevoa na borda do mapa (src/sky/DustStormEffect.js); nao causa dano.
 export const DUST_STORM_VISUAL_CONFIG = {
   OUTER_WALL_OPACITY: 1,
-  OVERHEAD_FOG_HEIGHT: 24,
-  OVERHEAD_FOG_VIEW_START: 12,
-  OVERHEAD_FOG_VIEW_END: 36,
-  OVERHEAD_OUTER_BAND_OPACITY: 0.34,
+  EDGE_FOG_LEAD: 24,
+  EDGE_FOG_MAX_DENSITY: 0.006,
+  EDGE_DOME_MAX_OPACITY: 0.28,
   WALL_BOTTOM_Y: -4,
   WALL_HEIGHT: 44,
   // A parede some perto da camera (entre estas distancias, em blocos) para nao virar um plano duro

@@ -1,19 +1,21 @@
-import { SURVIVAL_CONFIG, TERRAIN_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { DUST_STORM_VISUAL_CONFIG, SURVIVAL_CONFIG, TERRAIN_CONFIG } from '../config/constants.js';
 
 // Parede de poeira que marca a borda da area jogavel: um anel em volta do centro da base.
 // Logica pura, usada pelo HUD (aviso), pelo visual (DustStormEffect) e pela parede invisivel.
 // Nao machuca (issue #103): a tempestade de poeira de verdade e o clima (src/mission/dustWeather.js).
 
 const CENTER = TERRAIN_CONFIG.BASE_CENTER;
-const HALF_MAP_X = WORLD_CONFIG.SIZE_X / 2;
-const HALF_MAP_Z = WORLD_CONFIG.SIZE_Z / 2;
-
+const EDGE_FOG_START = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS - DUST_STORM_VISUAL_CONFIG.EDGE_FOG_LEAD;
+const EDGE_FOG_RANGE = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS - EDGE_FOG_START;
 export const DUST_STORM_CENTER = CENTER;
 export const DUST_STORM_WALL_RADIUS = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS;
-export const DUST_STORM_WORLD_RADIUS = Math.hypot(
-  HALF_MAP_X + Math.abs(CENTER.x),
-  HALF_MAP_Z + Math.abs(CENTER.z)
-);
+
+// Gradua a nevoa sentida pelo jogador ao se aproximar da barreira; nao aplica dano.
+export function dustStormVisualStrength(x, z) {
+  const distance = distanceFromBaseCenter(x, z);
+  return Math.max(0, Math.min(1, (distance - EDGE_FOG_START) / EDGE_FOG_RANGE));
+}
+
 export function distanceFromBaseCenter(x, z) {
   return Math.hypot(x - CENTER.x, z - CENTER.z);
 }

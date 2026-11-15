@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { DUST_STORM_VISUAL_CONFIG as V, DUST_WEATHER_CONFIG as W, WORLD_CONFIG } from '../config/constants.js';
+import { DUST_STORM_VISUAL_CONFIG as V, DUST_WEATHER_CONFIG as W } from '../config/constants.js';
 import {
   DUST_STORM_CENTER,
   DUST_STORM_WALL_RADIUS,
-  DUST_STORM_WORLD_RADIUS,
+  dustStormVisualStrength,
 } from '../world/dustStormZone.js';
 
 // Uma unica frente de nevoa marca a borda do mapa. O clima temporizado (#103) continua
@@ -128,7 +128,6 @@ export class DustStormEffect {
     this.haze = 0;
 
     this._buildWall();
-    this._buildOverheadFog();
     this._buildDome();
     this._buildParticles();
   }
@@ -166,25 +165,6 @@ export class DustStormEffect {
     wall.renderOrder = -1;
     this.scene.add(wall);
     return { mesh: wall, uniforms };
-  }
-
-  _buildOverheadFog() {
-    this.overheadFogMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      fog: false,
-    });
-    const geometry = new THREE.RingGeometry(DUST_STORM_WALL_RADIUS, DUST_STORM_WORLD_RADIUS, 128, 2);
-    const mesh = new THREE.Mesh(geometry, this.overheadFogMaterial);
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set(DUST_STORM_CENTER.x, WORLD_CONFIG.GROUND_LEVEL + V.OVERHEAD_FOG_HEIGHT, DUST_STORM_CENTER.z);
-    mesh.frustumCulled = false;
-    mesh.renderOrder = 1;
-    this.scene.add(mesh);
-    this.overheadFog = mesh;
   }
 
   _buildDome() {
@@ -242,9 +222,10 @@ export class DustStormEffect {
   // `camera`: de onde a cena e vista, para posicionar a cupula e as particulas.
   // Chamar depois do MarsSkySystem.update, que acerta a cor da neblina do horario.
   // `weather`: { haze, front, indoors } da tempestade de poeira do clima (0 a 1)
-  update(dt, camera, weather = NO_WEATHER) {
+  update(dt, focus, camera, weather = NO_WEATHER) {
     this.time += dt;
     const haze = weather.haze;
+    const edgeStrength = dustStormVisualStrength(focus.x, focus.z);
     this.haze = haze;
 
     // Cor da poeira a partir da neblina do horario (o ceu acabou de escrever nela)
@@ -252,8 +233,10 @@ export class DustStormEffect {
     _skyFog.copy(fog.color);
     _dust.copy(STORM_DUST_COLOR).multiplyScalar(THREE.MathUtils.clamp(luma(_skyFog) / DAY_FOG_LUMA, NIGHT_DUST_BRIGHTNESS, 1));
 
-    fog.density = V.FOG_BASE_DENSITY + (W.WEATHER_FOG_DENSITY - V.FOG_BASE_DENSITY) * haze;
-    fog.color.lerp(_dust, haze * 0.85);
+    const weatherFogDensity = V.FOG_BASE_DENSITY + (W.WEATHER_FOG_DENSITY - V.FOG_BASE_DENSITY) * haze;
+    const edgeFogDensity = V.FOG_BASE_DENSITY + (V.EDGE_FOG_MAX_DENSITY - V.FOG_BASE_DENSITY) * edgeStrength;
+    fog.density = Math.max(weatherFogDensity, edgeFogDensity);
+    fog.color.lerp(_dust, Math.max(haze * 0.85, edgeStrength * 0.7));
 
     // A unica parede de nevoa marca a borda do mapa e nao causa dano.
     this.wall.visible = true;
@@ -261,19 +244,11 @@ export class DustStormEffect {
     this.wallUniforms.uOpacity.value = V.OUTER_WALL_OPACITY;
     this.wallUniforms.uColor.value.copy(_dust);
 
-    // A nevoa externa e visivel de cima, mas nao cobre o mapa na altura do jogador.
-    const viewHeight = camera.position.y - WORLD_CONFIG.GROUND_LEVEL;
-    const overheadVisibility = THREE.MathUtils.smoothstep(
-      viewHeight,
-      V.OVERHEAD_FOG_VIEW_START,
-      V.OVERHEAD_FOG_VIEW_END
-    );
-    this.overheadFog.visible = overheadVisibility > 0.005;
-    this.overheadFogMaterial.color.copy(_dust);
-    this.overheadFogMaterial.opacity = V.OVERHEAD_OUTER_BAND_OPACITY * overheadVisibility;
-
     // Cupula: usada apenas nas tempestades de poeira temporizadas do clima.
-    const domeOpacity = W.WEATHER_DOME_OPACITY * haze;
+    const domeOpacity = Math.max(
+      W.WEATHER_DOME_OPACITY * haze,
+      V.EDGE_DOME_MAX_OPACITY * edgeStrength
+    );
     this.dome.visible = domeOpacity > 0.01;
     if (this.dome.visible) {
       this.dome.position.copy(camera.position);
