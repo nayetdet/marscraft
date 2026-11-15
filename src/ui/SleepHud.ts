@@ -44,9 +44,10 @@ export class SleepHud {
     this.fade.innerHTML = `
       <div class="sleep-clock" aria-hidden="true"><span class="sleep-hand"></span></div>
       <div id="sleep-time" class="sleep-time"></div>
-      <div class="sleep-label">Sleeping... zzz</div>`;
+      <div class="sleep-label">${SLEEPING_LABEL}</div>`;
     document.body.appendChild(this.fade);
     this.timeEl = this.fade.querySelector('#sleep-time');
+    this.labelEl = this.fade.querySelector('.sleep-label');
 
     this.card = document.createElement('div');
     this.card.id = 'sleep-wake-card';
@@ -75,9 +76,11 @@ export class SleepHud {
     this.panel.classList.add('hidden');
   }
 
-  showSleeping(timeText, hoursSlept) {
+  // `label`: o que a tela escura diz (dormindo, ou esperando a tempestade no abrigo, issue #228)
+  showSleeping(timeText, hoursSlept, label = SLEEPING_LABEL) {
     this.fade.classList.remove('hidden');
     this.timeEl.textContent = timeText;
+    if (this.labelEl.textContent !== label) this.labelEl.textContent = label;
     // O ponteiro da uma volta inteira a cada 12 h de jogo
     this.fade.style.setProperty('--sleep-turn', `${hoursSlept * 30}deg`);
   }
@@ -95,6 +98,8 @@ export class SleepHud {
     this._cardTimer = setTimeout(() => this.card.classList.add('hidden'), fact ? 14000 : 7000);
   }
 }
+
+const SLEEPING_LABEL = 'Sleeping... zzz';
 
 function formatHours(hours) {
   const total = Math.round(hours * 60);

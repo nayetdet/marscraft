@@ -1,11 +1,12 @@
 // @ts-nocheck
 import { SurvivalSystem } from '../player/SurvivalSystem.ts';
 import { BLOCK_IDS, CROP_ITEM_IDS } from '../config/blockTypes.ts';
-import { CROP_CONFIG, SCIENCE_CONFIG, STATION_CONFIG, WATER_SYSTEM_CONFIG, CREW_CONFIG } from '../config/constants.ts';
+import { CROP_CONFIG, SCIENCE_CONFIG, STATION_CONFIG, TIME_SCALE_CONFIG, WATER_SYSTEM_CONFIG, CREW_CONFIG } from '../config/constants.ts';
 import { describe, it, expect } from 'vitest';
 import { ExpeditionState } from './ExpeditionState.ts';
 import { StationSystem } from './StationSystem.ts';
 import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.ts';
+import { SAMPLE_TYPES } from '../data/sampleTypes.ts';
 
 const player = () => ({ health: 20, maxStat: 20, takeDamage(amount) { this.health = Math.max(0, this.health - amount); } });
 describe('base stations', () => {
@@ -78,7 +79,9 @@ describe('greenhouse and science progression', () => {
     expect(station.collectBasket('potato', survival)).toMatch(/full/i);
   });
   it.each(['potato', 'lettuce', 'soy'])('grows %s with power and harvests fresh food', type => {
-    expect(CROP_CONFIG[type].seconds).toBeLessThan(10);
+    // Acelerado pela excecao declarada (issue #229): proporcional aos dias reais, e ainda em segundos
+    expect(CROP_CONFIG[type].seconds).toBe(Math.round(CROP_CONFIG[type].realDays / TIME_SCALE_CONFIG.CROP_REAL_DAYS_PER_GAME_SECOND));
+    expect(CROP_CONFIG[type].seconds).toBeLessThanOrEqual(20);
     const mission = new ExpeditionState();
     const station = new StationSystem(mission);
     const survival = new SurvivalSystem();
@@ -106,17 +109,70 @@ describe('greenhouse and science progression', () => {
     const station = new StationSystem(mission);
     const survival = new SurvivalSystem();
     survival.inventorySlots.fill(null);
-    expect(station.analyzeSample(survival)).toMatch(/Collect a new regolith sample/);
+    expect(station.analyzeSample(survival)).toMatch(/Nothing to analyze/);
     station.samples = 1;
     expect(station.analyzeSample(survival)).toMatch(/Collect regolith/);
     survival.addBlockToInventory(BLOCK_IDS.REGOLITH);
+    expect(station.rawSampleCount(survival)).toBe(1);
     const before = mission.energy;
-    expect(station.analyzeSample(survival)).toMatch(/science package/);
+    expect(station.analyzeSample(survival)).toMatch(/\+1 science point/);
     expect(station.analyzedSamples).toBe(1);
     expect(station.samples).toBe(0);
-    expect(station.science).toBe(STATION_CONFIG.SCIENCE_PER_SAMPLE);
+    expect(station.analyzed[0]).toMatchObject({ typeId: 'regolith', points: SCIENCE_CONFIG.REGOLITH_POINTS });
     expect(survival.countItem(BLOCK_IDS.REGOLITH)).toBe(0);
     expect(mission.energy).toBeCloseTo(before - SCIENCE_CONFIG.ANALYZE_POWER_COST);
+  });
+  it('counts plain regolith only once, so exploring the map is worth it (issue #270)', () => {
+    const mission = new ExpeditionState();
+    const station = new StationSystem(mission);
+    const survival = new SurvivalSystem();
+    survival.inventorySlots.fill(null);
+    station.samples = 2;
+    survival.addBlockToInventory(BLOCK_IDS.REGOLITH);
+    survival.addBlockToInventory(BLOCK_IDS.REGOLITH);
+    station.analyzeSample(survival);
+    const before = mission.energy;
+    expect(station.analyzeSample(survival)).toMatch(/already studied plain regolith/);
+    expect(station.analyzedSamples).toBe(1);
+    expect(station.rawSampleCount(survival)).toBe(0);
+    expect(mission.energy).toBe(before);
+    for (const type of SAMPLE_TYPES) expect(type.points).toBeGreaterThan(SCIENCE_CONFIG.REGOLITH_POINTS);
+  });
+  it('analyzes map samples first, best one first, and remembers the type for its fact card', () => {
+    const mission = new ExpeditionState();
+    const station = new StationSystem(mission);
+    const survival = new SurvivalSystem();
+    survival.inventorySlots.fill(null);
+    const [sand, , sulfur] = SAMPLE_TYPES;
+    expect(survival.addBlockToInventory(sand.itemId)).toBe(true);
+    expect(survival.addBlockToInventory(sulfur.itemId)).toBe(true);
+    expect(station.rawSampleCount(survival)).toBe(2);
+    const before = mission.energy;
+    expect(station.analyzeSample(survival)).toMatch(new RegExp(`\\+${sulfur.points} science points`));
+    expect(station.lastAnalyzedType).toBe(sulfur);
+    expect(survival.countItem(sulfur.itemId)).toBe(0);
+    expect(mission.energy).toBeCloseTo(before - SCIENCE_CONFIG.ANALYZE_POWER_COST);
+    station.analyzeSample(survival);
+    expect(station.analyzed.map((sample) => sample.typeId)).toEqual([sulfur.id, sand.id]);
+    expect(station.rawSampleCount(survival)).toBe(0);
+  });
+  it('keeps map samples in the bag: they cannot be placed or dropped', () => {
+    const survival = new SurvivalSystem();
+    survival.inventorySlots.fill(null);
+    survival.slots = survival.inventorySlots.slice(0, 9);
+    survival.addBlockToInventory(SAMPLE_TYPES[0].itemId);
+    expect(survival.useBlockFromSlot(0)).toBe(false);
+    expect(survival.countItem(SAMPLE_TYPES[0].itemId)).toBe(1);
+  });
+  it('pays lab upgrades with science points that were not sent to Earth', () => {
+    const station = new StationSystem(new ExpeditionState());
+    expect(station.upgrade(() => 0)).toMatch(/Not enough science points/);
+    expect(station.upgraded).toBe(false);
+    const asked = [];
+    expect(station.upgrade((cost) => { asked.push(cost); return cost; })).toMatch(/Suit upgrade installed/);
+    expect(station.upgradeTool((cost) => { asked.push(cost); return cost; })).toMatch(/Tool upgraded/);
+    expect(asked).toEqual([SCIENCE_CONFIG.SUIT_UPGRADE_POINTS, SCIENCE_CONFIG.TOOL_UPGRADE_POINTS]);
+    expect(station.upgrade(() => 4)).toMatch(/already installed/);
   });
   it('refuses to analyze without power and keeps the sample', () => {
     const mission = new ExpeditionState();

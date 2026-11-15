@@ -1,3 +1,4 @@
+import { STORY_CONFIG } from '../config/constants.ts';
 import { TradeoffLedger, sceneForTrigger } from '../story/tradeoffScenes.ts';
 import type { TradeoffScene, TradeoffTarget } from '../story/tradeoffScenes.ts';
 import { pixelSpriteSvg } from './pixelSprites.ts';
@@ -44,6 +45,7 @@ export class TradeoffHud {
   private ledger = new TradeoffLedger(loadSeen());
   private openedAt = 0;
   private onClose: (() => void) | null = null;
+  private autoCloseTimer = 0;
   private closeCallbacks = new Map<string, () => void>();
 
   constructor() {
@@ -82,9 +84,12 @@ export class TradeoffHud {
     this.render(scene);
     this.root.classList.remove('hidden');
     this.openedAt = performance.now();
+    // Cena de emergencia nao segura ninguem: sem resposta, fecha sozinha e o jogo volta
+    if (scene.urgent) this.autoCloseTimer = window.setTimeout(() => this.close(), STORY_CONFIG.URGENT_TRADEOFF_SECONDS * 1000);
   }
 
   close(): void {
+    window.clearTimeout(this.autoCloseTimer);
     if (!this.isOpen) return;
     this.root.classList.add('hidden');
     const done = this.onClose;

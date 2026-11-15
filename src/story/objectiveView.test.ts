@@ -4,6 +4,7 @@ import { StoryDirector } from './StoryDirector.ts';
 import { CARDS, commsCard, replyCard } from './storyChapters.ts';
 import { nextRocketJob, objectiveView } from './objectiveView.ts';
 import { pixelIconSvg } from '../ui/pixelIcons.ts';
+import { SCIENCE_CONFIG } from '../config/constants.ts';
 
 function snap(overrides = {}) {
   return {
@@ -115,7 +116,7 @@ describe('objectiveView', () => {
       { icon: 'rocket', state: 'now' },
       { icon: 'home', state: 'todo' },
     ]);
-    expect(view.goals).toEqual({ storms: 0, stormsNeeded: 1, dataSent: false });
+    expect(view.goals).toEqual({ storms: 0, stormsNeeded: 1, dataSent: false, sciencePoints: 0, scienceGoal: SCIENCE_CONFIG.POINTS_TO_LAUNCH });
     expect(view.progress).toBeNull(); // o numero do passo so existe no tutorial
 
     // Entregou o gelo: o degrau acende e o passo seguinte e voltar a base

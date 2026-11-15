@@ -246,7 +246,8 @@ export class MissionHud {
   }
 
   // `analyzedSamples`: amostras analisadas no laboratorio (as que podem virar tubos);
-  updateMavPanel(mission, iceInBag, analyzedSamples = 0, _totals = { discoveries: 0, samples: 0 }) {
+  // `science`: pontos de ciencia desta partida ({ pendingPoints, sentPoints }, sciencePackage.scienceStatus)
+  updateMavPanel(mission, iceInBag, analyzedSamples = 0, science = { pendingPoints: 0, sentPoints: 0 }) {
     if (!this.isMavPanelOpen) return;
     const progress = mission.progress;
     const fuel = Math.floor(mission.propellant);
@@ -305,7 +306,8 @@ export class MissionHud {
     setClass(this.pillFuelEl, `mav-check-tile${fuel >= 100 ? ' is-ok' : ''}`);
     setText(this.stormsEl, `${storms}/${vm.stormsNeeded}`);
     setClass(this.pillStormsEl, `mav-check-tile${storms >= vm.stormsNeeded ? ' is-ok' : ''}`);
-    setText(this.dataEl, vm.dataSent ? 'OK' : 'NO');
+    // Pontos de ciencia ja enviados, da meta que o foguete pede (issue #269)
+    setText(this.dataEl, `${Math.min(science.sentPoints, SCIENCE_CONFIG.POINTS_TO_LAUNCH)}/${SCIENCE_CONFIG.POINTS_TO_LAUNCH}`);
     setClass(this.pillDataEl, `mav-check-tile${vm.dataSent ? ' is-ok' : ''}`);
 
     setText(this.tubesEl, `${tubes}/${vm.maxSampleTubes}`);

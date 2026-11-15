@@ -1,6 +1,8 @@
 // @ts-nocheck
 // 24x24 pixel-art illustrations for the Discovery Journal cards (Greenhouse monitor style).
 // Built as SVG data URLs with shape-rendering="crispEdges" so they scale cleanly at any resolution.
+import { SAMPLE_TYPES } from '../data/sampleTypes.ts';
+import { sampleIconRects } from './itemIcons.ts';
 
 function svgToDataUrl(rects, viewBox = '0 0 24 24', crisp = true) {
   const rendering = crisp ? 'shape-rendering="crispEdges"' : 'shape-rendering="geometricPrecision"';
@@ -523,6 +525,14 @@ const ICON_BUILDERS = {
     `,
   }),
 };
+
+// ---------- SAMPLES (issue #270): a pedra do item, sobre o chao de Marte ----------
+for (const sample of SAMPLE_TYPES) {
+  ICON_BUILDERS[sample.id] = () => ({
+    viewBox: '0 0 16 16',
+    body: r('#2a1710', 0, 0, 16, 16) + r('#5b2e1c', 0, 12, 16, 4) + r('#7a3f28', 0, 12, 16, 1) + sampleIconRects(sample.id),
+  });
+}
 
 const ICON_CACHE = new Map();
 

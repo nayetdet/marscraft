@@ -1,9 +1,14 @@
 // @ts-nocheck
 import { BLOCK_IDS, CROP_ITEM_IDS } from '../config/blockTypes.ts';
 import { STATION_CONFIG as C, CROP_CONFIG, SCIENCE_CONFIG, WATER_SYSTEM_CONFIG, CREW_CONFIG } from '../config/constants.ts';
+import { SAMPLE_TYPES } from '../data/sampleTypes.ts';
 import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.ts';
 
 const RADIO_SILENT = 'Radio silent: the Sun is between Mars and Earth (solar conjunction). You must decide on your own until it passes.';
+
+// Regolito comum como amostra: vale pouco e so a primeira analise conta (issue #270)
+export const REGOLITH_SAMPLE = Object.freeze({ typeId: 'regolith', name: 'Plain Regolith', points: SCIENCE_CONFIG.REGOLITH_POINTS });
+const notEnoughPoints = (cost) => `Not enough science points: this needs ${cost} points that were not sent to Earth yet.`;
 
 // All times, costs and penalties are scaled for gameplay.
 export class StationSystem {
@@ -17,11 +22,15 @@ export class StationSystem {
     this.workoutCount = 0;
     this.dirtySuit = false;
     this.contaminated = false;
-    this.science = 0;
+    // Regolito coletado la fora, esperando a analise
     this.samples = 0;
     this.upgraded = false;
     this.toolUpgraded = false;
-    this.analyzedSamples = 0;
+    // Amostras ja analisadas nesta partida, na ordem: [{ typeId, name, points }] (issue #270).
+    // Cada uma vira um item de ciencia (sciencePackage.sampleItem) e pode virar tubo no foguete.
+    this.analyzed = [];
+    // A ultima amostra do mapa analisada (SampleType), para o GameEngine mostrar o fato dela
+    this.lastAnalyzedType = null;
     this.freshFood = C.FRESH_FOOD_DURATION;
     // Um cultivo por campo da estufa (GREENHOUSE_PLOTS). `crop` e o do campo selecionado no monitor.
     this.plots = GREENHOUSE_PLOTS.map(() => ({ crop: null }));
@@ -214,30 +223,54 @@ export class StationSystem {
     if (!collected) return this.harvestBaskets[type] ? 'Inventory full. Make room to collect the harvest.' : `The ${type} basket is empty.`;
     return `Collected ${collected} ${type}.${this.harvestBaskets[type] ? ' The rest is in the basket.' : ''}`;
   }
-  // Analisa 1 amostra de regolito coletada la fora: gasta o bloco e energia do laboratorio,
-  // da pontos de ciencia e entra no pacote para a Terra (e pode virar tubo no foguete).
+  get analyzedSamples() {
+    return this.analyzed.length;
+  }
+  get regolithAnalyzed() {
+    return this.analyzed.some((sample) => sample.typeId === REGOLITH_SAMPLE.typeId);
+  }
+  // Amostras na mochila esperando a analise: as do mapa, mais o regolito (so a primeira vez conta)
+  rawSampleCount(survival) {
+    const fromMap = SAMPLE_TYPES.reduce((total, type) => total + survival.countItem(type.itemId), 0);
+    const regolith = !this.regolithAnalyzed && this.samples > 0 && survival.countItem(BLOCK_IDS.REGOLITH) > 0 ? 1 : 0;
+    return fromMap + regolith;
+  }
+  // Analisa 1 amostra no laboratorio: gasta a amostra e energia, e vira pontos de ciencia para
+  // enviar a Terra. As amostras do mapa vao primeiro (valem mais); o regolito comum vale pouco e
+  // so conta uma vez (issue #270), para a exploracao ter motivo.
   analyzeSample(survival) {
-    if (this.samples < 1) return 'Collect a new regolith sample outside first.';
+    this.lastAnalyzedType = null;
+    const type = SAMPLE_TYPES.filter((t) => survival.countItem(t.itemId) > 0).sort((a, b) => b.points - a.points)[0];
+    if (type) {
+      if (!this.mission.spend(SCIENCE_CONFIG.ANALYZE_POWER_COST)) return 'Not enough power.';
+      survival.removeItems(type.itemId, 1);
+      this.analyzed.push({ typeId: type.id, name: type.name, points: type.points });
+      this.lastAnalyzedType = type;
+      return `${type.name} analyzed: +${type.points} science points. Send it to Earth from this terminal.`;
+    }
+    if (this.regolithAnalyzed) return 'You already studied plain regolith. Look for the glowing sample spots outside the base.';
+    if (this.samples < 1) return 'Nothing to analyze. Look for the glowing sample spots outside the base.';
     if (survival.countItem(BLOCK_IDS.REGOLITH) < 1) return 'Collect regolith before analyzing a sample.';
     if (!this.mission.spend(SCIENCE_CONFIG.ANALYZE_POWER_COST)) return 'Not enough power.';
     survival.removeItems(BLOCK_IDS.REGOLITH, 1);
     this.samples--;
-    this.science += C.SCIENCE_PER_SAMPLE;
-    this.analyzedSamples++;
-    return `Sample analyzed: +${C.SCIENCE_PER_SAMPLE} science points. It is now part of your science package.`;
+    this.analyzed.push({ ...REGOLITH_SAMPLE });
+    return `Regolith analyzed: +${REGOLITH_SAMPLE.points} science point. Plain regolith only counts once: the glowing sample spots outside are worth more.`;
   }
-  upgradeTool() {
+  // Melhorias: gastam pontos de ciencia que ainda NAO foram enviados (issue #269). `spendPoints`
+  // = (custo) => pontos gastos, ou 0 se nao ha pontos esperando (MissionSystem.spendScience).
+  upgradeTool(spendPoints = () => 0) {
     if (this.toolUpgraded) return 'Tool upgrade already installed.';
-    if (this.science < C.TOOL_UPGRADE_COST) return 'Not enough science points.';
-    this.science -= C.TOOL_UPGRADE_COST;
+    const spent = spendPoints(SCIENCE_CONFIG.TOOL_UPGRADE_POINTS);
+    if (!spent) return notEnoughPoints(SCIENCE_CONFIG.TOOL_UPGRADE_POINTS);
     this.toolUpgraded = true;
-    return 'Tool upgraded: collecting blocks is faster.';
+    return `Tool upgraded (-${spent} science points, not sent to Earth): collecting blocks is faster.`;
   }
-  upgrade() {
+  upgrade(spendPoints = () => 0) {
     if (this.upgraded) return 'Suit upgrade already installed.';
-    if (this.science < C.UPGRADE_COST) return 'Not enough science points.';
-    this.science -= C.UPGRADE_COST;
+    const spent = spendPoints(SCIENCE_CONFIG.SUIT_UPGRADE_POINTS);
+    if (!spent) return notEnoughPoints(SCIENCE_CONFIG.SUIT_UPGRADE_POINTS);
     this.upgraded = true;
-    return 'Suit upgrade installed: outside, less radiation hurts you and less dose adds up.';
+    return `Suit upgrade installed (-${spent} science points, not sent to Earth): outside, less radiation hurts you and less dose adds up.`;
   }
 }

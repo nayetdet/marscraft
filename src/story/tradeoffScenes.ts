@@ -32,6 +32,9 @@ export interface TradeoffScene {
   accent: string;
   source: string;
   targets: TradeoffTarget[];
+  // Cena de emergencia: o modal fecha sozinho (STORY_CONFIG.URGENT_TRADEOFF_SECONDS), porque o
+  // relogio da tempestade continua andando com ele aberto (issue #135)
+  urgent?: boolean;
 }
 
 // Limites de texto: a crianca le rapido e volta para o jogo
@@ -143,6 +146,7 @@ export const TRADEOFF_SCENES: readonly TradeoffScene[] = Object.freeze([
   {
     id: 'solar',
     triggers: ['storm-warning'],
+    urgent: true,
     word: 'SOLAR STORM',
     line: 'Three ways to hide. Each one costs.',
     accent: '#ff7a6b',

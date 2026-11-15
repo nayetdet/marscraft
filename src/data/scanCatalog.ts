@@ -1,5 +1,8 @@
 // @ts-nocheck
 import { BLOCK_IDS } from '../config/blockTypes.ts';
+import { SAMPLE_TYPES } from './sampleTypes.ts';
+
+export const SAMPLE_CATEGORY = 'samples';
 import { INSIGHT_AVG_C, INSIGHT_PRESSURE_PA, INSIGHT_PRESSURE_PCT_EARTH, WEATHER_RANGE } from './marsWeather.ts';
 
 // Clima real do InSight (issue #108): lido de src/data/insightWeather.json
@@ -28,7 +31,26 @@ export const SCAN_CATEGORIES = [
   { id: 'terrain', label: 'Terrain' },
   { id: 'base', label: 'Base' },
   { id: 'landscape', label: 'Landscape' },
+  // Amostras do mapa (issue #270): a ficha abre quando a amostra e analisada no laboratorio,
+  // nao com a luneta
+  { id: SAMPLE_CATEGORY, label: 'Samples' },
 ];
+
+const GAME_RULE = { name: 'MarsCraft game rule', url: null };
+
+// Uma ficha por tipo de amostra, com o fato real e a fonte (src/data/sampleTypes.ts)
+const SAMPLE_ENTRIES = SAMPLE_TYPES.map((type) => ({
+  id: type.id,
+  category: SAMPLE_CATEGORY,
+  title: type.name,
+  summary: `${type.lines[0]}.`,
+  // O primeiro fato e o numero em destaque no cartao do diario: os pontos
+  facts: [
+    { label: 'Science', value: `+${type.points} points`, source: GAME_RULE },
+    { label: 'Real find', value: type.where, source: type.source },
+  ],
+  why: `${type.lines[1]}. Where it sits on the game map is a game rule.`,
+}));
 
 export const SCAN_CATALOG = [
   // ---------- Céu ----------
@@ -317,6 +339,8 @@ export const SCAN_CATALOG = [
     ],
     why: 'The air is too thin to breathe or to block much radiation, so you always need a suit.',
   },
+  // ---------- Amostras do mapa ----------
+  ...SAMPLE_ENTRIES,
 ];
 
 const BY_ID = new Map(SCAN_CATALOG.map((entry) => [entry.id, entry]));

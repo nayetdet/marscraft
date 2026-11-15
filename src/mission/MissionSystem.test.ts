@@ -3,6 +3,10 @@ import { describe, it, expect } from 'vitest';
 import { MissionSystem, mavProgress, oxygenPointsToKg } from './MissionSystem.ts';
 import { DOSE_CONFIG, ENERGY_CONFIG, MAV_CONFIG, SCIENCE_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, SPACE_WEATHER_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.ts';
 import { TRANSIT_DOSE_MSV } from './doseBudget.ts';
+import { discoveryItem, sampleItem } from './sciencePackage.ts';
+
+// `n` descobertas comuns do scanner (1 ponto de ciencia cada)
+const scienceScans = (n) => Array.from({ length: n }, (_, i) => discoveryItem({ id: `thing-${i}`, title: `Thing ${i}`, category: 'base' }));
 
 // CME com impacto direto previsto em Marte 3 dias depois (aviso de poucos segundos no jogo)
 const cmes = [{
@@ -120,13 +124,13 @@ describe('MissionSystem energy', () => {
 
 });
 
-describe('MissionSystem science package (issue #105)', () => {
-  const { UPLOAD_BASE_COST: BASE, UPLOAD_COST_PER_ITEM: PER_ITEM, MIN_DISCOVERIES, MIN_SAMPLES, MAX_ITEMS_PER_UPLOAD } = SCIENCE_CONFIG;
+describe('MissionSystem science points (issues #105 and #269)', () => {
+  const { UPLOAD_BASE_COST: BASE, UPLOAD_COST_PER_ITEM: PER_ITEM, POINTS_TO_LAUNCH, MAX_ITEMS_PER_UPLOAD } = SCIENCE_CONFIG;
 
   it('cannot complete the science goal with nothing scanned or analyzed this mission', () => {
     const mission = createMission(0);
     mission.battery.charge = 100;
-    const result = mission.sendData({ discoveries: 0, samples: 0 });
+    const result = mission.sendData([]);
     expect(result.status).toBe('empty');
     expect(mission.dataSent).toBe(false);
     expect(mission.battery.charge).toBe(100);
@@ -135,8 +139,8 @@ describe('MissionSystem science package (issue #105)', () => {
 
   it('costs more energy for a bigger package', () => {
     const mission = createMission(0);
-    const small = mission.sciencePackage({ discoveries: 1, samples: 0 });
-    const big = mission.sciencePackage({ discoveries: 4, samples: 2 });
+    const small = mission.sciencePackage(scienceScans(1));
+    const big = mission.sciencePackage(scienceScans(6));
     expect(small.cost).toBe(BASE + PER_ITEM);
     expect(big.cost).toBe(BASE + 6 * PER_ITEM);
     expect(big.cost).toBeGreaterThan(small.cost);
@@ -145,33 +149,53 @@ describe('MissionSystem science package (issue #105)', () => {
   it('needs enough charge for the whole upload', () => {
     const mission = createMission(0);
     mission.battery.charge = BASE + 2 * PER_ITEM - 1;
-    const result = mission.sendData({ discoveries: 2, samples: 0 });
+    const result = mission.sendData(scienceScans(2));
     expect(result).toMatchObject({ status: 'no-energy', cost: BASE + 2 * PER_ITEM });
-    expect(mission.sentDiscoveries).toBe(0);
+    expect(mission.sentPoints).toBe(0);
   });
 
-  it('allows partial uploads, each paying the radio start again, until the minimum is home', () => {
+  it('allows partial uploads, each paying the radio start again, until the points goal is home', () => {
     const mission = createMission(0);
     mission.battery.charge = 100;
-    const first = mission.sendData({ discoveries: MIN_DISCOVERIES - 2, samples: 0 });
-    expect(first).toMatchObject({ status: 'sent', discoveries: MIN_DISCOVERIES - 2, samples: 0, dataSent: false });
+    const found = scienceScans(POINTS_TO_LAUNCH);
+    const early = found.slice(0, 3);
+    const first = mission.sendData(early);
+    expect(first).toMatchObject({ status: 'sent', items: 3, points: 3, sentPoints: 3, dataSent: false });
     expect(mission.dataSent).toBe(false);
-    // Nada novo: o mesmo pacote nao e enviado duas vezes
-    expect(mission.sendData({ discoveries: MIN_DISCOVERIES - 2, samples: 0 }).status).toBe('empty');
+    expect(mission.progress.ready).toBe(false);
+    // Nada novo: o mesmo item nao e enviado duas vezes
+    expect(mission.sendData(early).status).toBe('empty');
 
-    const second = mission.sendData({ discoveries: MIN_DISCOVERIES, samples: 0 });
-    expect(second).toMatchObject({ status: 'sent', discoveries: 2, dataSent: true });
+    const second = mission.sendData(found);
+    expect(second).toMatchObject({ status: 'sent', items: MAX_ITEMS_PER_UPLOAD - 1, dataSent: true });
     expect(mission.dataSent).toBe(true);
+    expect(mission.sentPoints).toBe(POINTS_TO_LAUNCH);
     expect(mission.uploads).toBe(2);
-    expect(mission.battery.charge).toBeCloseTo(100 - (2 * BASE + MIN_DISCOVERIES * PER_ITEM));
+    expect(mission.battery.charge).toBeCloseTo(100 - (2 * BASE + POINTS_TO_LAUNCH * PER_ITEM));
   });
 
-  it('also counts analyzed samples, which go first, and caps one upload at an orbiter pass', () => {
+  it('sends the samples that are worth more first and caps one upload at an orbiter pass', () => {
     const mission = createMission(0);
     mission.battery.charge = 100;
-    const result = mission.sendData({ discoveries: MAX_ITEMS_PER_UPLOAD, samples: MIN_SAMPLES });
-    expect(result).toMatchObject({ samples: MIN_SAMPLES, discoveries: MAX_ITEMS_PER_UPLOAD - MIN_SAMPLES, leftAfter: MIN_SAMPLES, dataSent: true });
-    expect(mission.sciencePackage({ discoveries: MAX_ITEMS_PER_UPLOAD, samples: MIN_SAMPLES }).items).toBe(MIN_SAMPLES);
+    const rocks = [sampleItem(0, { typeId: 'sample-sulfur', name: 'Sulfur', points: 4 }), sampleItem(1, { typeId: 'sample-mudstone', name: 'Mudstone', points: 3 })];
+    const found = [...scienceScans(MAX_ITEMS_PER_UPLOAD), ...rocks];
+    const result = mission.sendData(found);
+    expect(result).toMatchObject({ items: MAX_ITEMS_PER_UPLOAD, leftAfter: 2, points: 7 + MAX_ITEMS_PER_UPLOAD - 2 });
+    expect(mission.sentSamples).toBe(2);
+    expect(mission.sentDiscoveries).toBe(MAX_ITEMS_PER_UPLOAD - 2);
+    expect(mission.sciencePackage(found).items).toBe(2);
+  });
+
+  it('spends waiting points on a lab upgrade, and those points never reach Earth', () => {
+    const mission = createMission(0);
+    mission.battery.charge = 100;
+    const found = scienceScans(POINTS_TO_LAUNCH);
+    expect(mission.spendScience(found.slice(0, 3), 4)).toBe(0);
+    expect(mission.spendScience(found, 4)).toBe(4);
+    expect(mission.scienceStatus(found)).toMatchObject({ usedPoints: 4, pendingPoints: POINTS_TO_LAUNCH - 4 });
+    mission.sendData(found);
+    expect(mission.sentPoints).toBe(POINTS_TO_LAUNCH - 4);
+    expect(mission.dataSent).toBe(false);
   });
 });
 
@@ -405,7 +429,7 @@ describe('MissionSystem demo storm control', () => {
   it('the demo storm works with the shelter water wall', () => {
     const mission = createMission(12);
     mission.triggerStormSoon(0.2);
-    mission.shelterWaterL = 40;
+    mission.shelterWaterL = RADIATION_CONFIG.SHELTER_WALL_MAX_L;
     mission.update(12.3, { insideHabitat: true });
     const habitat = mission.doseRate;
     mission.update(12.4, { insideHabitat: true, insideShelter: true });
@@ -588,7 +612,9 @@ describe('MissionSystem dose budget', () => {
     expect(mission.propellant).toBe(100);
     mission.stormsSurvived = MAV_CONFIG.STORMS_TO_SURVIVE;
     mission.battery.charge = 100;
-    expect(mission.sendData({ discoveries: SCIENCE_CONFIG.MIN_DISCOVERIES }).status).toBe('sent');
+    expect(mission.sendData(scienceScans(SCIENCE_CONFIG.POINTS_TO_LAUNCH)).status).toBe('sent');
+    mission.battery.charge = 100;
+    mission.sendData(scienceScans(SCIENCE_CONFIG.POINTS_TO_LAUNCH));
     expect(mission.ignite()).toBe(true);
   });
 

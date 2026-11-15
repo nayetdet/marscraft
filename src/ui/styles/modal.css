@@ -1359,10 +1359,12 @@ body.pause-menu-open .crew-picker { display: none; }
   overflow: hidden;
 }
 
+/* Uma coluna por categoria (5 desde a issue #270, com SAMPLES), todas na mesma linha */
 .journal-tabs {
   flex-shrink: 0;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 6px;
 }
 
@@ -1370,10 +1372,11 @@ body.pause-menu-open .crew-picker { display: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   height: 36px;
-  padding: 4px 8px;
-  font-size: 13px;
+  padding: 4px 4px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .journal-tab small {
@@ -1548,7 +1551,7 @@ body.pause-menu-open .crew-picker { display: none; }
 .report-card { width: 100%; display: flex; flex-direction: column; gap: 8px; }
 .report-card:empty { display: none; }
 .report-heading { margin: 0; font-size: 13px; letter-spacing: 2px; color: #ffcf3a; text-shadow: 2px 2px 0 #000; }
-.report-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.report-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .report-tile {
   display: grid;
   grid-template-columns: 26px 1fr;
@@ -1582,6 +1585,25 @@ body.pause-menu-open .crew-picker { display: none; }
   border: 2px solid #000;
 }
 .report-profile b { color: #ffcf3a; }
+/* O que a crianca descobriu (issue #271): contagem, patente do diario e as descobertas mais legais */
+.report-finds {
+  margin: 0;
+  padding: 8px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: left;
+  color: #fff;
+  background: rgba(48, 22, 70, .88);
+  border: 2px solid #000;
+  box-shadow: inset 0 0 0 2px #c084fc;
+}
+.report-finds b { color: #ffcf3a; }
+.report-rank { color: #d8b4fe; letter-spacing: 1px; }
+.report-top { flex-basis: 100%; font-size: 12px; color: #e8e8e8; }
 .victory-details { width: 100%; text-align: left; color: #e8e8e8; font-size: 13px; }
 .victory-details summary { cursor: pointer; color: #ffffa0; }
 @media (max-width: 700px), (max-height: 500px) {
@@ -1594,9 +1616,13 @@ body.pause-menu-open .crew-picker { display: none; }
   .report-detail { font-size: 9px; }
   .report-data { display: none; }
   .report-profile { font-size: 12px; padding: 6px 10px; }
+  .report-finds { font-size: 12px; padding: 6px 10px; }
+  .report-top { font-size: 10px; }
 }
 @media (max-width: 480px) {
   .report-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* 5 notas em 2 colunas: a ultima ocupa a linha inteira */
+  .report-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 
 /* Texto das estacoes em blocos (src/ui/stationTextView.js): numeros em destaque, explicacao menor */
@@ -1611,6 +1637,39 @@ body.pause-menu-open .crew-picker { display: none; }
 .station-text .st-list li { padding: 3px 8px; background: #10262a; border-left: 3px solid #2c6f66; }
 .station-screen .station-text .st-text { margin: 0; font-size: 12px; color: #a9c9c4; }
 .station-screen .station-text .st-fact { margin: 0; padding: 8px 10px; font-size: 12px; color: #cfe8ff; background: #14283c; border-left: 4px solid #5aa9e6; }
+
+/* Painel SCIENCE FOR EARTH (src/ui/sciencePanelView.ts, issue #269) */
+.sci-panel.is-compact { gap: 5px; align-content: start; }
+.sci-panel.is-compact .sci-list { max-height: none; overflow: visible; }
+.sci-panel.is-compact .sci-goal b { font-size: 12px; }
+.sci-panel.is-compact .sci-cols { grid-template-columns: 1fr; }
+/* No monitor do laboratorio a lista ocupa o palco e rola por dentro, na altura da coluna de botoes */
+.mc-monitor[data-machine="science"] .mc-stage-wrap { position: relative; min-height: 210px; }
+.mc-monitor[data-machine="science"] .mc-sci-stage { position: absolute; inset: 0; padding: 6px 8px; overflow-y: auto; }
+.mc-skip-note { margin: 4px 0 0; font-size: 11px; line-height: 1.3; color: #a9c9c4; }
+.sci-panel { display: grid; gap: 8px; }
+.sci-goal { display: grid; gap: 4px; }
+.sci-goal b { font-size: 14px; letter-spacing: .06em; color: #ffdf75; }
+.sci-goal.is-met b { color: #7ef0a8; }
+.sci-bar { display: block; height: 12px; background: #0e1f23; border: 2px solid #2c4a4f; }
+.sci-bar i { display: block; height: 100%; background: #c084fc; }
+.sci-goal.is-met .sci-bar i { background: #7ef0a8; }
+.station-screen .sci-panel p { margin: 0; font-size: 12px; color: #a9c9c4; }
+.station-screen .sci-panel .sci-why { color: #cfe8ff; padding: 6px 10px; background: #14283c; border-left: 4px solid #5aa9e6; }
+.station-screen .sci-panel .sci-note.is-hot { color: #ffdf75; }
+.station-screen .sci-panel .sci-empty { padding: 6px 8px; background: #10262a; border-left: 3px solid #2c4a4f; }
+.sci-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.sci-cols h4 { margin: 0 0 4px; font-size: 11px; letter-spacing: .08em; color: #ffdf75; font-weight: normal; display: flex; justify-content: space-between; gap: 8px; }
+.sci-cols h4 small { color: #d9ffe9; font-size: 11px; }
+.sci-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; max-height: 168px; overflow-y: auto; }
+.sci-item { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 8px; padding: 3px 8px; background: #10262a; border-left: 3px solid #2c6f66; font-size: 13px; color: #d9ffe9; }
+.sci-item.is-sample { border-left-color: #c084fc; }
+.sci-item.is-rare { border-left-color: #ffdf75; }
+.sci-icon { width: 24px; height: 24px; image-rendering: pixelated; }
+.sci-name { overflow-wrap: anywhere; }
+.sci-name i { font-style: normal; font-size: 9px; letter-spacing: .08em; color: #ffdf75; margin-left: 4px; }
+.sci-item.is-sample .sci-name i { color: #d8b4fe; }
+.sci-points { color: #ffdf75; font-variant-numeric: tabular-nums; }
 
 /* Painel POWER & HEAT (src/ui/powerPanelView.ts) */
 .pw-tip-banner {

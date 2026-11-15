@@ -76,7 +76,7 @@ export function addVoxelOutcrops(world) {
 }
 
 // y do topo do bloco solido mais alto da coluna, ou -1 se o topo nao for chao natural
-function naturalGroundTop(world, x, z) {
+export function naturalGroundTop(world, x, z) {
   for (let y = world.sizeY - 1; y >= 0; y -= 1) {
     const id = world.getBlock(x, y, z);
     if (id === BLOCK_IDS.AIR) continue;

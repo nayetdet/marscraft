@@ -1,6 +1,49 @@
 // @ts-nocheck
 import { marsSurfaceMedian } from '../data/radlabSummary.ts';
 
+// ---------------------------------------------------------------------------------------------
+// Regra unica do tempo (issue #229). O relogio do jogo anda GAME_HOURS_PER_SECOND horas de jogo
+// por segundo real: 1 hora de jogo = 50 s reais e 1 sol de 24 h = 20 min reais. Tudo o que gasta
+// ou produz "por hora" segue este relogio. O que precisa de outra compressao para caber numa
+// partida e uma excecao com nome, declarada em TIME_SCALE_CONFIG e mostrada a crianca na aba
+// REAL VS GAME do diario [J] (src/data/realVsGame.ts).
+const GAME_HOURS_PER_SECOND = 0.02;
+const MAX_STAT = 20; // tamanho das barras do jogador (vida, ar, agua, comida)
+
+export const TIME_SCALE_CONFIG = {
+  GAME_HOURS_PER_SECOND,
+  // Fome e sede do jogador: a barra cheia dura estas horas de jogo. E a mesma ordem da tripulacao
+  // (CREW_CONFIG.BEDRIDDEN_AFTER_HOURS): comer e beber umas duas vezes por sol. Escala de jogo:
+  // uma pessoa de verdade aguenta bem mais sem comer, mas come ~3 vezes por dia (NASA BVAD).
+  PLAYER_FOOD_HOURS: 12,
+  PLAYER_WATER_HOURS: 12,
+  // EXCECAO, plantas: a estufa nao segue o relogio. Dias reais de cultivo que passam em 1 segundo
+  // real de jogo: 28 dias de alface viram 5 s. A PROPORCAO entre as culturas e real.
+  // [Ref] NASA Kennedy Space Center, Biomass Production Chamber (Wheeler et al.): alface 28 a 30
+  // dias, soja 90 a 97, batata 90 a 105. https://ntrs.nasa.gov/citations/20040089951
+  CROP_REAL_DAYS_PER_GAME_SECOND: 5.6,
+  // EXCECAO, foguete: o tanque do jogo enche com MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK blocos de gelo.
+  // [Ref] Tirar 4 astronautas de Marte pede ~7 toneladas de combustivel e ~25 toneladas de
+  // oxigenio (NASA, MOXIE, 21/04/2021).
+  // https://www.nasa.gov/news-release/nasas-perseverance-mars-rover-extracts-first-oxygen-from-red-planet/
+  REAL_ASCENT_PROPELLANT_TONNES: 32,
+  // EXCECAO, energia: a bateria do jogo e medida em %. Para dar uma unidade real, o reator do jogo
+  // (ENERGY_CONFIG.REACTOR_CHARGE_PER_HOUR) vale UMA unidade Kilopower de 10 kW [Ref NASA, 2018].
+  // Dai sai o resto: 1 % de bateria por hora de jogo = REACTOR_KW / REACTOR_CHARGE_PER_HOUR kW
+  // (src/mission/powerUnits.ts). E so uma regua para comparar com o mundo real: as proporcoes
+  // entre os consumos continuam sendo escala de jogo.
+  REACTOR_KW: 10,
+  // [Ref] MMRTG do Curiosity e do Perseverance: ~110 W de eletricidade (NASA)
+  MMRTG_KW: 0.11,
+  // Um passeio no espaco dura de 5 a 8 horas (NASA, "What Is a Spacewalk?")
+  REAL_SPACEWALK_HOURS: [5, 8],
+};
+
+// Segundos reais de jogo para uma cultura que leva `realDays` dias de verdade
+const cropSeconds = (realDays) => Math.round(realDays / TIME_SCALE_CONFIG.CROP_REAL_DAYS_PER_GAME_SECOND);
+// Queda por segundo real de uma barra do jogador que dura `gameHours` horas de jogo
+const statDrainPerSecond = (gameHours) => MAX_STAT / (gameHours / GAME_HOURS_PER_SECOND);
+
 export const WORLD_CONFIG = {
   SIZE_X: 224,
   SIZE_Y: 48,
@@ -164,15 +207,18 @@ export const BLOCK_INTERACTION_CONFIG = {
 };
 
 export const SURVIVAL_CONFIG = {
-  MAX_STAT: 20,
+  MAX_STAT,
   OXYGEN_DRAIN_RATE: 20 / 360, // tanque cheio dura 6 minutos fora da base
   OXYGEN_REFILL_RATE: 4.5,
   NO_SUIT_BASE_OXYGEN_DRAIN_RATE: 2, // tanque pessoal cheio dura 10 segundos sem traje na base
   BREACH_OXYGEN_DRAIN_RATE: 1.0, // pontos de O2 do jogador por segundo
   BASE_OXYGEN_LEAK_RATE: 5, // porcentagem por segundo, para qualquer abertura
   BASE_OXYGEN_REFILL_RATE: 2, // porcentagem por segundo após vedar a base
-  WATER_DRAIN_RATE: 20 / 600, // hidratacao cheia dura 10 minutos
-  FOOD_DRAIN_RATE: 0.11,
+  // Sede e fome seguem o relogio do jogo (issue #229): a barra cheia dura 12 horas de jogo
+  // (10 min reais). A fome era 0,11/s (a barra zerava em ~3 min = 3,6 h de jogo): a crianca
+  // ficava com fome mais rapido do que uma alface crescia.
+  WATER_DRAIN_RATE: statDrainPerSecond(TIME_SCALE_CONFIG.PLAYER_WATER_HOURS),
+  FOOD_DRAIN_RATE: statDrainPerSecond(TIME_SCALE_CONFIG.PLAYER_FOOD_HOURS),
   STARVE_DAMAGE_RATE: 0.8,
   DANGER_THRESHOLD: 5,
   DAMAGE_FEEDBACK_SECONDS: 0.8,
@@ -308,8 +354,9 @@ export const MISSION_CONFIG = {
   AIRLOCK_MANUAL_EXTRA_SECONDS: 3,
 
   // Hora de jogo por segundo real (igual a MarsSkySystem.autoAdvanceSpeed): 1 hora de jogo
-  // = 50 s reais e 1 sol de 24 h = 20 min reais. Toda taxa "por hora" do jogo usa este relogio.
-  GAME_HOURS_PER_SECOND: 0.02,
+  // = 50 s reais e 1 sol de 24 h = 20 min reais. Toda taxa "por hora" do jogo usa este relogio
+  // (regra unica do tempo, no topo deste arquivo).
+  GAME_HOURS_PER_SECOND,
   // Passo maximo de simulacao, para avancos de tempo grandes (tecla T) nao pularem eventos
   MAX_STEP_HOURS: 0.05,
   // Hora do nascer do sol no relogio do jogo (MarsSkySystem: sol no horizonte as 6h e 18h)
@@ -390,10 +437,27 @@ export const RADIATION_CONFIG = {
   // solares de 2012 com agua: 1 g/cm2 -> 42 %, 5 g/cm2 -> 79 %, 10 g/cm2 (abrigo) -> 83 %.
   // Pares [g/cm2 de agua, fracao da dose que ainda passa].
   SHELTER_WATER_CURVE: [[0, 1], [1, 0.58], [5, 0.21], [10, 0.17]],
-  // Escala de jogo: a parede cheia (40 L do tanque da base) vale 10 g/cm2, o abrigo do PREDICCS
-  SHELTER_WALL_MAX_L: 40,
-  SHELTER_G_CM2_PER_L: 0.25,
+  // Escala de jogo: a parede cheia vale 10 g/cm2, o abrigo do PREDICCS. Issue #228: a parede
+  // cheia subiu de 40 para 60 L (mais da metade do tanque da base, de 100 L), porque so a parede
+  // cheia libera a espera rapida da tempestade (STORM_SKIP_CONFIG): encher custa agua de beber.
+  SHELTER_WALL_MAX_L: 60,
+  SHELTER_G_CM2_PER_L: 10 / 60, // 10 g/cm2 com a parede cheia (balance.test.ts confere)
   SHELTER_FILL_STEP_L: 10,
+  // Menos que isto no tanque da base nao da para mandar agua para a parede
+  SHELTER_FILL_MIN_L: 1,
+};
+
+// Espera rapida da tempestade solar dentro do abrigo (issue #228). So com a parede de agua cheia.
+// Nada para: o relogio do jogo corre mais rapido ate a tempestade acabar, e a base, a tripulacao,
+// a fome e a sede andam junto (o mesmo motor do sono, SleepController). Regras de jogo.
+export const STORM_SKIP_CONFIG = {
+  // Horas de jogo por segundo real na espera rapida (o relogio normal anda 0,02, entao e 10x):
+  // o aviso mais longo do DONKI mais a tempestade (~0,9 h de jogo, 45 s reais) passam em ~4,5 s
+  CLOCK_HOURS_PER_SECOND: 0.2,
+  // A cada passo (1,2 min de jogo) a base anda e o jogo checa se algo interrompe a espera
+  STEP_HOURS: 0.02,
+  // Folga depois do fim da tempestade, para o relogio parar ja na calmaria
+  END_MARGIN_HOURS: 0.01,
 };
 
 export const STORM_CONFIG = {
@@ -410,7 +474,7 @@ export const STORM_CONFIG = {
   // correr e sem ir em linha reta (~10 s), passar pelo airlock (~4 s) e entrar no abrigo (~1 s).
   // balance.test.ts refaz essa conta: se a base ou a velocidade mudarem, o teste avisa.
   MIN_WARNING_HOURS: 0.4,
-  // Calmaria antes do primeiro aviso e entre tempestades: 2 h de jogo = 100 s reais
+  // Calmaria entre tempestades: 2 h de jogo = 100 s reais (o primeiro aviso vem em 0,4 h = 20 s)
   FIRST_WARNING_AFTER_HOURS: 0.4,
   GAP_BETWEEN_STORMS_HOURS: 2,
   // No maximo duas tempestades em qualquer janela de 24 h de jogo. O micro intervalo evita
@@ -486,9 +550,10 @@ export const PACING_CONFIG = {
   HOURS_PER_SOL: 24,
 };
 
-// Tripulacao NPC (issue #47). Taxas por hora de jogo (1 hora de jogo = 100 s reais).
-// Agua : comida por tripulante segue o NASA BVAD (~3 kg : ~1,8 kg por pessoa/dia).
-// Issue #81: ar, agua e comida cortados em 40-50 % (eram 1,5 / 0,5 / 0,3), mantendo a proporcao.
+// Tripulacao NPC (issue #47). Taxas por hora de jogo (1 hora de jogo = 50 s reais).
+// Agua e comida por tripulante sao as do NASA BVAD, na unidade real e no relogio do jogo (issue
+// #229): ~3 kg de agua (beber e preparar comida) e ~1,8 kg de comida por pessoa por dia.
+// Eram 0,3 L e 0,18 racao por hora (7,2 L por sol, 2,4 vezes o real).
 // O O2 do tripulante e pago em energia, como o O2 do jogador no habitat (reciclagem + MOXIE).
 export const CREW_CONFIG = {
   COLLISION_DISTANCE: 0.9,
@@ -511,8 +576,12 @@ export const CREW_CONFIG = {
   GREENHOUSE_HARVEST_INTERVAL: 20, // segundos de jogo ativo entre colheitas do tripulante
   SUIT_COLORS: [0xf97316, 0x22c55e, 0x3b82f6, 0xeab308, 0xec4899, 0x06b6d4, 0xa855f7, 0xf43f5e],
   OXYGEN_ENERGY_PER_HOUR: 0.75, // % de bateria por tripulante
-  WATER_L_PER_HOUR: 0.3,
-  FOOD_PER_HOUR: 0.18, // racoes
+  // [Ref] NASA BVAD: ~3 kg de agua por pessoa por dia = 3 L por sol = 0,125 L por hora de jogo
+  WATER_L_PER_HOUR: 3 / 24,
+  // [Ref] NASA BVAD: ~1,8 kg de comida por pessoa por dia. 1 racao = 1 refeicao de 0,6 kg, entao
+  // 3 racoes por sol = 0,125 racao por hora de jogo
+  KG_PER_RATION: 0.6,
+  FOOD_PER_HOUR: 3 / 24, // racoes
   START_FOOD: 0,
   MAX_FOOD: 40,
   // Horas seguidas sem ar, agua ou comida ate o tripulante ficar de repouso na enfermaria.
@@ -533,7 +602,7 @@ export const CREW_CONFIG = {
 };
 
 // Modulo norte (issue #56, parte B): energia/aquecimento, cozinha, banheiro e oficina.
-// Custos em % de bateria; "por hora" = hora de jogo (100 s reais). Fontes em docs/data/numeros-reais.md.
+// Custos em % de bateria; "por hora" = hora de jogo (50 s reais). Fontes em docs/data/numeros-reais.md.
 export const UTILITY_CONFIG = {
   RATION_PREP_SECONDS: 10, // tempo de trabalho por racao (ajuste de jogo)
   RATION_PREP_POWER: 0.5, // energia para preparar uma racao
@@ -603,9 +672,8 @@ export const STATION_CONFIG = {
   FILTER_DECAY: 0.2, CO2_RISE: 0.08, CO2_CLEAR: 0.12,
   DUST_DAMAGE: 0.015, DECONTAMINATION_COST: 2, FILTER_COST: 4,
   EXERCISE_COST: 3, TREATMENT_COST: 5,
-  COMMS_COST: 3, COMMS_DELAY: 40, SCIENCE_PER_SAMPLE: 2, UPGRADE_COST: 4,
+  COMMS_COST: 3, COMMS_DELAY: 40,
   FITNESS_DECAY: 0.015, FRESH_FOOD_DURATION: 120,
-  TOOL_UPGRADE_COST: 4,
   SUIT_RADIATION_DAMAGE_FACTOR: 0.65,
 };
 
@@ -617,6 +685,21 @@ export const STORY_CONFIG = {
   STORMS_FOR_WINDOW: MAV_CONFIG.STORMS_TO_SURVIVE,
   // Segundos reais que um card de radio fica na tela
   CARD_SECONDS: 12,
+  // O card MESSAGE SENT fecha sozinho mais cedo: so o tempo de o pacote ir de Marte ate a Terra (issue #135)
+  COMMS_CARD_SECONDS: 4,
+  // Texto do card aparecendo letra por letra: letras por segundo e o teto de tempo por card
+  CARD_TYPE_CHARS_PER_SECOND: 50,
+  CARD_TYPE_MAX_SECONDS: 1.2,
+  // Modal de trade-off de emergencia (tempestade solar): fecha sozinho depois destes segundos,
+  // porque o relogio da tempestade continua andando com ele aberto
+  URGENT_TRADEOFF_SECONDS: 8,
+  // Desvios do tutorial (issue #237, src/story/tutorialDetours.ts): quando falta um recurso para
+  // o passo, a crianca e mandada buscar. Para o passo voltar, o recurso precisa passar do minimo
+  // por esta folga (L de agua, % de bateria, porcoes de comida, % da bateria do rover): sem ela a
+  // tarefa ficaria piscando entre o passo e o desvio.
+  DETOUR_RESUME_EXTRA: { water: 2, power: 2, food: 0, roverPower: 5 },
+  // Racoes na despensa que o passo de comer pede (UtilityModule.eatRation tira 1)
+  TUTORIAL_RATIONS_NEEDED: 1,
 };
 
 // Animacoes de chegada e de decolagem (docs/superpowers/plans/2026-11-14-story-arc.md)
@@ -642,13 +725,20 @@ export const CUTSCENE_CONFIG = {
 // numero de itens da colheita. Campo maior rende mais, mas bebe mais agua de uma vez.
 export const GREENHOUSE_PLOT_YIELD = Object.freeze({ garden: 1, inner: 2, outer: 3 });
 
-// Design choices, not NASA agronomic measurements. Seconds are accelerated.
-// `water` = litros do tanque da base que a planta bebe ate ficar pronta, por unidade de tamanho
-// do campo (GREENHOUSE_PLOT_YIELD); `energy` = % de bateria ao plantar.
+// `realDays` = dias de cultivo de verdade [Ref] NASA Kennedy Space Center, Biomass Production
+// Chamber (Wheeler et al.): alface 28 a 30 dias, soja 90 a 97, batata 90 a 105. `seconds` sai
+// deles pela excecao declarada TIME_SCALE_CONFIG.CROP_REAL_DAYS_PER_GAME_SECOND (issue #229): a
+// estufa e acelerada para a crianca ver a colheita, mas a proporcao entre as culturas e real
+// (a batata demora quase 4 vezes a alface). Eram 5, 7 e 9 s, sem relacao com o real.
+// Agua, energia e comida sao escolhas de jogo, nao medidas: `water` = litros do tanque da base
+// que a planta bebe ate ficar pronta, por unidade de tamanho do campo (GREENHOUSE_PLOT_YIELD);
+// `energy` = % de bateria ao plantar. Nenhuma cultura e a melhor em tudo: a alface e a mais
+// rapida, a soja da mais comida por colheita e a batata rende mais por litro e por % de bateria,
+// mas e a mais lenta.
 export const CROP_CONFIG = Object.freeze({
-  lettuce: { water: 1, energy: 2, seconds: 5, nutrition: 3, strategy: 'Quick snack, small harvest' },
-  potato: { water: 2, energy: 3, seconds: 7, nutrition: 6, strategy: 'Balanced meal, longer wait' },
-  soy: { water: 3, energy: 5, seconds: 9, nutrition: 10, strategy: 'Big harvest, thirsty plants' },
+  lettuce: { water: 1, energy: 2, realDays: 28, seconds: cropSeconds(28), nutrition: 3, strategy: 'Quick snack, small harvest' },
+  potato: { water: 2, energy: 3, realDays: 105, seconds: cropSeconds(105), nutrition: 8, strategy: 'Cheap and filling, slowest to grow' },
+  soy: { water: 3, energy: 5, realDays: 90, seconds: cropSeconds(90), nutrition: 10, strategy: 'Big harvest, thirsty plants' },
 });
 
 // Como a planta aparece enquanto cresce (so visual; o tempo e o de CROP_CONFIG.seconds). Logo ao
@@ -736,7 +826,7 @@ export const DUST_WEATHER_CONFIG = {
   // Regra de jogo: geracao solar com o tau no recorde (nunca zero de dia). Entre o ceu limpo e
   // o recorde a geracao cai em linha reta.
   SOLAR_FACTOR_AT_RECORD: 0.2,
-  // Escala de jogo (horas de jogo; 1 h = 100 s reais). O clima so comeca no ato 2 da historia.
+  // Escala de jogo (horas de jogo; 1 h = 50 s reais). O clima so comeca no ato 2 da historia.
   // A primeira vem cedo (3 a 7 min reais): numa partida curta a crianca precisa ver uma
   FIRST_STORM_AFTER_HOURS: [2, 4],
   GAP_BETWEEN_STORMS_HOURS: [24, 36],
@@ -790,20 +880,47 @@ export const WEATHER_CONFIG = {
 // [Ref] O Perseverance guarda amostras em tubos para uma futura missao de retorno, que usaria
 // um foguete de subida (MAV); massa a mais no foguete pede mais combustivel.
 export const SCIENCE_CONFIG = {
-  // Minimo enviado para a vitoria: N descobertas do scanner OU M amostras analisadas
-  MIN_DISCOVERIES: 5,
-  MIN_SAMPLES: 2,
+  // Uma moeda so: pontos de ciencia (issue #269). Cada coisa que a crianca acha vale pontos, e o
+  // foguete so decola com POINTS_TO_LAUNCH pontos enviados para a Terra. Regras de jogo.
+  POINTS_TO_LAUNCH: 10,
+  // Descoberta do scanner: comum (terreno, base) x rara (ceu e paisagem, mais dificeis de achar)
+  POINTS_PER_DISCOVERY: 1,
+  POINTS_PER_RARE_DISCOVERY: 2,
+  RARE_DISCOVERY_CATEGORIES: ['sky', 'landscape'],
+  // Regolito comum: vale pouco e so a primeira analise conta (issue #270). Os pontos das amostras
+  // do mapa ficam em SAMPLE_TYPES (src/data/sampleTypes.ts).
+  REGOLITH_POINTS: 1,
   // Custo do envio em % de bateria: base (ligar o radio e falar com o orbitador) + por item
   UPLOAD_BASE_COST: 8,
   UPLOAD_COST_PER_ITEM: 3,
   // Itens por envio (uma passagem do orbitador). O resto espera o proximo envio.
   MAX_ITEMS_PER_UPLOAD: 8,
-  // Analisar 1 amostra de regolito no laboratorio (% de bateria)
+  // Analisar 1 amostra no laboratorio (% de bateria)
   ANALYZE_POWER_COST: 2,
+  // Melhorias do laboratorio: gastam pontos ainda NAO enviados (a amostra fica na bancada em vez
+  // de ir para a Terra). Trade-off: melhorar o traje agora ou decolar mais cedo.
+  SUIT_UPGRADE_POINTS: 4,
+  TOOL_UPGRADE_POINTS: 4,
   // Cada tubo de amostra no MAV pede mais gelo para encher o tanque. Muito mais do que um tubo de
   // verdade pesa: regra de jogo, para a escolha "levar mais ciencia x buscar mais gelo" aparecer.
   ICE_PER_SAMPLE_TUBE: 1,
   MAX_SAMPLE_TUBES: 4,
+};
+
+// Amostras espalhadas pelo mapa (issue #270). Posicoes sorteadas com semente fixa: nao sao dado
+// real. Os fatos de cada tipo sao reais (src/data/sampleTypes.ts, docs/data/numeros-reais.md).
+export const SAMPLE_SITE_CONFIG = {
+  SEED: 2026,
+  COUNT: 10,
+  // Distancia do centro da base, em blocos: longe o bastante para ser um passeio de EVA
+  MIN_RADIUS: 40,
+  MAX_RADIUS: 78,
+  MIN_SPACING: 12, // blocos entre dois locais
+  PLACEMENT_TRIES: 600,
+  // Amostras de gelo ficam perto da cratera de gelo (anel em volta do centro dela)
+  ICE_RING: [13, 18],
+  INTERACT_RADIUS: 3.2, // blocos: de perto, olhando para a amostra
+  BEACON_HEIGHT: 2.6, // altura do facho de luz que marca o local
 };
 
 // Diario de bordo por sol (issue #106). Escala de jogo, so de interface.
@@ -861,7 +978,7 @@ export const SLEEP_CONFIG = {
 export const EVENTS_CONFIG = Object.freeze({
   // Eventos sorteados (a aurora nao entra: ela vem depois de uma tempestade solar sobrevivida)
   RANDOM_TYPES: Object.freeze(['meteor', 'marsquake', 'eclipse', 'dustDevil', 'frost']),
-  // Horas de jogo do primeiro selo do tutorial ate o primeiro evento (1 h de jogo = 100 s reais)
+  // Horas de jogo do primeiro selo do tutorial ate o primeiro evento (1 h de jogo = 50 s reais)
   FIRST_DELAY_HOURS: Object.freeze([0.5, 1]),
   // Horas de jogo entre o fim de um evento e o inicio do proximo, na agenda sorteada
   GAP_HOURS: Object.freeze([2.5, 5]),

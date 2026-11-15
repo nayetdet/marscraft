@@ -4,8 +4,9 @@ import { StoryDirector } from './StoryDirector.ts';
 import { objectiveView } from './objectiveView.ts';
 import { objectiveTarget } from './waypoints.ts';
 import { MissionSystem } from '../mission/MissionSystem.ts';
-import { scansStillNeeded, scienceStep } from '../mission/sciencePackage.ts';
-import { SCIENCE_CONFIG } from '../config/constants.ts';
+import { discoveryItem, pointsStillNeeded, sampleItem, scienceStep } from '../mission/sciencePackage.ts';
+import { SCIENCE_CONFIG, STORY_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.ts';
+import { TUTORIAL_STEPS } from './tutorialSteps.ts';
 
 const REPLY = 0.5;
 const WINDOW = 8;
@@ -242,44 +243,50 @@ describe('StoryDirector', () => {
     expect(director.objectiveId).toBe('ignite');
   });
 
-  it('keeps asking for science until the minimum package is sent, guiding scan, analyze and send (issue #105)', () => {
+  it('keeps asking for science until the points goal is sent, guiding find, analyze and send (issues #105, #269)', () => {
     const director = started();
     reachAct2(director);
     const mission = new MissionSystem({ cmes: [], startHours: 0 });
     mission.battery.charge = 100;
-    const science = { discoveries: 0, samples: 0, rawSamples: 0 };
+    const GOAL = SCIENCE_CONFIG.POINTS_TO_LAUNCH;
+    const found = [];
+    let rawSamples = 0;
     // O mesmo retrato que o GameEngine monta, com a ciencia desta partida
     const frame = (hours) => {
-      const state = { ...science, sentDiscoveries: mission.sentDiscoveries, sentSamples: mission.sentSamples };
+      const status = mission.scienceStatus(found);
+      const state = { pendingPoints: status.pendingPoints, sentPoints: status.sentPoints, rawSamples };
       const s = snap({ hours, stormsSurvived: 3, propellantPct: 100, iceNeeded: 0, dataSent: mission.dataSent,
-        scienceStep: scienceStep(state), scansLeft: scansStillNeeded(state) });
+        scienceStep: scienceStep(state), sciencePointsLeft: pointsStillNeeded(state), sciencePointsSent: status.sentPoints });
       director.update(s);
       return { s, view: objectiveView(director, s), target: objectiveTarget(director.objectiveId, s) };
     };
 
-    // Nada escaneado nem analisado: enviar nao conclui nada e o painel pede para escanear
-    expect(mission.sendData(science).status).toBe('empty');
+    // Nada escaneado nem analisado: enviar nao conclui nada e o painel pede para achar ciencia
+    expect(mission.sendData(found).status).toBe('empty');
     let f = frame(40);
     expect(director.objectiveId).toBe('send-data');
-    expect(f.view.task).toMatchObject({ icon: 'scope', label: `SCAN ${SCIENCE_CONFIG.MIN_DISCOVERIES} MORE` });
+    expect(f.view.task).toMatchObject({ icon: 'scope', label: `FIND ${GOAL} SCIENCE POINTS` });
+    expect(f.view.goals).toMatchObject({ sciencePoints: 0, scienceGoal: GOAL, dataSent: false });
     expect(f.target).toBeNull();
 
-    // Regolito coletado la fora: a seta leva ao laboratorio para analisar
-    science.rawSamples = 1;
+    // Amostra coletada la fora: a seta leva ao laboratorio para analisar
+    rawSamples = 1;
     f = frame(40.5);
-    expect(f.view.task).toMatchObject({ icon: 'rock', label: 'ANALYZE ROCKS' });
+    expect(f.view.task).toMatchObject({ icon: 'rock', label: 'ANALYZE SAMPLES' });
     expect(f.target).toBe('science');
 
-    // Amostras analisadas bastam: enviar
-    science.rawSamples = 0;
-    science.samples = SCIENCE_CONFIG.MIN_SAMPLES;
+    // Pontos na mao bastam: enviar
+    rawSamples = 0;
+    found.push(sampleItem(0, { typeId: 'sample-sulfur', name: 'Sulfur', points: 4 }));
+    for (let i = 0; i < GOAL - 4; i += 1) found.push(discoveryItem({ id: `thing-${i}`, title: `Thing ${i}`, category: 'base' }));
     f = frame(41);
     expect(f.view.task.label).toBe('SEND SCIENCE');
     expect(f.target).toBe('science');
     expect(director.objectiveId).toBe('send-data');
 
-    expect(mission.sendData(science)).toMatchObject({ status: 'sent', dataSent: true });
-    frame(41.5);
+    expect(mission.sendData(found)).toMatchObject({ status: 'sent', dataSent: true });
+    f = frame(41.5);
+    expect(f.view.goals).toMatchObject({ sciencePoints: GOAL, dataSent: true });
     expect(director.objectiveId).toBe('ignite');
   });
 
@@ -310,5 +317,155 @@ describe('StoryDirector', () => {
 
     director.update(snap({ hours: 60, stormsSurvived: 3 }));
     expect(director.drainEvents()).toHaveLength(0);
+  });
+});
+
+// Issue #237: falta um recurso para o passo -> o tutorial manda buscar e depois volta ao passo
+describe('StoryDirector: tutorial resource detours', () => {
+  const DRINK = WATER_SYSTEM_CONFIG.DRINK_AMOUNT_FROM_DISPENSER;
+  const RESUME = DRINK + STORY_CONFIG.DETOUR_RESUME_EXTRA.water;
+  const FULL = { baseWaterL: 25, batteryCharge: 80, foodStock: 10, roverBattery: 100, roverActive: false };
+  const TOTAL = TUTORIAL_STEPS.length;
+  const state = (overrides = {}) => snap({ ...FULL, insideHabitat: true, ...overrides });
+
+  // Tutorial no passo 2 (beber agua), com a base como em `overrides`
+  function atDrink(overrides = {}) {
+    const director = new StoryDirector({ training: true });
+    director.start(snap({ ...FULL }));
+    director.update(state(overrides));
+    return director;
+  }
+
+  it('with enough resources the step shows as always, and no detour ever starts', () => {
+    const director = atDrink();
+    expect(director.detour).toBeNull();
+    expect(director.objectiveId).toBe('drink');
+    const titles = cards(director).map((card) => card.title);
+    expect(titles).toEqual([`STEP 1/${TOTAL}: ENTER THE BASE`, `STEP 2/${TOTAL}: DRINK WATER`]);
+    for (let i = 0; i < 20; i++) director.update(state({ baseWaterL: 25 - i * 0.5 }));
+    expect(director.detour).toBeNull();
+    expect(director.drainEvents()).toEqual([]);
+  });
+
+  it('starts the detour when the step begins without the resource: only the detour card shows', () => {
+    const director = atDrink({ baseWaterL: 0 });
+    expect(director.stepIndex).toBe(1);
+    expect(director.detour.id).toBe('need-water');
+    expect(director.objectiveId).toBe('need-water');
+    expect(director.objectiveText).toMatch(/drill ice with the rover/);
+    const titles = cards(director).map((card) => card.title);
+    expect(titles).toEqual([`STEP 1/${TOTAL}: ENTER THE BASE`, 'FIRST: GET WATER']);
+  });
+
+  it('interrupts a step that is already running when the resource runs out', () => {
+    const director = atDrink();
+    director.drainEvents();
+    director.update(state({ baseWaterL: DRINK - 0.5 }));
+    expect(director.objectiveId).toBe('need-water');
+    expect(cards(director).map((card) => card.title)).toEqual(['FIRST: GET WATER']);
+  });
+
+  it('the panel and the arrow show the detour, keeping the step number', () => {
+    const director = atDrink({ baseWaterL: 0 });
+    const s = state({ baseWaterL: 0 });
+    const view = objectiveView(director, s);
+    expect(view.task.label).toBe('GET WATER');
+    expect(view.task.hint).toMatch(/Rover console/);
+    expect(view.progress).toEqual({ now: 2, total: TOTAL });
+    expect(objectiveTarget(director.objectiveId, s)).toBe('console');
+    expect(objectiveTarget(director.objectiveId, { ...s, roverActive: true })).toBe('ice');
+  });
+
+  it('shows the detour card once per interruption, not every frame', () => {
+    const director = atDrink({ baseWaterL: 0 });
+    director.drainEvents();
+    for (let i = 0; i < 30; i++) director.update(state({ baseWaterL: i * 0.05 }));
+    expect(director.drainEvents()).toEqual([]);
+    expect(director.objectiveId).toBe('need-water');
+  });
+
+  it('comes back to the same step when the resource is back, without restarting anything', () => {
+    const director = atDrink({ baseWaterL: 0 });
+    director.drainEvents();
+    director.update(state({ baseWaterL: RESUME, roverDrives: 1, roverIceKg: 10 }));
+    expect(director.detour).toBeNull();
+    expect(director.stepIndex).toBe(1);
+    expect(director.objectiveId).toBe('drink');
+    expect(director.objectiveText).toBe('Drink water at the water tap');
+    expect(cards(director).map((card) => card.title)).toEqual([`STEP 2/${TOTAL}: DRINK WATER`]);
+    // O passo continua valendo: beber agora fecha o passo e abre o seguinte
+    director.update(state({ baseWaterL: RESUME - DRINK, roverDrives: 1, roverIceKg: 10, drinkCount: 1 }));
+    expect(director.stepIndex).toBe(2);
+    expect(director.objectiveId).toBe('eat');
+  });
+
+  it('does not flicker: between the minimum and the resume level the detour stays', () => {
+    const director = atDrink({ baseWaterL: 0 });
+    director.drainEvents();
+    for (let i = 0; i < 10; i++) {
+      director.update(state({ baseWaterL: DRINK + (i % 2) * 0.5 }));
+      expect(director.objectiveId).toBe('need-water');
+    }
+    expect(director.drainEvents()).toEqual([]);
+    // E de volta ao passo, um gole de planta abaixo do nivel de retomada nao reabre o desvio
+    director.update(state({ baseWaterL: RESUME }));
+    director.update(state({ baseWaterL: RESUME - 0.5 }));
+    expect(director.objectiveId).toBe('drink');
+  });
+
+  it('keeps the progress made before the interruption (the baseline is not reset)', () => {
+    const director = new StoryDirector({ training: true });
+    director.start(snap({ ...FULL }));
+    const done = { insideHabitat: true, drinkCount: 1, mealCount: 1, earthCalls: 1, powerChecks: 1, plantCount: 1, harvestCount: 1, workoutCount: 1, washCount: 1 };
+    const steps = ['drinkCount', 'mealCount', 'earthCalls', 'powerChecks', 'plantCount', 'harvestCount', 'workoutCount', 'washCount'];
+    const s = state();
+    director.update({ ...s });
+    for (const key of steps) {
+      s[key] = done[key];
+      director.update({ ...s });
+    }
+    expect(director.objectiveId).toBe('cert-shelter');
+    director.drainEvents();
+    // O tanque seca no meio do passo da parede de agua
+    director.update({ ...s, baseWaterL: 0 });
+    expect(director.objectiveId).toBe('need-water');
+    director.update({ ...s, baseWaterL: 20 });
+    expect(director.objectiveId).toBe('cert-shelter');
+    director.drainEvents();
+    director.update({ ...s, baseWaterL: 10, shelterWaterL: 10 });
+    const events = director.drainEvents();
+    expect(events.filter((e) => e.type === 'certificate')).toHaveLength(1);
+    expect(director.certificates.filter((id) => id === 'cert-shelter')).toHaveLength(1);
+    expect(director.objectiveId).toBe('rover-drive');
+  });
+
+  it('a step that gets done during the detour advances normally, with no extra certificate', () => {
+    const director = atDrink({ baseWaterL: 0 });
+    director.drainEvents();
+    director.update(state({ baseWaterL: 0, drinkCount: 1 }));
+    expect(director.detour).toBeNull();
+    expect(director.stepIndex).toBe(2);
+    expect(director.certificates).toEqual([]);
+    const events = director.drainEvents();
+    expect(events.filter((e) => e.type === 'step-done')).toEqual([{ type: 'step-done', id: 'drink' }]);
+    expect(events.filter((e) => e.type === 'card').map((e) => e.card.title)).toEqual([`STEP 3/${TOTAL}: EAT A MEAL`]);
+  });
+
+  it('switches to the deeper detour when getting the resource needs another one', () => {
+    const director = atDrink({ baseWaterL: 0, roverBattery: 0 });
+    expect(director.objectiveId).toBe('need-rover-power');
+    director.drainEvents();
+    director.update(state({ baseWaterL: 0, roverBattery: 100 }));
+    expect(director.objectiveId).toBe('need-water');
+    expect(cards(director).map((card) => card.title)).toEqual(['FIRST: GET WATER']);
+  });
+
+  it('skipping the tutorial in the middle of a detour leaves no detour behind', () => {
+    const director = atDrink({ baseWaterL: 0 });
+    expect(director.skipTraining()).toBe(true);
+    expect(director.detour).toBeNull();
+    expect(director.objectiveId).toBe('act2');
+    director.update(state({ baseWaterL: 0 }));
+    expect(director.objectiveId).toBe('act2');
   });
 });
