@@ -92,8 +92,10 @@ it('shows the player watching in the background and hides them when the scene en
   expect(observer.visible).toBe(false);
 });
 
-function play(def: ReturnType<typeof createRationDeliveryCutscene>, until: number) {
-  for (let t = 0; t < until; t += 0.1) def.update(t, 0.1);
+// Avanca a cena de `from` ate `until`, como o CutscenePlayer: o tempo so anda para a frente.
+// (Recomecar do 0 reinicia a cena, que dispara os eventos de novo.)
+function play(def: ReturnType<typeof createRationDeliveryCutscene>, until: number, from = 0) {
+  for (let t = from; t < until; t += 0.1) def.update(t, 0.1);
   def.update(until, 0.1);
 }
 
@@ -133,11 +135,11 @@ describe('ration delivery cutscene', () => {
     expect(camera.position.z).toBeGreaterThanOrEqual(-25);
     expect(camera.position.z).toBeLessThanOrEqual(-16.5);
 
-    play(def, 3.6);
+    play(def, 3.6, 2.0);
     expect(events.handoff).toBe(1);
     expect(events.packed).toBe(0);
 
-    play(def, def.duration);
+    play(def, def.duration, 3.6);
     expect(events.handoff).toBe(1);
     expect(events.packed).toBe(1);
     expect(cropProp.visible).toBe(false);
