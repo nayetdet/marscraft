@@ -3,6 +3,7 @@ import { BLOCK_IDS, CROP_ITEM_IDS } from '../config/blockTypes.ts';
 import { STATION_CONFIG as C, CROP_CONFIG, SCIENCE_CONFIG, WATER_SYSTEM_CONFIG, CREW_CONFIG } from '../config/constants.ts';
 import { SAMPLE_TYPES } from '../data/sampleTypes.ts';
 import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.ts';
+import { WORKOUT_COST, workoutBlocker, workoutNeeds } from '../story/acts/act3Gym.ts';
 
 const RADIO_SILENT = 'Radio silent: the Sun is between Mars and Earth (solar conjunction). You must decide on your own until it passes.';
 
@@ -20,6 +21,10 @@ export class StationSystem {
     this.boneDensity = 100;
     this.muscleStrength = 100;
     this.workoutCount = 0;
+    // Custos do treino alem da bateria (issue #421): o GameEngine liga as barras da crianca
+    // (`body`, o SurvivalSystem) e o relogio (`passHours`). Sem eles o treino so gasta bateria.
+    this.body = null;
+    this.passHours = null;
     this.dirtySuit = false;
     this.contaminated = false;
     // Regolito coletado la fora, esperando a analise
@@ -135,7 +140,15 @@ export class StationSystem {
     return 'CO2 filter replaced.';
   }
   exercise(mode = 'treadmill') {
+    // Treinar gasta comida, agua e horas, alem da bateria (issue #421, act3Gym.ts)
+    const blocked = workoutBlocker(this.body);
+    if (blocked) return blocked;
     if (!this.mission.spend(C.EXERCISE_COST)) return 'Not enough power.';
+    if (this.body) {
+      const needs = workoutNeeds(this.body.maxStat);
+      this.body.spendNeeds(needs.food, needs.water);
+    }
+    this.passHours?.(WORKOUT_COST.hours);
     this.workoutCount++;
     this.lastWorkoutMode = mode; // diario de bordo: esteira revela estudo de osso, bike de musculo
     if (mode === 'bike') {

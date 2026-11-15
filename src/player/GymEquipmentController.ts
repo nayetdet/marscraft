@@ -1,6 +1,7 @@
 // @ts-nocheck
 import * as THREE from 'three';
 import { STATION_CONFIG as C } from '../config/constants.ts';
+import { workoutBlocker } from '../story/acts/act3Gym.ts';
 import { buildIvaAstronautRig, buildSpacesuitRig } from '../graphics/spacesuitModel.ts';
 
 const EQUIPMENT_SPECS = {
@@ -168,6 +169,13 @@ export class GymEquipmentController {
 
     if (this.expedition.energy < C.EXERCISE_COST) {
       this.hud?.showToast(`Not enough power! Need ${C.EXERCISE_COST}%.`);
+      this._refreshHudDom();
+      return;
+    }
+
+    const blocked = workoutBlocker(this.stations.body);
+    if (blocked) {
+      this.hud?.showToast(blocked);
       this._refreshHudDom();
       return;
     }
