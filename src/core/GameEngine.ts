@@ -223,6 +223,11 @@ export class GameEngine {
     this._lastStorm = false;
     this._lastStormWarning = false;
     this.audio = new AudioManager();
+    document.addEventListener('click', (event) => {
+      const control = event.target?.closest?.('button, [role="button"], a');
+      if (!control || control.disabled || control.closest('[data-action]')) return;
+      this.audio.playUiClick();
+    });
 
     // Maozinha 3D do jogador em primeira pessoa
     this.playerHand = new PlayerHand(this.camera, materials, carrot.texture);
@@ -359,6 +364,7 @@ export class GameEngine {
       onStartShipBlockBreak: () => this.audio.playShipBlockBreak(),
       onStopShipBlockBreak: () => this.audio.stopShipBlockBreak(),
       onBlockBroken: (blockId) => this.audio.playBlockBreakImpact(blockId === BLOCK_IDS.REGOLITH),
+      onFoodConsumed: () => this.audio.playUiConfirm(),
       onSuitportAction: (action) => this._handleSuitportShortcut(action),
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown
@@ -880,6 +886,7 @@ export class GameEngine {
   }
 
   _onScanCompleted({ entry, discovery }) {
+    this.audio.playUiConfirm();
     this.scannerHud.showCard(entry, discovery);
     if (discovery.missionNew) {
       this.hud.showToast(`+1 discovery in your science package (${discovery.missionCount} this mission). Send it home from the science & radio terminal.`, 4500);

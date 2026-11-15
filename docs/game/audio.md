@@ -8,6 +8,10 @@
 | World interaction | Regolith placement/mining, ship block mining, landing | Covered |
 | Airlock and arrival | Door open/close, decompression, manual crank, rocket | Covered; door assets can be refreshed later |
 | Survival | Danger loop | Covered; add distinct oxygen/radiation warnings if needed |
+| Interface | Buttons and links now use the short CC0 click; station action controls keep their result feedback | Covered |
+| Computers and journal | Open, close, and navigation controls use the interface click | Covered |
+| Food | Successful consumption plays the confirmation effect | Covered |
+| Scanner | Completed scans play a confirmation effect | Covered |
 | Suit | Equip and dock | Replaced synthesized tones with CC0 sci-fi door and confirmation sounds |
 | Gym and station actions | Synthesized oscillator tones | Replaced with CC0 confirmation/error sound effects |
 | Interface/scanner/radio | No dedicated effects found in current audio wiring | Candidate follow-up; use click/confirmation cues sparingly |
