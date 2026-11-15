@@ -11,6 +11,7 @@ import { EMBEDDED_SPACE_WEATHER } from '../data/spaceWeather.js';
 import { MissionSystem, oxygenPointsToKg } from '../mission/MissionSystem.js';
 import { NO_STORM_DATA_TEXT, donkiCredit, donkiLabel, formatDateDMY, formatDose, formatHours, stormEventMessage } from '../mission/missionText.js';
 import { doseEventMessage, doseVictoryRows, evaBlockMessage, roverMavBlocks } from '../mission/doseBudget.js';
+import { scansStillNeeded, scienceCountText, scienceStep, uploadResultText } from '../mission/sciencePackage.js';
 import { MissionHud } from '../ui/MissionHud.js';
 import { missionReport } from '../mission/missionReport.js';
 import { renderReportCard } from '../ui/ReportCard.js';
@@ -221,6 +222,8 @@ export class GameEngine {
     this.missionHud = new MissionHud({
       donkiFetched: this.spaceWeather,
       onLoadIce: (count) => this._loadIceIntoMav(count),
+      onLoadSample: () => this._loadSampleTube(true),
+      onUnloadSample: () => this._loadSampleTube(false),
       onToggleFactory: () => this.mission.toggleFactory(),
       onIgnite: () => this._launchMav(),
       onClose: () => this._closeMavPanel(),
@@ -380,7 +383,7 @@ export class GameEngine {
       ...this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' })),
       { type: 'power', x: 10.6, y: 11.4, z: -3, label: 'Press F: life support' },
       { type: 'console', x: 8.25, y: 11.5, z: -10.8, label: 'Press F: mission computer' },
-      { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth' },
+      { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth · [G] send science' },
       { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
       { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
       { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
@@ -659,6 +662,9 @@ export class GameEngine {
 
   _onScanCompleted({ entry, discovery }) {
     this.scannerHud.showCard(entry, discovery);
+    if (discovery.missionNew) {
+      this.hud.showToast(`+1 discovery in your science package (${discovery.missionCount} this mission). Send it home from the science & radio terminal.`, 4500);
+    }
     if (!discovery.isNew) return;
 
     const reward = applyDiscoveryReward(entry, this.survival);
@@ -732,23 +738,35 @@ export class GameEngine {
     requestRawPointerLock(this.renderer.domElement);
   }
 
-  // [G] no console de comando da base: envia o pacote de dados cientificos para a Terra
+  // [G] no terminal de ciencia e radio: o mesmo envio do botao do painel (que e o caminho no toque)
   _sendScienceData() {
-    if (this.currentInteraction !== 'rover_terminal') {
-      this.hud.showToast('Go to the command console inside the base to send science data.');
+    if (this._getInteraction()?.type !== 'science') {
+      this.hud.showToast('Go to the science & radio terminal inside the base to send your science to Earth.');
       return;
     }
-    if (this.comms.blackout) {
-      this.hud.showToast('Radio silent: the Sun is between Mars and Earth. Send the data after the solar conjunction.', 5000);
-      return;
-    }
-    const result = this.mission.sendData();
-    const messages = {
-      sent: 'Science data sent! Radio waves take 3 to 22 minutes to reach Earth, so Mission Control cannot help you right away.',
-      'no-energy': 'Not enough energy to power the radio. Wait for the Sun to charge the battery.',
-      'already-sent': 'Your science data is already on its way to Earth.',
-    };
-    this.hud.showToast(messages[result], 5000);
+    this.hud.showToast(this.sendSciencePackage(), 6000);
+  }
+
+  // Ciencia feita nesta partida: descobertas do scanner nesta missao e amostras analisadas
+  scienceTotals() {
+    return { discoveries: this.scanJournal.missionCount, samples: this.stations.analyzedSamples };
+  }
+
+  currentSciencePackage() {
+    return this.mission.sciencePackage(this.scienceTotals());
+  }
+
+  // Envia o pacote de ciencia (issue #105). Devolve a frase para o painel ou o aviso.
+  sendSciencePackage() {
+    if (this.comms.blackout) return 'Radio silent: the Sun is between Mars and Earth. Send your science after the solar conjunction.';
+    return uploadResultText(this.mission.sendData(this.scienceTotals()));
+  }
+
+  // Tubo de amostra analisada entra (ou sai) do foguete: cada tubo pede mais gelo no tanque
+  _loadSampleTube(load) {
+    const result = load ? this.mission.loadSampleTube(this.stations.analyzedSamples) : this.mission.unloadSampleTube();
+    if (result === 'no-samples') this.hud.showToast('Analyze a regolith sample at the science & radio terminal first.');
+    this._refreshMavPanel();
   }
 
   // Sobrevivencia com o O2 do habitat pago pela bateria
@@ -760,7 +778,7 @@ export class GameEngine {
   }
 
   _refreshMavPanel() {
-    this.missionHud.updateMavPanel(this.mission, this.survival.countItem(BLOCK_IDS.MARS_ICE));
+    this.missionHud.updateMavPanel(this.mission, this.survival.countItem(BLOCK_IDS.MARS_ICE), this.stations.analyzedSamples, this.scienceTotals());
   }
 
   _toggleShield() {
@@ -820,6 +838,8 @@ export class GameEngine {
       ['Sols on Mars (1 sol = 1 Mars day)', String(this.sky.solCount)],
       ...doseVictoryRows(m.doseBreakdown),
       ['Solar storms survived', String(m.stormsSurvived)],
+      ['Science sent home', scienceCountText(m.sentDiscoveries, m.sentSamples)],
+      ['Rock sample tubes on the rocket', String(m.sampleTubes)],
       ['Oxygen made by the base', `${oxygenPointsToKg(m.oxygenProducedPoints).toFixed(2)} kg`],
       ['Ice turned into rocket fuel', `${m.iceDelivered} blocks`],
       ['Solar energy collected', `${(m.solarEnergyCollected / m.battery.capacity).toFixed(1)} full batteries`],
@@ -834,7 +854,8 @@ export class GameEngine {
       'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station. ' +
       'Storm shelter water wall: PREDICCS shielding model (University of New Hampshire, Curiosity RAD data) and NASA storm shelter studies. ' +
       'Radio delay: Earth-Mars distance from NASA/JPL planet orbits; solar conjunction rules from NASA/JPL. ' +
-      'Trip time, thin air and launch windows: NASA Mars facts.';
+      'Trip time, thin air and launch windows: NASA Mars facts. ' +
+      'Science sent through orbiters: NASA Mars Relay Network. Rock sample tubes: NASA Perseverance; upload costs and extra ice per tube are game rules.';
     this.missionHud.showVictory(rows, sources);
     renderReportCard(document.getElementById('victory-report'), missionReport(this._reportStats()));
     document.exitPointerLock();
@@ -1142,9 +1163,10 @@ export class GameEngine {
     this._storySnapshot = {
       hours: 0, insideHabitat: false, iceCount: 0, iceNeeded: 0, atConsole: false,
       stormPhase: 'calm', stormsSurvived: 0, propellantPct: 0, dataSent: false, launched: false,
-      needsBase: false,
+      needsBase: false, iceForFullTank: MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK, scienceStep: null, scansLeft: 0,
       powerChecks: 0, harvestCount: 0, workoutCount: 0, shelterWaterL: 0,
     };
+    this._scienceState = { discoveries: 0, samples: 0, sentDiscoveries: 0, sentSamples: 0, rawSamples: 0 };
 
     // Setas do objetivo: uma flutua no mundo e a outra fica na tela (aponta mesmo atraves das paredes)
     this.waypoints = this._buildWaypoints();
@@ -1181,6 +1203,7 @@ export class GameEngine {
     return {
       airlock: { x: 0.5, y: ground + 3.2, z: outerDoor.z + 0.5, label: WAYPOINT_LABELS.airlock },
       console: { x: 4, y: ground + 3, z: -9.6, label: WAYPOINT_LABELS.console },
+      science: { x: 9.75, y: ground + 3, z: -10.8, label: WAYPOINT_LABELS.science },
       ice: { x: ice.x + 0.5, y: iceTop + 1.6, z: ice.z + 0.5, label: WAYPOINT_LABELS.ice },
       mav: { x: pad.x, y: ground + 9.2, z: pad.z, label: WAYPOINT_LABELS.mav },
       shelter: { x: shelterX, y: ground + 2.2, z: shelterZ, label: 'STORM SHELTER' },
@@ -1292,6 +1315,15 @@ export class GameEngine {
     s.harvestCount = this.stations.harvestCount;
     s.workoutCount = this.stations.workoutCount;
     s.shelterWaterL = this.mission.shelterWaterL;
+    s.iceForFullTank = this.mission.iceForFullTank();
+    const sci = this._scienceState;
+    sci.discoveries = this.scanJournal.missionCount;
+    sci.samples = this.stations.analyzedSamples;
+    sci.sentDiscoveries = this.mission.sentDiscoveries;
+    sci.sentSamples = this.mission.sentSamples;
+    sci.rawSamples = this.stations.samples;
+    s.scienceStep = scienceStep(sci);
+    s.scansLeft = scansStillNeeded(sci);
     this.story.update(s);
 
     for (const event of this.story.drainEvents()) {
@@ -1530,8 +1562,7 @@ export class GameEngine {
     const dyConsole = Math.abs(this.player.pos.y - 11.0);
     if (distConsole < 2.6 && dyConsole < 2.2) {
       this.currentInteraction = 'rover_terminal';
-      const dataHint = this.mission.dataSent ? '' : ' · [G] Send science data to Earth';
-      this.hud.setInteractionPrompt(true, `[F] Operate Rover Remote Terminal${dataHint}`);
+      this.hud.setInteractionPrompt(true, '[F] Operate Rover Remote Terminal');
       return;
     }
 

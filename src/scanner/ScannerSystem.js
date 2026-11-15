@@ -29,10 +29,12 @@ export class ScannerSystem {
     if (targetId !== this.targetId) {
       this.targetId = targetId;
       this.targetWasKnown = targetId ? this.journal.has(targetId) : false;
-      // Previously discovered targets are identified immediately; only new science
-      // requires holding the scope steady for a full scan.
-      this.progress = this.targetWasKnown ? 1 : 0;
-      this.completedTargetId = this.targetWasKnown ? targetId : null;
+      // Targets already scanned in this mission are identified immediately. Anything else
+      // (new, or known from an earlier mission) needs a full scan to enter this mission's
+      // science package (issue #105).
+      const scannedNow = targetId ? this.journal.scannedThisMission(targetId) : false;
+      this.progress = scannedNow ? 1 : 0;
+      this.completedTargetId = scannedNow ? targetId : null;
     }
 
     const known = this.targetWasKnown;

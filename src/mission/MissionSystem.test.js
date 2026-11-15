@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MissionSystem, mavProgress, oxygenPointsToKg } from './MissionSystem.js';
-import { DOSE_CONFIG, ENERGY_CONFIG, MAV_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.js';
+import { DOSE_CONFIG, ENERGY_CONFIG, MAV_CONFIG, SCIENCE_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.js';
 import { TRANSIT_DOSE_MSV } from './doseBudget.js';
 
 // CME com impacto direto previsto em Marte 3 dias depois (3 horas de jogo de aviso)
@@ -90,14 +90,104 @@ describe('MissionSystem energy', () => {
     expect(mission.drainEvents().some((e) => e.type === 'shield-off-no-energy')).toBe(true);
   });
 
-  it('data upload costs energy and needs enough charge', () => {
+});
+
+describe('MissionSystem science package (issue #105)', () => {
+  const { UPLOAD_BASE_COST: BASE, UPLOAD_COST_PER_ITEM: PER_ITEM, MIN_DISCOVERIES, MIN_SAMPLES, MAX_ITEMS_PER_UPLOAD } = SCIENCE_CONFIG;
+
+  it('cannot complete the science goal with nothing scanned or analyzed this mission', () => {
     const mission = createMission(0);
-    mission.battery.charge = ENERGY_CONFIG.DATA_UPLOAD_COST - 1;
-    expect(mission.sendData()).toBe('no-energy');
     mission.battery.charge = 100;
-    expect(mission.sendData()).toBe('sent');
-    expect(mission.battery.charge).toBe(100 - ENERGY_CONFIG.DATA_UPLOAD_COST);
-    expect(mission.sendData()).toBe('already-sent');
+    const result = mission.sendData({ discoveries: 0, samples: 0 });
+    expect(result.status).toBe('empty');
+    expect(mission.dataSent).toBe(false);
+    expect(mission.battery.charge).toBe(100);
+    expect(mission.progress.ready).toBe(false);
+  });
+
+  it('costs more energy for a bigger package', () => {
+    const mission = createMission(0);
+    const small = mission.sciencePackage({ discoveries: 1, samples: 0 });
+    const big = mission.sciencePackage({ discoveries: 4, samples: 2 });
+    expect(small.cost).toBe(BASE + PER_ITEM);
+    expect(big.cost).toBe(BASE + 6 * PER_ITEM);
+    expect(big.cost).toBeGreaterThan(small.cost);
+  });
+
+  it('needs enough charge for the whole upload', () => {
+    const mission = createMission(0);
+    mission.battery.charge = BASE + 2 * PER_ITEM - 1;
+    const result = mission.sendData({ discoveries: 2, samples: 0 });
+    expect(result).toMatchObject({ status: 'no-energy', cost: BASE + 2 * PER_ITEM });
+    expect(mission.sentDiscoveries).toBe(0);
+  });
+
+  it('allows partial uploads, each paying the radio start again, until the minimum is home', () => {
+    const mission = createMission(0);
+    mission.battery.charge = 100;
+    const first = mission.sendData({ discoveries: MIN_DISCOVERIES - 2, samples: 0 });
+    expect(first).toMatchObject({ status: 'sent', discoveries: MIN_DISCOVERIES - 2, samples: 0, dataSent: false });
+    expect(mission.dataSent).toBe(false);
+    // Nada novo: o mesmo pacote nao e enviado duas vezes
+    expect(mission.sendData({ discoveries: MIN_DISCOVERIES - 2, samples: 0 }).status).toBe('empty');
+
+    const second = mission.sendData({ discoveries: MIN_DISCOVERIES, samples: 0 });
+    expect(second).toMatchObject({ status: 'sent', discoveries: 2, dataSent: true });
+    expect(mission.dataSent).toBe(true);
+    expect(mission.uploads).toBe(2);
+    expect(mission.battery.charge).toBeCloseTo(100 - (2 * BASE + MIN_DISCOVERIES * PER_ITEM));
+  });
+
+  it('also counts analyzed samples, which go first, and caps one upload at an orbiter pass', () => {
+    const mission = createMission(0);
+    mission.battery.charge = 100;
+    const result = mission.sendData({ discoveries: MAX_ITEMS_PER_UPLOAD, samples: MIN_SAMPLES });
+    expect(result).toMatchObject({ samples: MIN_SAMPLES, discoveries: MAX_ITEMS_PER_UPLOAD - MIN_SAMPLES, leftAfter: MIN_SAMPLES, dataSent: true });
+    expect(mission.sciencePackage({ discoveries: MAX_ITEMS_PER_UPLOAD, samples: MIN_SAMPLES }).items).toBe(MIN_SAMPLES);
+  });
+});
+
+describe('MissionSystem sample tubes on the MAV', () => {
+  const { ICE_PER_SAMPLE_TUBE, MAX_SAMPLE_TUBES } = SCIENCE_CONFIG;
+
+  it('only loads analyzed samples, up to the rack size', () => {
+    const mission = createMission(0);
+    expect(mission.loadSampleTube(0)).toBe('no-samples');
+    for (let i = 0; i < MAX_SAMPLE_TUBES; i++) expect(mission.loadSampleTube(99)).toBe('loaded');
+    expect(mission.loadSampleTube(99)).toBe('full');
+    expect(mission.sampleTubes).toBe(MAX_SAMPLE_TUBES);
+  });
+
+  it('asks for more ice for every tube loaded', () => {
+    const mission = createMission(0);
+    expect(mission.iceNeeded()).toBe(MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK);
+    mission.loadSampleTube(2);
+    mission.loadSampleTube(2);
+    expect(mission.iceForFullTank()).toBe(MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK + 2 * ICE_PER_SAMPLE_TUBE);
+    expect(mission.iceNeeded()).toBe(MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK + 2 * ICE_PER_SAMPLE_TUBE);
+  });
+
+  it('turns a full tank into a partly full one, and gives the fuel back when the tube comes out', () => {
+    const mission = createMission(0);
+    mission.propellant = 100;
+    mission.loadSampleTube(1);
+    const full = MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
+    expect(mission.propellant).toBeCloseTo((100 * full) / (full + ICE_PER_SAMPLE_TUBE));
+    expect(mission.iceNeeded()).toBe(ICE_PER_SAMPLE_TUBE);
+    expect(mission.progress.ready).toBe(false);
+    expect(mission.unloadSampleTube()).toBe('unloaded');
+    expect(mission.propellant).toBeCloseTo(100);
+    expect(mission.unloadSampleTube()).toBe('empty');
+  });
+
+  it('fills the heavier rocket with the extra ice through the factory', () => {
+    const mission = createMission(12);
+    mission.battery.charge = 100;
+    mission.loadSampleTube(1);
+    const need = mission.iceNeeded();
+    expect(mission.deliverIce(need + 3)).toBe(need);
+    mission.update(12 + need * MAV_CONFIG.ISRU_HOURS_PER_ICE_BLOCK + 0.1);
+    expect(mission.propellant).toBe(100);
   });
 });
 

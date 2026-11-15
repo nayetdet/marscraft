@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { StoryDirector } from './StoryDirector.js';
+import { objectiveView } from './objectiveView.js';
+import { objectiveTarget } from './waypoints.js';
+import { MissionSystem } from '../mission/MissionSystem.js';
+import { scansStillNeeded, scienceStep } from '../mission/sciencePackage.js';
+import { SCIENCE_CONFIG } from '../config/constants.js';
 
 const REPLY = 0.5;
 const WINDOW = 8;
@@ -229,6 +234,47 @@ describe('StoryDirector', () => {
     expect(director.windowHoursLeft).toBeCloseTo(WINDOW - 2);
 
     director.update(snap({ hours: 43, stormsSurvived: 3, propellantPct: 100, dataSent: true }));
+    expect(director.objectiveId).toBe('ignite');
+  });
+
+  it('keeps asking for science until the minimum package is sent, guiding scan, analyze and send (issue #105)', () => {
+    const director = started();
+    reachAct2(director);
+    const mission = new MissionSystem({ cmes: [], startHours: 0 });
+    mission.battery.charge = 100;
+    const science = { discoveries: 0, samples: 0, rawSamples: 0 };
+    // O mesmo retrato que o GameEngine monta, com a ciencia desta partida
+    const frame = (hours) => {
+      const state = { ...science, sentDiscoveries: mission.sentDiscoveries, sentSamples: mission.sentSamples };
+      const s = snap({ hours, stormsSurvived: 3, propellantPct: 100, iceNeeded: 0, dataSent: mission.dataSent,
+        scienceStep: scienceStep(state), scansLeft: scansStillNeeded(state) });
+      director.update(s);
+      return { s, view: objectiveView(director, s), target: objectiveTarget(director.objectiveId, s) };
+    };
+
+    // Nada escaneado nem analisado: enviar nao conclui nada e o painel pede para escanear
+    expect(mission.sendData(science).status).toBe('empty');
+    let f = frame(40);
+    expect(director.objectiveId).toBe('send-data');
+    expect(f.view.task).toMatchObject({ icon: 'scope', label: `SCAN ${SCIENCE_CONFIG.MIN_DISCOVERIES} MORE` });
+    expect(f.target).toBeNull();
+
+    // Regolito coletado la fora: a seta leva ao laboratorio para analisar
+    science.rawSamples = 1;
+    f = frame(40.5);
+    expect(f.view.task).toMatchObject({ icon: 'rock', label: 'ANALYZE ROCKS' });
+    expect(f.target).toBe('science');
+
+    // Amostras analisadas bastam: enviar
+    science.rawSamples = 0;
+    science.samples = SCIENCE_CONFIG.MIN_SAMPLES;
+    f = frame(41);
+    expect(f.view.task.label).toBe('SEND SCIENCE');
+    expect(f.target).toBe('science');
+    expect(director.objectiveId).toBe('send-data');
+
+    expect(mission.sendData(science)).toMatchObject({ status: 'sent', dataSent: true });
+    frame(41.5);
     expect(director.objectiveId).toBe('ignite');
   });
 
