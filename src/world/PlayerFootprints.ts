@@ -37,7 +37,7 @@ function createFootprintTexture(): THREE.CanvasTexture {
   context.fillRect(3, 2, 12, 24);
 
   // Repeating square tread blocks keep the print readable at game distance.
-  context.fillStyle = '#965f3e';
+  context.fillStyle = '#865637';
   for (const y of [5, 10, 15, 20]) {
     context.fillRect(4, y, 10, 1);
     context.fillRect(7, y + 1, 1, 3);
