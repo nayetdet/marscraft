@@ -1049,6 +1049,105 @@ const DYNAMIC_PATTERNS: Array<{
     match: /^The MAV fuel tank is full!$/,
     format: (_parts, language) => language === 'pt-BR' ? 'O tanque de combustível do MAV está cheio!' : '¡El tanque de combustible del MAV está lleno!',
   },
+  // Dynamic messages from systems that interpolate game values.
+  {
+    match: /^Science sent: (\d+) \/ (\d+) points$/,
+    format: ([, sent, goal], language) => language === 'pt-BR' ? `Ciência enviada: ${sent} / ${goal} pontos` : `Ciencia enviada: ${sent} / ${goal} puntos`,
+  },
+  {
+    match: /^Send (\d+) items? = (\d+) points? to Earth \((\d+)% power\)$/,
+    format: ([, items, points, cost], language) => language === 'pt-BR'
+      ? `Enviar ${items} ${items === '1' ? 'item' : 'itens'} = ${points} ${points === '1' ? 'ponto' : 'pontos'} para a Terra (${cost}% de energia)`
+      : `Enviar ${items} ${items === '1' ? 'artículo' : 'artículos'} = ${points} ${points === '1' ? 'punto' : 'puntos'} a la Tierra (${cost}% de energía)`,
+  },
+  {
+    match: /^Not enough power: this upload needs (\d+)% of the battery\. Wait for the Sun\.$/,
+    format: ([, cost], language) => language === 'pt-BR' ? `Energia insuficiente: este envio precisa de ${cost}% da bateria. Espere o Sol.` : `Falta energía: este envío necesita el ${cost}% de la batería. Espera al Sol.`,
+  },
+  {
+    match: /^Not enough science points: this needs (\d+) points that were not sent to Earth yet\.$/,
+    format: ([, cost], language) => language === 'pt-BR' ? `Faltam pontos científicos: são necessários ${cost} pontos ainda não enviados à Terra.` : `Faltan puntos científicos: necesitas ${cost} puntos que aún no hayas enviado a la Tierra.`,
+  },
+  {
+    match: /^Question sent\. The answer needs about (\d+) s \(game time\) to come back\.$/,
+    format: ([, seconds], language) => language === 'pt-BR' ? `Pergunta enviada. A resposta deve voltar em cerca de ${seconds} s do jogo.` : `Pregunta enviada. La respuesta tardará unos ${seconds} s del juego.`,
+  },
+  {
+    match: /^Regolith analyzed: \+(\d+) science point\. Plain regolith only counts once: the glowing sample spots outside are worth more\.$/,
+    format: ([, points], language) => language === 'pt-BR' ? `Rególito analisado: +${points} ponto científico. Rególito comum só conta uma vez; os pontos brilhantes de amostra lá fora valem mais.` : `Regolito analizado: +${points} punto científico. El regolito común solo cuenta una vez; los puntos brillantes de muestra valen más.`,
+  },
+  {
+    match: /^Tool upgraded \(-([\d.]+) science points, not sent to Earth\): collecting blocks is faster\.$/,
+    format: ([, points], language) => language === 'pt-BR' ? `Ferramenta melhorada (−${points} pontos científicos, não enviados à Terra): agora você coleta blocos mais rápido.` : `Herramienta mejorada (−${points} puntos científicos, no enviados a la Tierra): ahora recoges bloques más rápido.`,
+  },
+  {
+    match: /^Suit upgrade installed \(-([\d.]+) science points, not sent to Earth\): outside, less radiation hurts you and less dose adds up\.$/,
+    format: ([, points], language) => language === 'pt-BR' ? `Melhoria do traje instalada (−${points} pontos científicos, não enviados à Terra): lá fora, a radiação machuca menos e sua dose aumenta mais devagar.` : `Mejora del traje instalada (−${points} puntos científicos, no enviados a la Tierra): afuera, la radiación te hace menos daño y tu dosis aumenta más despacio.`,
+  },
+  {
+    match: /^Moved (\d+(?:\.\d+)?) L into the wall\. Less water to drink, more protection\.$/,
+    format: ([, liters], language) => language === 'pt-BR' ? `${liters} L foram para a parede. Menos água para beber, mais proteção.` : `Se pasaron ${liters} L a la pared. Menos agua para beber, más protección.`,
+  },
+  {
+    match: /^Moved (\d+(?:\.\d+)?) L back to the tank\. More water to drink, less protection\.$/,
+    format: ([, liters], language) => language === 'pt-BR' ? `${liters} L voltaram para o tanque. Mais água para beber, menos proteção.` : `Se devolvieron ${liters} L al tanque. Más agua para beber, menos protección.`,
+  },
+  {
+    match: /^Need (\d+(?:\.\d+)?)% base power for full suit repair\.$/,
+    format: ([, cost], language) => language === 'pt-BR' ? `São necessários ${cost}% de energia da base para reparar o traje por completo.` : `Necesitas el ${cost}% de energía de la base para reparar todo el traje.`,
+  },
+  {
+    match: /^Need (\d+(?:\.\d+)?)% base power for electrostatic cleaning\.$/,
+    format: ([, cost], language) => language === 'pt-BR' ? `São necessários ${cost}% de energia da base para limpar o traje com eletricidade estática.` : `Necesitas el ${cost}% de energía de la base para limpiar el traje con electricidad estática.`,
+  },
+  {
+    match: /^Commander, the (.+) has no power! The battery is empty\.$/,
+    format: ([, station], language) => language === 'pt-BR'
+      ? `Comandante, o(a) ${translate(station, language)} está sem energia! A bateria acabou.`
+      : `Comandante, ¡${translate(station, language)} se quedó sin energía! La batería está vacía.`,
+  },
+  {
+    match: /^Commander, the (.+) is breaking down\. It needs care\.$/,
+    format: ([, station], language) => language === 'pt-BR'
+      ? `Comandante, o(a) ${translate(station, language)} está quebrando. Precisa de manutenção.`
+      : `Comandante, ${translate(station, language)} se está averiando. Necesita mantenimiento.`,
+  },
+  {
+    match: /^Commander, it is freezing! The (.+) stopped\. Turn the heater on in the power room\.$/,
+    format: ([, station], language) => language === 'pt-BR'
+      ? `Comandante, está congelando! ${translate(station, language)} parou. Ligue o aquecedor na sala de energia.`
+      : `Comandante, ¡hace mucho frío! ${translate(station, language)} se detuvo. Enciende el calentador en la sala de energía.`,
+  },
+  {
+    match: /^Fission reactor ON: \+(\d+(?:\.\d+)?)%\/h day and night\. Your radiation dose climbs faster while it runs\.$/,
+    format: ([, output], language) => language === 'pt-BR'
+      ? `Reator de fissão LIGADO: +${output}%/h, de dia e de noite. Sua dose de radiação aumenta mais rápido enquanto ele funciona.`
+      : `Reactor de fisión ENCENDIDO: +${output}%/h, día y noche. Tu dosis de radiación aumenta más rápido mientras funciona.`,
+  },
+  {
+    match: /^The rocket takes ice in loads of (\d+(?:\.\d+)?) kg\. Drill more first\.$/,
+    format: ([, amount], language) => language === 'pt-BR'
+      ? `O foguete recebe gelo em cargas de ${amount} kg. Perfure mais gelo primeiro.`
+      : `El cohete recibe hielo en cargas de ${amount} kg. Perfora más hielo primero.`,
+  },
+  {
+    match: /^Rover loaded (\d+(?:\.\d+)?) ice into the rocket\. No walk outside needed!$/,
+    format: ([, amount], language) => language === 'pt-BR'
+      ? `O rover carregou ${amount} blocos de gelo no foguete. Você não precisou sair da base!`
+      : `El rover cargó ${amount} bloques de hielo en el cohete. ¡No tuviste que salir de la base!`,
+  },
+  {
+    match: /^EVA suit below minimum launch levels \((\d+)% O2 \/ (\d+)% Heat\)\. Wait for recharge\.$/,
+    format: ([, oxygen, heat], language) => language === 'pt-BR'
+      ? `O traje EVA está abaixo do mínimo para decolar (${oxygen}% de O₂ / ${heat}% de calor). Espere a recarga.`
+      : `El traje EVA está por debajo del mínimo para despegar (${oxygen}% de O₂ / ${heat}% de calor). Espera a que se recargue.`,
+  },
+  {
+    match: /^The battery will be empty before sunrise \((.+) to go\)\. Turn something off, or start the fission reactor\.$/,
+    format: ([, time], language) => language === 'pt-BR'
+      ? `A bateria vai acabar antes do nascer do Sol (faltam ${time}). Desligue algo ou ligue o reator de fissão.`
+      : `La batería se agotará antes del amanecer (faltan ${time}). Apaga algo o enciende el reactor de fisión.`,
+  },
 ];
 
 export function isLanguage(value: unknown): value is Language {
