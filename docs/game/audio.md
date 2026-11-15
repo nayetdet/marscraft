@@ -21,7 +21,7 @@ The existing rocket engine loop now starts when the MAV ignites in the launch cu
 
 ## Mix and loudness
 
-On 15 November 2026, the audio files in `public/audio/` were loudness-normalized to a -24 LUFS integrated target with a -6 dBTP ceiling. Clips too short for a stable LUFS reading use the same true-peak ceiling. `AUDIO_MIX_CONFIG` then sets quieter gains for frequent interface sounds and continuous motor loops, with stronger gains for action cues. The procedural Mars wind uses its own gain envelope: it remains audible outdoors and grows during dust gusts.
+On 15 November 2026, the audio files in `public/audio/` were loudness-normalized to a -24 LUFS integrated target with a -6 dBTP ceiling. Clips too short for a stable LUFS reading use the same true-peak ceiling. `quebrando_areia.WAV` is an exception: the original, quieter file was restored because its crunch sounded better. Mining uses it at its original gain; breaking the block plays a separate short procedural impact. `AUDIO_MIX_CONFIG` sets gains by sound role. The procedural Mars wind uses its own gain envelope: it remains audible outdoors and grows during dust gusts.
 
 ## Added sound assets
 

@@ -16,9 +16,8 @@ export class AudioManager {
     this.rocket = this._createAudio(`${AUDIO_BASE_URL}foguete.wav`, true);
     this.sandFall = this._createAudio(`${AUDIO_BASE_URL}queda_areia.wav`);
     this.regolithPlace = this._createAudio(`${AUDIO_BASE_URL}colocando_areia.WAV`);
-    this.regolithBreak = this._createAudio(`${AUDIO_BASE_URL}quebrando_areia.WAV?v=4`);
+    this.regolithBreak = this._createAudio(`${AUDIO_BASE_URL}quebrando_areia.WAV?v=5`);
     this.shipBlockBreak = this._createAudio(`${AUDIO_BASE_URL}quebrando_pedra.WAV`, true);
-    this.regolithBreakImpact = this._createAudio(`${AUDIO_BASE_URL}quebrando_areia.WAV`);
     this.shipBlockBreakImpact = this._createAudio(`${AUDIO_BASE_URL}quebrando_pedra.WAV`);
     this.doorOpen = this._createAudio(`${AUDIO_BASE_URL}porta_abrir.wav`);
     this.doorClose = this._createAudio(`${AUDIO_BASE_URL}porta_fechar.wav`);
@@ -38,9 +37,8 @@ export class AudioManager {
     this.rocket.volume = AUDIO_MIX_CONFIG.ROCKET_LOOP_VOLUME;
     this.sandFall.volume = AUDIO_MIX_CONFIG.LANDING_VOLUME;
     this.regolithPlace.volume = AUDIO_MIX_CONFIG.REGOLITH_PLACE_VOLUME;
-    this.regolithBreak.volume = AUDIO_MIX_CONFIG.REGOLITH_BREAK_LOOP_VOLUME;
+    this.regolithBreak.volume = AUDIO_MIX_CONFIG.REGOLITH_BREAK_VOLUME;
     this.shipBlockBreak.volume = AUDIO_MIX_CONFIG.BLOCK_BREAK_LOOP_VOLUME;
-    this.regolithBreakImpact.volume = AUDIO_MIX_CONFIG.BLOCK_BREAK_IMPACT_VOLUME;
     this.shipBlockBreakImpact.volume = AUDIO_MIX_CONFIG.BLOCK_BREAK_IMPACT_VOLUME;
     this.doorOpen.volume = AUDIO_MIX_CONFIG.DOOR_VOLUME;
     this.doorClose.volume = AUDIO_MIX_CONFIG.DOOR_VOLUME;
@@ -145,7 +143,36 @@ export class AudioManager {
   }
 
   playBlockBreakImpact(isRegolith) {
-    this._playOneShot(isRegolith ? this.regolithBreakImpact : this.shipBlockBreakImpact);
+    if (isRegolith) {
+      this.playRegolithBreakImpact();
+      return;
+    }
+    this._playOneShot(this.shipBlockBreakImpact);
+  }
+
+  playRegolithBreakImpact() {
+    if (this.masterVolume <= 0) return;
+    const ctx = this._getSynthContext();
+    if (!ctx) return;
+    const C = AUDIO_MIX_CONFIG;
+    this._playSuitTone(
+      ctx,
+      C.REGOLITH_IMPACT_LOW_START_HZ,
+      0,
+      C.REGOLITH_IMPACT_LOW_DURATION_SECONDS,
+      'sine',
+      C.REGOLITH_IMPACT_LOW_GAIN,
+      C.REGOLITH_IMPACT_LOW_END_HZ
+    );
+    this._playSuitTone(
+      ctx,
+      C.REGOLITH_IMPACT_CLICK_START_HZ,
+      0,
+      C.REGOLITH_IMPACT_CLICK_DURATION_SECONDS,
+      'triangle',
+      C.REGOLITH_IMPACT_CLICK_GAIN,
+      C.REGOLITH_IMPACT_CLICK_END_HZ
+    );
   }
 
   // Abertura manual do airlock (sem energia): som mecanico pesado
