@@ -142,11 +142,26 @@ export class InputController {
     }
   }
 
-  _closeInventory() {
+  _closeInventory({ deferPointerLock = false } = {}) {
     this.hud.closeInventory();
     if (!this.isTouchMode) {
-      requestRawPointerLock(this.domElement, () => this._showPauseMenu?.());
+      if (deferPointerLock) {
+        // Browsers release pointer lock for Escape, so request it after keyup.
+        this._resumeOnEscapeKeyUp = true;
+      } else {
+        requestRawPointerLock(this.domElement, () => this._showPauseMenu?.());
+      }
     }
+  }
+
+  _handleInventoryKey(e) {
+    if (!this.hud.isInventoryOpen) return false;
+    if (e.code === 'Escape') {
+      e.preventDefault();
+      this._closeInventory({ deferPointerLock: true });
+      return true;
+    }
+    return e.code !== 'KeyE';
   }
 
   openJournal() {
@@ -576,7 +591,7 @@ export class InputController {
         }
         return;
       }
-      if (this.hud.isInventoryOpen && e.code !== 'KeyE') return;
+      if (this._handleInventoryKey(e)) return;
       if (this.isJournalOpen()) {
         this._handleJournalKey(e, showPauseMenu);
         return;
