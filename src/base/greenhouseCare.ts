@@ -36,8 +36,8 @@ export function plantsStalled(state) {
 // Fatos "Marte <-> Terra": a mesma tecnologia da estufa ajudando pessoas na Terra. Frases curtas
 // para 7 a 12 anos, sem numeros inventados. Cada fato e a recompensa de uma descoberta do jogador
 // (issue #216): `crop` e a planta cuja PRIMEIRA colheita revela o fato; o fato sem `crop` sai na
-// colheita seguinte a ter colhido os 3 tipos. `side` de cada frase: a base em Marte, a Terra ou a
-// Estacao Espacial (cor do icone no card, EarthFactHud).
+// colheita seguinte a ter colhido os 3 tipos. `tone` de cada frase: a base em Marte, a Terra ou a
+// Estacao Espacial (cor do icone no card, FirstTimeHud).
 export const EARTH_FACT_TITLE = 'SPACE SCIENCE ON EARTH';
 export const EARTH_CARDS = [
   {
@@ -45,8 +45,8 @@ export const EARTH_CARDS = [
     crop: 'lettuce',
     reason: 'First lettuce harvest!',
     lines: [
-      { icon: 'heart', side: 'mars', text: 'Fresh food keeps the crew healthy and happy' },
-      { icon: 'plant', side: 'space', text: 'Astronauts ate space lettuce in 2015' },
+      { icon: 'heart', tone: 'mars', text: 'Fresh food keeps the crew healthy and happy' },
+      { icon: 'plant', tone: 'space', text: 'Astronauts ate space lettuce in 2015' },
     ],
     source: 'NASA Veggie on the Space Station. Plant studies: NASA OSDR',
   },
@@ -55,9 +55,9 @@ export const EARTH_CARDS = [
     crop: 'potato',
     reason: 'First potato harvest!',
     lines: [
-      { icon: 'plant', side: 'mars', text: 'Mars soil has perchlorate salts' },
-      { icon: 'drop', side: 'mars', text: 'So we grow plants in water, not soil' },
-      { icon: 'home', side: 'earth', text: 'Earth: city vertical farms do the same' },
+      { icon: 'plant', tone: 'mars', text: 'Mars soil has perchlorate salts' },
+      { icon: 'drop', tone: 'mars', text: 'So we grow plants in water, not soil' },
+      { icon: 'home', tone: 'earth', text: 'Earth: city vertical farms do the same' },
     ],
     source: 'Perchlorate found in Mars soil by NASA Phoenix (2008). CSA: Food production toolkit',
   },
@@ -66,8 +66,8 @@ export const EARTH_CARDS = [
     crop: 'soy',
     reason: 'First soy harvest!',
     lines: [
-      { icon: 'drop', side: 'mars', text: 'Our greenhouse reuses its water' },
-      { icon: 'home', side: 'earth', text: 'Earth: closed greenhouses grow food in the Canadian Arctic' },
+      { icon: 'drop', tone: 'mars', text: 'Our greenhouse reuses its water' },
+      { icon: 'home', tone: 'earth', text: 'Earth: closed greenhouses grow food in the Canadian Arctic' },
     ],
     source: 'CSA: Food production on the Moon and in remote areas',
   },
@@ -76,8 +76,8 @@ export const EARTH_CARDS = [
     crop: null,
     reason: 'You grew every crop!',
     lines: [
-      { icon: 'sun', side: 'mars', text: 'Red and blue LEDs feed the plants' },
-      { icon: 'bolt', side: 'earth', text: 'Earth: indoor farms use LEDs to save power' },
+      { icon: 'sun', tone: 'mars', text: 'Red and blue LEDs feed the plants' },
+      { icon: 'bolt', tone: 'earth', text: 'Earth: indoor farms use LEDs to save power' },
     ],
     source: 'NASA Veggie uses red and blue LED light. CSA: Food production toolkit',
   },
@@ -104,9 +104,14 @@ export class EarthFacts {
   }
 }
 
-// O que o card de descoberta desenha (EarthFactHud.show)
+// O que a animacao de descoberta desenha (FirstTimeHud.show): o sinal indo de Marte para a Terra
+export const EARTH_FACT_SCENE = { from: 'mars', to: 'earth', motion: 'beam' };
+export const EARTH_FACT_ACCENT = '#ffe45c';
 export function earthFactView(card) {
-  return { title: EARTH_FACT_TITLE, reason: card.reason, lines: card.lines, source: card.source };
+  return {
+    stamp: 'DISCOVERY!', title: EARTH_FACT_TITLE, reason: card.reason, lines: card.lines, source: card.source,
+    scene: EARTH_FACT_SCENE, accent: EARTH_FACT_ACCENT,
+  };
 }
 
 // A linha do diario de bordo [J]

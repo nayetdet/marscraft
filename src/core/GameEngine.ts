@@ -65,7 +65,8 @@ import { buildBaseDecor } from '../base/baseDecor.ts';
 import { SuitportStation } from '../base/SuitportStation.ts';
 import { buildGreenhouseFields } from '../base/greenhouseFields.ts';
 import { EarthFacts, earthFactLogText, earthFactView, plantsStalled } from '../base/greenhouseCare.ts';
-import { EarthFactHud } from '../ui/EarthFactHud.ts';
+import { FirstTimeHud } from '../ui/FirstTimeHud.ts';
+import { FirstTimeMoments, momentLogText } from '../story/firstTimeMoments.ts';
 import { MenuScreens } from '../ui/MenuScreens.ts';
 import { StoryDirector } from '../story/StoryDirector.ts';
 import { objectiveView } from '../story/objectiveView.ts';
@@ -285,8 +286,11 @@ export class GameEngine {
     this.missionLog = new MissionLog();
     this.studyReveals = new StudyReveals();
     this.earthFacts = new EarthFacts();
-    this._earthFactQueue = []; // fatos ganhos que esperam o monitor da estufa fechar
-    this._earthFactShowing = false;
+    // Animacoes de "primeira vez" (beber, pegar gelo, ligar para a Terra...) e fatos da estufa:
+    // entram numa fila e aparecem uma de cada vez, com o jogo rodando (nenhum painel aberto)
+    this.firstTimeMoments = new FirstTimeMoments();
+    this._momentQueue = [];
+    this._momentBusyUntil = 0;
     this.missionLogFeed = new MissionLogFeed({
       log: this.missionLog,
       reveals: this.studyReveals,
@@ -1261,23 +1265,26 @@ export class GameEngine {
     const card = this.earthFacts.onPlayerHarvest(type);
     if (!card) return;
     this.missionLog.add({ text: earthFactLogText(card), kind: 'study', hours: this._skyHours() });
-    this._earthFactQueue.push(card);
-    this.showPendingEarthFacts();
+    this._momentQueue.push(earthFactView(card));
   }
 
-  // O card fica atras do monitor da estufa, entao o fato espera o painel fechar (StationPanel.close
-  // chama aqui). Colher varios campos de uma vez mostra um fato depois do outro.
-  showPendingEarthFacts() {
-    if (this._earthFactShowing || this.stationPanel.isOpen || !this._earthFactQueue.length) return;
-    const card = this._earthFactQueue.shift();
-    this._earthFactShowing = true;
-    const { EARTH_FACT_INTRO_MS: introMs, EARTH_FACT_CARD_MS: cardMs, EARTH_FACT_GAP_MS: gapMs } = MISSION_LOG_CONFIG;
-    this.earthFactHud ??= new EarthFactHud();
-    this.earthFactHud.show(earthFactView(card), introMs, cardMs);
-    setTimeout(() => {
-      this._earthFactShowing = false;
-      this.showPendingEarthFacts();
-    }, introMs + cardMs + gapMs);
+  // Chamado a cada quadro com o jogo rodando (sem painel aberto, sem animacao da historia):
+  // percebe a primeira vez de cada acao principal e mostra a proxima animacao da fila.
+  _updateMoments() {
+    const moment = this.firstTimeMoments.observe(this._storySnapshot);
+    if (moment) {
+      this.missionLog.add({ text: momentLogText(moment), kind: 'study', hours: this._skyHours() });
+      this._momentQueue.push(moment);
+    }
+    if (!this._momentQueue.length) return;
+    const now = performance.now();
+    if (now < this._momentBusyUntil) return;
+    const view = this._momentQueue.shift();
+    const C = MISSION_LOG_CONFIG;
+    const cardMs = C.MOMENT_CARD_MS + C.MOMENT_CARD_MS_PER_LINE * view.lines.length;
+    this.firstTimeHud ??= new FirstTimeHud();
+    this.firstTimeHud.show(view, C.MOMENT_INTRO_MS, cardMs);
+    this._momentBusyUntil = now + C.MOMENT_INTRO_MS + cardMs + C.MOMENT_GAP_MS;
   }
 
   // Os 3 cuidados da estufa (luz, agua reciclada, sem poeira) para o monitor e para as plantas
@@ -1418,7 +1425,7 @@ export class GameEngine {
       needsBase: false, iceForFullTank: MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK, scienceStep: null, scansLeft: 0,
       powerChecks: 0, harvestCount: 0, workoutCount: 0, shelterWaterL: 0,
       drinkCount: 0, mealCount: 0, washCount: 0, earthCalls: 0, plantCount: 0,
-      roverDrives: 0, roverIceKg: 0, scanCount: 0,
+      roverDrives: 0, roverIceKg: 0, scanCount: 0, iceDelivered: 0,
     };
     this._scienceState = { discoveries: 0, samples: 0, sentDiscoveries: 0, sentSamples: 0, rawSamples: 0 };
 
@@ -1580,6 +1587,7 @@ export class GameEngine {
     s.earthCalls = done.earthCalls;
     s.roverDrives = done.roverDrives;
     s.roverIceKg = done.roverIceKg;
+    s.iceDelivered = this.mission.iceDelivered; // animacao de primeira vez (firstTimeMoments)
     s.plantCount = this.stations.plantCount;
     s.scanCount = this.scanJournal.missionCount;
     s.iceForFullTank = this.mission.iceForFullTank();
@@ -2165,7 +2173,10 @@ export class GameEngine {
       this._updateCrew(dt);
       this._updateBaseDisplays(dt);
       if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
-      if (isGameRunning) this._updateStory(dt);
+      if (isGameRunning) {
+        this._updateStory(dt);
+        this._updateMoments();
+      }
 
       this.dustStorm.update(
         dt,
