@@ -26,6 +26,7 @@ import { MissionHud } from '../ui/MissionHud.ts';
 import { missionReport } from '../mission/missionReport.ts';
 import { renderReportCard } from '../ui/ReportCard.ts';
 import { requestRawPointerLock } from '../player/mouseLook.ts';
+import { createThirdPersonCameraScratch, updateThirdPersonCamera } from '../player/thirdPersonCamera.ts';
 import { createCarrotTexture } from '../graphics/carrotTexture.ts';
 import { BLOCK_IDS } from '../config/blockTypes.ts';
 import { createBlockMaterials } from '../graphics/blockMaterials.ts';
@@ -431,8 +432,7 @@ export class GameEngine {
     this.sleep = new SleepController(this);
 
     this._lookDir = new THREE.Vector3();
-    this._thirdPersonBack = new THREE.Vector3();
-    this._thirdPersonCameraOffset = new THREE.Vector3();
+    this._thirdPersonCameraScratch = createThirdPersonCameraScratch();
 
     this.debug = new DebugOverlay(this.renderer);
     this.crewInstances = CrewInstances.for(this.scene);
@@ -1003,25 +1003,15 @@ export class GameEngine {
 
   _updateCamera() {
     if (this.isThirdPerson) {
-      this.playerAvatar.group.visible = true;
-      this.playerAvatar.group.position.set(
-        this.player.pos.x,
-        this.player.pos.y - this.player.height,
-        this.player.pos.z
+      updateThirdPersonCamera(
+        this.camera,
+        this.player,
+        this.world,
+        this.playerAvatar.group,
+        this.playerHand.handGroup,
+        this.isZoomed,
+        this._thirdPersonCameraScratch
       );
-      this.playerAvatar.group.rotation.y = this.player.yaw + Math.PI;
-
-      const back = this._thirdPersonBack.set(Math.sin(this.player.yaw), 0, Math.cos(this.player.yaw));
-      const obstruction = this.world.raycast(this.player.pos, back, CAMERA_CONFIG.THIRD_PERSON_DISTANCE);
-      const distance = obstruction.hit
-        ? Math.max(CAMERA_CONFIG.THIRD_PERSON_MIN_DISTANCE, obstruction.distance - 0.2)
-        : CAMERA_CONFIG.THIRD_PERSON_DISTANCE;
-      this.camera.position.copy(this.player.pos)
-        .addScaledVector(back, distance)
-        .add(this._thirdPersonCameraOffset.set(0, CAMERA_CONFIG.THIRD_PERSON_CAMERA_HEIGHT, 0));
-      this.camera.rotation.order = 'YXZ';
-      this.camera.rotation.y = this.player.yaw;
-      this.camera.rotation.x = this.player.pitch;
     } else {
       this.playerAvatar.group.visible = false;
       this.camera.position.copy(this.player.pos);
