@@ -1841,9 +1841,13 @@ export class GameEngine {
   // no diario de bordo [J]. A colheita da tripulacao nao chama isto (issue #216).
   onPlayerHarvest(type) {
     const card = this.earthFacts.onPlayerHarvest(type);
-    if (!card) return;
-    this.missionLog.add({ text: earthFactLogText(card), kind: 'study', hours: this._skyHours() });
-    this._momentQueue.push(earthFactView(card));
+    if (card) {
+      this.missionLog.add({ text: earthFactLogText(card), kind: 'study', hours: this._skyHours() });
+      this._momentQueue.push(earthFactView(card));
+    }
+    // Station screens pause the game loop. Advance the tutorial immediately after harvesting so
+    // it does not snapshot the harvest as part of the previous planting step.
+    this._updateStory(0);
   }
 
   // Chamado a cada quadro com o jogo rodando (sem painel aberto, sem animacao da historia):
