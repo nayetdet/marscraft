@@ -255,8 +255,8 @@ export const SURVIVAL_CONFIG = {
   SUIT_DUST_MOVE_MULTIPLIER: 2.0,
   SUIT_WEAR_PER_SECOND: 100 / 420, // ~7 min continuous EVA before suit wears out
   SUIT_WEAR_DUST_MULTIPLIER: 1.75,
-  SUIT_REPAIR_POWER_COST: 4,
-  SUIT_CLEAN_POWER_COST: 2,
+  SUIT_REPAIR_POWER_COST: 2,
+  SUIT_CLEAN_POWER_COST: 1,
   SUIT_NO_SUIT_O2_DRAIN_MULTIPLIER: 2.0,
   // Borda da area jogavel (parede de poeira), medida a partir de TERRAIN_CONFIG.BASE_CENTER.
   // Issue #103: a borda nao machuca mais. O vento de Marte nao derruba ninguem (o ar e fino
@@ -388,8 +388,8 @@ export const ROVER_CONFIG = {
   LOW_BATTERY: 15,
   LOW_BATTERY_SPEED_FACTOR: 0.35,
   CHARGE_PER_SECOND: 8, // % da bateria do rover por segundo real, parado no deposito
-  // % da bateria da base por 1 % do rover: uma carga completa do rover custa 10 % da base
-  BASE_COST_PER_ROVER_PERCENT: 0.1,
+  // % da bateria da base por 1 % do rover: uma carga completa do rover custa 5 % da base
+  BASE_COST_PER_ROVER_PERCENT: 0.05,
   // Mesmo raio da doca onde o rover descarrega o gelo (WATER_SYSTEM_CONFIG.ICE_DEPOT_POS)
   CHARGE_RADIUS: 5.8,
 };
@@ -398,7 +398,7 @@ export const ROVER_CONFIG = {
 // Taxas "por hora de jogo": com GAME_HOURS_PER_SECOND = 0.02, 1 hora de jogo = 50 s reais.
 // Fontes dos numeros reais em docs/data/numeros-reais.md.
 export const MISSION_CONFIG = {
-  AIRLOCK_COST: 1, AIRLOCK_CYCLE: 0.8, DOOR_SPEED: 10,
+  AIRLOCK_COST: 0.5, AIRLOCK_CYCLE: 0.8, DOOR_SPEED: 10,
   // Limpeza eletrostatica do traje no airlock (segundos). Sem energia, o aviso fica na tela
   // SUIT_CLEAN_SKIP_TIME e a poeira entra na base. Ver docs/data/airlock-e-poeira.md
   SUIT_CLEAN_TIME: 0.8, SUIT_CLEAN_SKIP_TIME: 0.6,
@@ -426,12 +426,12 @@ export const ENERGY_CONFIG = {
   // Custos (em % de bateria)
   OXYGEN_COST_PER_POINT: 1.5, // reciclar 1 ponto de O2 no habitat (MOXIE + reciclagem)
   // Blindagem contra radiacao ligada. Anda junto com STORM_CONFIG.DURATION_HOURS: com a
-  // tempestade de 0,2 h (10 s reais) uma tempestade inteira custa 22 % da bateria (era 25 %
-  // com a tempestade de 1 h e 25 %/h). Esquecida ligada, esvazia a bateria em ~45 s.
-  SHIELD_DRAIN_PER_HOUR: 110,
+  // tempestade de 0,2 h (10 s reais) uma tempestade inteira custa 11 % da bateria (era 22 %
+  // com 110 %/h, cortado pela metade em 15/11/2026). Esquecida ligada, esvazia a bateria em ~90 s.
+  SHIELD_DRAIN_PER_HOUR: 55,
   // Fabrica de combustivel ligada. Anda junto com MAV_CONFIG.ISRU_HOURS_PER_ICE_BLOCK: um bloco
-  // de gelo custa 7,5 % da bateria (era 15 % com 0,6 h por bloco e 25 %/h).
-  ISRU_DRAIN_PER_HOUR: 50,
+  // de gelo custa 3,75 % da bateria (era 7,5 % com 50 %/h, cortado pela metade em 15/11/2026).
+  ISRU_DRAIN_PER_HOUR: 25,
   // Gerador nuclear (issue #85). [Ref] O MMRTG do Curiosity e do Perseverance gera ~110 W de
   // eletricidade de dia e de noite, com calor do plutonio (NASA). Na base ele so paga o suporte
   // de vida minimo (O2 do jogador e da tripulacao, filtro de CO2): fabrica, blindagem, luz da
@@ -442,9 +442,10 @@ export const ENERGY_CONFIG = {
   // Reator de fissao tipo Kilopower: energia de dia e de noite, para a base toda.
   // [Ref] NASA Kilopower / KRUSTY (teste em Nevada, nov/2017 a mar/2018): 1 a 10 kW de eletricidade
   // por pelo menos 10 anos; 4 unidades dariam conta de um posto avancado (NASA, 02/05/2018).
-  // Potencia em escala de jogo: paga o gasto parado da base a noite (~6 %/h), mas nao a fabrica
-  // nem a blindagem. O custo dele e dose de radiacao: DOSE_CONFIG.REACTOR_MSV_PER_HOUR.
-  REACTOR_CHARGE_PER_HOUR: 8,
+  // Potencia em escala de jogo: paga o gasto parado da base a noite (~6 %/h) e ainda carrega a
+  // bateria, mas sozinho nao segura a fabrica nem a blindagem (era 8 ate 15/11/2026).
+  // O custo dele e dose de radiacao: DOSE_CONFIG.REACTOR_MSV_PER_HOUR.
+  REACTOR_CHARGE_PER_HOUR: 16,
   // Hora do aviso de por do sol (o Sol se poe as 18h): hora de conferir a bateria
   SUNSET_WARNING_HOUR: 16.5,
   // Abaixo disso (%) a bateria esta vazia: maquinas em espera, so o RTG mantem o ar
@@ -725,9 +726,9 @@ export const STATION_CONFIG = {
   MEDBAY_HEAL_PER_HOUR: 2, // pontos de vida por hora de jogo
   MEDBAY_LOW_HEALTH: 8,
   FILTER_DECAY: 0.2, CO2_RISE: 0.08, CO2_CLEAR: 0.12,
-  DUST_DAMAGE: 0.015, DECONTAMINATION_COST: 2, FILTER_COST: 4,
-  EXERCISE_COST: 3, TREATMENT_COST: 5,
-  COMMS_COST: 3, COMMS_DELAY: 40,
+  DUST_DAMAGE: 0.015, DECONTAMINATION_COST: 1, FILTER_COST: 2,
+  EXERCISE_COST: 2, TREATMENT_COST: 3,
+  COMMS_COST: 2, COMMS_DELAY: 40,
   FITNESS_DECAY: 0.015,
   SUIT_RADIATION_DAMAGE_FACTOR: 0.65,
 };
@@ -864,7 +865,7 @@ export const OXYGEN_PLANT_CONFIG = {
   SABATIER_WATER_RETURN: 0.5,
   // Custo de montar o reator de Sabatier na impressora 3D (escala de jogo)
   SABATIER_REGOLITH: 3,
-  SABATIER_POWER: 8,
+  SABATIER_POWER: 4,
   // Avisos do tripulante: o modo escolhido esta gastando o recurso que esta acabando
   LOW_WATER_WARN_L: 100,
   LOW_BATTERY_WARN_PCT: 25,
@@ -950,12 +951,12 @@ export const SCIENCE_CONFIG = {
   // do mapa ficam em SAMPLE_TYPES (src/data/sampleTypes.ts).
   REGOLITH_POINTS: 1,
   // Custo do envio em % de bateria: base (ligar o radio e falar com o orbitador) + por item
-  UPLOAD_BASE_COST: 8,
-  UPLOAD_COST_PER_ITEM: 3,
+  UPLOAD_BASE_COST: 4,
+  UPLOAD_COST_PER_ITEM: 2,
   // Itens por envio (uma passagem do orbitador). O resto espera o proximo envio.
   MAX_ITEMS_PER_UPLOAD: 8,
   // Analisar 1 amostra no laboratorio (% de bateria)
-  ANALYZE_POWER_COST: 2,
+  ANALYZE_POWER_COST: 1,
   // Melhorias do laboratorio: gastam pontos ainda NAO enviados (a amostra fica na bancada em vez
   // de ir para a Terra). Trade-off: melhorar o traje agora ou decolar mais cedo.
   SUIT_UPGRADE_POINTS: 4,

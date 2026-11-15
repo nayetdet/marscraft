@@ -145,9 +145,9 @@ describe('base energy pacing (issue #81)', () => {
     const sim = makeBase({ charge: ENERGY_CONFIG.BATTERY_CAPACITY });
     runBase(sim, NIGHT_HOURS, { night: true });
     expect(sim.battery.charge).toBeGreaterThan(10);
-    // Margem pequena: ligar a blindagem ou a fabrica a noite ainda derruba a base
+    // Margem pequena: a fabrica ligada a noite inteira ainda derruba a base
     expect(sim.battery.charge).toBeLessThan(30);
-    expect(sim.battery.charge).toBeLessThan(shieldThroughOneStorm);
+    expect(sim.battery.charge).toBeLessThan(fullRocketTank);
     expect(sim.crew.members.every((member) => member.state === 'working')).toBe(true);
   });
 
@@ -157,12 +157,14 @@ describe('base energy pacing (issue #81)', () => {
     expect(solar).toBeLessThan(288);
   });
 
-  it('but the surplus does not pay for the choices: something must be turned off', () => {
+  // Em 15/11/2026 a fabrica e a blindagem ficaram pela metade: a sobra de um sol paga a blindagem
+  // de uma tempestade, mas nao o foguete inteiro.
+  it('the surplus pays for one storm shield, but not for the whole rocket: something must be turned off', () => {
     const surplus = solar - passivePerSol;
     expect(surplus).toBeGreaterThan(oneIceBlockOfFuel); // da para comecar a encher o foguete
-    expect(surplus).toBeLessThan(shieldThroughOneStorm); // nao da para a blindagem de uma tempestade
+    expect(surplus).toBeGreaterThan(shieldThroughOneStorm); // da para a blindagem de uma tempestade
     expect(surplus).toBeLessThan(fullRocketTank);
-    expect(surplus).toBeLessThan(shieldThroughOneStorm + oneIceBlockOfFuel);
+    expect(surplus).toBeLessThan(shieldThroughOneStorm + fullRocketTank / 2);
   });
 
   it('turning systems off still matters: what can be switched off pays for a real choice', () => {
