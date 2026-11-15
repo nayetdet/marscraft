@@ -143,6 +143,11 @@ export class AudioManager {
   playUiConfirm() { this._playOneShot(this.uiConfirm); }
   playUiError() { this._playOneShot(this.uiError); }
 
+  playUiFeedback(success = true) {
+    if (success) this.playUiConfirm();
+    else this.playUiError();
+  }
+
   _getSynthContext() {
     if (typeof window === 'undefined') return null;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;

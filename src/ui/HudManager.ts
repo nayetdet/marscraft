@@ -17,6 +17,7 @@ const ICONS_PER_BAR = 10;
 export class HudManager {
   constructor(previews, initialSlots, {
     onInventorySwap,
+    onUiClick,
     onOpenJournal,
     getSuitState,
     onSuitportEquip,
@@ -25,6 +26,7 @@ export class HudManager {
   } = {}) {
     this.previews = previews;
     this.onInventorySwap = onInventorySwap;
+    this.onUiClick = onUiClick;
     this.onOpenJournal = onOpenJournal;
     this.getSuitState = getSuitState;
     this.onSuitportEquip = onSuitportEquip;
@@ -334,6 +336,7 @@ export class HudManager {
     if (this.inventorySelection === null) {
       if (!this.currentInventorySlots[index]) return;
       this.inventorySelection = index;
+      this.onUiClick?.();
       this.renderInventory(this.currentInventorySlots);
       return;
     }
@@ -345,12 +348,14 @@ export class HudManager {
         return;
       }
       this.inventorySelection = null;
+      this.onUiClick?.();
       this.renderInventory(this.currentInventorySlots);
       return;
     }
 
     const inventorySlots = this.onInventorySwap?.(this.inventorySelection, index) ?? this.currentInventorySlots;
     this.inventorySelection = null;
+    this.onUiClick?.();
     this.renderInventory(inventorySlots);
   }
 

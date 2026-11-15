@@ -110,24 +110,29 @@ export class StationPanel {
           if (action === 'harvest' || action === 'harvestAll' || msg === 'harvested') {
             this._playGymSound(520, 0.09, 680);
           } else if (action.startsWith('seed:')) {
-            this._playGymSound(460, 0.04);
+            this.engine.audio.playUiClick();
           } else if (msg === 'failed') {
             this._playGymSound(220, 0.08);
           } else if (action.startsWith('plot:') && msg) {
-            this._playGymSound(420, 0.09, 540);
+            this._playGymSound(this._isActionFailure(msg) ? 220 : 420, 0.09, 540);
+          } else if (action.startsWith('plot:')) {
+            this.engine.audio.playUiClick();
           }
         } else if (this.type === 'powerroom') {
           this.feedback.textContent = '';
           const turnedOn = /\bON\b/i.test(msg);
-          this._playGymSound(turnedOn ? 480 : 360, 0.07, turnedOn ? 640 : 260);
+          if (turnedOn) this.engine.audio.playUiConfirm();
+          else this.engine.audio.playUiClick();
         } else if (isCustomMachineType(this.type)) {
           this.feedback.textContent = '';
-          const isWarn = /not enough|frozen|empty|full|silent|nothing|collect|already|unknown/i.test(msg);
+          const isWarn = this._isActionFailure(msg);
           this.machineNotice = msg;
           this.machineNoticeKind = isWarn ? 'warn' : 'ok';
           this._playGymSound(isWarn ? 220 : 480, 0.08, isWarn ? 0 : 620);
         } else {
           this.feedback.textContent = msg;
+          if (msg) this.engine.audio.playUiFeedback(!this._isActionFailure(msg));
+          else this.engine.audio.playUiClick();
         }
         this.render();
       }
@@ -211,6 +216,7 @@ export class StationPanel {
       if (!this.isOpen) return;
       if (e.code === 'Escape') {
         e.preventDefault();
+        this.engine.audio.playUiClick();
         this.close();
         return;
       }
@@ -235,6 +241,7 @@ export class StationPanel {
   open(type) {
     this.type = type;
     this.isOpen = true;
+    this.engine.audio.playUiClick();
     // Conferir a bateria vale o certificado de engenharia do treino de cadete (issue #88)
     if (type === 'powerroom' || type === 'power') this.engine.powerChecks++;
     // Estufa: abre no campo que ja pode ser colhido, para a crianca ver o GET! de primeira
@@ -396,6 +403,7 @@ export class StationPanel {
     if (!d.active) {
       if (Math.hypot(event.clientX - d.startX, event.clientY - d.startY) < 6) return;
       d.active = true;
+      this.engine.audio.playUiClick();
       this.selectedCrop = d.cropType;
       this.ghNotice = '';
       this.greenhouseContainer?.querySelectorAll('[data-action^="seed:"]').forEach((btn) => {
@@ -594,11 +602,16 @@ export class StationPanel {
     else this.engine.audio.playUiConfirm();
   }
 
+  _isActionFailure(message) {
+    return /\b(?:need|not enough|frozen|empty|full|silent|nothing|already|unknown|failed|cannot|can't|missing|unavailable|no|too low|not ready)\b/i.test(String(message));
+  }
+
   _doGymStep(side) {
     const { expedition: mission, stations } = this.engine;
     if (mission.energy < C.EXERCISE_COST) {
       this.lastHitQuality = 'warn';
       this.lastHitText = `Need ${C.EXERCISE_COST}% power to train.`;
+      this.engine.audio.playUiError();
       this._updateGymLiveDom();
       return;
     }
@@ -608,7 +621,6 @@ export class StationPanel {
     this.lastHitQuality = result.status;
     if (result.status === 'hit') {
       this.stridePhase = this.stridePhase ? 0 : 1;
-      this._playGymSound(420, 0.08);
     }
     if (this.workoutProgress >= 100) {
       stations.exercise(this.gymMode);
@@ -620,6 +632,7 @@ export class StationPanel {
       this.render();
       return;
     }
+    this._playGymSound(result.status === 'hit' ? 420 : 220, 0.08);
     this._updateGymLiveDom();
   }
 
