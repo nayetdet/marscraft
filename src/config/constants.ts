@@ -762,6 +762,10 @@ export const STORY_CONFIG = {
   DETOUR_RESUME_EXTRA: { water: 20, power: 2, food: 0, roverPower: 5 },
   // Racoes na despensa que o passo de comer pede (UtilityModule.eatRation tira 1)
   TUTORIAL_RATIONS_NEEDED: 1,
+  // Trade-off do primeiro gelo (ato 1, issue #413, src/story/firstIceChoice.ts): blocos de gelo
+  // que a escolha TANK despeja no tanque da base e segundos reais do card na tela. Regra de jogo.
+  FIRST_ICE_BLOCKS: 1,
+  FIRST_ICE_CARD_SECONDS: 20,
 };
 
 // Animacoes de chegada e de decolagem (docs/superpowers/plans/2026-11-14-story-arc.md)
