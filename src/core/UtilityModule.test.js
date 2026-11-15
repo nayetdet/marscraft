@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { CREW_CONFIG, MISSION_CONFIG, STATION_CONFIG, UTILITY_CONFIG as U } from '../config/constants.js';
+import { CREW_CONFIG, ENERGY_CONFIG, MISSION_CONFIG, STATION_CONFIG, UTILITY_CONFIG as U } from '../config/constants.js';
 import { Battery } from '../mission/energy.js';
 import { UtilityModule } from './UtilityModule.js';
 
@@ -118,7 +118,7 @@ describe('north module (issue #56, part B)', () => {
     expect(loads['Crew at work']).toBeCloseTo(0.6 * 2 * STATION_CONFIG.WORK_ENERGY_PER_HOUR);
     expect(utility.greenhouseLightsCost(1 / MISSION_CONFIG.GAME_HOURS_PER_SECOND)).toBeCloseTo(0.6 * U.GREENHOUSE_LIGHTS_PER_HOUR);
     // As escolhas do jogador custam o mesmo: so o consumo passivo e mais brando
-    expect(loads['Radiation shield']).toBe(12.5);
+    expect(loads['Radiation shield']).toBe(ENERGY_CONFIG.SHIELD_DRAIN_PER_HOUR);
   });
 
   it('the 3D printer spends regolith and power to fix the most worn station', () => {

@@ -79,6 +79,11 @@ export class UtilityModule {
       this.mission.factoryOn = !this.mission.factoryOn;
       return this.mission.factoryOn ? 'Fuel factory ON: turns ice into rocket fuel. Uses a lot of power.' : 'Fuel factory OFF: saves power, but the rocket stops filling.';
     }
+    if (system === 'reactor') {
+      return this.mission.toggleReactor()
+        ? `Fission reactor ON: +${ENERGY_CONFIG.REACTOR_CHARGE_PER_HOUR}%/h day and night. Your radiation dose climbs faster while it runs.`
+        : 'Fission reactor OFF: no extra radiation, but no power at night.';
+    }
     if (system === 'shield') {
       if (!this.mission.toggleShield()) return 'The battery is empty: the shield cannot turn on.';
       return this.mission.shieldOn ? 'Radiation shield ON.' : 'Radiation shield OFF.';
@@ -100,12 +105,13 @@ export class UtilityModule {
     // Modo do gerador de O2 (issue #102): o MOXIE gasta mais energia por tripulante
     const air = OXYGEN_MODE_INFO[m.oxygenPlant?.mode ?? 'electrolysis'];
     return [
-      [air.powerLabel, crewSize * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR * air.energyFactor * f, true],
-      ['Crew at work', operatingStations * STATION_CONFIG.WORK_ENERGY_PER_HOUR * f, true],
-      ['Greenhouse lights', U.GREENHOUSE_LIGHTS_PER_HOUR * f, this.greenhouseLightsOn],
-      ['Heater', this.heaterRatePerHour, this.heaterOn],
-      ['Radiation shield', ENERGY_CONFIG.SHIELD_DRAIN_PER_HOUR, m.shieldOn],
-      ['Fuel factory', factoryRunning ? ENERGY_CONFIG.ISRU_DRAIN_PER_HOUR : 0, m.factoryOn],
+      // [nome, % por hora, ligado, id do interruptor em toggle() ou null se nao desliga]
+      [air.powerLabel, crewSize * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR * air.energyFactor * f, true, null],
+      ['Crew at work', operatingStations * STATION_CONFIG.WORK_ENERGY_PER_HOUR * f, true, null],
+      ['Greenhouse lights', U.GREENHOUSE_LIGHTS_PER_HOUR * f, this.greenhouseLightsOn, 'lights'],
+      ['Heater', this.heaterRatePerHour, this.heaterOn, 'heater'],
+      ['Radiation shield', ENERGY_CONFIG.SHIELD_DRAIN_PER_HOUR, m.shieldOn, 'shield'],
+      ['Fuel factory', factoryRunning ? ENERGY_CONFIG.ISRU_DRAIN_PER_HOUR : 0, m.factoryOn, 'factory'],
     ];
   }
 

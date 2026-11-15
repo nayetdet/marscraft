@@ -88,9 +88,17 @@ describe('missionStatus', () => {
     expect(s.alerts.map((a) => a.id)).toEqual(['power']);
   });
 
-  it('puts what hurts now (red) before warnings (yellow)', () => {
+  it('shows one alert at a time: what hurts now (red) before warnings (yellow)', () => {
     const s = missionStatus(fakeMission({ shieldOn: true, insideShield: false }), FETCHED, { water: 6, co2: 85 });
-    expect(s.alerts.map((a) => a.id)).toEqual(['air', 'water']);
+    expect(s.alerts.map((a) => a.id)).toEqual(['air']);
+    // O perigo que ficou de fora continua vermelho na barra dele
+    expect(s.water.tone).toBe('danger');
+  });
+
+  it('at night with a low battery the alert offers the reactor', () => {
+    const night = missionStatus(fakeMission({ chargeRate: 0, battery: { percent: 5 } }), FETCHED);
+    expect(night.alerts[0]).toMatchObject({ id: 'power', target: 'powerroom' });
+    expect(night.alerts[0].text).toContain('start the reactor');
   });
 
   it('celebrates when the rocket is ready', () => {

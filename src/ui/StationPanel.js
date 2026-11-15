@@ -2,7 +2,7 @@ import { BLOCK_IDS } from '../config/blockTypes.js';
 import { GREENHOUSE_CENTER, PLOT_PLANT_CELLS } from '../world/greenhouseLayout.js';
 import { greenhouseMapSvg, plotMapLabel, plotRingDash, plotStatus } from './greenhouseMap.js';
 import { hideModal, showModal } from './modalTransition.js';
-import { COMMS_CONFIG, CROP_CONFIG, ENERGY_CONFIG, RADIATION_CONFIG, SCIENCE_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
+import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, SCIENCE_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
 import { doseHistoryText } from '../mission/doseBudget.js';
 import { scienceCountText, scienceMissingText, uploadButtonLabel } from '../mission/sciencePackage.js';
@@ -15,11 +15,12 @@ import { GymWorkout } from './gymWorkout.js';
 import { growthChecks } from '../base/greenhouseCare.js';
 import { MEDBAY_BONE_TEXT } from './stationText.js';
 import { OXYGEN_SOURCES, oxygenPlantButtons, oxygenPlantText } from '../mission/oxygenText.js';
-import { INSIGHT_MONTH, WEATHER_RANGE, formatTempC } from '../data/marsWeather.js';
+import { formatTempC } from '../data/marsWeather.js';
 import { solarReason } from '../mission/weatherText.js';
-import { tauSolarFactor } from '../mission/dustWeather.js';
 import { radlabChartHtml } from './missionJournalView.js';
 import { getStudy } from '../data/osdrStudies.js';
+import { powerPanelHtml, powerPanelModel } from './powerPanelView.js';
+import { stationTextHtml } from './stationTextView.js';
 
 // Efeito ao plantar (issue #139): particulas verdes no canteiro e flash do que foi gasto
 const PLANT_FX_PARTICLES = 14;
@@ -29,6 +30,11 @@ const SPEND_TAG_MS = 900;
 const DATA_SOURCES = {
   donki: 'https://ccmc.gsfc.nasa.gov/tools/DONKI/',
   radlab: 'https://visualization.osdr.nasa.gov/radlab/',
+};
+
+const POWER_SOURCES = {
+  kilopower: 'https://www.nasa.gov/news-release/demonstration-proves-nuclear-fission-system-can-provide-space-exploration-power/',
+  insight: 'https://www.nasa.gov/news-release/nasa-retires-insight-mars-lander-mission-after-years-of-science/',
 };
 
 const SHELTER_SOURCES = {
@@ -51,6 +57,7 @@ export class StationPanel {
     this.content = document.getElementById('station-content');
     this.gymContainer = document.getElementById('gym-interactive');
     this.greenhouseContainer = document.getElementById('greenhouse-monitor');
+    this.powerContainer = document.getElementById('power-monitor');
     this.actions = document.getElementById('station-actions');
     this.sources = document.getElementById('station-sources');
     this.feedback = document.getElementById('station-feedback');
@@ -106,6 +113,7 @@ export class StationPanel {
       }
     };
     this.actions.addEventListener('click', handleActionClick);
+    this.powerContainer.addEventListener('click', handleActionClick);
     if (this.greenhouseContainer) {
       this.greenhouseContainer.addEventListener('click', handleActionClick);
       this.greenhouseContainer.addEventListener('pointerdown', event => {
@@ -899,48 +907,27 @@ export class StationPanel {
     return '';
   }
 
-  _powerText() {
-    const { utility, mission, crew } = this.engine;
-    const loads = utility.loads({
-      crewSize: crew?.members.length ?? 0,
-      operatingStations: crew?.stations.filter((st) => st.operating).length ?? 0,
-    });
-    const lines = loads.map(([name, rate, on]) => `  ${name.padEnd(18)} ${!on ? 'OFF' : rate > 0 ? `-${rate.toFixed(1)}%/h` : 'idle'}`);
-    const used = loads.reduce((sum, [, rate, on]) => sum + (on ? rate : 0), 0);
-    // Clima (issues #103 e #108): por que a geracao caiu, poeira nos paineis e ar la fora
+  // Retrato da energia para o painel POWER & HEAT (src/ui/powerPanelView.js)
+  _powerState() {
+    const { utility, mission, crew, sky } = this.engine;
     const dust = mission.dustWeather;
-    const reason = solarReason({ night: utility.isNight, phase: dust.phase, panelDust: dust.panelDust });
     const temp = utility.outsideTempC;
-    const stormLine = dust.phase === 'storm' || dust.phase === 'clearing'
-      ? `DUST STORM: the dusty air lets through only ${Math.round(tauSolarFactor(dust.tau) * 100)}% of the sunlight.\n`
-      : '';
-    return `BATTERY: ${Math.round(mission.battery.percent)}%\n` +
-      `SOLAR PANELS NOW: +${mission.chargeRate.toFixed(1)}%/h (${reason})\n` +
-      `DUST ON THE PANELS: ${Math.round(dust.panelDust * 100)}% (clean them at the solar field, outside to the west)\n` +
-      stormLine +
-      (temp === null ? '' : `OUTSIDE AIR NOW: ${formatTempC(temp)} (real NASA InSight data)\n`) +
-      `NUCLEAR RTG: +${ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR}%/h, day and night, only for life support (air and CO2 filter)\n` +
-      `${mission.standby ? 'BATTERY EMPTY: STANDBY. Factory, lights, heater and shield stopped. The RTG keeps the air on until the Sun is back.\n' : ''}` +
-      `USING ABOUT: -${used.toFixed(1)}%/h (plus your own oxygen)\n` +
-      `${utility.demandFactor < 1 ? `EASY START: the base uses ${Math.round(utility.demandFactor * 100)}% of its normal power for now. It will need more each sol.\n` : ''}\n` +
-      `WHERE THE POWER GOES:\n${lines.join('\n')}\n\n` +
-      `OXYGEN MACHINE: ${mission.oxygenPlant.info.label.toUpperCase()}${mission.oxygenPlant.usesWater ? ' (uses water, less power)' : ' (no water, more power)'}. Change it in Life Support.\n` +
-      `HEATER: ${utility.heaterOn ? 'ON' : 'OFF'}${utility.cold ? '   FREEZING! Pipes and plants stopped.' : ''}\n\n` +
-      `Mars nights get down to about ${formatTempC(WEATHER_RANGE.coldestC)} (real NASA InSight data, ${INSIGHT_MONTH}). The colder it is outside, the more power the heater needs. At night the panels make nothing. ` +
-      'Turning systems off saves power, but each one stops doing its job.\n' +
-      'Real case: the InSight lander shut down in 2022 when dust covered its solar panels. ' +
-      'Curiosity and Perseverance use an RTG instead: a nuclear power source that makes about 110 W day and night (NASA).';
-  }
-
-  _powerButtons() {
-    const { utility, mission } = this.engine;
-    const label = (on, name) => `${name}: ${on ? 'ON' : 'OFF'}`;
-    return [
-      ['toggle:heater', label(utility.heaterOn, 'Heater')],
-      ['toggle:lights', label(utility.greenhouseLightsOn, 'Greenhouse lights')],
-      ['toggle:factory', label(mission.factoryOn, 'Fuel factory')],
-      ['toggle:shield', label(mission.shieldOn, 'Radiation shield')],
-    ];
+    return {
+      batteryPct: mission.battery.percent,
+      timeOfDay: sky?.timeOfDay ?? ((mission.lastHours % 24) + 24) % 24,
+      solarRate: mission.chargeRate,
+      solarReason: solarReason({ night: utility.isNight, phase: dust.phase, panelDust: dust.panelDust }),
+      panelDustPct: Math.round(dust.panelDust * 100),
+      reactorOn: mission.reactorOn,
+      standby: mission.standby,
+      cold: utility.cold,
+      outsideTemp: temp === null ? null : formatTempC(temp),
+      easyStartPct: utility.demandFactor < 1 ? Math.round(utility.demandFactor * 100) : null,
+      loads: utility.loads({
+        crewSize: crew?.members.length ?? 0,
+        operatingStations: crew?.stations.filter((st) => st.operating).length ?? 0,
+      }),
+    };
   }
 
   _galleyText(survival) {
@@ -1140,6 +1127,7 @@ export class StationPanel {
       this.title.textContent = 'MARS GYM';
       this.content.classList.add('hidden');
       this.gymContainer.classList.remove('hidden');
+      this.powerContainer.classList.add('hidden');
       if (this.greenhouseContainer) this.greenhouseContainer.classList.add('hidden');
       this._renderGymInteractive();
       this.sources.replaceChildren();
@@ -1152,15 +1140,34 @@ export class StationPanel {
       this.content.classList.add('hidden');
       if (this.gymContainer) this.gymContainer.classList.add('hidden');
       this.greenhouseContainer.classList.remove('hidden');
+      this.powerContainer.classList.add('hidden');
       this._renderGreenhouseMonitor();
       this.sources.replaceChildren();
       this.actions.replaceChildren();
       return;
     }
 
-    this.content.classList.remove('hidden');
     if (this.gymContainer) this.gymContainer.classList.add('hidden');
     if (this.greenhouseContainer) this.greenhouseContainer.classList.add('hidden');
+
+    // Energia e calor: painel proprio, com os interruptores na linha de cada consumidor
+    const isPower = this.type === 'powerroom';
+    this.powerContainer.classList.toggle('hidden', !isPower);
+    this.content.classList.toggle('hidden', isPower);
+    if (isPower) {
+      this.title.textContent = 'POWER & HEAT ROOM';
+      this.powerContainer.innerHTML = powerPanelHtml(powerPanelModel(this._powerState()));
+      this.sources.replaceChildren(...[['NASA: Kilopower fission reactor test (2018)', POWER_SOURCES.kilopower], ['NASA: InSight retires after dust covers its panels', POWER_SOURCES.insight]].map(([label, url]) => {
+        const link = document.createElement('a');
+        link.textContent = label;
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        return link;
+      }));
+      this.actions.replaceChildren();
+      return;
+    }
 
     const pages = {
       console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nFILTER: ${Math.round(s.filter)}%   SCIENCE POINTS: ${s.science}\n\n${radiationStatusText(mission)}\n\n${stormStatusText(mission.storm, this.engine.spaceWeather, mission.noStormData)}\n\n${this.engine.spaceWeather.live ? `Storm data: ${donkiLabel(this.engine.spaceWeather)}.` : 'The NASA data is saved inside the game, it is not live.'} Storm length and damage are game rules.`, [['mission', 'Show mission objective'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
@@ -1171,7 +1178,6 @@ export class StationPanel {
       ]],
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\n${doseHistoryText(mission.doseBreakdown)}\n\n${MEDBAY_BONE_TEXT}`, [['treat', 'Use medical station']]],
       science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   REGOLITH TO ANALYZE: ${s.samples}\n\n${this._packageText()}\n\n${this._radioText(s)}`, [['sendScience', uploadButtonLabel(this.engine.currentSciencePackage())], ['analyze', `Analyze regolith (${SCIENCE_CONFIG.ANALYZE_POWER_COST}% power)`], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
-      powerroom: ['POWER & HEAT ROOM', this._powerText(), this._powerButtons()],
       galley: ['KITCHEN & PANTRY', this._galleyText(v), [['eatRation', 'Eat a ration (pantry)'], ['cookMeal', `Cook fresh meal (1 carrot, ${U.MEAL_WATER_L} L, ${U.MEAL_POWER}% power)`]]],
       hygiene: ['BATHROOM & WATER RECYCLER', this._hygieneText(v), [['washUp', `Wash up (${U.WASH_WATER_L} L of water)`], ['serviceFilter', `Clean water filter (${U.FILTER_SERVICE_POWER}% power)`]]],
       workshop: ['WORKSHOP & 3D PRINTER', this._workshopText(v), [['printPart', `Print spare part (${U.PRINT_REGOLITH} regolith, ${U.PRINT_POWER}% power)`]]],
@@ -1179,7 +1185,7 @@ export class StationPanel {
     };
     const [title, text, buttons] = pages[this.type];
     this.title.textContent = title;
-    this.content.textContent = text;
+    this.content.innerHTML = stationTextHtml(text);
     const links = this.type === 'console'
       ? [['NASA DONKI: space weather events', DATA_SOURCES.donki], ['NASA RadLab: radiation data', DATA_SOURCES.radlab]]
       : this.type === 'power'

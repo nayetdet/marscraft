@@ -1412,3 +1412,65 @@ body.pause-menu-open .crew-picker { display: none; }
 @media (max-width: 480px) {
   .report-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Texto das estacoes em blocos (src/ui/stationTextView.js): numeros em destaque, explicacao menor */
+.station-text.hidden, .power-monitor.hidden { display: none; }
+.station-text { display: grid; gap: 10px; line-height: 1.45; }
+.station-text .st-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 6px; margin: 0; }
+.station-text .st-stats > div { padding: 6px 8px; background: #0e1f23; border: 2px solid #2c4a4f; }
+.station-text .st-stats dt { font-size: 10px; letter-spacing: .06em; color: #7fb3ad; }
+.station-text .st-stats dd { margin: 2px 0 0; font-size: 15px; color: #d9ffe9; overflow-wrap: anywhere; }
+.station-text .st-head { margin: 4px 0 0; font-size: 11px; letter-spacing: .08em; color: #ffdf75; font-weight: normal; }
+.station-text .st-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 13px; }
+.station-text .st-list li { padding: 3px 8px; background: #10262a; border-left: 3px solid #2c6f66; }
+.station-screen .station-text .st-text { margin: 0; font-size: 12px; color: #a9c9c4; }
+.station-screen .station-text .st-fact { margin: 0; padding: 8px 10px; font-size: 12px; color: #cfe8ff; background: #14283c; border-left: 4px solid #5aa9e6; }
+
+/* Painel POWER & HEAT (src/ui/powerPanelView.js) */
+.power-monitor { display: grid; gap: 6px; }
+.pw-icon { display: inline-grid; place-items: center; width: 22px; height: 22px; flex: 0 0 22px; color: #ffdf75; }
+.pw-icon svg { width: 100%; height: 100%; }
+.pw-icon.big { width: 40px; height: 40px; flex-basis: 40px; }
+.pw-battery { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #0e1f23; border: 2px solid #2c4a4f; }
+.pw-battery-main { flex: 1; min-width: 0; }
+.pw-battery-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; letter-spacing: .08em; color: #7fb3ad; }
+.pw-battery-top strong { font-size: 26px; color: #d9ffe9; letter-spacing: 0; }
+.pw-bar { height: 14px; margin: 4px 0; background: #071215; border: 2px solid #2c4a4f; }
+.pw-bar i { display: block; height: 100%; background: #5ee08a; }
+.pw-battery.tone-warn .pw-bar i { background: #ffcf64; }
+.pw-battery.tone-danger .pw-bar i { background: #ff6b5e; }
+.pw-battery.tone-danger .pw-battery-top strong, .pw-battery.tone-danger .pw-icon { color: #ff8a80; }
+.pw-battery-foot { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: #a9c9c4; }
+.pw-net.up { color: #5ee08a; }
+.pw-net.down { color: #ff8a80; }
+.station-screen .pw-tip { margin: 0; padding: 8px 10px; font-size: 13px; line-height: 1.4; color: #d9ffe9; background: #10262a; border-left: 4px solid #5ee08a; }
+.station-screen .pw-tip.tone-warn { color: #ffe9b0; background: #2c2512; border-left-color: #ffcf64; }
+.station-screen .pw-tip.tone-danger { color: #ffd6d2; background: #331715; border-left-color: #ff6b5e; }
+.pw-head { display: flex; justify-content: space-between; margin: 6px 0 0; font-size: 11px; letter-spacing: .08em; color: #ffdf75; font-weight: normal; }
+.pw-head span { color: #ff8a80; }
+.pw-row { display: flex; align-items: center; gap: 10px; padding: 5px 8px; background: #10262a; border: 2px solid #1d3d42; }
+.pw-row.is-off { opacity: .72; }
+.pw-name { flex: 1; min-width: 0; font-size: 13px; color: #d9ffe9; }
+.pw-name small { display: block; font-size: 10px; color: #7fb3ad; line-height: 1.3; }
+.pw-rate { flex: 0 0 auto; min-width: 74px; text-align: right; font-size: 13px; font-weight: normal; color: #a9c9c4; }
+.pw-rate.in { color: #5ee08a; }
+.pw-rate.out { color: #ff8a80; }
+.pw-meter { flex: 0 0 22px; height: 14px; background: #071215; border: 2px solid #2c4a4f; }
+.pw-meter i { display: block; height: 100%; min-width: 0; background: #ff8a80; }
+.pw-toggle, .pw-toggle-gap { flex: 0 0 64px; width: 64px; }
+.pw-toggle { min-height: 36px; font: inherit; font-size: 13px; color: #fff; cursor: pointer; border: 2px solid #111; box-shadow: inset 2px 2px rgba(255,255,255,.25), inset -2px -2px rgba(0,0,0,.3); }
+.pw-toggle.is-on { background: #2f8f55; }
+.pw-toggle.is-off { background: #6b6f70; color: #d6d6d6; }
+.pw-toggle:hover, .pw-toggle:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+.pw-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.pw-chips span { padding: 3px 6px; font-size: 10px; letter-spacing: .04em; color: #a9c9c4; background: #0e1f23; border: 2px solid #2c4a4f; }
+.station-screen .pw-fact { margin: 2px 0 0; padding: 8px 10px; font-size: 11px; line-height: 1.4; color: #cfe8ff; background: #14283c; border-left: 4px solid #5aa9e6; }
+@media (pointer: coarse) { .pw-toggle { min-height: 44px; } }
+@media (max-height: 480px) {
+  .station-window { padding: 8px 10px; max-height: 96dvh; }
+  .station-window header { padding: 4px 6px; font-size: 15px; }
+  .station-screen { padding: 8px 10px; min-height: 0; }
+  .power-monitor { grid-template-columns: 1fr 1fr; column-gap: 8px; }
+  .pw-battery, .pw-tip, .pw-head, .pw-chips, .pw-fact { grid-column: 1 / -1; }
+  .pw-fact { display: none; }
+}

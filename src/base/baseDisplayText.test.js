@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { RADIATION_CONFIG } from '../config/constants.js';
 import {
   commandModel, formatClock, formatSpan, greenhouseModel, modelKey, powerModel, shelterModel,
 } from './baseDisplayText.js';
@@ -75,7 +76,7 @@ describe('base display text', () => {
     expect(shelterModel(state({ storm })).rows.at(-1).value).toBe('STAND HERE!');
     expect(shelterModel(state({ storm, inShelter: true })).rows.at(-1).value).toBe('YOU ARE SAFE HERE');
     // Dentro do abrigo com a parede vazia a dose ainda machuca: o medidor nao chama de seguro
-    const dry = shelterModel(state({ storm, inShelter: true, doseRate: 1.4, shelterWaterL: 0 }));
+    const dry = shelterModel(state({ storm, inShelter: true, doseRate: RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR + 0.1, shelterWaterL: 0 }));
     expect(dry.rows.at(-1).value).toBe('ADD WATER TO THE WALL!');
     expect(shelterModel(state()).rows.at(-1).value).toBe('NO STORM');
     expect(shelterModel(state()).rows[2].value).toBe('20 L');

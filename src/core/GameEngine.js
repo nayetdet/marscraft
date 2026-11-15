@@ -1097,7 +1097,10 @@ export class GameEngine {
     for (const event of this.mission.drainEvents()) {
       if (event.type === 'storm-survived') this.events.requestAurora(this._skyHours());
       const message = stormEventMessage(event, this.spaceWeather) || doseEventMessage(event.type);
-      if (message) this.hud.showToast(message, event.type === 'storm-warning' || event.type.startsWith('dose-') ? 8000 : 4500);
+      // O aviso e o inicio da tempestade ja aparecem no card de alerta (com a contagem e a fonte
+      // do dado): a legenda repetia o mesmo recado por cima. Eles continuam no diario da missao.
+      const onAlertCard = event.type === 'storm-warning' || event.type === 'storm-start';
+      if (message && !onAlertCard) this.hud.showToast(message, event.type.startsWith('dose-') ? 8000 : 4500);
       this.missionLogFeed.onMissionEvent(event, this._skyHours());
     }
     this._updateWeather();
