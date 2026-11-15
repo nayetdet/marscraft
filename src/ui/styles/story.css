@@ -157,6 +157,7 @@
 .story-goals { display: flex; align-items: center; gap: 9px; }
 .story-goal { display: flex; align-items: center; gap: 4px; color: #ffffff; font-size: 12px; }
 .story-goal-icon { flex: none; width: 16px; height: 16px; }
+.story-goal-points { font-weight: 700; font-variant-numeric: tabular-nums; }
 .story-goal.done { color: var(--hud-good); }
 
 .story-bar { flex: 1; height: 8px; background: #303940; box-shadow: inset 0 0 0 1px #59636a; }
@@ -328,6 +329,24 @@ body:has(.story-card:not(.hidden)) .waypoint { visibility: hidden; }
   letter-spacing: 1px;
 }
 
+/* Quem fala no radio: rosto de capacete na cor do traje, o nome e, embaixo, o titulo do card */
+.story-card-face {
+  flex: none;
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  padding: 2px;
+  background: #11171b;
+  box-shadow: inset 0 0 0 1px var(--hud-border);
+}
+.story-card-head { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.story-card-speaker { color: #b8c4cc; font-size: 10px; font-weight: 400; letter-spacing: 1px; }
+.story-card.is-step .story-card-speaker { color: #11171b; }
+.story-card.is-step .story-card-face { box-shadow: none; }
+
+/* Maquina de escrever: a letra ocupa o lugar dela, mas so aparece na sua vez */
+.story-type-off { visibility: hidden; }
+
 /* Balao de passo do tutorial: faixa do titulo, borda e icones na cor da secao da base */
 .story-card.is-step { box-shadow: inset 0 0 0 2px var(--step-color), 4px 4px rgba(0, 0, 0, 0.6); }
 .story-card.is-step header {
@@ -386,18 +405,33 @@ body:has(.story-card:not(.hidden)) .waypoint { visibility: hidden; }
   background: repeating-linear-gradient(90deg, #5a7384 0 6px, transparent 6px 12px) 0 8px / 100% 3px no-repeat;
 }
 
+/* Pacote de radio: um bloco verde com rastro, que sai de Marte e chega na Terra uma vez so,
+   pouco antes de o card fechar (--link-seconds = tempo do card, vem do StoryHud) */
 .story-link-track i {
   position: absolute;
   top: 4px;
   left: 0;
-  width: 10px;
+  width: 12px;
   height: 10px;
   background: var(--hud-good);
-  animation: story-link-go 2.4s linear infinite;
+  box-shadow: inset 0 0 0 2px #17231c, -8px 0 0 -3px var(--hud-good), -14px 0 0 -4px var(--hud-good);
+  animation: story-link-go calc(var(--link-seconds, 4s) * 0.8) linear 1 both;
 }
 
 @keyframes story-link-go {
-  to { left: calc(100% - 10px); }
+  to { left: calc(100% - 12px); }
+}
+
+/* A Terra pisca quando o pacote chega */
+.story-link .story-planet.earth i { animation: story-link-arrive 0.4s steps(2, end) calc(var(--link-seconds, 4s) * 0.8) 2; }
+
+@keyframes story-link-arrive {
+  50% { background: var(--hud-good); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-link-track i { left: calc(50% - 6px); animation: none; }
+  .story-link .story-planet.earth i { animation: none; }
 }
 
 .story-link-track b { color: var(--hud-accent); font-size: 16px; }
@@ -418,6 +452,22 @@ body:has(.story-card:not(.hidden)) .waypoint { visibility: hidden; }
   background: #16232e;
   box-shadow: inset 0 0 0 2px #2c4354;
 }
+
+/* Opcao que se escolhe na hora (tecla [1]/[2] ou toque): um botao, com a tecla em destaque */
+.story-choice.is-pick {
+  margin: 0;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: inset 0 0 0 2px var(--hud-blue);
+}
+.story-choice.is-pick:active { background: #22384a; }
+.story-choice.is-pick .story-key { color: #11171b; background: var(--hud-accent); padding: 0 3px; font-size: 13px; }
+.story-card.has-picks .story-card-ok { display: none; }
+body.touch-device .story-choice.is-pick { min-height: 44px; }
 
 .story-choice-icon { width: 32px; height: 32px; color: var(--hud-blue); }
 .story-choice strong { font-size: 15px; letter-spacing: 1px; }
@@ -460,7 +510,10 @@ body.touch-device .story-card-ok { min-height: 44px; min-width: 110px; }
     font-size: 12px;
     line-height: 1.25;
   }
-  .story-card header { margin-bottom: 3px; font-size: 11px; }
+  .story-card header { margin-bottom: 3px; font-size: 11px; gap: 6px; }
+  .story-card-face { width: 22px; height: 22px; padding: 1px; }
+  .story-card-speaker { font-size: 9px; }
+  .story-choice.is-pick { font-size: 11px; }
   .story-card.is-step header { margin: -6px -10px 5px; padding: 4px 10px 3px; font-size: 11px; }
   .story-card-ok { margin-top: 6px; }
   .story-signal {

@@ -31,6 +31,11 @@ function sciencePlace(s) {
   return s.scienceStep === 'scan' ? null : 'science';
 }
 
+function tutorialTarget(task, s) {
+  if (!task) return null;
+  return (s.roverActive && task.roverPlace) || task.place || null;
+}
+
 // Lugar que o objetivo pede (uma chave de WAYPOINT_LABELS ou do GameEngine) ou null (nenhum lugar).
 // `s` e o retrato do jogo ({ iceCount, iceNeeded, propellantPct, dataSent, needsBase, scienceStep }).
 export function objectiveTarget(objectiveId, s = {}) {
@@ -46,8 +51,9 @@ export function objectiveTarget(objectiveId, s = {}) {
       // A seta segue o mesmo trabalho que o painel do objetivo mostra
       return nextRocketJob(s) === 'data' ? sciencePlace(s) : JOB_PLACES[nextRocketJob(s)] ?? null;
     default:
-      // Passos do tutorial guiado: cada um tem o seu lugar (ou nenhum)
-      return tutorialStepById(objectiveId)?.place ?? null;
+      // Passos do tutorial guiado: cada um tem o seu lugar (ou nenhum). Um desvio (issue #237)
+      // pode ter outro lugar enquanto a crianca dirige o rover (`roverPlace`).
+      return tutorialTarget(tutorialStepById(objectiveId), s);
   }
 }
 

@@ -1,7 +1,9 @@
 // @ts-nocheck
 import { MAV_CONFIG, STORY_CONFIG } from '../config/constants.ts';
 import { WINDOW_CLOSED } from '../story/storyChapters.ts';
+import { cardSpeaker, speakerFaceSvg } from '../story/radioSpeakers.ts';
 import { pixelIconSvg } from './pixelIcons.ts';
+import { typedChars } from './typewriter.ts';
 
 // Tempo minimo de um card na tela quando ja existe outro na fila
 const MIN_CARD_SECONDS = 5;
@@ -50,7 +52,10 @@ function setWidth(node, fraction) {
 }
 
 // UI da historia: o painel do objetivo (meta, foguete em degraus, tarefa e passos), o card de radio
-// (mensagens do Controle da Missao, nao pausa o jogo) e a tela de janela de lancamento fechada.
+// (mensagens da tripulacao e do Controle da Missao, nao pausa o jogo) e a tela de janela de
+// lancamento fechada.
+// Card de radio (issue #135): mostra o rosto de quem fala, o texto aparece letra por letra e as
+// escolhas com tecla ([1] HIDE / [2] SHIELD) sao feitas na hora, sem soltar o teclado nem parar.
 export class StoryHud {
   constructor({ cardSeconds = STORY_CONFIG.CARD_SECONDS, stormsNeeded = STORY_CONFIG.STORMS_FOR_WINDOW } = {}) {
     const $ = (id) => document.getElementById(id);
@@ -60,6 +65,18 @@ export class StoryHud {
     this.titleEl = $('story-card-title');
     this.bodyEl = $('story-card-body');
     this.sourceEl = $('story-card-source');
+    this.faceEl = $('story-card-face');
+    this.speakerEl = $('story-card-speaker');
+    // Escolha rapida de um card: o GameEngine diz se o jogo esta rodando (`canChoose`) e aplica a
+    // escolha (`onChoice(id)`; devolve false para o card continuar aberto, ex.: bateria vazia)
+    this.canChoose = () => true;
+    this.onChoice = () => true;
+    // Maquina de escrever: as letras do card atual (um <span> por letra, montados na troca do card)
+    this._typeChars = [];
+    this._typed = 0;
+    this._typeTime = 0;
+    this._reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    this._cardSeconds = cardSeconds; // tempo total do card atual
     this.windowOverlayEl = $('window-overlay');
 
     this.panelEl = $('story-objective');
@@ -85,6 +102,7 @@ export class StoryHud {
     this.goalsEl = $('story-goals');
     this.stormsGoalEl = $('story-goal-storms');
     this.dataGoalEl = $('story-goal-data');
+    this.dataPointsEl = $('story-goal-points');
     this.timerEl = $('story-timer');
     this.timerIconEl = $('story-timer-icon');
     this.timerFillEl = this.timerEl.querySelector('.story-bar i');
@@ -111,10 +129,12 @@ export class StoryHud {
     this.timer = 0;
     this.isWindowClosedShown = false;
 
-    $('story-card-ok').addEventListener('click', () => this.dismiss());
+    $('story-card-ok').addEventListener('click', () => this._close());
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Enter' && this.current) this.dismiss();
+      if (e.code === 'Enter' && this.current) this._close();
     });
+    // Na captura: com um card de escolha na tela, [1] e [2] vao para o card e nao trocam o item da mao
+    document.addEventListener('keydown', (e) => this._onChoiceKey(e), true);
     $('window-play-again-btn').addEventListener('click', () => window.location.reload());
   }
 
@@ -165,7 +185,8 @@ export class StoryHud {
 
     setClass(this.goalsEl, view.goals ? 'story-goals' : 'story-goals hidden');
     if (view.goals) {
-      const { storms, stormsNeeded, dataSent } = view.goals;
+      const { storms, stormsNeeded, dataSent, sciencePoints = 0, scienceGoal = 0 } = view.goals;
+      setText(this.dataPointsEl, scienceGoal > 0 ? `${sciencePoints}/${scienceGoal}` : '');
       this.pipEls.forEach((node, i) => setClass(node, i < storms ? 'on' : ''));
       setClass(this.stormsGoalEl, storms >= stormsNeeded ? 'story-goal done' : 'story-goal');
       setClass(this.dataGoalEl, dataSent ? 'story-goal done' : 'story-goal');
@@ -229,19 +250,50 @@ export class StoryHud {
       return;
     }
     // Com outro card esperando, o atual so fica o tempo minimo de leitura
-    const shown = this.cardSeconds - this.timer;
+    const shown = this._cardSeconds - this.timer;
     this.timer = Math.min(this.timer, Math.max(0, MIN_CARD_SECONDS - shown));
   }
 
   // Conta o tempo do card so enquanto o jogo roda, para ninguem perder a mensagem no pause
   update(dt) {
     if (!this.current) return;
+    if (this._typed < this._typeChars.length) {
+      this._typeTime += dt;
+      this._revealChars(typedChars(this._typeTime, this._typeChars.length, STORY_CONFIG.CARD_TYPE_CHARS_PER_SECOND, STORY_CONFIG.CARD_TYPE_MAX_SECONDS));
+    }
     this.timer -= dt;
     if (this.timer <= 0) this._next();
   }
 
   dismiss() {
     if (this.current) this._next();
+  }
+
+  // Enter ou OK: com o texto ainda aparecendo, a primeira vez mostra tudo; a segunda fecha
+  _close() {
+    if (this._typed < this._typeChars.length) this._revealChars(this._typeChars.length);
+    else this.dismiss();
+  }
+
+  _revealChars(count) {
+    for (; this._typed < count; this._typed++) this._typeChars[this._typed].className = '';
+  }
+
+  _onChoiceKey(e) {
+    const choices = this.current?.choices;
+    if (!choices || e.ctrlKey || e.altKey || e.metaKey) return;
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    const choice = choices.find((c) => c.id && c.key && (e.code === `Digit${c.key}` || e.code === `Numpad${c.key}`));
+    if (!choice || !this.canChoose()) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (!e.repeat) this._choose(choice);
+  }
+
+  // A escolha fecha o card, a nao ser que o jogo recuse (onChoice devolve false)
+  _choose(choice) {
+    if (!this.current?.choices?.includes(choice) || !this.canChoose()) return;
+    if (this.onChoice(choice.id) !== false) this.dismiss();
   }
 
   clearCards() {
@@ -275,8 +327,16 @@ export class StoryHud {
     }
     this.signalEl.classList.add('hidden');
     this.signalEl._cls = undefined;
-    this.timer = this.current.seconds ?? this.cardSeconds; // cards com fato real ficam mais tempo
+    this._cardSeconds = this.current.seconds ?? this.cardSeconds; // cada card pode ter o seu tempo
+    this.timer = this._cardSeconds;
     this.titleEl.textContent = this.current.title;
+    // Quem fala: rosto de capacete na cor do traje e o nome (radioSpeakers.ts)
+    const speaker = cardSpeaker(this.current);
+    setText(this.speakerEl, `${speaker.name.toUpperCase()} - ${speaker.tag}`);
+    if (this.faceEl._color !== speaker.color) {
+      this.faceEl._color = speaker.color;
+      this.faceEl.innerHTML = speakerFaceSvg(speaker.color);
+    }
     // Balao de passo do tutorial: faixa do titulo e icones na cor da secao da base
     this.cardEl.classList.toggle('is-step', Boolean(this.current.color));
     this.cardEl.style.setProperty('--step-color', this.current.color ?? 'var(--hud-accent)');
@@ -293,10 +353,17 @@ export class StoryHud {
   _renderBody(card) {
     const body = this.bodyEl;
     body.replaceChildren();
+    this._typeChars.length = 0;
+    this._typed = 0;
+    this._typeTime = 0;
+    // Card com escolha por tecla nao tem OK: a resposta e a propria escolha (ou o tempo do card)
+    this.cardEl.classList.toggle('has-picks', Boolean(card.choices?.some((choice) => choice.id)));
 
     if (card.link) {
-      // Sinal de radio saindo de Marte e chegando na Terra, com o tempo real de viagem
+      // Pacote de radio saindo de Marte e chegando na Terra, com o tempo real de viagem. A viagem
+      // do desenho dura o tempo do card: ele fecha quando o pacote chega.
       const link = el('div', 'story-link');
+      link.style.setProperty('--link-seconds', `${this._cardSeconds}s`);
       const mars = el('span', 'story-planet mars');
       mars.append(el('i'), el('b', '', 'MARS'));
       const track = el('span', 'story-link-track');
@@ -312,9 +379,14 @@ export class StoryHud {
       const row = el('div', 'story-choices');
       card.choices.forEach((choice, i) => {
         if (i > 0) row.append(el('span', 'story-choice-or', 'OR'));
-        const tile = el('div', 'story-choice');
+        // Opcao com `id` e um botao: tecla no teclado, toque no celular
+        const tile = el(choice.id ? 'button' : 'div', choice.id ? 'story-choice is-pick' : 'story-choice');
+        if (choice.id) {
+          tile.type = 'button';
+          tile.addEventListener('click', () => this._choose(choice));
+        }
         const name = el('strong', '', choice.name);
-        if (choice.key) name.append(' ', el('span', 'story-key', `[${choice.key}]`));
+        if (choice.key) name.prepend(el('span', 'story-key', `[${choice.key}]`), ' ');
         tile.append(iconEl(choice.icon, 'story-choice-icon'), name, el('span', 'good', `+ ${choice.good}`), el('span', 'bad', `- ${choice.bad}`));
         row.append(tile);
       });
@@ -323,11 +395,21 @@ export class StoryHud {
 
     for (const line of card.lines ?? []) {
       const row = el('div', 'story-line');
-      row.append(iconEl(line.icon, 'story-line-icon'), el('span', '', line.text));
+      row.append(iconEl(line.icon, 'story-line-icon'), this._typedText(line.text));
       body.append(row);
     }
 
     // Fato real dos eventos aleatorios (issue #107): data e fonte vao no rodape do card
     if (card.fact) body.append(el('p', 'story-fact', card.fact));
+  }
+
+  // Frase do card com uma letra por <span>, escondidas ate a maquina de escrever chegar nelas
+  // (o lugar do texto ja fica reservado: o card nao muda de tamanho enquanto escreve)
+  _typedText(text) {
+    if (this._reducedMotion) return el('span', '', text);
+    const span = el('span');
+    span.setAttribute('aria-label', text);
+    for (const ch of text) this._typeChars.push(span.appendChild(el('span', 'story-type-off', ch)));
+    return span;
   }
 }

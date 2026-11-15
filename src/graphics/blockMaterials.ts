@@ -3,6 +3,7 @@ import { createCropTexture } from './cropTextures.ts';
 import { renderBlockIsometricPreview } from './blockPreview.ts';
 import * as THREE from 'three';
 import { BLOCK_IDS, CROP_ITEM_IDS } from '../config/blockTypes.ts';
+import { SAMPLE_TYPES } from '../data/sampleTypes.ts';
 import { createSeededRandom, fillNoise, makeCanvasTexture } from './textureGenerator.ts';
 
 const TILE = 16;
@@ -217,6 +218,10 @@ export function createBlockMaterials() {
     const { texture, dataUrl } = createCropTexture(type);
     materials[id] = new THREE.MeshLambertMaterial({ map: texture, transparent: true, alphaTest: .1 });
     previews[id] = dataUrl;
+  }
+  // Amostras do mapa (issue #270): so itens de mao, uma cor por tipo; tambem ficam fora do atlas.
+  for (const sample of SAMPLE_TYPES) {
+    materials[sample.itemId] = new THREE.MeshLambertMaterial({ color: sample.color, emissive: sample.glow, emissiveIntensity: 0.12 });
   }
   const atlas = createBlockAtlas(atlasEntries);
 

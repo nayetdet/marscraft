@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { MAV_CONFIG } from '../config/constants.ts';
+import { MAV_CONFIG, SCIENCE_CONFIG } from '../config/constants.ts';
 import { formatHours } from '../mission/missionText.ts';
 import { STEP_COLORS, tutorialStepById } from './tutorialSteps.ts';
 
@@ -33,18 +33,25 @@ const LOAD_ROCKET = { icon: 'rocket', label: 'LOAD THE ROCKET' };
 const BACK_TO_BASE = { icon: 'home', label: 'BACK TO BASE' };
 const MAKING_FUEL = { icon: 'bolt', label: 'MAKING FUEL' };
 const SURVIVE = { icon: 'storm', label: 'SURVIVE THE STORMS' };
-const ANALYZE_ROCKS = { icon: 'rock', label: 'ANALYZE ROCKS' };
+const ANALYZE_ROCKS = { icon: 'rock', label: 'ANALYZE SAMPLES', hint: 'Science terminal: press F, then ANALYZE' };
 // Um objeto por quantidade que falta, criado uma vez (o painel roda a cada frame)
 const SCAN_TASKS = new Map();
 function scanTask(left) {
-  if (!SCAN_TASKS.has(left)) SCAN_TASKS.set(left, { icon: 'scope', label: left > 0 ? `SCAN ${left} MORE` : 'SCAN THINGS' });
+  if (!SCAN_TASKS.has(left)) {
+    SCAN_TASKS.set(left, {
+      icon: 'scope',
+      label: left > 0 ? `FIND ${left} SCIENCE ${left === 1 ? 'POINT' : 'POINTS'}` : 'FIND SCIENCE',
+      hint: 'Scan new things with the scope, or bring glowing samples to the lab',
+    });
+  }
   return SCAN_TASKS.get(left);
 }
 
-// O que a ciencia pede agora (issue #105): escanear, analisar amostras ou enviar o pacote.
-// `s.scienceStep` vem de sciencePackage.scienceStep(); sem ele (testes antigos), enviar.
+// O que a ciencia pede agora (issues #105 e #269): achar pontos (escanear ou coletar amostras),
+// analisar amostras ou enviar. `s.scienceStep` vem de sciencePackage.scienceStep(); sem ele
+// (testes antigos), enviar. `s.sciencePointsLeft` = pontos que ainda faltam achar.
 export function scienceTask(s = {}) {
-  if (s.scienceStep === 'scan') return scanTask(s.scansLeft ?? 0);
+  if (s.scienceStep === 'scan') return scanTask(s.sciencePointsLeft ?? 0);
   if (s.scienceStep === 'analyze') return ANALYZE_ROCKS;
   return TASKS['send-data'];
 }
@@ -110,6 +117,9 @@ export function objectiveView(story, s) {
         storms: Math.min(s.stormsSurvived, story.stormsForWindow),
         stormsNeeded: story.stormsForWindow,
         dataSent: Boolean(s.dataSent),
+        // "6/10": pontos de ciencia ja enviados para a Terra, da meta que o foguete pede
+        sciencePoints: Math.min(s.sciencePointsSent ?? 0, SCIENCE_CONFIG.POINTS_TO_LAUNCH),
+        scienceGoal: SCIENCE_CONFIG.POINTS_TO_LAUNCH,
       };
 
   // A janela de lancamento fechando (ato 3)

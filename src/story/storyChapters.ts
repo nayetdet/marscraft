@@ -1,14 +1,20 @@
 // @ts-nocheck
 import { formatDateDMY } from '../mission/missionText.ts';
 import { shelterDoseFactor } from '../mission/radiation.ts';
+import { STORY_CONFIG } from '../config/constants.ts';
+import { SPEAKERS } from './radioSpeakers.ts';
 
 // Textos da historia (UI em ingles, para criancas de 7 a 12 anos, sem emoji).
 // So dados: quem decide quando cada coisa aparece e o StoryDirector.
 //
-// Um card e mais desenho do que texto: { title, lines?, choices?, link?, source? }
+// Um card e mais desenho do que texto: { title, lines?, choices?, link?, source?, speaker?, seconds? }
 //   lines:   [{ icon, text }]  frases curtas, cada uma com um icone (pixelIcons.js)
-//   choices: [{ icon, name, key?, good, bad }]  duas opcoes lado a lado, com o ganho e o custo
+//   choices: [{ icon, name, good, bad, id?, key? }]  duas opcoes lado a lado, com o ganho e o custo.
+//            Com `id` e `key` a opcao e escolhida na hora pela tecla (ou pelo toque), sem parar o
+//            jogo: quem aplica a escolha e o GameEngine (_onCardChoice)
 //   link:    { minutes, millionKm }  desenho do sinal de radio indo de Marte ate a Terra
+//   speaker: quem da tripulacao fala no radio (radioSpeakers.ts); sem ele fala o oficial de comunicacao
+//   seconds: tempo do card na tela; sem ele vale STORY_CONFIG.CARD_SECONDS
 
 // Os baloes do tutorial (ato 1) ficam em src/story/tutorialSteps.ts, um por passo.
 export const CARDS = {
@@ -16,6 +22,7 @@ export const CARDS = {
   // sua hora (card da primeira tempestade, tarefa SEND DATA), para ensinar uma coisa por vez.
   act2: {
     title: 'FILL THE ROCKET',
+    speaker: SPEAKERS.engineer,
     lines: [
       { icon: 'ice', text: 'Get ice at the crater' },
       { icon: 'rocket', text: 'Load it into the rocket' },
@@ -26,6 +33,7 @@ export const CARDS = {
   // Fim do tutorial guiado: dai em diante o jogo e a rotina de encher o foguete
   trainingDone: {
     title: 'TRAINING COMPLETE',
+    speaker: SPEAKERS.engineer,
     lines: [
       { icon: 'medal', text: 'You know the whole base!' },
       { icon: 'storm', text: 'Now solar storms can come' },
@@ -33,10 +41,13 @@ export const CARDS = {
   },
   stormGuide: {
     title: 'SOLAR STORM COMING',
+    // Radiacao e assunto da medica da tripulacao
+    speaker: SPEAKERS.medic,
     lines: [{ icon: 'storm', text: 'Survive this storm, then you can launch' }],
+    // Escolha na hora, andando: [1] ou [2] (issue #135). Nenhuma e de graca.
     choices: [
-      { icon: 'home', name: 'HIDE', good: 'Shelter with water wall', bad: 'No work outside' },
-      { icon: 'shield', name: 'SHIELD', good: 'Keep working', bad: 'Eats battery' },
+      { id: 'hide', key: '1', icon: 'home', name: 'HIDE', good: 'Shelter with water wall', bad: 'No work outside' },
+      { id: 'shield', key: '2', icon: 'shield', name: 'SHIELD', good: 'Keep working', bad: 'Eats battery' },
     ],
   },
   window: {
@@ -115,6 +126,9 @@ export function certificateBadge(cert, { shelterWaterL = 0 } = {}) {
 export function commsCard({ millionKm, oneWayMinutes, dateIso }) {
   return {
     title: 'MESSAGE SENT',
+    speaker: SPEAKERS.comms,
+    // Fecha sozinho quando o pacote do desenho chega na Terra
+    seconds: STORY_CONFIG.COMMS_CARD_SECONDS,
     link: { minutes: oneWayMinutes, millionKm },
     lines: [
       { icon: 'clock', text: 'Earth cannot help fast: you decide' },
@@ -129,6 +143,7 @@ export function commsCard({ millionKm, oneWayMinutes, dateIso }) {
 export function replyCard({ oneWayMinutes }) {
   return {
     title: 'EARTH ANSWERED',
+    speaker: SPEAKERS.comms,
     lines: [
       { icon: 'radio', text: 'We hear you, Commander!' },
       { icon: 'clock', text: `Real radio trip: ${oneWayMinutes * 2} min there and back` },

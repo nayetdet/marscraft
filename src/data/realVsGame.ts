@@ -1,7 +1,9 @@
 // @ts-nocheck
 import {
-  COMMS_CONFIG, CROP_CONFIG, ENERGY_CONFIG, MISSION_CONFIG, PHYSICS_CONFIG, RADIATION_CONFIG, STORM_CONFIG,
+  COMMS_CONFIG, CREW_CONFIG, CROP_CONFIG, ENERGY_CONFIG, MAV_CONFIG, MISSION_CONFIG, PHYSICS_CONFIG, RADIATION_CONFIG, STORM_CONFIG,
+  SURVIVAL_CONFIG, TIME_SCALE_CONFIG,
 } from '../config/constants.ts';
+import { BATTERY_KWH, RTG_IN_REAL_MMRTGS, RTG_KW, SOLAR_PEAK_KW } from '../mission/powerUnits.ts';
 
 // Aba "REAL VS GAME" do diario [J] (issue #106): onde o jogo muda a realidade para caber numa
 // partida. Os numeros do jogo vem de constants.js; os reais e as fontes de
@@ -10,6 +12,13 @@ import {
 const realSecondsPerGameHour = Math.round(1 / MISSION_CONFIG.GAME_HOURS_PER_SECOND);
 const solMinutes = Math.round((24 * realSecondsPerGameHour) / 60);
 const cropSeconds = Object.values(CROP_CONFIG).map((c) => c.seconds);
+const cropDays = Object.values(CROP_CONFIG).map((c) => c.realDays);
+// Issue #229: numeros reais por pessoa e por sol, e as excecoes declaradas do relogio
+const crewWaterPerSol = CREW_CONFIG.WATER_L_PER_HOUR * 24;
+const crewFoodKgPerSol = CREW_CONFIG.FOOD_PER_HOUR * 24 * CREW_CONFIG.KG_PER_RATION;
+const suitMinutes = Math.round(100 / SURVIVAL_CONFIG.SUIT_OXYGEN_DRAIN_PER_SECOND / 60);
+const suitGameHours = (suitMinutes * 60 * MISSION_CONFIG.GAME_HOURS_PER_SECOND).toFixed(1);
+const oneDecimal = (n) => (Math.round(n * 10) / 10).toString();
 
 export const REAL_VS_GAME = [
   {
@@ -35,10 +44,45 @@ export const REAL_VS_GAME = [
   },
   {
     topic: 'Battery',
-    game: `One battery, 0 to ${ENERGY_CONFIG.BATTERY_CAPACITY}%`,
-    real: 'Not measured yet for a Mars base',
-    why: 'Power costs are in % so they are easy to compare. The 43% sunlight on Mars is real.',
-    source: 'NASA Mars Fact Sheet (sunlight)',
+    game: `0 to ${ENERGY_CONFIG.BATTERY_CAPACITY}%, about ${Math.round(BATTERY_KWH)} kWh; the solar field makes up to ${Math.round(SOLAR_PEAK_KW)} kW`,
+    real: `One Kilopower reactor: 1 to ${TIME_SCALE_CONFIG.REACTOR_KW} kW. Sunlight on Mars: 43% of Earth`,
+    why: `Power is shown in % so it is easy to compare. Our ruler: the game reactor counts as one real ${TIME_SCALE_CONFIG.REACTOR_KW} kW Kilopower. How much each machine uses is a game rule.`,
+    source: 'NASA Kilopower (2018); NASA Mars Fact Sheet',
+  },
+  {
+    topic: 'Nuclear generator (RTG)',
+    game: `About ${oneDecimal(RTG_KW)} kW, day and night`,
+    real: `Curiosity's generator (MMRTG): about ${Math.round(TIME_SCALE_CONFIG.MMRTG_KW * 1000)} W`,
+    why: `A base needs far more power than a rover. The game one is like ${RTG_IN_REAL_MMRTGS} rover generators together.`,
+    source: 'NASA: MMRTG',
+  },
+  {
+    topic: 'Crew food and water',
+    game: `${oneDecimal(crewWaterPerSol)} L of water and ${oneDecimal(crewFoodKgPerSol)} kg of food per person each sol`,
+    real: 'About 3 kg of water and 1.8 kg of food per person each day',
+    why: 'These numbers are not changed. They follow the game clock: one sol of play is one day of eating and drinking.',
+    source: 'NASA life support baseline values (BVAD)',
+  },
+  {
+    topic: 'Your hunger and thirst',
+    game: `A full bar lasts ${TIME_SCALE_CONFIG.PLAYER_FOOD_HOURS} game hours (${Math.round(TIME_SCALE_CONFIG.PLAYER_FOOD_HOURS * realSecondsPerGameHour / 60)} minutes of play)`,
+    real: 'Astronauts eat about 3 meals a day',
+    why: 'You eat and drink about twice each sol. A real person can last longer, but would feel weak.',
+    source: 'NASA life support baseline values (BVAD)',
+  },
+  {
+    topic: 'Suit air',
+    game: `${suitMinutes} minutes of play, about ${suitGameHours} game hours`,
+    real: `A real spacewalk lasts ${TIME_SCALE_CONFIG.REAL_SPACEWALK_HOURS[0]} to ${TIME_SCALE_CONFIG.REAL_SPACEWALK_HOURS[1]} hours`,
+    why: 'Close to real on the game clock. The suit tank is what limits how far you can walk.',
+    source: 'NASA: What Is a Spacewalk?',
+  },
+  {
+    topic: 'Rocket fuel',
+    game: `${MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK} blocks of ice fill the tank`,
+    real: `About ${TIME_SCALE_CONFIG.REAL_ASCENT_PROPELLANT_TONNES} tons: 7 of fuel and 25 of oxygen to lift 4 astronauts`,
+    why: 'Thousands of times smaller, so you can fill it in one play session. Making fuel from Mars ice and air is the real plan.',
+    source: 'NASA, 2021 (MOXIE on Perseverance)',
   },
   {
     topic: 'Solar storm',
@@ -51,15 +95,15 @@ export const REAL_VS_GAME = [
     topic: 'Storm shelter wall',
     game: `${RADIATION_CONFIG.SHELTER_WALL_MAX_L} L of water = 10 g/cm²`,
     real: 'A real wall that thick needs hundreds of liters',
-    why: 'Shrunk to fit the 100 L base tank. How much each layer blocks is real (PREDICCS).',
+    why: 'Shrunk to fit the 100 L base tank. How much each layer blocks is real (PREDICCS). Only a full wall lets you wait out a storm with the clock running fast: that part is a game rule.',
     source: 'Quinn et al., UNH (PREDICCS)',
   },
   {
     topic: 'Plants',
     game: `${Math.min(...cropSeconds)} to ${Math.max(...cropSeconds)} seconds to grow`,
-    real: 'Space Station salad plants: 28 days (VEG-04)',
-    why: 'Sped up so you can see a harvest while you play.',
-    source: 'NASA, 2019',
+    real: `${Math.min(...cropDays)} to ${Math.max(...cropDays)} days: lettuce ${CROP_CONFIG.lettuce.realDays}, soy ${CROP_CONFIG.soy.realDays}, potato ${CROP_CONFIG.potato.realDays}`,
+    why: `The greenhouse runs much faster than the game clock so you can see a harvest: ${TIME_SCALE_CONFIG.CROP_REAL_DAYS_PER_GAME_SECOND} real days pass each second. Which plant is slower is real.`,
+    source: 'NASA Kennedy Space Center crop tests; Space Station VEG-04 (2019)',
   },
   {
     topic: 'Radio to Earth',

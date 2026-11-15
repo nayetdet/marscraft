@@ -40,7 +40,7 @@ Em 2017, Jim Green (então diretor de Ciência Planetária da NASA) apresentou n
   - O jogo reduz a dose em 80% (`RADIATION_CONFIG.SHIELD_FACTOR = 0.2`). Os estudos reais não dão um número único, e o ativo sozinho ainda não supera o passivo.
   - Não há bobinas modeladas em volta da base.
 - **O habitat é a proteção passiva** (`HABITAT_FACTOR = 0.25`): ficar dentro, atrás das paredes, já corta parte da dose.
-- **Abrigo de tempestade com parede de água** (issue #56): cabine no canto sudeste do habitat (`HABITAT_LAYOUT.SHELTER_*`). No painel o jogador move água do tanque da base para a parede (`MissionSystem.fillShelterWall`). Dentro da cabine a dose é multiplicada pela curva do PREDICCS (`shelterDoseFactor`): parede vazia não protege nada a mais; 40 L (10 g/cm² na escala do jogo) cortam ~83 %. O custo: água na parede não serve para beber nem para a estufa.
+- **Abrigo de tempestade com parede de água** (issue #56): cabine no canto sudeste do habitat (`HABITAT_LAYOUT.SHELTER_*`). No painel o jogador move água do tanque da base para a parede (`MissionSystem.fillShelterWall`). Dentro da cabine a dose é multiplicada pela curva do PREDICCS (`shelterDoseFactor`): parede vazia não protege nada a mais; 60 L (10 g/cm² na escala do jogo) cortam ~83 %. O custo: água na parede não serve para beber nem para a estufa. Só com a parede cheia o painel libera o **WAIT OUT THE STORM** (issue #228, `src/mission/stormSkip.ts`): dentro do abrigo, o relógio do jogo corre 10x (`STORM_SKIP_CONFIG`) até a tempestade acabar, com o mesmo motor do sono (`SleepController`); a dose atrás da parede, a bateria, a tripulação, a fome e a sede continuam andando. É regra de jogo, não dado real.
 
 ## Fontes
 

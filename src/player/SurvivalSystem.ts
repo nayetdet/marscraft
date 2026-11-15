@@ -352,7 +352,7 @@ export class SurvivalSystem {
     if (slot) { slot.count++; return true; }
     const emptyIndex = this.inventorySlots.findIndex((item) => !item || item.count <= 0);
     if (emptyIndex < 0) return false;
-    this.inventorySlots[emptyIndex] = { id: block.id, name: block.name, count: 1, consumable: block.consumable };
+    this.inventorySlots[emptyIndex] = { id: block.id, name: block.name, count: 1, consumable: block.consumable, equipment: block.equipment ?? false };
     this.slots = this.inventorySlots.slice(0, 9);
     return true;
   }

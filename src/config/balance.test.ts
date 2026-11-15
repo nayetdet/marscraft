@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   BLOCK_INTERACTION_CONFIG, CREW_CONFIG, ENERGY_CONFIG, MAV_CONFIG, MISSION_CONFIG, PACING_CONFIG,
-  PHYSICS_CONFIG, STATION_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG, UTILITY_CONFIG, WATER_SYSTEM_CONFIG,
+  PHYSICS_CONFIG, RADIATION_CONFIG, STATION_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG, UTILITY_CONFIG, WATER_SYSTEM_CONFIG,
 } from './constants.ts';
 import { UtilityModule } from '../core/UtilityModule.ts';
 import { CrewManager } from '../crew/CrewManager.ts';
@@ -80,6 +80,21 @@ describe('EVA oxygen budget (issue #81)', () => {
     const pad = MAV_CONFIG.PAD_POSITION;
     const walking = (2 * Math.hypot(pad.x - 0.5, pad.z - 8.85) * 2) / PHYSICS_CONFIG.WALK_SPEED;
     expect((walking + 60) / secondsPerTank).toBeLessThanOrEqual(0.5);
+  });
+});
+
+describe('storm shelter water wall (issue #228)', () => {
+  it('the full wall is the 10 g/cm2 shelter of PREDICCS, whatever its size in liters', () => {
+    const curve = RADIATION_CONFIG.SHELTER_WATER_CURVE;
+    const fullGcm2 = curve[curve.length - 1][0];
+    expect(RADIATION_CONFIG.SHELTER_WALL_MAX_L * RADIATION_CONFIG.SHELTER_G_CM2_PER_L).toBeCloseTo(fullGcm2);
+  });
+
+  it('filling it is a real choice: it fits in the base tank, but not in the starting water', () => {
+    expect(RADIATION_CONFIG.SHELTER_WALL_MAX_L).toBeLessThanOrEqual(WATER_SYSTEM_CONFIG.MAX_BASE_WATER);
+    expect(RADIATION_CONFIG.SHELTER_WALL_MAX_L).toBeGreaterThan(WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER);
+    // O passo do tutorial so pede um pouco de agua na parede: a agua inicial precisa dar
+    expect(WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER).toBeGreaterThanOrEqual(RADIATION_CONFIG.SHELTER_FILL_MIN_L);
   });
 });
 

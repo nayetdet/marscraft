@@ -1,4 +1,4 @@
-import { pixelGridToSvgDataUrl, type PixelPalette } from './pixelArt.ts';
+import { pixelGridToSvgDataUrl, pixelGridToSvgRects, type PixelPalette } from './pixelArt.ts';
 
 const SCOPE_PALETTE: PixelPalette = {
   k: '#1c222d',
@@ -148,4 +148,56 @@ export function getJournalItemIcon(): string {
 
 export function getRationItemIcon(): string {
   return (cachedRation ??= pixelGridToSvgDataUrl(RATION_GRID, RATION_PALETTE));
+}
+
+// Amostras cientificas do mapa (issue #270): o mesmo desenho de pedra, com as cores de cada tipo.
+// k = contorno, d = sombra, m = cor da amostra, l = luz, s = brilho
+const SAMPLE_GRID: readonly string[] = [
+  '................',
+  '................',
+  '......kkkk......',
+  '....kkllllkk....',
+  '...kllllmmmmk...',
+  '..klllsmmmmmmk..',
+  '..kllmmmmmsmmk..',
+  '.kllmmmmmmmmmdk.',
+  '.klmmmsmmmmmddk.',
+  '.kmmmmmmmmmdddk.',
+  '.kmmmmmmmddddk..',
+  '..kmmmddddddk...',
+  '...kkddddkkk....',
+  '.....kkkk.......',
+  '................',
+  '................',
+];
+
+const SAMPLE_PALETTES: Record<string, PixelPalette> = {
+  'sample-dune-sand': { k: '#17110f', d: '#2a211d', m: '#4a3a33', l: '#6b564b', s: '#fbbf24' },
+  'sample-mudstone': { k: '#2f3a40', d: '#6b767c', m: '#9aa3a8', l: '#c9d1d6', s: '#7dd3fc' },
+  'sample-sulfur': { k: '#5c4a0a', d: '#c79a12', m: '#f5d21f', l: '#fff3a3', s: '#ffffff' },
+  'sample-meteorite': { k: '#111827', d: '#374151', m: '#64748b', l: '#a5b4c6', s: '#c4b5fd' },
+  'sample-ice-core': { k: '#1b6f8f', d: '#8fd3ea', m: '#c9efff', l: '#f2fcff', s: '#ffffff' },
+  // Regolito comum (so aparece no painel de ciencia)
+  regolith: { k: '#3b1d12', d: '#7a3f28', m: '#a8583a', l: '#c97a56', s: '#e6a27e' },
+};
+
+const sampleIconCache = new Map<string, string>();
+
+// Os mesmos pixels em <rect>, para o desenho da ficha no diario (src/graphics/journalIcons.ts)
+export function sampleIconRects(sampleId: string): string {
+  return pixelGridToSvgRects(SAMPLE_GRID, SAMPLE_PALETTES[sampleId] ?? SAMPLE_PALETTES['sample-mudstone']);
+}
+
+export function hasSampleIcon(sampleId: string): boolean {
+  return Object.hasOwn(SAMPLE_PALETTES, sampleId);
+}
+
+// Icone 16x16 da amostra (inventario, painel de ciencia e diario)
+export function getSampleItemIcon(sampleId: string): string {
+  let icon = sampleIconCache.get(sampleId);
+  if (!icon) {
+    icon = pixelGridToSvgDataUrl(SAMPLE_GRID, SAMPLE_PALETTES[sampleId] ?? SAMPLE_PALETTES['sample-mudstone']);
+    sampleIconCache.set(sampleId, icon);
+  }
+  return icon;
 }

@@ -24,6 +24,12 @@ export const BLOCK_IDS = {
   JOURNAL: 19,
   RATION: 21, // racao embalada estilo NASA, consumivel no inventario
   DARK_BASALT: 20,
+  // Amostras cientificas do mapa (issue #270): itens de inventario, nao sao blocos do mundo
+  SAMPLE_DUNE_SAND: 22,
+  SAMPLE_MUDSTONE: 23,
+  SAMPLE_SULFUR: 24,
+  SAMPLE_METEORITE: 25,
+  SAMPLE_ICE_CORE: 26,
 };
 
 export const SHIP_BLOCK_IDS = Object.freeze([
@@ -126,10 +132,21 @@ const BASE_BLOCK_ITEMS = [
   { id: BLOCK_IDS.DARK_BASALT, name: 'Dark Basalt' },
 ].map((item) => ({ ...item, initialCount: 0, consumable: null }));
 
+// Amostras do mapa: `equipment` impede colocar no mundo ou largar no chao (sao para o laboratorio).
+// Nomes e fatos em src/data/sampleTypes.ts.
+const SAMPLE_ITEMS = [
+  { id: BLOCK_IDS.SAMPLE_DUNE_SAND, name: 'Sample: Dark Dune Sand (analyze in the lab)' },
+  { id: BLOCK_IDS.SAMPLE_MUDSTONE, name: 'Sample: Layered Mudstone (analyze in the lab)' },
+  { id: BLOCK_IDS.SAMPLE_SULFUR, name: 'Sample: Yellow Sulfur Crystals (analyze in the lab)' },
+  { id: BLOCK_IDS.SAMPLE_METEORITE, name: 'Sample: Iron Meteorite (analyze in the lab)' },
+  { id: BLOCK_IDS.SAMPLE_ICE_CORE, name: 'Sample: Buried Ice Core (analyze in the lab)' },
+].map((item) => ({ ...item, initialCount: 0, consumable: null, equipment: true }));
+
 // Item registry is independent of the nine initial hotbar slots.
 export const ITEM_DEFINITIONS = [
   ...HOTBAR_BLOCKS,
   ...BASE_BLOCK_ITEMS,
+  ...SAMPLE_ITEMS,
   {
     id: BLOCK_IDS.RATION,
     name: 'Space Ration (Use to eat)',

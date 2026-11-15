@@ -19,7 +19,11 @@ function baseData(over: Partial<MachineViewData> = {}): MachineViewData {
     co2: 5,
     contaminated: false,
     science: 60,
+    scienceSent: 4,
+    scienceGoal: 10,
     samples: 1,
+    stormSkipAllowed: false,
+    stormSkipLabel: 'WAIT OUT THE STORM (no solar storm right now)',
     analyzedSamples: 1,
     upgraded: false,
     toolUpgraded: false,
@@ -50,6 +54,7 @@ function baseData(over: Partial<MachineViewData> = {}): MachineViewData {
     donkiLabel: 'Saved data',
     donkiBulletin: '',
     pkgItems: 2,
+    pkgPoints: 3,
     pkgCost: 12,
     sentDiscoveries: 1,
     sentSamples: 0,
@@ -152,5 +157,25 @@ describe('machineViews', () => {
     const dusty = renderMachineMonitorHtml(baseData({ type: 'power', contaminated: true }));
     expect(dusty).toContain('DUST');
     expect(dusty).toContain('data-action="cleanBase"');
+  });
+
+  it('shows the list of finds as the lab stage and prices upgrades in science points (issue #269)', () => {
+    const plain = renderMachineMonitorHtml(baseData({ type: 'science' }));
+    expect(plain).toContain('mc-scene-svg');
+    const html = renderMachineMonitorHtml(baseData({ type: 'science', sciencePanelHtml: '<div class="sci-panel">LIST</div>', science: 3 }));
+    expect(html).toContain('mc-sci-stage');
+    expect(html).toContain('<div class="sci-panel">LIST</div>');
+    expect(html).toContain('4/10'); // pontos enviados da meta
+    expect(html).toContain('SEND 3 PTS TO EARTH');
+    // 3 pontos esperando nao pagam a melhoria de 4
+    expect(html).toMatch(/data-action="upgrade"[^>]*disabled/);
+  });
+
+  it('offers the storm time skip in the shelter only when it is allowed (issue #228)', () => {
+    const locked = renderMachineMonitorHtml(baseData({ type: 'shelter' }));
+    expect(locked).toMatch(/data-action="waitStorm"[^>]*disabled/);
+    expect(locked).toContain('no solar storm right now');
+    const open = renderMachineMonitorHtml(baseData({ type: 'shelter', stormSkipAllowed: true, stormSkipLabel: 'WAIT OUT THE STORM (time runs fast)' }));
+    expect(open).not.toMatch(/data-action="waitStorm"[^>]*disabled/);
   });
 });

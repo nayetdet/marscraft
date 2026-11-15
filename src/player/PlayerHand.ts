@@ -469,6 +469,10 @@ export class PlayerHand {
       this.heldBlockMesh.material = handMat;
       this.heldBlockMesh.visible = true;
       this.armMesh.position.set(0.08, -0.06, 0.08);
+    } else {
+      // Item sem material de bloco: nao deixa o bloco anterior na mao
+      this.heldBlockMesh.visible = false;
+      this.armMesh.position.set(0, 0, 0);
     }
   }
 

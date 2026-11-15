@@ -5,8 +5,12 @@ import { greenhouseMapSvg, plotMapLabel, plotRingDash, plotStatus } from './gree
 import { hideModal, showModal } from './modalTransition.ts';
 import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, SCIENCE_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.ts';
 import { shelterDoseFactor } from '../mission/radiation.ts';
+import { STORM_SKIP_PANEL_LINE, stormSkipButtonLabel } from '../mission/stormSkip.ts';
 import { doseHistoryText } from '../mission/doseBudget.ts';
-import { scienceCountText, scienceMissingText, uploadButtonLabel } from '../mission/sciencePackage.ts';
+import { uploadButtonLabel } from '../mission/sciencePackage.ts';
+import { sciencePanelHtml, sciencePanelModel } from './sciencePanelView.ts';
+import { getJournalIcon } from '../graphics/journalIcons.ts';
+import { getSampleItemIcon } from '../graphics/itemIcons.ts';
 import { bulletinText, donkiLabel, formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.ts';
 import { requestRawPointerLock } from '../player/mouseLook.ts';
 import plantResearch from '../data/osdrPlants.json';
@@ -886,6 +890,12 @@ export class StationPanel {
     if (action === 'printPart') { const msg = utility.printPart(this.engine.crew?.stations ?? []); hud.renderHotbar(survival.slots); return msg; }
     if (action === 'fillWall') return this.engine.mission.fillShelterWall(survival);
     if (action === 'drainWall') return this.engine.mission.drainShelterWall(survival);
+    if (action === 'waitStorm') {
+      // Espera rapida (issue #228): o painel fecha e o relogio corre ate a tempestade acabar
+      if (!this.engine.sleep.startStormSkip()) return stormSkipButtonLabel(this.engine.sleep.stormSkipStatus());
+      this.close();
+      return '';
+    }
     if (action === 'cleanBase') return stations.cleanBase();
     if (action === 'exercise') return stations.exercise(this.gymMode || 'treadmill');
     if (action === 'exercise:treadmill') {
@@ -903,8 +913,9 @@ export class StationPanel {
       if (stations.messageTimer > 0) done.earthCalls++;
       return msg;
     }
-    if (action === 'upgrade') return stations.upgrade();
-    if (action === 'upgradeTool') return stations.upgradeTool();
+    const spendPoints = (cost) => this.engine.spendSciencePoints(cost);
+    if (action === 'upgrade') return stations.upgrade(spendPoints);
+    if (action === 'upgradeTool') return stations.upgradeTool(spendPoints);
     if (action === 'sendScience') return this.engine.sendSciencePackage();
     if (action.startsWith('seed:')) {
       const cropType = action.slice(5);
@@ -949,6 +960,7 @@ export class StationPanel {
     if (action === 'analyze') {
       const message = stations.analyzeSample(survival);
       hud.renderHotbar(survival.slots);
+      this.engine.onSampleAnalyzed(stations.lastAnalyzedType);
       return message;
     }
     return '';
@@ -1031,23 +1043,11 @@ export class StationPanel {
       'About every 26 months the Sun gets between Mars and Earth and the radio goes silent for about 2 weeks. Then the crew decides alone.';
   }
 
-  // Pacote de ciencia para a Terra (issue #105): o que ja foi, o que vai no proximo envio e o que falta
-  _packageText() {
-    const { mission } = this.engine;
-    const totals = this.engine.scienceTotals();
-    const pkg = this.engine.currentSciencePackage();
-    const state = { ...totals, sentDiscoveries: mission.sentDiscoveries, sentSamples: mission.sentSamples };
-    const next = pkg.items > 0
-      ? `NEXT UPLOAD: ${scienceCountText(pkg.uploadDiscoveries, pkg.uploadSamples)} = ${pkg.items} item${pkg.items === 1 ? '' : 's'}.\n` +
-        `COST: ${SCIENCE_CONFIG.UPLOAD_BASE_COST}% to start the radio + ${pkg.items} x ${SCIENCE_CONFIG.UPLOAD_COST_PER_ITEM}% = ${pkg.cost}% power.` +
-        (pkg.leftAfter > 0 ? `\n${pkg.leftAfter} more items wait for the next upload (max ${SCIENCE_CONFIG.MAX_ITEMS_PER_UPLOAD} per orbiter pass).` : '')
-      : 'NEXT UPLOAD: nothing new yet.';
-    return 'SCIENCE PACKAGE FOR EARTH\n' +
-      `MADE THIS MISSION: ${scienceCountText(totals.discoveries, totals.samples)} (scanned with the scope / analyzed here).\n` +
-      `ALREADY SENT: ${scienceCountText(mission.sentDiscoveries, mission.sentSamples)}.\n` +
-      `${next}\n${scienceMissingText(state)}\n` +
-      'Rovers send most of their data to an orbiter flying over Mars, and the orbiter passes it on to Earth (NASA Mars Relay Network). ' +
-      'A bigger package costs more power. Sending in small parts is allowed, but each part pays the radio start again. Costs are game rules.';
+  // Painel SCIENCE FOR EARTH (issue #269): o que a crianca achou, em itens com nome e pontos
+  _sciencePanelHtml() {
+    const { engine } = this;
+    const model = sciencePanelModel(engine.scienceStatus(), engine.currentSciencePackage(), engine.stations.rawSampleCount(engine.survival));
+    return sciencePanelHtml(model, (row) => (row.kind === 'sample' ? getSampleItemIcon(row.icon) : getJournalIcon(row.icon)), { compact: true });
   }
 
   _shelterText(mission, survival) {
@@ -1059,7 +1059,7 @@ export class StationPanel {
       `BLOCKS: ${blocked}% of storm radiation inside this booth\n` +
       `BASE WATER TANK: ${Math.round(survival.baseWater)} / ${survival.maxBaseWater} L\n` +
       `SOLAR STORM: ${storm}\n\n` +
-      'Water stops radiation. Water in the wall is water you cannot drink.\n\n' +
+      `Water stops radiation. Water in the wall is water you cannot drink. ${STORM_SKIP_PANEL_LINE}\n\n` +
       'A solar storm throws fast particles (protons) at Mars. Water is full of hydrogen, which slows them down. ' +
       'Astronauts in the Orion capsule build a shelter like this with their water and food bags.\n' +
       'Real model: a 10 cm layer of water (10 g/cm2) blocks about 83% of a storm dose. Game-scaled.';
@@ -1181,7 +1181,7 @@ export class StationPanel {
         ['POWER', `${round(m.energy)}%`, pct(m.energy), 'power'],
         ['OXYGEN', `${round(v.oxygen)} / ${v.maxStat}`, pct(v.oxygen, v.maxStat), 'air'],
         ['FILTER', `${round(s.filter)}%`, pct(s.filter), 'water'],
-        ['SCIENCE', `${s.science}`, null, 'science'],
+        ['SCIENCE TO SEND', `${this.engine.scienceStatus().pendingPoints}`, null, 'science'],
       ],
       power: [
         ['POWER', `${round(m.energy)}%`, pct(m.energy), 'power'],
@@ -1195,8 +1195,8 @@ export class StationPanel {
         ['FITNESS', `${round(s.fitness)}%`, pct(s.fitness), 'food'],
       ],
       science: [
-        ['SCIENCE', `${s.science}`, null, 'science'],
-        ['SAMPLES', `${s.samples}`, null, 'earth'],
+        ['SCIENCE TO SEND', `${this.engine.scienceStatus().pendingPoints}`, null, 'science'],
+        ['SAMPLES', `${s.rawSampleCount(v)}`, null, 'earth'],
         ['READY TO SEND', `${this.engine.currentSciencePackage().items}`, null, 'air'],
         ['SIGNAL TO EARTH', comms.blackout ? 'OFFLINE' : `${comms.lightMinutes.toFixed(1)} min`, null, 'power'],
       ],
@@ -1320,7 +1320,8 @@ export class StationPanel {
   _buildMachineViewData() {
     const { expedition: m, stations: s, survival: v, mission, utility, crewStock, comms, crew, spaceWeather } = this.engine;
     const pkg = this.engine.currentSciencePackage();
-    const totals = this.engine.scienceTotals();
+    const science = this.engine.scienceStatus();
+    const stormSkip = this.engine.sleep.stormSkipStatus();
     return {
       type: this.type,
       notice: this.machineNotice,
@@ -1338,8 +1339,14 @@ export class StationPanel {
       filter: s.filter,
       co2: s.co2,
       contaminated: s.contaminated,
-      science: s.science,
-      samples: s.samples,
+      // Pontos de ciencia (issue #269): os que esperam o envio pagam as melhorias
+      science: science.pendingPoints,
+      scienceSent: science.sentPoints,
+      scienceGoal: science.goal,
+      sciencePanelHtml: this.type === 'science' ? this._sciencePanelHtml() : undefined,
+      samples: s.rawSampleCount(v),
+      stormSkipAllowed: stormSkip.allowed,
+      stormSkipLabel: stormSkipButtonLabel(stormSkip),
       analyzedSamples: s.analyzedSamples,
       upgraded: s.upgraded,
       toolUpgraded: s.toolUpgraded,
@@ -1371,11 +1378,12 @@ export class StationPanel {
       donkiLabel: spaceWeather ? donkiLabel(spaceWeather) : 'Saved data',
       donkiBulletin: spaceWeather?.bulletin ? bulletinText(spaceWeather.bulletin) : '',
       pkgItems: pkg.items,
+      pkgPoints: pkg.points,
       pkgCost: pkg.cost,
       sentDiscoveries: mission.sentDiscoveries,
       sentSamples: mission.sentSamples,
-      totalDiscoveries: totals.discoveries,
-      totalSamples: totals.samples,
+      totalDiscoveries: this.engine.scanJournal.missionCount,
+      totalSamples: s.analyzedSamples,
       radlabHtml: this.type === 'medical' ? radlabChartHtml() : undefined,
       medbayBoneFact: MEDBAY_BONE_TEXT,
       links: this._stationLinksFor(this.type),
@@ -1443,18 +1451,18 @@ export class StationPanel {
     }
 
     const pages = {
-      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nFILTER: ${Math.round(s.filter)}%   SCIENCE POINTS: ${s.science}\n\n${radiationStatusText(mission)}\n\n${stormStatusText(mission.storm, this.engine.spaceWeather, mission.noStormData)}\n\n${this.engine.spaceWeather.live ? `Storm data: ${donkiLabel(this.engine.spaceWeather)}.` : 'The NASA data is saved inside the game, it is not live.'} Storm length and damage are game rules.`, [['mission', 'Show mission objective'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
+      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nFILTER: ${Math.round(s.filter)}%   SCIENCE TO SEND: ${this.engine.scienceStatus().pendingPoints} points\n\n${radiationStatusText(mission)}\n\n${stormStatusText(mission.storm, this.engine.spaceWeather, mission.noStormData)}\n\n${this.engine.spaceWeather.live ? `Storm data: ${donkiLabel(this.engine.spaceWeather)}.` : 'The NASA data is saved inside the game, it is not live.'} Storm length and damage are game rules.`, [['mission', 'Show mission objective'], ['upgrade', `Upgrade suit (uses ${SCIENCE_CONFIG.SUIT_UPGRADE_POINTS} unsent science points)`]]],
       power: ['MAKE AIR', '', [...oxygenPlantButtons(mission.oxygenPlant).map(([action, label]) => [action, action === 'o2mode:electrolysis' ? `${label} · uses water, less power` : action === 'o2mode:moxie' ? `${label} · no water, more power` : label]), ['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
       greenhouse: ['MARS GARDEN / FIELD NOTEBOOK', this.gardenText(s, m, v), [
         ...Object.entries(CROP_CONFIG).map(([type, r]) => ['plant:' + type, type.toUpperCase() + ' | ' + s.plotCost(type).water + ' L water / ' + s.plotCost(type).energy + '% power / ' + r.seconds + 's / +' + r.nutrition + ' food']),
         ['harvest', 'Harvest & discover NASA research'], ['cleanBase', 'Clean habitat'],
       ]],
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\n${doseHistoryText(mission.doseBreakdown)}\n\n${MEDBAY_BONE_TEXT}`, [['treat', 'Use medical station']]],
-      science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   REGOLITH TO ANALYZE: ${s.samples}\n\n${this._packageText()}\n\n${this._radioText(s)}`, [['sendScience', uploadButtonLabel(this.engine.currentSciencePackage())], ['analyze', `Analyze regolith (${SCIENCE_CONFIG.ANALYZE_POWER_COST}% power)`], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
+      science: ['SCIENCE FOR EARTH & RADIO', this._radioText(s), [['sendScience', uploadButtonLabel(this.engine.currentSciencePackage())], ['analyze', `Analyze a sample (${SCIENCE_CONFIG.ANALYZE_POWER_COST}% power)`], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (uses ${SCIENCE_CONFIG.SUIT_UPGRADE_POINTS} unsent science points)`], ['upgradeTool', `Upgrade tool (uses ${SCIENCE_CONFIG.TOOL_UPGRADE_POINTS} unsent science points)`]]],
       galley: ['KITCHEN & PANTRY', this._galleyText(v), [['cookMeal', `Cook fresh meal (1 carrot, ${U.MEAL_WATER_L} L, ${U.MEAL_POWER}% power)`]]],
       hygiene: ['BATHROOM & WATER RECYCLER', this._hygieneText(v), [['washUp', `Wash up (${U.WASH_WATER_L} L of water)`], ['serviceFilter', `Clean water filter (${U.FILTER_SERVICE_POWER}% power)`]]],
       workshop: ['WORKSHOP & 3D PRINTER', this._workshopText(v), [['printPart', `Print spare part (${U.PRINT_REGOLITH} regolith, ${U.PRINT_POWER}% power)`]]],
-      shelter: ['STORM SHELTER', this._shelterText(mission, v), [['fillWall', `Fill wall (+${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`], ['drainWall', `Drain wall (-${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`]]],
+      shelter: ['STORM SHELTER', this._shelterText(mission, v), [['fillWall', `Fill wall (+${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`], ['drainWall', `Drain wall (-${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`], ['waitStorm', stormSkipButtonLabel(this.engine.sleep.stormSkipStatus())]]],
     };
     const [title, text, buttons] = pages[this.type];
     this.title.textContent = title;
@@ -1498,6 +1506,7 @@ export class StationPanel {
         if (match) { const cost = document.createElement('small'); cost.textContent = match[2]; copy.append(cost); }
       }
       button.append(icon, copy);
+      if (action === 'waitStorm') button.disabled = !this.engine.sleep.stormSkipStatus().allowed;
       if (this.type === 'greenhouse') {
         if (action.startsWith('plant:')) {
           const cost = s.plotCost(action.slice(6));

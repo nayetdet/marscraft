@@ -51,6 +51,8 @@ src/core/GameEngine.ts     loop principal; instancia e conecta todos os sistemas
 src/mission/               missao: bateria e paineis (energy), tempestades solares do DONKI (solarStorms), radiacao,
                            radio Terra-Marte (commsLink, earthMars), MAV e textos (MissionSystem, missionText),
                            gerador de O2 eletrolise x MOXIE (oxygenPlant, oxygenText)
+                           ciencia em pontos (sciencePackage: itens, meta para decolar, envio e melhorias), boletim final (missionReport)
+                           espera rapida da tempestade no abrigo, so com a parede de agua cheia (stormSkip; quem faz o relogio correr e o SleepController)
                            tempestade de poeira e poeira nos paineis (dustWeather, weatherText)
 src/data/marsWeather.ts    clima real do InSight por sol (insightWeather.tson): temperatura la fora e relatorio do tempo
 src/config/
@@ -64,6 +66,8 @@ src/world/
   voxelRaycaster.ts        DDA para mirar blocos
   voxelShading.ts          cor por vértice dos blocos: tinta do chão natural e sombra de canto (oclusão)
   surfaceRocks.ts          pedras decorativas espalhadas fora das áreas construídas (sem colisão)
+  sampleSites.ts           amostras científicas do mapa (#270): onde ficam (semente fixa, função pura); SampleSiteMarkers desenha
+                           (pedras + facho de luz, 2 draw calls); tipos, fatos reais e fontes em src/data/sampleTypes.ts
 src/player/
   PlayerPhysics.ts         movimento, gravidade, colisão AABB × voxels
   InputController.ts       teclado/mouse/pointer lock e controles touch em paisagem (joystick, câmera por arrasto, ações, hotbar e atalhos de missão/tripulação)
@@ -81,6 +85,7 @@ src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades
                            crewInstances (desenha as caixas de todos os trajes juntas, com instancing)
 src/story/                 história em 3 atos: StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
                            tutorialSteps (os passos do tutorial guiado do ato 1, um por vez, em dados),
+                           tutorialDetours (o desvio de cada recurso: se falta agua, energia, comida ou bateria do rover para o passo, manda buscar e depois volta, em dados),
                            objectiveView (o que o painel do objetivo desenha), waypoints (para onde a seta aponta) e WaypointBeacon (seta 3D),
                            firstTimeMoments (a animacao e o fato real da primeira vez de cada acao principal, em dados; quem desenha e o FirstTimeHud),
                            tradeoffScenes (o modal animado de trade-off de cada tarefa ou evento, em dados, uma vez por partida; quem desenha e o TradeoffHud)
@@ -104,7 +109,7 @@ docs/                      contexto do desafio, APIs e dados reais
 
 - **Recursos e regras de sobrevivência:** `SurvivalSystem.update(dt, playerPos)`. Hoje o O2 recarrega de graça em `isPlayerInsideShip`; é aí que entra o custo de energia.
 - **Balanceamento:** só em `src/config/constants.ts`. Não espalhe números mágicos.
-- **Ciclo dia/noite (energia solar):** `MarsSkySystem.timeOfDay` / `solCount` (1 sol = 24 h de jogo ≈ 40 min reais; 1 hora de jogo = 100 s reais, com `MISSION_CONFIG.GAME_HOURS_PER_SECOND = 0.01`).
+- **Ciclo dia/noite (energia solar):** `MarsSkySystem.timeOfDay` / `solCount` (1 sol = 24 h de jogo ≈ 20 min reais; 1 hora de jogo = 50 s reais, com `MISSION_CONFIG.GAME_HOURS_PER_SECOND = 0.02`). Tudo o que gasta ou produz "por hora" segue esse relógio; o que precisa de outra compressão é uma exceção com nome em `TIME_SCALE_CONFIG` e aparece na aba REAL VS GAME do diário (issue #229).
 - **Dados da NASA embutidos:** crie `src/data/*.tson` (gerados por script, com data de coleta) e um módulo de acesso. Não faça fetch espalhado pelo código.
 - **HUD novo:** adicione o markup em `public/game.html` e a lógica em `HudManager.update(...)`.
 

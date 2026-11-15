@@ -1,7 +1,8 @@
 // @ts-nocheck
 import { MISSION_CONFIG, STORY_CONFIG } from '../config/constants.ts';
 import { CARDS, OBJECTIVES, certificateBadge, certificateById, commsCard, replyCard } from './storyChapters.ts';
-import { CORE_STEPS, TUTORIAL_STEPS, stepCard } from './tutorialSteps.ts';
+import { findDetours } from './tutorialDetours.ts';
+import { CORE_STEPS, TUTORIAL_STEPS, detourCard, stepCard } from './tutorialSteps.ts';
 
 // A historia do jogo em 3 atos: chegada (tutorial), preparar a volta e janela de lancamento.
 // O ato 1 e o tutorial guiado (src/story/tutorialSteps.ts): um passo por vez, cada um com um
@@ -17,6 +18,8 @@ import { CORE_STEPS, TUTORIAL_STEPS, stepCard } from './tutorialSteps.ts';
 //              drinkCount, mealCount, earthCalls, powerChecks, plantCount, harvestCount,
 //              workoutCount, washCount, shelterWaterL, roverDrives, roverIceKg, scanCount }
 //              (a segunda parte so e lida pelos passos do tutorial)
+//            + { baseWaterL, batteryCharge, foodStock, roverBattery, roverActive }: recursos da
+//              base, lidos pelos desvios do tutorial (issue #237, tutorialDetours.ts)
 //
 // `training: true` = tutorial completo. Sem ele sobram os 3 passos centrais (entrar, avisar a
 // Terra, buscar gelo). 4 passos entregam um certificado (issue #88): evento 'certificate' com o
@@ -42,6 +45,11 @@ export class StoryDirector {
     this.certificates = [];
     // Copia do retrato tirada quando o passo atual comecou
     this._stepBaseline = {};
+    // Desvio do tutorial (issue #237): falta um recurso para o passo atual, entao a tarefa vira
+    // buscar esse recurso. null = o passo normal. O passo (stepIndex) e a base de comparacao
+    // (_stepBaseline) nao mudam durante o desvio: quando o recurso volta, o passo continua.
+    this.detour = null;
+    this._detourResources = new Set();
     this.replyDelayHours = replyDelayHours;
     this.comms = comms;
     this.gameHoursPerSecond = gameHoursPerSecond;
@@ -104,7 +112,13 @@ export class StoryDirector {
   // Ato 1: um passo por vez. Um passo por frame, para cada balao ter a sua vez.
   _updateArrival(s) {
     const step = this.step;
-    if (!step || !step.done(s, this._stepBaseline)) return;
+    if (!step) return;
+    if (!step.done(s, this._stepBaseline)) {
+      this._updateDetour(step, s);
+      return;
+    }
+    // O passo acabou, mesmo no meio de um desvio: segue normalmente
+    this._clearDetour();
 
     if (step.id === 'report') {
       this._replyAt = s.hours + this.replyDelayHours;
@@ -125,13 +139,41 @@ export class StoryDirector {
   _startStep(index, s) {
     this.stepIndex = index;
     this._stepBaseline = { ...s };
+    this._clearDetour();
     const step = this.steps[index];
+    // Ja comeca no desvio se a base nao tem o que o passo pede (so o balao do desvio aparece)
+    this._updateDetour(step, s);
+    if (this.detour) return;
     this._setObjective(step.id, step.objective);
     this._card(stepCard(step, index, this.steps.length));
   }
 
+  _clearDetour() {
+    this.detour = null;
+    this._detourResources.clear();
+  }
+
+  // Falta um recurso para o passo? Entao o painel, a seta e o balao mostram onde busca-lo. Quando
+  // o recurso volta, o passo volta com o seu balao. Cada troca mostra um balao, uma vez so.
+  _updateDetour(step, s) {
+    const chain = findDetours(step.needs, s, this._detourResources);
+    const next = chain.length > 0 ? chain[chain.length - 1] : null;
+    this._detourResources.clear();
+    for (const detour of chain) this._detourResources.add(detour.resource);
+    if (next === this.detour) return;
+    this.detour = next;
+    if (next) {
+      this._setObjective(next.id, next.objective);
+      this._card(detourCard(next));
+    } else {
+      this._setObjective(step.id, step.objective);
+      this._card(stepCard(step, this.stepIndex, this.steps.length));
+    }
+  }
+
   // Fim do tutorial: comeca o ato 2, com as tempestades e a rotina de encher o foguete
   _finishTutorial() {
+    this._clearDetour();
     this.stepIndex = -1;
     this.act = 2;
     this._events.push({ type: 'start-storms' });

@@ -15,7 +15,13 @@ import { EMBEDDED_SPACE_WEATHER } from '../data/spaceWeather.ts';
 import { MissionSystem, oxygenPointsToKg } from '../mission/MissionSystem.ts';
 import { NO_STORM_DATA_TEXT, donkiCredit, donkiLabel, formatDateDMY, formatDose, formatHours, stormEventMessage } from '../mission/missionText.ts';
 import { doseEventMessage, doseVictoryRows, evaBlockMessage, roverMavBlocks } from '../mission/doseBudget.ts';
-import { scansStillNeeded, scienceCountText, scienceStep, uploadResultText } from '../mission/sciencePackage.ts';
+import { discoveryItem, pointsStillNeeded, pointsWord, sampleItem, scienceCountText, scienceStep, uploadResultText } from '../mission/sciencePackage.ts';
+import { placeSampleSites } from '../world/sampleSites.ts';
+import { SampleSiteMarkers } from '../world/SampleSiteMarkers.ts';
+import { naturalGroundTop } from '../world/surfaceRocks.ts';
+import { isBuildZone } from '../world/terrainGenerator.ts';
+import { sampleFactView, sampleLogText, sampleTypeById } from '../data/sampleTypes.ts';
+import { journalRank } from '../ui/journalProgress.ts';
 import { MissionHud } from '../ui/MissionHud.ts';
 import { missionReport } from '../mission/missionReport.ts';
 import { renderReportCard } from '../ui/ReportCard.ts';
@@ -54,7 +60,7 @@ import { CommsLink } from '../mission/commsLink.ts';
 import { passiveDemandFactor } from '../mission/pacing.ts';
 import { oxygenModeWarning } from '../mission/oxygenPlant.ts';
 import { AudioManager } from '../audio/AudioManager.ts';
-import { getCategoryLabel } from '../data/scanCatalog.ts';
+import { SAMPLE_CATEGORY, getCategoryLabel, getScanEntry } from '../data/scanCatalog.ts';
 import { ScanJournal } from '../scanner/scanJournal.ts';
 import { MissionLog } from '../story/missionLog.ts';
 import { MissionLogFeed } from '../story/missionLogFeed.ts';
@@ -89,7 +95,7 @@ import { EngineFlame, ParticlePuffs } from '../story/cutscene/effects.ts';
 import { DUST_WEATHER_CONFIG, WEATHER_CONFIG } from '../config/constants.ts';
 import { outsideTemperatureC, solWeather } from '../data/marsWeather.ts';
 import { DUST_WARNING_CARD, dustEventMessage, weatherReportCard } from '../mission/weatherText.ts';
-import { clampToPlayArea } from '../world/dustStormZone.ts';
+import { clampToPlayArea, distanceFromBaseCenter } from '../world/dustStormZone.ts';
 import { WeatherHud } from '../ui/WeatherHud.ts';
 import { LANDER_NOZZLE_Y, createLander, landerCollider } from '../story/cutscene/landerModel.ts';
 import { createArrivalCutscene } from '../story/cutscene/arrivalCutscene.ts';
@@ -100,7 +106,7 @@ import { DUST_DEVIL_HIT_TOAST, ECLIPSE_END_TOAST, compassDirection, dustDevilPan
 import { MarsEventEffects } from '../sky/MarsEventEffects.ts';
 import { EventHud } from '../ui/EventHud.ts';
 import { carveImpactCrater, findImpactSite, hideRocksNear } from '../world/impactCrater.ts';
-import { EVENTS_CONFIG, GRAPHICS_CONFIG, TERRAIN_CONFIG } from '../config/constants.ts';
+import { EVENTS_CONFIG, GRAPHICS_CONFIG, SAMPLE_SITE_CONFIG, SCIENCE_CONFIG, TERRAIN_CONFIG } from '../config/constants.ts';
 
 // Raio angular (rad) em que a mira da luneta "pega" cada astro. A Lua fica a ~0,047 rad da
 // Terra, então os dois raios precisam ser menores que isso para não se sobreporem.
@@ -166,6 +172,18 @@ export class GameEngine {
     this._windState = createWindState();
     this._windInput = { time: 0, haze: 0, edgeStrength: 0, windAvgMs: 6, gustMs: 14 };
     this.windEffect = new MarsWindEffect(this.scene, (x, z) => this._groundSurfaceY(x, z));
+    // Amostras cientificas espalhadas pelo mapa (issue #270): os mesmos lugares para a mesma
+    // semente, sempre em chao natural, longe das areas construidas e da borda do mapa
+    const mapEdge = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS - 8;
+    this.sampleSites = new SampleSiteMarkers(placeSampleSites({
+      groundTop: (x, z) => (isBuildZone(x, z) || distanceFromBaseCenter(x, z) > mapEdge ? -1 : naturalGroundTop(this.world, x, z)),
+    }));
+    this.scene.add(this.sampleSites.group);
+    // Itens de ciencia desta partida (descobertas + amostras analisadas), refeitos so quando mudam
+    this._scienceItems = [];
+    this._scienceItemsKey = '';
+    this._scienceStatus = null;
+    this._scienceStatusKey = '';
 
     // Modelos 3D detalhados estilo Mod de Minecraft + Caixas de Colisão AABB
     const { group: customModels, colliders, plants, rover, roverWheels, rocket, solarPanelMaterial } = buildNasaCustomModels(this.scene);
@@ -455,6 +473,7 @@ export class GameEngine {
     this.stations.updateCrewHarvest(dt, this.crew.members.some(member => member.task === 'greenhouse' && member.stationary && member.canWork));
     this.utility.updateRations(dt, this.crew.members.some(member => member.task === 'kitchen' && member.stationary && member.canWork));
     this._updateShelterWater();
+    this.sampleSites.update(this.lastTime / 1000);
     this.updateCropVisuals();
     this.airlock.update(dt, this.player.pos);
     this._syncSuitVisualState();
@@ -678,6 +697,17 @@ export class GameEngine {
         best = candidate; bestDistance = distance;
       }
     }
+    // Amostras do mapa (issue #270): de perto e olhando para o facho de luz
+    if (this.sampleSites && !this.survival.insidePressurizedShip) {
+      for (const site of this.sampleSites.sites) {
+        if (this.sampleSites.isCollected(site.id)) continue;
+        this._interactionOffset.set(site.x + 0.5, site.y + 0.9, site.z + 0.5).sub(this.player.pos);
+        const distance = this._interactionOffset.length();
+        if (distance < Math.min(bestDistance, SAMPLE_SITE_CONFIG.INTERACT_RADIUS) && distance > 0 && this._interactionOffset.dot(dir) / distance > 0.5) {
+          best = this._sampleInteraction(site); bestDistance = distance;
+        }
+      }
+    }
     // Posteres e equipamentos explicativos: cone de mira mais fechado, para nao roubar o [F] das estacoes
     for (const point of this.baseDecor.infoPoints) {
       this._interactionOffset.set(point.x, point.y, point.z).sub(this.player.pos);
@@ -695,6 +725,7 @@ export class GameEngine {
     if (target.type === 'info') { this.hud.showToast(target.text(this._baseState()), 8000); return; }
     if (target.type === 'basket') { this.hud.showToast(this.stations.collectBasket(target.cropType, this.survival)); return; }
     if (target.type === 'bunk') { this._tradeoff('sleep', () => this.sleep.openChooser()); return; }
+    if (target.type === 'sample') { this._collectSample(target.site); return; }
     if (target.type === 'door') {
       const msg = this.airlock.request(target.door, this.player.pos);
       if (msg.includes('Suitport')) this.suitport.flashLocked();
@@ -930,7 +961,8 @@ export class GameEngine {
     this.audio.playUiConfirm();
     this.scannerHud.showCard(entry, discovery);
     if (discovery.missionNew) {
-      this.hud.showToast(`+1 discovery in your science package (${discovery.missionCount} this mission). Send it home from the science & radio terminal.`, 4500);
+      const item = discoveryItem(entry);
+      this.hud.showToast(`+${pointsWord(item.points)} of science: ${entry.title}${item.rare ? ' (rare find!)' : ''}. Send it home from the science & radio terminal.`, 4500);
     }
     if (!discovery.isNew) return;
 
@@ -1037,25 +1069,92 @@ export class GameEngine {
     this.hud.showToast(this.sendSciencePackage(), 6000);
   }
 
-  // Ciencia feita nesta partida: descobertas do scanner nesta missao e amostras analisadas
-  scienceTotals() {
-    return { discoveries: this.scanJournal.missionCount, samples: this.stations.analyzedSamples };
+  // Alvo de interacao de um local de amostra (um objeto por local, reaproveitado)
+  _sampleInteraction(site) {
+    this._sampleTargets ??= new Map();
+    let target = this._sampleTargets.get(site.id);
+    if (!target) {
+      const type = sampleTypeById(site.typeId);
+      target = { type: 'sample', site, label: `Press F: collect ${type.name} (+${type.points} science in the lab)` };
+      this._sampleTargets.set(site.id, target);
+    }
+    return target;
+  }
+
+  // Coleta uma amostra do mapa: ocupa um lugar na mochila e so vira ciencia depois da analise no
+  // laboratorio. O custo e o passeio la fora: ar do traje e dose de radiacao.
+  _collectSample(site) {
+    const type = sampleTypeById(site.typeId);
+    if (!type || this.sampleSites.isCollected(site.id)) return;
+    if (!this.survival.addBlockToInventory(type.itemId)) {
+      this.hud.showToast('Your bag is full. Make room to carry this sample.');
+      return;
+    }
+    this.sampleSites.collect(site.id);
+    this.hud.renderHotbar(this.survival.slots);
+    const heldSlot = this.survival.slots[this.hud.selectedSlot];
+    this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
+    this.missionLog.add({ text: `Collected a sample outside: ${type.name}.`, kind: 'study', hours: this._skyHours() });
+    this.hud.showToast(`Sample collected: ${type.name}. Analyze it at the science & radio terminal for +${pointsWord(type.points)}. ${this.sampleSites.remaining} sample spots left on the map.`, 6000);
+  }
+
+  // Uma amostra do mapa acabou de ser analisada (StationPanel): fato real na tela, ficha no
+  // diario [J] e linha no diario de bordo
+  onSampleAnalyzed(type) {
+    if (!type) return;
+    const found = this.scanJournal.record(type.id, { mission: false });
+    if (found.isNew) this.scannerHud.unseen.add(type.id, SAMPLE_CATEGORY);
+    this.missionLog.add({ text: sampleLogText(type), kind: 'study', hours: this._skyHours() });
+    this._momentQueue.push(sampleFactView(type));
+  }
+
+  // Tudo o que a crianca achou nesta partida, como itens de ciencia com pontos (issue #269):
+  // descobertas do scanner (na ordem em que foram escaneadas) e amostras analisadas
+  scienceItems() {
+    const key = `${this.scanJournal.missionCount}:${this.stations.analyzed.length}`;
+    if (key !== this._scienceItemsKey) {
+      this._scienceItemsKey = key;
+      const items = [];
+      for (const id of this.scanJournal.missionScans) {
+        const entry = getScanEntry(id);
+        if (entry) items.push(discoveryItem(entry));
+      }
+      this.stations.analyzed.forEach((sample, order) => items.push(sampleItem(order, sample)));
+      this._scienceItems = items;
+    }
+    return this._scienceItems;
+  }
+
+  // O que espera o envio, o que ja foi e o que foi gasto (refeito so quando algo muda)
+  scienceStatus() {
+    const items = this.scienceItems();
+    const key = `${this._scienceItemsKey}:${this.mission.sentScienceIds.size}:${this.mission.usedScienceIds.size}`;
+    if (key !== this._scienceStatusKey) {
+      this._scienceStatusKey = key;
+      this._scienceStatus = this.mission.scienceStatus(items);
+    }
+    return this._scienceStatus;
   }
 
   currentSciencePackage() {
-    return this.mission.sciencePackage(this.scienceTotals());
+    return this.mission.sciencePackage(this.scienceItems());
   }
 
-  // Envia o pacote de ciencia (issue #105). Devolve a frase para o painel ou o aviso.
+  // Envia a ciencia para a Terra (issues #105 e #269). Devolve a frase para o painel ou o aviso.
   sendSciencePackage() {
     if (this.comms.blackout) return 'Radio silent: the Sun is between Mars and Earth. Send your science after the solar conjunction.';
-    return uploadResultText(this.mission.sendData(this.scienceTotals()));
+    return uploadResultText(this.mission.sendData(this.scienceItems()));
+  }
+
+  // Melhorias do laboratorio: gastam pontos que ainda nao foram enviados. Devolve os pontos gastos.
+  spendSciencePoints(cost) {
+    return this.mission.spendScience(this.scienceItems(), cost);
   }
 
   // Tubo de amostra analisada entra (ou sai) do foguete: cada tubo pede mais gelo no tanque
   _loadSampleTube(load) {
     const result = load ? this.mission.loadSampleTube(this.stations.analyzedSamples) : this.mission.unloadSampleTube();
-    if (result === 'no-samples') this.hud.showToast('Analyze a regolith sample at the science & radio terminal first.');
+    if (result === 'no-samples') this.hud.showToast('Analyze a sample at the science & radio terminal first.');
     this._refreshMavPanel();
   }
 
@@ -1078,7 +1177,7 @@ export class GameEngine {
   }
 
   _refreshMavPanel() {
-    this.missionHud.updateMavPanel(this.mission, this.survival.countItem(BLOCK_IDS.MARS_ICE), this.stations.analyzedSamples, this.scienceTotals());
+    this.missionHud.updateMavPanel(this.mission, this.survival.countItem(BLOCK_IDS.MARS_ICE), this.stations.analyzedSamples, this.scienceStatus());
   }
 
   _toggleShield() {
@@ -1089,6 +1188,20 @@ export class GameEngine {
     this.hud.showToast(this.mission.shieldOn
       ? 'Radiation shield ON: a magnetic field around the base deflects solar particles. Stay inside the bubble! Uses energy.'
       : 'Radiation shield OFF.');
+  }
+
+  // Escolha feita num card de radio sem parar o jogo (issue #135). Devolve false para o card
+  // continuar aberto. O escudo liga pelo mesmo caminho do Shield Remote: gasta a mesma bateria.
+  _onCardChoice(id) {
+    if (id === 'hide') {
+      this.hud.showToast('Follow the arrow to the base. Hide in the storm shelter and fill its water wall!', 6000);
+      return true;
+    }
+    if (id === 'shield') {
+      if (!this.mission.shieldOn) this._toggleShield();
+      return this.mission.shieldOn;
+    }
+    return true;
   }
 
   _loadIceIntoMav(count) {
@@ -1138,7 +1251,7 @@ export class GameEngine {
       ['Sols on Mars (1 sol = 1 Mars day)', String(this.sky.solCount)],
       ...doseVictoryRows(m.doseBreakdown),
       ['Solar storms survived', String(m.stormsSurvived)],
-      ['Science sent home', scienceCountText(m.sentDiscoveries, m.sentSamples)],
+      ['Science sent home', `${pointsWord(m.sentPoints)} (${scienceCountText(m.sentDiscoveries, m.sentSamples)})`],
       ['Rock sample tubes on the rocket', String(m.sampleTubes)],
       ['Oxygen made by the base', `${oxygenPointsToKg(m.oxygenProducedPoints).toFixed(2)} kg`],
       ['Ice turned into rocket fuel', `${m.iceDelivered} blocks`],
@@ -1157,7 +1270,8 @@ export class GameEngine {
       'Storm shelter water wall: PREDICCS shielding model (University of New Hampshire, Curiosity RAD data) and NASA storm shelter studies. ' +
       'Radio delay: Earth-Mars distance from NASA/JPL planet orbits; solar conjunction rules from NASA/JPL. ' +
       'Trip time, thin air and launch windows: NASA Mars facts. ' +
-      'Science sent through orbiters: NASA Mars Relay Network. Rock sample tubes: NASA Perseverance; upload costs and extra ice per tube are game rules. ' +
+      'Science sent through orbiters: NASA Mars Relay Network. Rock sample tubes: NASA Perseverance; science points, upload costs and extra ice per tube are game rules. ' +
+      'Map samples: real finds by NASA Curiosity in Gale Crater (dune sand, mudstone, sulfur, iron meteorite) and by NASA Phoenix (buried ice); where they sit on the map is a game rule. ' +
       'Mars events: NASA InSight (marsquakes and the 2021 meteor impact), MRO, Perseverance (Phobos eclipse, aurora), Spirit (dust devils) and Viking 2 (frost); when and how strong they are is a game rule.';
     this.missionHud.showVictory(rows, sources);
     renderReportCard(document.getElementById('victory-report'), missionReport(this._reportStats()));
@@ -1182,6 +1296,30 @@ export class GameEngine {
       cropVariety: s.cropCollection.size,
       iceDelivered: m.iceDelivered,
       standbyHours: m.standbyHours,
+      ...this._scienceReportStats(),
+    };
+  }
+
+  // Ciencia para o boletim (issue #271): o que a crianca descobriu nesta partida e a patente do
+  // diario [J] (o diario e guardado no navegador, entao conta tambem partidas antigas)
+  _scienceReportStats() {
+    const journal = this.scanJournal;
+    const status = this.scienceStatus();
+    const rank = journalRank(journal.count, journal.total);
+    // As descobertas mais legais: as que valem mais pontos (as mais raras) primeiro
+    const topFinds = [...this.scienceItems()].sort((a, b) => b.points - a.points).slice(0, 3).map((item) => ({ name: item.name, points: item.points }));
+    return {
+      discoveries: journal.missionCount,
+      // Alvos que a luneta alcanca (as fichas de amostra abrem no laboratorio)
+      scanTotal: journal.catalog.filter((entry) => entry.category !== SAMPLE_CATEGORY).length,
+      journalFound: journal.count,
+      journalTotal: journal.total,
+      journalRank: rank.label,
+      samplesAnalyzed: this.stations.analyzedSamples,
+      sampleTypes: new Set(this.stations.analyzed.map((sample) => sample.typeId)).size,
+      sciencePointsSent: status.sentPoints,
+      sciencePointsGoal: SCIENCE_CONFIG.POINTS_TO_LAUNCH,
+      topFinds,
     };
   }
 
@@ -1620,17 +1758,22 @@ export class GameEngine {
       },
     });
     this.storyHud = new StoryHud();
+    // Escolha rapida dos cards de radio ([1] HIDE / [2] SHIELD): so com o jogo rodando
+    this.storyHud.canChoose = () => Boolean(this._wasGameRunning);
+    this.storyHud.onChoice = (id) => this._onCardChoice(id);
     this._objectiveText = '';
     // Retrato do jogo que o diretor le a cada frame (objeto reaproveitado)
     this._storySnapshot = {
       hours: 0, insideHabitat: false, iceCount: 0, iceNeeded: 0,
       stormPhase: 'calm', stormsSurvived: 0, propellantPct: 0, dataSent: false, launched: false,
-      needsBase: false, iceForFullTank: MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK, scienceStep: null, scansLeft: 0,
+      needsBase: false, iceForFullTank: MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK, scienceStep: null, sciencePointsLeft: 0, sciencePointsSent: 0,
       powerChecks: 0, harvestCount: 0, workoutCount: 0, shelterWaterL: 0,
       drinkCount: 0, mealCount: 0, washCount: 0, earthCalls: 0, plantCount: 0,
       roverDrives: 0, roverIceKg: 0, scanCount: 0, iceDelivered: 0,
+      // Recursos da base, para os desvios do tutorial (issue #237, tutorialDetours.ts)
+      baseWaterL: 0, batteryCharge: 0, foodStock: 0, roverBattery: 0, roverActive: false,
     };
-    this._scienceState = { discoveries: 0, samples: 0, sentDiscoveries: 0, sentSamples: 0, rawSamples: 0 };
+    this._scienceState = { pendingPoints: 0, sentPoints: 0, rawSamples: 0 };
 
     // Setas do objetivo: uma flutua no mundo e a outra fica na tela (aponta mesmo atraves das paredes)
     this.waypoints = this._buildWaypoints();
@@ -1998,6 +2141,11 @@ export class GameEngine {
     s.harvestCount = this.stations.harvestCount;
     s.workoutCount = this.stations.workoutCount;
     s.shelterWaterL = this.mission.shelterWaterL;
+    s.baseWaterL = this.survival.baseWater;
+    s.batteryCharge = this.mission.battery.charge;
+    s.foodStock = this.crewStock.food + this.survival.countItem(BLOCK_IDS.HYDRO_PLANT);
+    s.roverBattery = this.roverController.battery;
+    s.roverActive = this.roverController.isActive;
     const done = this.tutorialCounts;
     s.drinkCount = done.drink;
     s.mealCount = done.meal;
@@ -2010,13 +2158,13 @@ export class GameEngine {
     s.scanCount = this.scanJournal.missionCount;
     s.iceForFullTank = this.mission.iceForFullTank();
     const sci = this._scienceState;
-    sci.discoveries = this.scanJournal.missionCount;
-    sci.samples = this.stations.analyzedSamples;
-    sci.sentDiscoveries = this.mission.sentDiscoveries;
-    sci.sentSamples = this.mission.sentSamples;
-    sci.rawSamples = this.stations.samples;
+    const science = this.scienceStatus();
+    sci.pendingPoints = science.pendingPoints;
+    sci.sentPoints = science.sentPoints;
+    sci.rawSamples = this.stations.rawSampleCount(this.survival);
     s.scienceStep = scienceStep(sci);
-    s.scansLeft = scansStillNeeded(sci);
+    s.sciencePointsLeft = pointsStillNeeded(sci);
+    s.sciencePointsSent = science.sentPoints;
     this.story.update(s);
 
     for (const event of this.story.drainEvents()) {

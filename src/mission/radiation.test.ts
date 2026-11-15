@@ -64,10 +64,11 @@ describe('storm balance (issue #99, game rules)', () => {
 describe('storm shelter water wall', () => {
   it('blocks more radiation with more water and needs water to help at all', () => {
     expect(shelterDoseFactor(0)).toBe(1);
-    expect(shelterDoseFactor(4)).toBeCloseTo(0.58);
-    expect(shelterDoseFactor(40)).toBeCloseTo(0.17);
+    // 1 g/cm2 e a parede cheia (10 g/cm2), os pontos do PREDICCS, na escala de litros do jogo
+    expect(shelterDoseFactor(1 / RADIATION_CONFIG.SHELTER_G_CM2_PER_L)).toBeCloseTo(0.58);
+    expect(shelterDoseFactor(RADIATION_CONFIG.SHELTER_WALL_MAX_L)).toBeCloseTo(0.17);
     const inside = doseRateMsvPerHour({ stormDoseUGyPerHour: STORM, insideHabitat: true });
-    const sheltered = doseRateMsvPerHour({ stormDoseUGyPerHour: STORM, insideHabitat: true, shelterWaterL: 40 });
+    const sheltered = doseRateMsvPerHour({ stormDoseUGyPerHour: STORM, insideHabitat: true, shelterWaterL: RADIATION_CONFIG.SHELTER_WALL_MAX_L });
     expect(sheltered).toBeLessThan(inside * 0.2);
   });
 });
@@ -93,7 +94,7 @@ describe('mission dose budget rate', () => {
       { insideHabitat: true },
       { insideHabitat: true, shieldOn: true },
       { insideHabitat: true, shelterWaterL: 20 },
-      { insideHabitat: true, shelterWaterL: 40 },
+      { insideHabitat: true, shelterWaterL: RADIATION_CONFIG.SHELTER_WALL_MAX_L },
       { shieldOn: true },
     ];
     for (const protection of cases) {
@@ -105,7 +106,7 @@ describe('mission dose budget rate', () => {
 
   it('the water wall cuts the storm dose that adds up', () => {
     const habitat = missionDoseMsvPerHour({ stormDoseUGyPerHour: STRONGEST, insideHabitat: true });
-    const shelter = missionDoseMsvPerHour({ stormDoseUGyPerHour: STRONGEST, insideHabitat: true, shelterWaterL: 40 });
+    const shelter = missionDoseMsvPerHour({ stormDoseUGyPerHour: STRONGEST, insideHabitat: true, shelterWaterL: RADIATION_CONFIG.SHELTER_WALL_MAX_L });
     expect(shelter).toBeCloseTo(habitat * 0.17, 6);
   });
 

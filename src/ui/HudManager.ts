@@ -8,7 +8,8 @@ import { getDamageFeedback, getDeathReport } from '../player/deathReport.ts';
 import { getSuitTelemetryView } from '../player/suitTelemetry.ts';
 import { InventorySuitPreview } from './InventorySuitPreview.ts';
 import { DOSE_LIMIT_MSV, dosePercent, doseTone } from '../mission/doseBudget.ts';
-import { getJournalItemIcon, getRationItemIcon, getScopeItemIcon, getShieldRemoteItemIcon } from '../graphics/itemIcons.ts';
+import { getJournalItemIcon, getRationItemIcon, getSampleItemIcon, getScopeItemIcon, getShieldRemoteItemIcon } from '../graphics/itemIcons.ts';
+import { sampleTypeByItem } from '../data/sampleTypes.ts';
 import { getStatIconSvg } from './statIcons.ts';
 
 const ICONS_PER_BAR = 10;
@@ -241,6 +242,8 @@ export class HudManager {
     if (id === BLOCK_IDS.SHIELD_REMOTE) return getShieldRemoteItemIcon();
     if (id === BLOCK_IDS.JOURNAL) return getJournalItemIcon();
     if (id === BLOCK_IDS.RATION) return getRationItemIcon();
+    const sample = sampleTypeByItem(id);
+    if (sample) return getSampleItemIcon(sample.id);
     return this.previews[id];
   }
 

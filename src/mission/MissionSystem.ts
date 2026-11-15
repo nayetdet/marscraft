@@ -17,7 +17,7 @@ import { buildStormSchedule, liveStormEvents, makeStorm, marsBoundCmes, nextStor
 import { DustWeather } from './dustWeather.ts';
 
 const PROPELLANT_PER_ICE = 100 / MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
-import { sciencePackage, scienceMinimumMet } from './sciencePackage.ts';
+import { pickForSpend, pointsOf, sciencePackage, scienceStatus } from './sciencePackage.ts';
 
 // Converte pontos de O2 do jogo em kg (mora em oxygenPlant.js, junto da conta da agua)
 export { oxygenPointsToKg } from './oxygenPlant.ts';
@@ -75,7 +75,12 @@ export class MissionSystem {
     this.factoryOn = true;
     this.iceStock = 0; // blocos de gelo esperando na fabrica
     this.propellant = 0; // %
-    // Ciencia ja enviada para a Terra (issue #105). `dataSent` so vale com o minimo do pacote.
+    // Ciencia ja enviada para a Terra (issues #105 e #269): uma moeda so, pontos de ciencia.
+    // `dataSent` so vale com SCIENCE_CONFIG.POINTS_TO_LAUNCH pontos enviados.
+    this.sentScienceIds = new Set();
+    // Itens gastos numa melhoria do laboratorio (nao podem mais ser enviados)
+    this.usedScienceIds = new Set();
+    this.sentPoints = 0;
     this.sentDiscoveries = 0;
     this.sentSamples = 0;
     this.uploads = 0;
@@ -430,7 +435,7 @@ export class MissionSystem {
     const room = RADIATION_CONFIG.SHELTER_WALL_MAX_L - this.shelterWaterL;
     if (room <= 0) return 'The water wall is already full.';
     const liters = Math.min(RADIATION_CONFIG.SHELTER_FILL_STEP_L, room, tank.baseWater);
-    if (liters < 1) return 'The base water tank is empty. Bring ice with the rover first.';
+    if (liters < RADIATION_CONFIG.SHELTER_FILL_MIN_L) return 'The base water tank is empty. Bring ice with the rover first.';
     tank.baseWater -= liters;
     this.shelterWaterL += liters;
     return `Moved ${Math.round(liters)} L into the wall. Less water to drink, more protection.`;
@@ -486,25 +491,50 @@ export class MissionSystem {
     return accepted;
   }
 
-  // O que o proximo envio leva. `discoveries` e `samples` = total feito nesta partida
-  // (descobertas do scanner nesta missao e amostras de regolito analisadas).
-  sciencePackage({ discoveries = 0, samples = 0 } = {}) {
-    return sciencePackage({ discoveries, samples, sentDiscoveries: this.sentDiscoveries, sentSamples: this.sentSamples });
+  // Livro da ciencia desta partida: o que ja foi enviado e o que foi gasto no laboratorio
+  get scienceLedger() {
+    return { sentIds: this.sentScienceIds, usedIds: this.usedScienceIds };
+  }
+
+  // `items` = tudo o que a crianca achou nesta partida (ScienceItem[], src/mission/sciencePackage.ts:
+  // descobertas do scanner e amostras analisadas), montado pelo GameEngine.
+  scienceStatus(items = []) {
+    return scienceStatus(items, this.scienceLedger);
+  }
+
+  // O que o proximo envio leva e quanto custa
+  sciencePackage(items = []) {
+    return sciencePackage(items, this.scienceLedger);
   }
 
   // Envia o que ainda nao foi (ate o limite de uma passagem do orbitador). Pode enviar em partes;
   // cada parte paga o custo base de novo. Devolve { status: 'sent' | 'empty' | 'no-energy', ... }.
-  sendData(totals = {}) {
-    const pkg = this.sciencePackage(totals);
-    const result = { status: 'sent', discoveries: pkg.uploadDiscoveries, samples: pkg.uploadSamples, cost: pkg.cost, leftAfter: pkg.leftAfter, dataSent: this.dataSent };
+  sendData(items = []) {
+    const pkg = this.sciencePackage(items);
+    const result = { status: 'sent', items: pkg.items, points: pkg.points, cost: pkg.cost, leftAfter: pkg.leftAfter, sentPoints: this.sentPoints, dataSent: this.dataSent };
     if (pkg.items === 0) return { ...result, status: 'empty' };
     if (!this.battery.spend(pkg.cost)) return { ...result, status: 'no-energy' };
-    this.sentDiscoveries += pkg.uploadDiscoveries;
-    this.sentSamples += pkg.uploadSamples;
+    for (const item of pkg.upload) {
+      this.sentScienceIds.add(item.id);
+      if (item.kind === 'sample') this.sentSamples++;
+      else this.sentDiscoveries++;
+    }
+    this.sentPoints += pkg.points;
     this.uploads++;
-    this.dataSent = scienceMinimumMet(this.sentDiscoveries, this.sentSamples);
+    this.dataSent = this.sentPoints >= SCIENCE_CONFIG.POINTS_TO_LAUNCH;
+    result.sentPoints = this.sentPoints;
     result.dataSent = this.dataSent;
     return result;
+  }
+
+  // Gasta `cost` pontos que ainda esperam o envio (melhorias do laboratorio). O que e gasto aqui
+  // nao vai mais para a Terra: melhorar o traje atrasa a decolagem. Devolve os pontos gastos
+  // (pode passar um pouco de `cost`, se so houver itens grandes) ou 0 se nao ha pontos.
+  spendScience(items = [], cost = 0) {
+    const picked = pickForSpend(this.scienceStatus(items).pending, cost);
+    if (!picked) return 0;
+    for (const item of picked) this.usedScienceIds.add(item.id);
+    return pointsOf(picked);
   }
 
   // Carrega 1 tubo de amostra no foguete. `analyzedSamples` = amostras analisadas no laboratorio

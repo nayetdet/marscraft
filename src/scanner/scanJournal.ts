@@ -93,8 +93,10 @@ export class ScanJournal {
    * (`missionNew`), mesmo se ja estava no diario permanente.
    * @returns {{isNew: boolean, missionNew: boolean, missionCount: number, count: number, total: number, completedCategory: string|null, completedAll: boolean}}
    */
-  record(id) {
-    const missionNew = this.validIds.has(id) && !this.missionScans.has(id);
+  record(id, { mission = true } = {}) {
+    // `mission: false` (fichas de amostra, issue #270): entra no diario, mas nao conta como
+    // descoberta do scanner desta partida. A amostra ja vale os seus pontos pela analise.
+    const missionNew = mission && this.validIds.has(id) && !this.missionScans.has(id);
     if (missionNew) this.missionScans.add(id);
     if (!this.validIds.has(id) || this.discovered.has(id)) {
       return { isNew: false, missionNew, missionCount: this.missionCount, count: this.count, total: this.total, completedCategory: null, completedAll: false };

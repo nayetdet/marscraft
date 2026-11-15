@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { describe, it, expect } from 'vitest';
-import { SCAN_CATALOG, SCAN_CATEGORIES, getScanEntry, listCatalogSources } from './scanCatalog.ts';
+import { SAMPLE_CATEGORY, SCAN_CATALOG, SCAN_CATEGORIES, getScanEntry, listCatalogSources } from './scanCatalog.ts';
+import { SAMPLE_TYPES } from './sampleTypes.ts';
 import { BLOCK_IDS } from '../config/blockTypes.ts';
 import { getJournalIcon } from '../graphics/journalIcons.ts';
 
@@ -15,8 +16,20 @@ const TARGET_IDS = [
 ];
 
 describe('scan catalog', () => {
-  it('has one entry for every target the scanner can resolve, and nothing else', () => {
-    expect(SCAN_CATALOG.map((e) => e.id).sort()).toEqual([...TARGET_IDS].sort());
+  it('has one entry for every target the scanner can resolve and every map sample, and nothing else', () => {
+    const sampleIds = SAMPLE_TYPES.map((type) => type.id);
+    expect(SCAN_CATALOG.map((e) => e.id).sort()).toEqual([...TARGET_IDS, ...sampleIds].sort());
+    expect(SCAN_CATALOG.filter((e) => e.category === SAMPLE_CATEGORY).map((e) => e.id).sort()).toEqual([...sampleIds].sort());
+  });
+
+  it('gives every map sample a real fact with a NASA source (issue #270)', () => {
+    expect(SAMPLE_TYPES.length).toBeGreaterThanOrEqual(4);
+    for (const type of SAMPLE_TYPES) {
+      expect(type.lines.length).toBeGreaterThanOrEqual(2);
+      expect(type.source.url).toMatch(/^https:\/\/(www\.)?(science\.)?(jpl\.)?nasa\.gov\//);
+      expect(type.points).toBeGreaterThan(0);
+      expect(getScanEntry(type.id).facts[1]).toMatchObject({ value: type.where, source: type.source });
+    }
   });
 
   it('uses unique ids and known categories', () => {

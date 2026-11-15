@@ -1,5 +1,8 @@
 // @ts-nocheck
 import { SIGNS, ZONE_COLORS } from '../base/basePosters.ts';
+import { speakerForZone } from './radioSpeakers.ts';
+import { RADIATION_CONFIG, ROVER_CONFIG, STATION_CONFIG, STORY_CONFIG, UTILITY_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.ts';
+import { PLANT_NEEDS, detourById } from './tutorialDetours.ts';
 
 // Tutorial guiado (teste com jogadores de 15/11/2026): um passo por vez, cada um com UMA coisa
 // para fazer, o lugar aonde ir e a tecla. O proximo passo so aparece quando a crianca termina
@@ -18,6 +21,9 @@ import { SIGNS, ZONE_COLORS } from '../base/basePosters.ts';
 //             quando o passo comecou: o que vale e o que a crianca fez DEPOIS do pedido
 //   core      true = continua existindo com o tutorial pulado (menu Demo Tools)
 //   certificate  id do selo que o passo entrega (CERTIFICATES em storyChapters.ts)
+//   needs     o que a base precisa ter para o passo funcionar: [{ resource, amount }], com as
+//             quantidades das constantes do jogo. Enquanto faltar, o StoryDirector mostra o
+//             desvio daquele recurso (src/story/tutorialDetours.ts, issue #237) e depois volta
 //
 // As tarefas de comer, beber e lavar contam a tentativa (apertar o botao certo), nao o resultado:
 // quem ja esta sem fome ou sem sede nao fica preso no passo.
@@ -72,6 +78,7 @@ export const TUTORIAL_STEPS = [
       { icon: 'drop', text: 'Go to the WATER TAP: press F' },
       { icon: 'home', text: 'It comes from the base tank' },
     ],
+    needs: [{ resource: 'water', amount: WATER_SYSTEM_CONFIG.DRINK_AMOUNT_FROM_DISPENSER }],
     done: more('drinkCount'),
   },
   {
@@ -87,6 +94,7 @@ export const TUTORIAL_STEPS = [
       { icon: 'check', text: 'Choose EAT A RATION' },
       { icon: 'heart', text: 'The pantry feeds the whole crew' },
     ],
+    needs: [{ resource: 'food', amount: STORY_CONFIG.TUTORIAL_RATIONS_NEEDED }],
     done: more('mealCount'),
   },
   {
@@ -103,6 +111,7 @@ export const TUTORIAL_STEPS = [
       { icon: 'check', text: 'Choose CALL EARTH' },
       { icon: 'bolt', text: 'Each call uses battery' },
     ],
+    needs: [{ resource: 'power', amount: STATION_CONFIG.COMMS_COST }],
     done: more('earthCalls'),
   },
   {
@@ -133,6 +142,7 @@ export const TUTORIAL_STEPS = [
       { icon: 'check', text: 'Pick a seed, then click a field' },
       { icon: 'drop', text: 'Plants drink water and use battery' },
     ],
+    needs: PLANT_NEEDS,
     done: more('plantCount'),
   },
   {
@@ -145,9 +155,11 @@ export const TUTORIAL_STEPS = [
     place: 'greenhouse',
     objective: 'Harvest 1 plant at the food monitor',
     lines: [
-      { icon: 'clock', text: 'Wait a few seconds: it grows fast' },
+      { icon: 'clock', text: 'Wait: lettuce is ready in 5 seconds' },
       { icon: 'plant', text: 'Press HARVEST at the food monitor' },
     ],
+    // A planta ja plantada so cresce com agua no tanque e luz na estufa
+    needs: PLANT_NEEDS,
     done: more('harvestCount'),
   },
   {
@@ -164,6 +176,7 @@ export const TUTORIAL_STEPS = [
       { icon: 'check', text: 'Press SPACE in the green zone' },
       { icon: 'down', text: 'Low gravity makes bones weak' },
     ],
+    needs: [{ resource: 'power', amount: STATION_CONFIG.EXERCISE_COST }],
     done: more('workoutCount'),
   },
   {
@@ -179,6 +192,7 @@ export const TUTORIAL_STEPS = [
       { icon: 'check', text: 'Choose WASH UP' },
       { icon: 'up', text: 'Used water is cleaned to drink again' },
     ],
+    needs: [{ resource: 'water', amount: UTILITY_CONFIG.WASH_WATER_L }],
     done: more('washCount'),
   },
   {
@@ -195,6 +209,7 @@ export const TUTORIAL_STEPS = [
       { icon: 'check', text: 'Choose FILL WALL' },
       { icon: 'drop', text: 'Wall water is water you cannot drink' },
     ],
+    needs: [{ resource: 'water', amount: RADIATION_CONFIG.SHELTER_FILL_MIN_L }],
     done: (s, b) => count(s, 'shelterWaterL') > count(b, 'shelterWaterL') + 1e-6,
   },
   {
@@ -224,6 +239,8 @@ export const TUTORIAL_STEPS = [
       { icon: 'check', text: 'Press SPACE to drill' },
       { icon: 'drop', text: 'Rover ice becomes water for the base' },
     ],
+    // O rover so perfura com a bateria acima do nivel baixo
+    needs: [{ resource: 'roverPower', amount: ROVER_CONFIG.LOW_BATTERY }],
     done: more('roverIceKg'),
   },
   {
@@ -283,13 +300,21 @@ export const TUTORIAL_STEP_IDS = TUTORIAL_STEPS.map((step) => step.id);
 // Passos que sobram com o tutorial pulado: entrar na base, avisar a Terra e buscar gelo
 export const CORE_STEPS = TUTORIAL_STEPS.filter((step) => step.core);
 
+// Tarefa de um objetivo do tutorial: o passo ou, durante um desvio (issue #237), a tarefa de
+// buscar o recurso que falta. Os dois tem label, hint, place, icon e zone.
 export function tutorialStepById(id) {
-  return TUTORIAL_STEPS.find((step) => step.id === id) ?? null;
+  return TUTORIAL_STEPS.find((step) => step.id === id) ?? detourById(id);
 }
 
 // Balao do passo: titulo com o numero ("STEP 4/15: CALL EARTH") e as frases do passo.
 // `step: true` avisa o StoryHud que este balao troca o do passo anterior, sem fila.
 export function stepCard(step, index, total) {
   // `stepId`: o GameEngine usa como gatilho do modal de trade-off da tarefa (tradeoffScenes.ts)
-  return { step: true, color: STEP_COLORS[step.zone], title: `STEP ${index + 1}/${total}: ${step.label}`, lines: step.lines, stepId: step.id };
+  return { step: true, color: STEP_COLORS[step.zone], title: `STEP ${index + 1}/${total}: ${step.label}`, lines: step.lines, stepId: step.id, speaker: speakerForZone(step.zone) };
+}
+
+// Balao do desvio (issue #237): troca o balao do passo enquanto a crianca busca o que falta.
+// Sem `stepId`: o desvio nao abre o modal de trade-off do passo.
+export function detourCard(detour) {
+  return { step: true, color: STEP_COLORS[detour.zone], title: `FIRST: ${detour.label}`, lines: detour.lines };
 }

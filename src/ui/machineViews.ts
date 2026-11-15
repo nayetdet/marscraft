@@ -51,8 +51,13 @@ export interface MachineViewData {
   filter: number;
   co2: number;
   contaminated: boolean;
-  science: number;
-  samples: number;
+  science: number; // pontos de ciencia esperando o envio (issue #269)
+  scienceSent: number;
+  scienceGoal: number;
+  sciencePanelHtml?: string; // lista do que a crianca achou (src/ui/sciencePanelView.ts)
+  samples: number; // amostras na mochila esperando a analise
+  stormSkipAllowed: boolean; // espera rapida da tempestade (issue #228)
+  stormSkipLabel: string;
   analyzedSamples: number;
   upgraded: boolean;
   toolUpgraded: boolean;
@@ -84,6 +89,7 @@ export interface MachineViewData {
   donkiLabel: string;
   donkiBulletin: string;
   pkgItems: number;
+  pkgPoints: number;
   pkgCost: number;
   sentDiscoveries: number;
   sentSamples: number;
@@ -229,7 +235,7 @@ function renderConsole(d: MachineViewData): { top: string; checks: string; stage
   const top = [
     resPill('power', 'bolt', `${Math.round(d.energy)}%`, 'mc-res-power', 'Battery'),
     resPill('water', 'air', `${Math.round(d.oxygen)}/${d.maxStat}`, 'mc-res-o2', 'Suit O2'),
-    resPill('science', 'scope', `${d.science}`, 'mc-res-sci', 'Science points'),
+    resPill('science', 'scope', `${d.science}`, 'mc-res-sci', 'Science points to send'),
     stormAlert,
   ].filter(Boolean).join('');
 
@@ -319,10 +325,10 @@ function renderConsole(d: MachineViewData): { top: string; checks: string; stage
         action: 'upgrade',
         icon: 'shield',
         title: d.upgraded ? 'SUIT SHIELDED' : 'UPGRADE SUIT',
-        costHtml: d.upgraded ? '' : costChip('scope', `${C.UPGRADE_COST} SCI`),
+        costHtml: d.upgraded ? '' : costChip('scope', `${SCIENCE_CONFIG.SUIT_UPGRADE_POINTS} SCI`),
         badgeText: d.upgraded ? 'MAX' : 'BUY',
-        badgeTone: d.upgraded ? 'on' : d.science >= C.UPGRADE_COST ? 'ready' : 'off',
-        disabled: d.upgraded || d.science < C.UPGRADE_COST,
+        badgeTone: d.upgraded ? 'on' : d.science >= SCIENCE_CONFIG.SUIT_UPGRADE_POINTS ? 'ready' : 'off',
+        disabled: d.upgraded || d.science < SCIENCE_CONFIG.SUIT_UPGRADE_POINTS,
         pressed: d.upgraded,
       })}
       ${actionCard({
@@ -733,13 +739,14 @@ function renderMedical(d: MachineViewData): { top: string; checks: string; stage
 /* ---------------- 4. SCIENCE & RADIO ---------------- */
 function renderScience(d: MachineViewData): { top: string; checks: string; stage: string; side: string; fact: string } {
   const top = [
-    resPill('science', 'scope', `${d.science}`, 'mc-res-sci', 'Science points'),
-    resPill('rock', 'rock', `${d.samples}`, 'mc-res-samples', 'Regolith waiting'),
+    resPill('science', 'scope', `${d.science}`, 'mc-res-sci', 'Science points to send'),
+    resPill('rock', 'rock', `${d.samples}`, 'mc-res-samples', 'Samples to analyze'),
+    resPill('earth', 'radio', `${Math.min(d.scienceSent, d.scienceGoal)}/${d.scienceGoal}`, 'mc-res-sent', 'Science points sent to Earth'),
     resPill('power', 'bolt', `${Math.round(d.energy)}%`, 'mc-res-power', 'Battery'),
     d.commsBlackout ? alertPill('SUN BLOCK!', 'warn') : '',
   ].filter(Boolean).join('');
 
-  const hasSampleReady = d.samples > 0 && d.regolith > 0;
+  const hasSampleReady = d.samples > 0;
 
   const svg = `
     <svg class="mc-scene-svg" viewBox="0 0 176 128" shape-rendering="crispEdges" aria-hidden="true">
@@ -789,12 +796,16 @@ function renderScience(d: MachineViewData): { top: string; checks: string; stage
       <rect x="140" y="92" width="12" height="12" fill="${d.pkgItems >= 3 ? '#a78bfa' : '#26294a'}"/>
     </svg>`;
 
-  const stage = `
+  // Com a lista do que a crianca achou (issue #269), ela ocupa o palco: e a informacao que
+  // importa aqui. Sem ela (testes, dados antigos) fica a cena do orbitador.
+  const stage = d.sciencePanelHtml
+    ? `<div class="mc-stage-box mc-sci-stage">${d.sciencePanelHtml}</div>`
+    : `
     <div class="mc-stage-box">
       ${svg}
       <div class="mc-stage-caption">
         <span class="mc-cap-tag">SENT</span>
-        <strong>${d.sentDiscoveries} scans · ${d.sentSamples} rocks</strong>
+        <strong>${d.scienceSent} / ${d.scienceGoal} points</strong>
       </div>
     </div>`;
 
@@ -804,16 +815,16 @@ function renderScience(d: MachineViewData): { top: string; checks: string; stage
       ${actionCard({
         action: 'analyze',
         icon: 'rock',
-        title: 'ANALYZE ROCK',
+        title: 'ANALYZE SAMPLE',
         costHtml: `${costChip('rock', '1')}${costChip('bolt', `${SCIENCE_CONFIG.ANALYZE_POWER_COST}%`)}`,
-        badgeText: `+${C.SCIENCE_PER_SAMPLE}`,
+        badgeText: '+PTS',
         badgeTone: hasSampleReady ? 'ready' : 'off',
         disabled: !hasSampleReady || d.energy < SCIENCE_CONFIG.ANALYZE_POWER_COST,
       })}
       ${actionCard({
         action: 'sendScience',
         icon: 'radio',
-        title: d.pkgItems > 0 ? `SEND ${d.pkgItems} TO EARTH` : 'NOTHING NEW',
+        title: d.pkgItems > 0 ? `SEND ${d.pkgPoints} PTS TO EARTH` : 'NOTHING NEW',
         costHtml: d.pkgItems > 0 ? costChip('bolt', `${d.pkgCost}%`) : '',
         badgeText: d.pkgItems > 0 ? 'UPLOAD' : 'EMPTY',
         badgeTone: d.pkgItems > 0 ? 'ready' : 'off',
@@ -832,8 +843,8 @@ function renderScience(d: MachineViewData): { top: string; checks: string; stage
           action: 'upgrade',
           icon: 'shield',
           title: d.upgraded ? 'SUIT MAX' : 'SUIT +',
-          costHtml: d.upgraded ? '' : costChip('scope', `${C.UPGRADE_COST}`),
-          disabled: d.upgraded || d.science < C.UPGRADE_COST,
+          costHtml: d.upgraded ? '' : costChip('scope', `${SCIENCE_CONFIG.SUIT_UPGRADE_POINTS}`),
+          disabled: d.upgraded || d.science < SCIENCE_CONFIG.SUIT_UPGRADE_POINTS,
           pressed: d.upgraded,
           compact: true,
         })}
@@ -841,8 +852,8 @@ function renderScience(d: MachineViewData): { top: string; checks: string; stage
           action: 'upgradeTool',
           icon: 'wrench',
           title: d.toolUpgraded ? 'TOOL MAX' : 'TOOL +',
-          costHtml: d.toolUpgraded ? '' : costChip('scope', `${C.TOOL_UPGRADE_COST}`),
-          disabled: d.toolUpgraded || d.science < C.TOOL_UPGRADE_COST,
+          costHtml: d.toolUpgraded ? '' : costChip('scope', `${SCIENCE_CONFIG.TOOL_UPGRADE_POINTS}`),
+          disabled: d.toolUpgraded || d.science < SCIENCE_CONFIG.TOOL_UPGRADE_POINTS,
           pressed: d.toolUpgraded,
           compact: true,
         })}
@@ -1279,7 +1290,18 @@ function renderShelter(d: MachineViewData): { top: string; checks: string; stage
           <div class="mc-bar-track"><i id="shelter-preview-wall-bar" style="width:${wallPct}%;background:#4ade80"></i></div>
         </div>
       </div>
-    </div>`;
+    </div>
+    ${actionCard({
+      action: 'waitStorm',
+      icon: 'clock',
+      title: 'WAIT OUT STORM',
+      costHtml: costChip('brick', `FULL WALL ${maxWall} L`),
+      badgeText: d.stormSkipAllowed ? 'GO' : 'LOCKED',
+      badgeTone: d.stormSkipAllowed ? 'ready' : 'off',
+      disabled: !d.stormSkipAllowed,
+      compact: true,
+    })}
+    <p class="mc-skip-note">${escapeHtml(d.stormSkipLabel)}</p>`;
 
   const fact = `
     <p><strong>Real Case:</strong> Solar storms shoot fast protons! Water is full of hydrogen, which slows protons down. Orion astronauts build shelters with their water and food bags.</p>

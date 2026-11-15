@@ -1,10 +1,16 @@
 // @ts-nocheck
 import { describe, expect, it } from 'vitest';
+import { BLOCK_IDS, HOTBAR_BLOCKS } from '../config/blockTypes.ts';
 import { StoryDirector } from './StoryDirector.ts';
 import { objectiveView } from './objectiveView.ts';
 import { objectiveTarget, routeWaypoint } from './waypoints.ts';
 import { CERTIFICATES, certificateBadge } from './storyChapters.ts';
-import { CORE_STEPS, STEP_COLORS, TUTORIAL_STEPS, TUTORIAL_STEP_IDS, stepCard } from './tutorialSteps.ts';
+import { CORE_STEPS, STEP_COLORS, TUTORIAL_STEPS, TUTORIAL_STEP_IDS, detourCard, stepCard, tutorialStepById } from './tutorialSteps.ts';
+import { PLANT_NEEDS, TUTORIAL_DETOURS, detourById, findDetours } from './tutorialDetours.ts';
+import {
+  CREW_CONFIG, CROP_CONFIG, ENERGY_CONFIG, RADIATION_CONFIG, ROVER_CONFIG, STATION_CONFIG, STORY_CONFIG,
+  UTILITY_CONFIG, WATER_SYSTEM_CONFIG,
+} from '../config/constants.ts';
 import { ZONE_COLORS } from '../base/basePosters.ts';
 import { pixelIconSvg } from '../ui/pixelIcons.ts';
 
@@ -53,6 +59,8 @@ function play(director, count) {
   }
   return state;
 }
+
+const STARTING_CARROTS = HOTBAR_BLOCKS.find((item) => item.id === BLOCK_IDS.HYDRO_PLANT)?.initialCount ?? 0;
 
 describe('guided tutorial', () => {
   it('has one action for every step, in the same order', () => {
@@ -168,7 +176,7 @@ describe('guided tutorial', () => {
 
   it('runs a simulated radiation pulse on the shielding certificate', () => {
     const shelter = CERTIFICATES.find((c) => c.id === 'cert-shelter');
-    expect(certificateBadge(shelter, { shelterWaterL: 10 }).line).toMatch(/10 L wall blocks 56%/);
+    expect(certificateBadge(shelter, { shelterWaterL: 10 }).line).toMatch(/10 L wall blocks 48%/);
   });
 });
 
@@ -226,5 +234,111 @@ describe('tutorial places', () => {
 
   it('points the rover at the ice crater directly: the driver is not walking out', () => {
     expect(routeWaypoint(objectiveTarget('rover-ice'), false)).toBe('ice');
+  });
+});
+
+// Issue #237: passo que gasta um recurso manda a crianca busca-lo quando a base nao tem
+describe('tutorial resource detours: the data', () => {
+  const detours = Object.values(TUTORIAL_DETOURS);
+  const stepsWithNeeds = TUTORIAL_STEPS.filter((step) => step.needs);
+
+  it('every resource a step or a detour needs has a detour that says where to get it', () => {
+    const needs = [...stepsWithNeeds, ...detours].flatMap((task) => task.needs ?? []);
+    expect(needs.length).toBeGreaterThan(0);
+    for (const need of needs) {
+      expect(TUTORIAL_DETOURS[need.resource], need.resource).toBeDefined();
+      expect(TUTORIAL_DETOURS[need.resource].resource).toBe(need.resource);
+      expect(need.amount).toBeGreaterThan(0);
+      expect(STORY_CONFIG.DETOUR_RESUME_EXTRA[need.resource]).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('covers every step that spends water, power, food or rover battery, with the game costs', () => {
+    const needs = Object.fromEntries(stepsWithNeeds.map((step) => [step.id, step.needs]));
+    expect(needs.drink).toEqual([{ resource: 'water', amount: WATER_SYSTEM_CONFIG.DRINK_AMOUNT_FROM_DISPENSER }]);
+    expect(needs.eat).toEqual([{ resource: 'food', amount: STORY_CONFIG.TUTORIAL_RATIONS_NEEDED }]);
+    expect(needs.report).toEqual([{ resource: 'power', amount: STATION_CONFIG.COMMS_COST }]);
+    expect(needs.plant).toBe(PLANT_NEEDS);
+    expect(needs['cert-greenhouse']).toBe(PLANT_NEEDS);
+    expect(needs['cert-gym']).toEqual([{ resource: 'power', amount: STATION_CONFIG.EXERCISE_COST }]);
+    expect(needs.wash).toEqual([{ resource: 'water', amount: UTILITY_CONFIG.WASH_WATER_L }]);
+    expect(needs['cert-shelter']).toEqual([{ resource: 'water', amount: RADIATION_CONFIG.SHELTER_FILL_MIN_L }]);
+    expect(needs['rover-ice']).toEqual([{ resource: 'roverPower', amount: ROVER_CONFIG.LOW_BATTERY }]);
+    // Plantar: a semente mais barata no menor campo
+    expect(PLANT_NEEDS).toEqual([
+      { resource: 'water', amount: CROP_CONFIG.lettuce.water },
+      { resource: 'power', amount: CROP_CONFIG.lettuce.energy },
+    ]);
+  });
+
+  it('a fresh base has enough of everything: no detour on a normal first run', () => {
+    const fresh = {
+      baseWaterL: WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER, batteryCharge: ENERGY_CONFIG.START_CHARGE,
+      // Como no GameEngine: racoes da despensa mais as plantas que a crianca traz na mochila
+      foodStock: CREW_CONFIG.START_FOOD + STARTING_CARROTS, roverBattery: ROVER_CONFIG.START_BATTERY,
+    };
+    for (const step of TUTORIAL_STEPS) expect(findDetours(step.needs, fresh), step.id).toEqual([]);
+  });
+
+  it('every detour sends the child to a place the tutorial already points at', () => {
+    const places = new Set(TUTORIAL_STEPS.map((step) => step.place).filter(Boolean));
+    for (const detour of detours) {
+      expect(places.has(detour.place), detour.id).toBe(true);
+      if (detour.roverPlace) expect(places.has(detour.roverPlace), detour.id).toBe(true);
+      expect(routeWaypoint(objectiveTarget(detour.id), true)).toBe(detour.place);
+      expect(tutorialStepById(detour.id)).toBe(detour);
+      expect(detourById(detour.id)).toBe(detour);
+    }
+    expect(TUTORIAL_STEP_IDS.some((id) => detourById(id))).toBe(false);
+  });
+
+  it('the water detour follows the rover: console inside, ice crater while driving', () => {
+    expect(objectiveTarget('need-water', {})).toBe('console');
+    expect(routeWaypoint(objectiveTarget('need-water', { roverActive: true }), false)).toBe('ice');
+    // O console do rover fica dentro da base: de fora, a seta passa pelo airlock
+    expect(routeWaypoint(objectiveTarget('need-water', {}), false)).toBe('airlock');
+  });
+
+  it('keeps detour texts short, for 7 to 12 year olds, with icons and colors that exist', () => {
+    for (const detour of detours) {
+      expect(pixelIconSvg(detour.icon), detour.id).not.toBe('');
+      expect(STEP_COLORS[detour.zone], detour.id).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(detour.label.split(' ').length).toBeLessThanOrEqual(3);
+      expect(detour.hint.length).toBeLessThanOrEqual(80);
+      expect(detour.lines.length).toBeLessThanOrEqual(3);
+      for (const line of detour.lines) {
+        expect(pixelIconSvg(line.icon), `${detour.id}: ${line.icon}`).not.toBe('');
+        expect(line.text.length).toBeLessThanOrEqual(50);
+      }
+      expect(detourCard(detour)).toMatchObject({ step: true, title: `FIRST: ${detour.label}`, color: STEP_COLORS[detour.zone] });
+      expect(detourCard(detour).stepId).toBeUndefined();
+    }
+  });
+
+  it('a detour that needs another resource sends the child to the deepest one first', () => {
+    const dryAndFlat = { baseWaterL: 0, roverBattery: 0 };
+    expect(findDetours(tutorialStepById('drink').needs, dryAndFlat).map((d) => d.id)).toEqual(['need-water', 'need-rover-power']);
+    expect(findDetours(tutorialStepById('drink').needs, { baseWaterL: 0, roverBattery: 100 }).map((d) => d.id)).toEqual(['need-water']);
+    // Sem comida, sem agua e com o rover carregado: primeiro a agua, que a planta vai beber
+    expect(findDetours(tutorialStepById('eat').needs, { foodStock: 0, baseWaterL: 0, batteryCharge: 100, roverBattery: 100 }).map((d) => d.id))
+      .toEqual(['need-food', 'need-water']);
+  });
+
+  it('a resource the game did not report never starts a detour', () => {
+    for (const step of TUTORIAL_STEPS) expect(findDetours(step.needs, {})).toEqual([]);
+    expect(findDetours(undefined, { baseWaterL: 0 })).toEqual([]);
+  });
+
+  it('leaving a detour asks for a little more than entering it, so the task does not flicker', () => {
+    const need = tutorialStepById('drink').needs;
+    const amount = WATER_SYSTEM_CONFIG.DRINK_AMOUNT_FROM_DISPENSER;
+    const extra = STORY_CONFIG.DETOUR_RESUME_EXTRA.water;
+    expect(extra).toBeGreaterThan(0);
+    const between = { baseWaterL: amount + extra / 2, roverBattery: 100 };
+    expect(findDetours(need, between)).toEqual([]);
+    expect(findDetours(need, between, new Set(['water'])).map((d) => d.id)).toEqual(['need-water']);
+    expect(findDetours(need, { baseWaterL: amount + extra, roverBattery: 100 }, new Set(['water']))).toEqual([]);
+    // Uma descarga do rover ja tira a crianca do desvio
+    expect(WATER_SYSTEM_CONFIG.ICE_PER_DRILL * WATER_SYSTEM_CONFIG.LITERS_PER_KG_ICE).toBeGreaterThanOrEqual(amount + extra);
   });
 });
