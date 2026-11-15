@@ -54,6 +54,10 @@ function mergedMesh(boxes, material) {
 export function buildGreenhouseFields(scene) {
   const R = HABITAT_LAYOUT.DOME_RADIUS;
   const material = new THREE.MeshLambertMaterial({ vertexColors: true });
+  // As plantas tem material proprio: quando param de crescer (sem luz, agua ou com poeira) ele
+  // fica amarelado e as folhas parecem murchas, sem mexer na terra das bandejas (issue #89)
+  const cropMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
+  let wilted = false;
   const color = new THREE.Color();
   const root = new THREE.Group();
   root.position.set(HABITAT_LAYOUT.DOME_X, WORLD_CONFIG.GROUND_LEVEL + 2, HABITAT_LAYOUT.DOME_Z);
@@ -77,7 +81,7 @@ export function buildGreenhouseFields(scene) {
     const meshes = {};
     for (const [type, shape] of Object.entries(CROP_SHAPES)) {
       const boxes = plantCells.flatMap(({ dx, dz }) => shape.map((part) => coloredBox(part, dx + 0.5, dz + 0.5, color)));
-      const mesh = mergedMesh(boxes, material);
+      const mesh = mergedMesh(boxes, cropMaterial);
       mesh.visible = false;
       group.add(mesh);
       meshes[type] = mesh;
@@ -92,7 +96,12 @@ export function buildGreenhouseFields(scene) {
   return {
     cellCounts: cells.map((list) => list.length),
     // `plots` = StationSystem.plots. Barato: so mexe na escala e na visibilidade.
-    update(plots) {
+    // `stalled` = as plantas pararam de crescer (falta luz, agua ou ha poeira): ficam murchas.
+    update(plots, { stalled = false } = {}) {
+      if (stalled !== wilted) {
+        wilted = stalled;
+        cropMaterial.color.setHex(stalled ? 0xb59a52 : 0xffffff);
+      }
       for (let i = 1; i < fields.length; i++) {
         const field = fields[i];
         if (!field) continue;

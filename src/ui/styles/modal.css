@@ -1224,3 +1224,27 @@ body.pause-menu-open .crew-picker { display: none; }
     padding: 4px 8px;
   }
 }
+
+/* Os 3 cuidados da estufa (issue #89): luz LED, agua reciclada e sem poeira */
+.gh-checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0; }
+.gh-check {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 6px;
+  align-items: center;
+  padding: 5px 7px;
+  border: 2px solid #000;
+  background: #1f2f1f;
+  color: #eaffea;
+}
+.gh-check b { grid-row: span 2; padding: 2px 4px; font-size: 11px; background: #22c55e; color: #052e16; }
+.gh-check span { font-size: 11px; letter-spacing: .5px; }
+.gh-check small { font-size: 10px; color: #b7d9b7; }
+.gh-check.bad { background: #3b1414; color: #ffe1dd; }
+.gh-check.bad b { background: #ef4444; color: #fff; animation: mission-blink 1s steps(2, end) infinite; }
+.gh-check.bad small { color: #ffb4ab; }
+@media (max-height: 500px) {
+  .gh-checks { gap: 4px; margin: 4px 0; }
+  .gh-check { padding: 3px 5px; }
+  .gh-check small { display: none; }
+}

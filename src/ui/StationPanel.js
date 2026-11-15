@@ -10,6 +10,7 @@ import plantResearch from '../data/osdrPlants.json';
 import { plantDiscovery } from '../data/plantDiscoveries.js';
 import { createCropTexture } from '../graphics/cropTextures.js';
 import { GymWorkout } from './gymWorkout.js';
+import { growthChecks } from '../base/greenhouseCare.js';
 import { MEDBAY_BONE_TEXT } from './stationText.js';
 
 const DATA_SOURCES = {
@@ -1016,6 +1017,12 @@ export class StationPanel {
         ${alertPill}
         ${s.contaminated ? `<button type="button" class="mc-btn gh-clean-btn" data-action="cleanBase">CLEAN</button>` : ''}
         <details class="gym-learn"><summary aria-label="NASA info" title="NASA info">i</summary><p>Plants drink from the base tank and breathe water back for the recycler. NASA grew salad crops in 28 days on the Space Station.<br/><br/>${study ? `${study.id}: ${study.explanation}` : `Real NASA OSDR data (${formatDateDMY(plantResearch.retrieved.slice(0, 10))}).`}<br/>${ghLinks}</p></details>
+      </div>
+      <div class="gh-checks" aria-label="What the plants need">
+        ${growthChecks(this.engine.greenhouseState()).map((check) => `
+          <div class="gh-check ${check.ok ? 'ok' : 'bad'}">
+            <b>${check.ok ? 'OK' : '!!'}</b><span>${check.label}</span><small>${check.detail}</small>
+          </div>`).join('')}
       </div>
       <div class="gh-body">
         <div class="gh-map-wrap">
