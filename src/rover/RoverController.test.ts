@@ -23,7 +23,7 @@ describe('RoverController', () => {
     expect(controller.cameraPitch).toBe(-0.22);
   });
 
-  it('starts facing outward from the base so forward movement leaves the dock', () => {
+  it('spawns facing the opposite direction from its previous heading', () => {
     const roverGroup = new THREE.Group();
     roverGroup.position.set(7.5, 9, 10.5);
     roverGroup.rotation.y = R.SPAWN_YAW;
@@ -33,7 +33,7 @@ describe('RoverController', () => {
     controller.update(0.5, { KeyW: true });
 
     expect(controller.yaw).toBe(R.SPAWN_YAW);
-    expect(controller.pos.z).toBeGreaterThan(10.5);
+    expect(controller.pos.z).toBeLessThan(10.5);
   });
 
   it('ativa o rover e permite olhar ao redor sem ultrapassar os limites da câmera', () => {
