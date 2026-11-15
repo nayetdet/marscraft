@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { MISSION_CONFIG } from '../config/constants.js';
 import { createAtmosphereDome } from './atmosphereShader.js';
+import { advanceSolClock } from './solClock.js';
 import {
   createEarthAndMoonSystem,
   createMartianMoons,
@@ -80,11 +81,9 @@ export class MarsSkySystem {
   }
 
   advanceTime(deltaHours) {
-    this.timeOfDay += deltaHours;
-    if (this.timeOfDay >= 24) {
-      this.timeOfDay -= 24;
-      this.solCount++;
-    }
+    const clock = advanceSolClock(this.timeOfDay, this.solCount, deltaHours);
+    this.timeOfDay = clock.timeOfDay;
+    this.solCount = clock.solCount;
   }
 
   update(dt, playerPos) {

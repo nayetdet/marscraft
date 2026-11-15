@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { Airlock } from './Airlock.js';
-import { MissionSystem } from '../core/MissionSystem.js';
+import { ExpeditionState } from '../core/ExpeditionState.js';
 import { StationSystem } from '../core/StationSystem.js';
 import { MISSION_CONFIG as C } from '../config/constants.js';
 
@@ -15,7 +15,7 @@ const run = (airlock, player, seconds) => {
 describe('airlock', () => {
   it('only opens a door after the cycle ends and interlocks the doors', () => {
     const colliders = [];
-    const airlock = new Airlock(new THREE.Scene(), colliders, new MissionSystem());
+    const airlock = new Airlock(new THREE.Scene(), colliders, new ExpeditionState());
     const [inner, outer] = airlock.doors;
     airlock.request(inner, away);
     run(airlock, away, 2);
@@ -37,7 +37,7 @@ describe('airlock', () => {
   });
 
   it('plays door and decompression events in sequence after both doors close', () => {
-    const airlock = new Airlock(new THREE.Scene(), [], new MissionSystem());
+    const airlock = new Airlock(new THREE.Scene(), [], new ExpeditionState());
     const events = [];
     airlock.onEvent = (type) => events.push(type);
     const [inner, outer] = airlock.doors;
@@ -63,7 +63,7 @@ describe('airlock', () => {
   });
 
   it('refills with air and cleans a dusty suit before opening to the base', () => {
-    const mission = new MissionSystem();
+    const mission = new ExpeditionState();
     const stations = new StationSystem(mission);
     const events = [];
     const airlock = new Airlock(new THREE.Scene(), [], mission);
@@ -85,7 +85,7 @@ describe('airlock', () => {
   });
 
   it('lets the dust in when there is no power to clean the suit', () => {
-    const mission = new MissionSystem();
+    const mission = new ExpeditionState();
     const stations = new StationSystem(mission);
     const events = [];
     const airlock = new Airlock(new THREE.Scene(), [], mission);
@@ -103,7 +103,7 @@ describe('airlock', () => {
   });
 
   it('refuses a cycle with no power', () => {
-    const mission = new MissionSystem();
+    const mission = new ExpeditionState();
     mission.energy = 0;
     const airlock = new Airlock(new THREE.Scene(), [], mission);
     expect(airlock.request(airlock.doors[0], away)).toMatch(/energy/);
@@ -111,7 +111,7 @@ describe('airlock', () => {
 });
 
 it('clips sliding leaves to the opening while leaving the frame intact', () => {
-  const airlock = new Airlock(new THREE.Scene(), [], new MissionSystem());
+  const airlock = new Airlock(new THREE.Scene(), [], new ExpeditionState());
   for (const door of airlock.doors) {
     const panel = door.left.children[0];
     const planes = panel.material.clippingPlanes;

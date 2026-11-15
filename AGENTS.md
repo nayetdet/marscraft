@@ -46,6 +46,8 @@ O desafio, em uma frase: um jogo em que **crianças de 7 a 12 anos** administram
 index.html                 HUD, menus e tela de morte (markup + ids usados pelo HudManager)
 src/main.js                bootstrap → new GameEngine(container).start()
 src/core/GameEngine.js     loop principal; instancia e conecta todos os sistemas
+src/mission/               missao: bateria e paineis (energy), tempestades solares do DONKI (solarStorms), radiacao,
+                           radio Terra-Marte (commsLink, earthMars), MAV e textos (MissionSystem, missionText)
 src/config/
   constants.js             WORLD/PHYSICS/CAMERA/SURVIVAL_CONFIG (todo número de balanceamento mora aqui)
   blockTypes.js            BLOCK_IDS e HOTBAR_BLOCKS (inventário inicial, consumíveis)
@@ -90,7 +92,7 @@ docs/                      contexto do desafio, APIs e dados reais
 
 - **Recursos e regras de sobrevivência:** `SurvivalSystem.update(dt, playerPos)`. Hoje o O2 recarrega de graça em `isPlayerInsideShip`; é aí que entra o custo de energia.
 - **Balanceamento:** só em `src/config/constants.js`. Não espalhe números mágicos.
-- **Ciclo dia/noite (energia solar):** `MarsSkySystem.timeOfDay` / `solCount` (1 sol ≈ 20 min reais com `autoAdvanceSpeed = 0.02`).
+- **Ciclo dia/noite (energia solar):** `MarsSkySystem.timeOfDay` / `solCount` (1 sol = 24 h de jogo ≈ 40 min reais; 1 hora de jogo = 100 s reais, com `MISSION_CONFIG.GAME_HOURS_PER_SECOND = 0.01`).
 - **Dados da NASA embutidos:** crie `src/data/*.json` (gerados por script, com data de coleta) e um módulo de acesso. Não faça fetch espalhado pelo código.
 - **HUD novo:** adicione o markup em `index.html` e a lógica em `HudManager.update(...)`.
 

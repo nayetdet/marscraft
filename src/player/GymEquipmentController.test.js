@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { GymEquipmentController } from './GymEquipmentController.js';
-import { MissionSystem as ExpeditionState } from '../core/MissionSystem.js';
+import { ExpeditionState } from '../core/ExpeditionState.js';
 import { StationSystem as HabitatStationSystem } from '../core/StationSystem.js';
 
 describe('GymEquipmentController (in-world 3D treadmill & exercise bike)', () => {

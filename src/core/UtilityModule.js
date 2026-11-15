@@ -1,5 +1,5 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { CREW_CONFIG, ENERGY_CONFIG, STATION_CONFIG, UTILITY_CONFIG as U } from '../config/constants.js';
+import { CREW_CONFIG, ENERGY_CONFIG, MISSION_CONFIG, STATION_CONFIG, UTILITY_CONFIG as U } from '../config/constants.js';
 
 // Regras do modulo norte (issue #56, parte B). Sem DOM nem Three.js, para testar com Vitest.
 // Nenhuma acao e de graca: tudo cobra energia, agua, comida da despensa ou regolito.
@@ -65,14 +65,20 @@ export class UtilityModule {
     return '';
   }
 
+  // % de bateria que a luz da estufa gasta em `seconds` segundos reais. E o unico lugar que
+  // converte a taxa por hora de jogo para o relogio real (MISSION_CONFIG.GAME_HOURS_PER_SECOND).
+  greenhouseLightsCost(seconds) {
+    return U.GREENHOUSE_LIGHTS_PER_HOUR * seconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND;
+  }
+
   // Lista de consumidores em % de bateria por hora de jogo, para o painel de distribuicao
-  loads({ crewSize = 0, operatingStations = 0, greenhouseRatePerSecond = 0 } = {}) {
+  loads({ crewSize = 0, operatingStations = 0 } = {}) {
     const m = this.mission;
     const factoryRunning = m.factoryOn && m.iceStock > 0 && m.propellant < 100;
     return [
       ['Crew oxygen', crewSize * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR, true],
       ['Crew at work', operatingStations * STATION_CONFIG.WORK_ENERGY_PER_HOUR, true],
-      ['Greenhouse lights', greenhouseRatePerSecond * U.GAME_SECONDS_PER_HOUR, this.greenhouseLightsOn],
+      ['Greenhouse lights', U.GREENHOUSE_LIGHTS_PER_HOUR, this.greenhouseLightsOn],
       ['Heater', this.isNight ? U.HEATER_NIGHT_PER_HOUR : U.HEATER_DAY_PER_HOUR, this.heaterOn],
       ['Radiation shield', ENERGY_CONFIG.SHIELD_DRAIN_PER_HOUR, m.shieldOn],
       ['Fuel factory', factoryRunning ? ENERGY_CONFIG.ISRU_DRAIN_PER_HOUR : 0, m.factoryOn],
