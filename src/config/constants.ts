@@ -613,6 +613,20 @@ export const CROP_CONFIG = Object.freeze({
   soy: { water: 3, energy: 5, seconds: 9, nutrition: 10, strategy: 'Big harvest, thirsty plants' },
 });
 
+// Como a planta aparece enquanto cresce (so visual; o tempo e o de CROP_CONFIG.seconds). Logo ao
+// plantar ja aparece um broto bem visivel em cada bandeja, para a crianca ver que plantou.
+export const CROP_LOOK_CONFIG = Object.freeze({
+  // Fracao do crescimento em que a muda ainda e um broto (depois vira a planta da cultura)
+  SPROUT_UNTIL: 0.3,
+  // Escala do broto recem-plantado e da planta quando deixa de ser broto (1 = pronta)
+  SPROUT_MIN_SCALE: 0.8,
+  PLANT_MIN_SCALE: 0.45,
+  // Marcador de "pronto para colher" sobre o campo: altura acima do piso, quanto sobe e desce, giro
+  MARKER_HEIGHT: 1.35,
+  MARKER_BOB: 0.1,
+  MARKER_SPIN: 1.6,
+});
+
 // Dose de radiacao acumulada como orcamento da missao (issue #104). Fontes em
 // docs/data/numeros-reais.md, secao "Dose da missao".
 export const DOSE_CONFIG = {
