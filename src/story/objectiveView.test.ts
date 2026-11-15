@@ -27,14 +27,15 @@ function director() {
   return story;
 }
 
-// Faz os 5 passos do tutorial: o ato 2 (e a janela de lancamento) comeca na hora 16, com 1 gelo
-// ja entregue no foguete
+// Faz os 6 passos do ato 1 (avisar a Terra, rover, gelo do rover, traje, gelo do meteoro e
+// foguete): o ato 2 (e a janela de lancamento) comeca na hora 16, com 1 gelo ja entregue
 function reachAct2(story) {
-  story.update(snap({ insideHabitat: true }));
-  story.update(snap({ insideHabitat: true, earthCalls: 1 }));
+  story.update(snap({ earthCalls: 1 }));
+  story.update(snap({ earthCalls: 1, roverDrives: 1 }));
+  story.update(snap({ earthCalls: 1, roverDrives: 1, roverIceKg: 100 }));
+  story.update(snap({ suitEquipped: true }));
   story.update(snap({ hours: 16, iceCount: 1 }));
   story.update(snap({ hours: 16, iceNeeded: 5 }));
-  story.update(snap({ hours: 16, iceNeeded: 5, scanCount: 1 }));
 }
 
 // Avanca o diretor e devolve o que o painel desenha para o mesmo retrato
@@ -72,9 +73,9 @@ describe('objectiveView', () => {
     const story = director();
     let view = step(story);
     expect(view.act).toBe(1);
-    expect(view.task).toMatchObject({ icon: 'door', label: 'ENTER THE BASE' });
+    expect(view.task).toMatchObject({ icon: 'radio', label: 'CALL EARTH' });
     expect(view.task.hint).toMatch(/[Pp]ress F/);
-    expect(view.progress).toEqual({ now: 1, total: 5 });
+    expect(view.progress).toEqual({ now: 1, total: 6 });
     expect(view.steps).toBeNull();
     expect(view.loop).toBe(false);
     // A meta e o foguete vazio aparecem desde o primeiro passo
@@ -84,17 +85,16 @@ describe('objectiveView', () => {
     expect(view.timer).toBeNull();
     expect(view.signal).toBeNull();
 
-    view = step(story, { insideHabitat: true });
-    expect(view.task.label).toBe('CALL EARTH');
-    expect(view.progress).toEqual({ now: 2, total: 5 });
+    view = step(story, { earthCalls: 1 });
+    expect(view.task.label).toBe('DRIVE THE ROVER');
+    expect(view.progress).toEqual({ now: 2, total: 6 });
   });
 
   it('shows the answer from Earth travelling while the next step is already on', () => {
     const story = director();
-    step(story, { insideHabitat: true });
-    let view = step(story, { insideHabitat: true, earthCalls: 1 });
-    expect(view.task.label).toBe('GET 1 ICE');
-    expect(view.progress).toEqual({ now: 3, total: 5 });
+    let view = step(story, { earthCalls: 1 });
+    expect(view.task.label).toBe('DRIVE THE ROVER');
+    expect(view.progress).toEqual({ now: 2, total: 6 });
     expect(view.timer).toBeNull();
     expect(view.signal).toMatchObject({ seconds: 25, returning: false, label: 'MESSAGE ON ITS WAY' });
     expect(view.signal.position).toBeCloseTo(0);

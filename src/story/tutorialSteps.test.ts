@@ -38,6 +38,7 @@ const ACTIONS = [
   ['cert-shelter', { shelterWaterL: 10 }],
   ['rover-drive', { roverDrives: 1 }],
   ['rover-ice', { roverIceKg: 10 }],
+  ['suit-up', { suitEquipped: true }],
   ['collect-ice', { iceCount: 1 }],
   ['load-rocket', { iceCount: 0, iceNeeded: 9 }],
   ['scan', { scanCount: 1 }],
@@ -157,9 +158,8 @@ describe('guided tutorial', () => {
     expect(before.skipTraining()).toBe(false);
     before.start(snap());
     expect(before.steps).toBe(CORE_STEPS);
-    before.update(snap({ insideHabitat: true }));
-    before.update(snap({ insideHabitat: true, earthCalls: 1 }));
-    expect(before.objectiveId).toBe('collect-ice');
+    before.update(snap({ earthCalls: 1 }));
+    expect(before.objectiveId).toBe('rover-drive');
   });
 
   it('shows the step, its hint and its number in the objective panel', () => {
@@ -212,9 +212,9 @@ describe('tutorial step texts', () => {
     });
   });
 
-  it('has unique ids and keeps the 5 core steps as the default tutorial', () => {
+  it('has unique ids and keeps the 6 steps of act 1 as the default tutorial', () => {
     expect(new Set(TUTORIAL_STEP_IDS).size).toBe(TUTORIAL_STEPS.length);
-    expect(CORE_STEPS.map((step) => step.id)).toEqual(['enter-base', 'report', 'collect-ice', 'load-rocket', 'scan']);
+    expect(CORE_STEPS.map((step) => step.id)).toEqual(['report', 'rover-drive', 'rover-ice', 'suit-up', 'collect-ice', 'load-rocket']);
   });
 });
 
