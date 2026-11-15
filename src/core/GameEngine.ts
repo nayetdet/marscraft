@@ -414,6 +414,12 @@ export class GameEngine {
     }, CREW_CONFIG.SUIT_COLORS[0]);
     this.playerAvatar.label.visible = false;
     this.playerAvatar.group.visible = false;
+    this.playerHand.attachThirdPersonHeldItems(this.playerAvatar.elbowR);
+    this.playerHand.onThirdPersonAction = (action) => {
+      if (this.isThirdPerson && !this.roverController.isActive && !this.gymController.isActive) {
+        this.playerAvatar.triggerPlayerAction(action);
+      }
+    };
 
     // Modo Shaders começa desligado; o botao do menu permite ligar. Criado antes do compile para
     // os shaders com sombra ja sairem prontos quando o jogador escolher ativa-los.
@@ -2132,6 +2138,17 @@ export class GameEngine {
     // Numa animacao quem posiciona a tripulacao e a propria animacao (o embarque no foguete)
     for (const avatar of this.crewAvatars) {
       if (!avatar.cutsceneControlled) avatar.update(dt);
+    }
+    if (this.isThirdPerson && !this.roverController.isActive && !this.gymController.isActive) {
+      const canMove = active
+        && !this.hud.isInventoryOpen
+        && !this.scannerHud.isJournalOpen
+        && !this.stationPanel.isOpen
+        && !this.adminPanel.isOpen
+        && !this.sleep?.isSleeping
+        && !this.tradeoffHud?.isOpen;
+      const sprinting = this.input.keys.Sprint || this.input.keys.ShiftLeft || this.input.keys.ShiftRight;
+      this.playerAvatar.posePlayer(dt, canMove && this.player.isMoving, sprinting ? 1.28 : 1);
     }
     if (!this.cutscenes.isActive) {
       separateCrew(this.crewAvatars, active && !this.roverController.isActive && !this.gymController.isActive ? this.player : null);

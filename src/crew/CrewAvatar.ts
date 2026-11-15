@@ -144,6 +144,8 @@ export class CrewAvatar {
     this._walkPhase = (member.id * 1.9) % (Math.PI * 2);
     this._tempo = 0.94 + (member.id % 3) * 0.05;
     this._walkBlend = member.state === 'walking' ? 1 : 0;
+    this._playerAction = null;
+    this._playerActionTime = 0;
     this._heading = null;
     this._posInit = false;
     this.cutsceneControlled = false;
@@ -312,6 +314,37 @@ export class CrewAvatar {
     this.upperBody.rotation.z = p.torsoRoll;
     this.headGroup.rotation.x = p.headPitch;
     this.headGroup.rotation.y = p.headYaw;
+  }
+
+  triggerPlayerAction(action) {
+    this._playerAction = action;
+    this._playerActionTime = 0;
+  }
+
+  // Pose driven directly by the controlled astronaut instead of the crew rail simulation.
+  posePlayer(dt, moving, pace = 1) {
+    this._time += dt;
+    const targetWalk = moving ? 1 : 0;
+    this._walkBlend += (targetWalk - this._walkBlend) * dampAlpha(9, dt);
+    if (this._walkBlend > 0.002) {
+      this._walkPhase += dt * WALK_RATE * pace * (0.35 + 0.65 * this._walkBlend);
+    }
+
+    const pose = this._pose;
+    this._setWalkPose(pose, this._walkPhase, this._walkBlend);
+    this._addIdlePose(pose, 'resting', 1 - this._walkBlend);
+    this._applyJoints(pose);
+
+    if (this._playerAction) {
+      this._playerActionTime += dt;
+      const duration = this._playerAction === 'eat' ? 0.52 : 0.38;
+      const progress = Math.min(1, this._playerActionTime / duration);
+      const swing = Math.sin(progress * Math.PI);
+      const reach = this._playerAction === 'eat' ? 0.92 : 1.42;
+      this.armR.rotation.x -= swing * reach;
+      this.elbowR.rotation.x -= swing * 0.48;
+      if (progress >= 1) this._playerAction = null;
+    }
   }
 
   update(dt) {

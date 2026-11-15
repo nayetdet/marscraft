@@ -359,6 +359,61 @@ export class PlayerHand {
     for (const model of Object.values(this.heldCrops)) model.visible = false;
   }
 
+  attachThirdPersonHeldItems(handJoint) {
+    this.thirdPersonItemGroup = new THREE.Group();
+    this.thirdPersonItemGroup.position.set(0, -0.35, 0.14);
+    this.thirdPersonItemGroup.rotation.x = 0.25;
+    handJoint.add(this.thirdPersonItemGroup);
+    this.thirdPersonHeldItems = new Map();
+
+    const addItem = (key, source) => {
+      const item = source.clone(true);
+      item.position.set(0, 0, 0);
+      item.visible = true;
+      item.traverse((node) => { node.renderOrder = 0; });
+      this.thirdPersonItemGroup.add(item);
+      this.thirdPersonHeldItems.set(key, item);
+    };
+
+    addItem('block', this.heldBlockMesh);
+    addItem('carrot', this.heldCarrotMesh);
+    addItem('ration', this.heldRationMesh);
+    addItem('scope', this.heldScopeMesh);
+    addItem('shield', this.heldShieldRemoteMesh);
+    addItem('journal', this.heldJournalMesh);
+    addItem('brush', this.heldBrushMesh);
+    for (const [id, crop] of Object.entries(this.heldCrops)) addItem(`crop:${id}`, crop);
+
+    this._syncThirdPersonHeldItem(this._currentHeld.blockId, this._currentHeld.count);
+  }
+
+  _syncThirdPersonHeldItem(blockId, count) {
+    if (!this.thirdPersonHeldItems) return;
+    for (const item of this.thirdPersonHeldItems.values()) item.visible = false;
+    if (this.cleanTime > 0) {
+      this.thirdPersonHeldItems.get('brush').visible = true;
+      return;
+    }
+    if (!blockId || count <= 0) return;
+
+    let key = 'block';
+    if (blockId === BLOCK_IDS.HYDRO_PLANT) key = 'carrot';
+    else if (blockId === BLOCK_IDS.RATION) key = 'ration';
+    else if (blockId === BLOCK_IDS.SCOPE) key = 'scope';
+    else if (blockId === BLOCK_IDS.SHIELD_REMOTE) key = 'shield';
+    else if (blockId === BLOCK_IDS.JOURNAL) key = 'journal';
+    else if (this.heldCrops[blockId]) key = `crop:${blockId}`;
+
+    const item = this.thirdPersonHeldItems.get(key);
+    if (!item) return;
+    if (key === 'block') {
+      const material = this._getHandMaterial(blockId);
+      if (!material) return;
+      item.material = material;
+    }
+    item.visible = true;
+  }
+
   // Um clone por tipo de bloco, reaproveitado (antes clonava a cada troca de slot e vazava)
   _getHandMaterial(blockId) {
     if (!this._handMaterials) this._handMaterials = {};
@@ -379,6 +434,7 @@ export class PlayerHand {
       return;
     }
     this._currentHeld = { blockId, count };
+    this._syncThirdPersonHeldItem(blockId, count);
     this._hideHeldItems();
     this.heldJournalMesh.visible = blockId === BLOCK_IDS.JOURNAL && count > 0;
     this.heldScopeMesh.visible = blockId === BLOCK_IDS.SCOPE && count > 0;
@@ -446,6 +502,7 @@ export class PlayerHand {
     this.heldBrushMesh.visible = false;
     this.eatTime = BLOCK_INTERACTION_CONFIG.EAT_ANIMATION_DURATION;
     this.isSwinging = false;
+    this.onThirdPersonAction?.('eat');
   }
 
   triggerCleanSolar() {
@@ -456,6 +513,8 @@ export class PlayerHand {
     this._hideHeldItems();
     this.heldBrushMesh.visible = true;
     this.armMesh.position.set(0.08, -0.06, 0.08);
+    this._syncThirdPersonHeldItem(this._currentHeld.blockId, this._currentHeld.count);
+    this.onThirdPersonAction?.('clean');
   }
 
   triggerReceive() {
@@ -466,6 +525,7 @@ export class PlayerHand {
     if (this.isSwinging) return;
     this.isSwinging = true;
     this.swingProgress = 0;
+    this.onThirdPersonAction?.('swing');
   }
 
   update(dt, isMoving) {
