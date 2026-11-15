@@ -116,10 +116,10 @@ describe('north module (issue #56, part B)', () => {
   it('the recycler cleans gray water by itself, gives back 98% and charges the battery per liter', () => {
     const { utility, survival, base, mission } = setup();
     utility.toggle('heater'); // aquecedor desligado de dia: so o reciclador gasta bateria
-    base.graywater = 10;
+    base.graywater = 100;
     utility.update(1);
     const treated = STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR;
-    expect(base.graywater).toBeCloseTo(10 - treated);
+    expect(base.graywater).toBeCloseTo(100 - treated);
     expect(survival.baseWater).toBeCloseTo(10 + treated * STATION_CONFIG.WATER_RECOVERY);
     expect(mission.battery.charge).toBeCloseTo(80 - treated * U.RECYCLER_POWER_PER_L);
     expect(utility.waterRecycledL).toBeCloseTo(treated * STATION_CONFIG.WATER_RECOVERY);

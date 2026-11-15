@@ -43,15 +43,22 @@ const cards = (director) => director.drainEvents().filter((e) => e.type === 'car
 // Hora em que o ato 2 comeca nos testes: a janela de lancamento fecha em MISSION_START + WINDOW
 const MISSION_START = 16;
 
-// Leva o diretor pelos 5 passos do tutorial ate o comeco do ato 2 (com a resposta da Terra ja
-// entregue): entrar, avisar a Terra, pegar gelo, carregar o foguete e escanear
+// Ato 1 (#407), do comeco ate o passo 'collect-ice': avisar a Terra, ligar o rover, descarregar
+// o gelo do rover (o meteoro cai) e vestir o traje. Cada update conclui um passo.
+function toIceStep(director, extra = {}) {
+  director.update(snap({ ...extra, earthCalls: 1 }));
+  director.update(snap({ ...extra, earthCalls: 1, roverDrives: 1 }));
+  director.update(snap({ ...extra, earthCalls: 1, roverDrives: 1, roverIceKg: 100 }));
+  director.update(snap({ ...extra, suitEquipped: true }));
+}
+
+// Leva o diretor pelos 6 passos do ato 1 ate o comeco do ato 2 (com a resposta da Terra ja
+// entregue): os de cima, pegar o gelo do meteoro e carregar o foguete
 function reachAct2(director) {
-  director.update(snap({ insideHabitat: true }));
-  director.update(snap({ insideHabitat: true, earthCalls: 1 }));
+  toIceStep(director);
   director.update(snap({ hours: 15 + REPLY }));
   director.update(snap({ hours: MISSION_START, iceCount: 1 }));
   director.update(snap({ hours: MISSION_START, iceNeeded: 5 }));
-  director.update(snap({ hours: MISSION_START, iceNeeded: 5, scanCount: 1 }));
   director.drainEvents();
 }
 
@@ -68,12 +75,12 @@ describe('StoryDirector', () => {
     const director = new StoryDirector();
     director.start(15);
     expect(director.act).toBe(1);
-    expect(director.objectiveId).toBe('enter-base');
-    expect(director.objectiveText).toMatch(/inside the base/);
+    expect(director.objectiveId).toBe('report');
+    expect(director.objectiveText).toMatch(/Call Earth/);
     const events = director.drainEvents();
     expect(events).toHaveLength(1);
     expect(events[0].type).toBe('card');
-    expect(events[0].card.title).toBe('STEP 1/5: ENTER THE BASE');
+    expect(events[0].card.title).toBe('STEP 1/6: CALL EARTH');
     expect(events[0].card.step).toBe(true);
   });
 
@@ -81,19 +88,16 @@ describe('StoryDirector', () => {
     const director = started();
 
     director.update(snap());
-    expect(director.objectiveId).toBe('enter-base');
-
-    director.update(snap({ insideHabitat: true }));
     expect(director.objectiveId).toBe('report');
 
     // Avisou a Terra: o proximo passo ja vale, e a resposta fica a caminho
-    director.update(snap({ insideHabitat: true, earthCalls: 1 }));
-    expect(director.objectiveId).toBe('collect-ice');
+    director.update(snap({ earthCalls: 1 }));
+    expect(director.objectiveId).toBe('rover-drive');
     expect(director.replySecondsLeft).toBe(25); // 0,5 h / 0,02 h por s
     const shown = cards(director);
     const sent = shown.find((card) => card.title === 'MESSAGE SENT');
     // O balao do passo seguinte vem logo depois do aviso do radio
-    expect(shown.at(-1).title).toBe('STEP 3/5: GET 1 ICE');
+    expect(shown.at(-1).title).toBe('STEP 2/6: DRIVE THE ROVER');
     expect(sent.link).toEqual({ minutes: 11, millionKm: 198 });
     expect(sent.source).toMatch(/14\/11\/2026/);
 
@@ -122,8 +126,7 @@ describe('StoryDirector', () => {
 
   it('still delivers the answer when the ice is collected before it arrives', () => {
     const director = started();
-    director.update(snap({ insideHabitat: true }));
-    director.update(snap({ insideHabitat: true, earthCalls: 1 }));
+    toIceStep(director);
     director.update(snap({ hours: 15.1, iceCount: 1 }));
     expect(director.objectiveId).toBe('load-rocket');
     director.drainEvents();
@@ -132,11 +135,36 @@ describe('StoryDirector', () => {
     expect(cards(director).map((card) => card.title)).toEqual(['EARTH ANSWERED']);
   });
 
+  it('tells the engine when the rover ice is unloaded (the meteor falls) and then asks for the suit', () => {
+    const director = started();
+    director.update(snap({ earthCalls: 1 }));
+    director.update(snap({ earthCalls: 1, roverDrives: 1 }));
+    expect(director.objectiveId).toBe('rover-ice');
+    director.drainEvents();
+
+    director.update(snap({ earthCalls: 1, roverDrives: 1, roverIceKg: 100 }));
+    const events = director.drainEvents();
+    // O GameEngine derruba o meteoro ao receber este evento
+    expect(events.filter((e) => e.type === 'step-done').map((e) => e.id)).toEqual(['rover-ice']);
+    expect(director.objectiveId).toBe('suit-up');
+    expect(objectiveTarget('suit-up')).toBe('suitport');
+
+    // Sem o traje o passo nao anda, mesmo com gelo na mochila
+    director.update(snap({ iceCount: 1 }));
+    expect(director.objectiveId).toBe('suit-up');
+    director.update(snap({ iceCount: 1, suitEquipped: true }));
+    expect(director.objectiveId).toBe('collect-ice');
+    // O gelo que ja estava na mochila nao conta: tem de ser gelo novo
+    director.update(snap({ iceCount: 1, suitEquipped: true }));
+    expect(director.objectiveId).toBe('collect-ice');
+    director.update(snap({ iceCount: 2, suitEquipped: true }));
+    expect(director.objectiveId).toBe('load-rocket');
+  });
+
   it('only counts ice collected after the objective started', () => {
     const director = started();
-    const base = { insideHabitat: true, iceCount: 3 };
-    director.update(snap(base));
-    director.update(snap({ ...base, earthCalls: 1 }));
+    const base = { iceCount: 3 };
+    toIceStep(director, base);
     expect(director.objectiveId).toBe('collect-ice');
 
     // As 3 que ja estavam na mochila nao contam
@@ -151,24 +179,23 @@ describe('StoryDirector', () => {
 
   it('opens act 2 with the launch window after the last step and starts the storms once', () => {
     const director = started();
-    director.update(snap({ insideHabitat: true }));
-    director.update(snap({ insideHabitat: true, earthCalls: 1 }));
+    toIceStep(director);
     director.update(snap({ hours: 15 + REPLY }));
     director.update(snap({ hours: 16, iceCount: 1 }));
-    director.update(snap({ hours: 16, iceNeeded: 5 }));
     expect(director.act).toBe(1);
-    expect(director.objectiveId).toBe('scan');
+    expect(director.objectiveId).toBe('load-rocket');
     expect(director.windowHoursLeft).toBeNull();
     director.drainEvents();
 
-    director.update(snap({ hours: 16, iceNeeded: 5, scanCount: 1 }));
+    director.update(snap({ hours: 16, iceNeeded: 5 }));
     expect(director.act).toBe(2);
     expect(director.objectiveId).toBe('act2');
     // A janela ja abre aqui: nao ha espera pela tempestade
     expect(director.windowHoursLeft).toBeCloseTo(WINDOW);
     const events = director.drainEvents();
     expect(events.filter((e) => e.type === 'start-storms')).toHaveLength(1);
-    expect(events.some((e) => e.type === 'card' && /FILL THE ROCKET/.test(e.card.title))).toBe(true);
+    // O card da rotina e, logo depois, o que ensina a luneta (o passo scan saiu do ato 1)
+    expect(events.filter((e) => e.type === 'card').map((e) => e.card.title)).toEqual(['FILL THE ROCKET', 'USE YOUR SCOPE']);
 
     director.update(snap({ hours: 16.3, iceNeeded: 5 }));
     expect(director.drainEvents().filter((e) => e.type === 'start-storms')).toHaveLength(0);
@@ -459,7 +486,7 @@ describe('StoryDirector: tutorial resource detours', () => {
     // O tanque seca no meio do passo da parede de agua
     director.update({ ...s, baseWaterL: 0 });
     expect(director.objectiveId).toBe('need-water');
-    director.update({ ...s, baseWaterL: 20 });
+    director.update({ ...s, baseWaterL: 200 });
     expect(director.objectiveId).toBe('cert-shelter');
     director.drainEvents();
     director.update({ ...s, baseWaterL: 10, shelterWaterL: 10 });

@@ -3,7 +3,7 @@ import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS, GREENHOUSE_
 import { createCropItemModel, createCropPlantModel } from '../graphics/cropModels.ts';
 import { createSpaceRationModel } from '../graphics/rationModel.ts';
 import * as THREE from 'three';
-import { CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
+import { CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, STORY_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
 import { separateCrew } from '../crew/separateCrew.ts';
 import { CrewManager } from '../crew/CrewManager.ts';
 import { CrewAvatar } from '../crew/CrewAvatar.ts';
@@ -544,7 +544,7 @@ export class GameEngine {
     if (m.dustWeather.phase === 'warning' || m.dustWeather.phase === 'storm') return 'A dust storm will hide the Sun for hours. Turn off the fuel factory and the greenhouse lights, and keep the heater on.';
     if (m.dustWeather.panelDust >= 0.5) return 'Your solar panels are dusty. Clean them at the solar field, west of the power room.';
     if (m.battery.percent < 30) return 'Your battery is low. Turn off the fuel factory or the greenhouse lights until the Sun is back, but keep the heater on at night.';
-    if (m.shelterWaterL < 20 && this.survival.baseWater > 30) return 'Put some water in the storm shelter wall before the next storm.';
+    if (m.shelterWaterL < RADIATION_CONFIG.SHELTER_HINT_WALL_L && this.survival.baseWater > RADIATION_CONFIG.SHELTER_HINT_TANK_L) return 'Put some water in the storm shelter wall before the next storm.';
     if (this.comms.hoursUntilConjunction < 12) return 'Solar conjunction is coming: the radio will go silent for a while. Plan ahead!';
     return 'Everything looks good from here. Keep collecting ice and science samples.';
   }
@@ -598,6 +598,7 @@ export class GameEngine {
         return;
       }
       this._setSuitEquippedAnimated(true);
+      this.tutorialCounts.suitUps++;
       this.hud.showToast('EVA suit equipped. Ready to cycle the outer door.');
       return;
     }
@@ -1766,7 +1767,7 @@ export class GameEngine {
     this.powerChecks = 0;
     // O que o jogador ja fez, para os passos do tutorial guiado (src/story/tutorialSteps.ts).
     // Beber, comer e lavar contam a tentativa: quem esta sem sede nao fica preso no passo.
-    this.tutorialCounts = { drink: 0, meal: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0 };
+    this.tutorialCounts = { drink: 0, meal: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0, suitUps: 0 };
     this.story = new StoryDirector({
       training: false, // tutorial padrao: so os 5 passos que a missao usa (CORE_STEPS)
       replyDelayHours: this.comms.roundTripGameSeconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND,
@@ -1789,6 +1790,7 @@ export class GameEngine {
       powerChecks: 0, harvestCount: 0, workoutCount: 0, shelterWaterL: 0,
       drinkCount: 0, mealCount: 0, earthCalls: 0, plantCount: 0,
       roverDrives: 0, roverIceKg: 0, scanCount: 0, iceDelivered: 0,
+      suitEquipped: false, suitUps: 0,
       // Recursos da base, para os desvios do tutorial (issue #237, tutorialDetours.ts)
       baseWaterL: 0, batteryCharge: 0, foodStock: 0, roverBattery: 0, roverActive: false,
     };
@@ -1865,6 +1867,7 @@ export class GameEngine {
       // Treino de cadete (issue #88): monitor da estufa e academia
       greenhouse: { x: GREENHOUSE_MONITOR_POS.x, y: ground + 3, z: GREENHOUSE_MONITOR_POS.z, label: WAYPOINT_LABELS.greenhouse },
       gym: { x: -7.5, y: ground + 3, z: 10.2, label: WAYPOINT_LABELS.gym },
+      suitport: { x: -0.68, y: ground + 3, z: 7.5, label: WAYPOINT_LABELS.suitport },
     };
   }
 
@@ -1942,12 +1945,24 @@ export class GameEngine {
     separateCrew(this.crewAvatars);
 
     this.input.keys = {};
-    this.player.yaw = PHYSICS_CONFIG.SPAWN_YAW;
-    this.player.pitch = PHYSICS_CONFIG.SPAWN_PITCH;
+    // Ato 1 (#407): a crianca comeca dentro da base, ao lado do terminal de radio, com o traje
+    // guardado no Suitport. Vestir o traje pela primeira vez e um passo da historia.
+    const start = STORY_CONFIG.START_INSIDE;
+    this.player.pos.set(start.x, HABITAT_LAYOUT.FLOOR_Y + 1 + start.eyeAboveFloor, start.z);
+    this.player.vel.set(0, 0, 0);
+    this.player.yaw = start.yaw;
+    this.player.pitch = 0;
+    this.survival.suitEquipped = false;
+    this._wasSuitEquipped = false;
+    this.suitport.setEquipped(false, false);
+    this.playerHand.setSuitEquipped(false);
     this.playerHand.handGroup.visible = !this.isZoomed;
     // O lookAt da animacao deixa a camera rolada; _updateCamera so escreve yaw e pitch
     this.camera.rotation.set(0, 0, 0);
     this._updateCamera();
+    // O primeiro passo (CALL EARTH) le a bateria: o retrato precisa estar em dia antes de a
+    // historia comecar, senao ela abre com um desvio de "falta energia" que nao existe
+    this._updateStory(0);
     this.story.start(this._storySnapshot);
   }
 
@@ -2187,6 +2202,8 @@ export class GameEngine {
     s.earthCalls = done.earthCalls;
     s.roverDrives = done.roverDrives;
     s.roverIceKg = done.roverIceKg;
+    s.suitEquipped = this.survival.suitEquipped;
+    s.suitUps = done.suitUps;
     s.iceDelivered = this.mission.iceDelivered; // animacao de primeira vez (firstTimeMoments)
     s.plantCount = this.stations.plantCount;
     s.scanCount = this.scanJournal.missionCount;
@@ -2219,7 +2236,11 @@ export class GameEngine {
         this.storyHud.showCertificate(event.badge);
         this._playGymTone(520, 0.22, 780);
       }
-      else if (event.type === 'step-done') this._playGymTone(440, 0.16, 660);
+      else if (event.type === 'step-done') {
+        this._playGymTone(440, 0.16, 660);
+        // Ato 1 (#407): o rover entregou o gelo e um meteoro cai, deixando gelo novo la fora
+        if (event.id === 'rover-ice') this.events.trigger('meteor', s.hours);
+      }
       else if (event.type === 'start-storms') {
         this.mission.startStorms(s.hours);
         this.onTutorialComplete();
@@ -2248,7 +2269,9 @@ export class GameEngine {
     const inside = s.insideHabitat && !this.roverController.isActive;
     const alertPlace = routeWaypoint(this.missionHud.activeAlertWaypoint, inside);
     const place = alertPlace ?? (this._finishedStory() ? null : routeWaypoint(objectiveTarget(this.story.objectiveId, s), inside));
-    let target = place === 'clue' ? this._clueSiteWaypoint(s.nextClue) : place ? this.waypoints[place] : null;
+    // Cratera do meteoro do ato 1: enquanto ela nao existe, vale a cratera de gelo
+    const placeKey = place === 'meteor' && !this.waypoints.meteor ? 'ice' : place;
+    let target = place === 'clue' ? this._clueSiteWaypoint(s.nextClue) : placeKey ? this.waypoints[placeKey] : null;
     if (place === 'brokenWindow') {
       const windows = this.world.brokenBaseBlocks;
       if (this._brokenWindowIndex === null || !windows.has(this._brokenWindowIndex)) {
@@ -2677,6 +2700,10 @@ export class GameEngine {
     hideRocksNear(this.world.surfaceRocks, x, z, EVENTS_CONFIG.METEOR_CRATER_RADIUS + 2);
     hideRocksNear(this.world.surfaceOutcrops, x, z, EVENTS_CONFIG.METEOR_CRATER_RADIUS + 2);
     this.iceSensor.activate(this.world, { x, z });
+    // Lugar da seta do passo "GET METEOR ICE" (ato 1): o fundo da cratera nova
+    let craterTop = this.world.sizeY - 1;
+    while (craterTop > 0 && !this.world.getBlock(x, craterTop, z)) craterTop--;
+    this.waypoints.meteor = { x: x + 0.5, y: craterTop + 1.6, z: z + 0.5, label: WAYPOINT_LABELS.meteor };
     const me = this.player.pos;
     this.hud.showToast(meteorToast({
       iceBlocks,

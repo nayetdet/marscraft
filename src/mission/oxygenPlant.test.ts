@@ -96,10 +96,10 @@ describe('oxygenModeWarning', () => {
   it('warns only when the chosen mode drains the resource that is running out', () => {
     const water = new OxygenPlant('electrolysis');
     const moxie = new OxygenPlant('moxie');
-    expect(oxygenModeWarning(water, { water: 5, batteryPct: 90 })).toBe('air-water-low');
-    expect(oxygenModeWarning(water, { water: 50, batteryPct: 5 })).toBe(null);
-    expect(oxygenModeWarning(moxie, { water: 50, batteryPct: 10 })).toBe('air-power-low');
-    expect(oxygenModeWarning(moxie, { water: 2, batteryPct: 90 })).toBe(null);
+    expect(oxygenModeWarning(water, { water: 50, batteryPct: 90 })).toBe('air-water-low');
+    expect(oxygenModeWarning(water, { water: 500, batteryPct: 5 })).toBe(null);
+    expect(oxygenModeWarning(moxie, { water: 500, batteryPct: 10 })).toBe('air-power-low');
+    expect(oxygenModeWarning(moxie, { water: 20, batteryPct: 90 })).toBe(null);
     expect(oxygenModeWarning(undefined, { water: 0, batteryPct: 0 })).toBe(null);
   });
 });

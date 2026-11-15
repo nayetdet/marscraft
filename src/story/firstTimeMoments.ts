@@ -45,6 +45,7 @@ export interface MomentCounts {
   workoutCount: number;
   shelterWaterL: number;
   roverDrives: number;
+  suitUps: number;
   iceDelivered: number;
   stormsSurvived: number;
 }
@@ -180,6 +181,20 @@ export const FIRST_TIME_MOMENTS: FirstTimeMoment[] = [
       { icon: 'clock', tone: 'mars', text: 'Its top speed is 0.14 km/h, slower than walking' },
     ],
     source: 'NASA Curiosity rover',
+  },
+  {
+    id: 'suit',
+    keys: ['suitUps'],
+    stamp: 'SUIT ON!',
+    title: 'A TINY SPACECRAFT',
+    reason: 'You put on your suit',
+    accent: '#f1c453',
+    scene: { from: 'air', to: 'shield', motion: 'pulse' },
+    lines: [
+      { icon: 'shield', tone: 'space', text: 'A spacesuit is like a spacecraft for one person' },
+      { icon: 'air', tone: 'space', text: 'Its backpack carries the air you breathe' },
+    ],
+    source: 'NASA: What Is a Spacesuit? (Grades 5-8)',
   },
   {
     id: 'fuel',

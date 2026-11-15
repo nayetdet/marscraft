@@ -12,6 +12,8 @@ export const WAYPOINT_LABELS = {
   ice: 'ICE CRATER',
   mav: 'MAV ROCKET',
   clue: 'CLUE',
+  meteor: 'METEOR CRATER',
+  suitport: 'SUITPORT',
   // Lugares do tutorial guiado
   greenhouse: 'FOOD MONITOR',
   gym: 'GYM',
@@ -20,7 +22,7 @@ export const WAYPOINT_LABELS = {
 };
 
 // Lugares que ficam dentro da base: de fora, o caminho ate eles passa pelo airlock
-const INDOOR = new Set(['console', 'science', 'shelter', 'powerroom', 'lifeSupport', 'brokenWindow', 'greenhouse', 'gym', 'water', 'kitchen']);
+const INDOOR = new Set(['console', 'science', 'shelter', 'powerroom', 'lifeSupport', 'brokenWindow', 'greenhouse', 'gym', 'water', 'kitchen', 'suitport']);
 
 // Lugar de cada trabalho do foguete (nextRocketJob); fabrica trabalhando e tempestades nao tem lugar
 const JOB_PLACES = { ice: 'ice', load: 'mav', base: 'airlock', clue: 'clue' };

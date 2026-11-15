@@ -41,6 +41,7 @@ export const STEP_COLORS = {
   gym: ZONE_COLORS.gym,
   shelter: ZONE_COLORS.shelter,
   rover: '#fb923c', // laranja do rover
+  suit: '#f1c453', // amarelo do traje (a mesma cor da animacao de primeira vez)
   ice: '#7dd3fc',
   rocket: ZONE_COLORS.medical,
   science: '#c084fc',
@@ -53,7 +54,6 @@ export const TUTORIAL_STEPS = [
   {
     id: 'enter-base',
     zone: 'airlock',
-    core: true,
     icon: 'door',
     label: 'ENTER THE BASE',
     hint: 'Follow the arrow. Press F on the door',
@@ -107,8 +107,8 @@ export const TUTORIAL_STEPS = [
     place: 'science',
     objective: 'Call Earth at the science & radio terminal',
     lines: [
-      { icon: 'radio', text: 'Go to the RADIO terminal: press F' },
-      { icon: 'check', text: 'Choose CALL EARTH' },
+      { icon: 'rocket', text: 'Mission: find 3 clues, then fly home' },
+      { icon: 'radio', text: 'RADIO terminal: press F, then CALL EARTH' },
       { icon: 'bolt', text: 'Each call uses battery' },
     ],
     needs: [{ resource: 'power', amount: STATION_CONFIG.COMMS_COST }],
@@ -199,12 +199,14 @@ export const TUTORIAL_STEPS = [
   {
     id: 'rover-drive',
     zone: 'rover',
+    core: true,
     icon: 'home',
     label: 'DRIVE THE ROVER',
     hint: 'Rover console: press F',
     place: 'console',
     objective: 'Start the rover at the rover console',
     lines: [
+      { icon: 'drop', text: 'The base water is running low' },
       { icon: 'home', text: 'Go to the ROVER CONSOLE: press F' },
       { icon: 'air', text: 'The rover works outside, you stay safe' },
     ],
@@ -213,6 +215,7 @@ export const TUTORIAL_STEPS = [
   {
     id: 'rover-ice',
     zone: 'rover',
+    core: true,
     icon: 'drop',
     label: 'DRILL ICE FOR WATER',
     hint: 'Drive to the ice crater: press SPACE to drill',
@@ -227,18 +230,37 @@ export const TUTORIAL_STEPS = [
     needs: [{ resource: 'roverPower', amount: ROVER_CONFIG.LOW_BATTERY }],
     done: more('roverIceKg'),
   },
+  // Ato 1 (#407): o meteoro cai quando o rover descarrega o gelo (GameEngine, evento step-done
+  // de 'rover-ice'). Para buscar o gelo novo a pe, a crianca veste o traje pela primeira vez.
+  {
+    id: 'suit-up',
+    zone: 'suit',
+    core: true,
+    icon: 'door',
+    label: 'PUT ON YOUR SUIT',
+    hint: 'Suitport, next to the airlock: press F',
+    place: 'suitport',
+    objective: 'Put on your EVA suit at the Suitport',
+    lines: [
+      { icon: 'ice', text: 'A meteor left fresh ice outside' },
+      { icon: 'door', text: 'Go to the SUITPORT: press F' },
+      { icon: 'air', text: 'No suit, no going outside' },
+    ],
+    done: (s) => Boolean(s.suitEquipped),
+  },
   {
     id: 'collect-ice',
     zone: 'ice',
     core: true,
     icon: 'ice',
-    label: 'GET 1 ICE',
-    hint: 'Go outside to the ice crater. Hold click on ice',
-    place: 'ice',
-    objective: 'Get 1 block of ice from the ice crater',
+    label: 'GET METEOR ICE',
+    hint: 'Go outside to the new crater. Hold click on ice',
+    // Cratera do meteoro; sem ela (partida recarregada, meteoro sem chao livre) vale a cratera de gelo
+    place: 'meteor',
+    objective: 'Get 1 block of ice from the meteor crater',
     lines: [
       { icon: 'door', text: 'Go outside through the AIRLOCK' },
-      { icon: 'ice', text: 'At the ICE CRATER: hold click on ice' },
+      { icon: 'ice', text: 'At the METEOR CRATER: hold click on ice' },
       { icon: 'air', text: 'Outside uses your suit air' },
     ],
     // So vale gelo novo, pego depois do pedido. Gelo gasto baixa a base de comparacao.
@@ -266,7 +288,6 @@ export const TUTORIAL_STEPS = [
   {
     id: 'scan',
     zone: 'science',
-    core: true,
     icon: 'scope',
     label: 'SCAN 1 THING',
     hint: 'Pick scope: left-click scans; right-click opens/closes',
@@ -283,8 +304,9 @@ export const TUTORIAL_STEPS = [
 
 export const TUTORIAL_STEP_IDS = TUTORIAL_STEPS.map((step) => step.id);
 
-// Tutorial padrao do jogo, so com o que a missao usa: entrar na base, avisar a Terra, buscar
-// gelo, carregar o foguete e escanear. Os outros passos sao o passeio completo pela base
+// Tutorial padrao do jogo, o ato 1 da historia (#407): avisar a Terra, mandar o rover buscar gelo
+// (a agua esta acabando), vestir o traje, pegar o gelo do meteoro e carregar o foguete.
+// Os outros passos sao o passeio completo pela base
 // (`training: true` no StoryDirector).
 export const CORE_STEPS = TUTORIAL_STEPS.filter((step) => step.core);
 

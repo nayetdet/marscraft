@@ -358,11 +358,12 @@ export const AUDIO_MIX_CONFIG = Object.freeze({
 });
 
 export const WATER_SYSTEM_CONFIG = {
-  MAX_BASE_WATER: 100, // Litros
-  INITIAL_BASE_WATER: 25,
-  ICE_CARGO_MAX: 50, // kg de gelo na caçamba do rover
-  ICE_PER_DRILL: 10, // kg coletados por perfuração
+  MAX_BASE_WATER: 1000, // Litros (eram 100 ate 15/11/2026: agua vezes 10, com os gastos junto)
+  INITIAL_BASE_WATER: 250,
+  ICE_CARGO_MAX: 500, // kg de gelo na caçamba do rover
+  ICE_PER_DRILL: 100, // kg coletados por perfuração
   LITERS_PER_KG_ICE: 1.0, // 1 kg de gelo = 1 L de água purificada
+  ADMIN_ADD_WATER_L: 200, // botao "+ water" do painel de admin (F8)
   // Estufa (issue #101): a planta bebe do tanque so enquanto cresce e devolve quase tudo pelo ar
   // (transpiracao), que vira agua cinza para o reciclador. So o que fica na comida sai do ciclo.
   // [Ref] No Advanced Plant Habitat da ISS a agua transpirada e recuperada por condensacao e
@@ -495,13 +496,18 @@ export const RADIATION_CONFIG = {
   // Pares [g/cm2 de agua, fracao da dose que ainda passa].
   SHELTER_WATER_CURVE: [[0, 1], [1, 0.58], [5, 0.21], [10, 0.17]],
   // Escala de jogo: a parede cheia vale 10 g/cm2, o abrigo do PREDICCS. Issue #228: a parede
-  // cheia subiu de 40 para 60 L (mais da metade do tanque da base, de 100 L), porque so a parede
+  // cheia e mais da metade do tanque da base (600 de 1000 L; eram 60 de 100 L ate 15/11/2026,
+  // quando a agua da base subiu 10 vezes: uma parede real pede centenas de litros), porque so a parede
   // cheia libera a espera rapida da tempestade (STORM_SKIP_CONFIG): encher custa agua de beber.
-  SHELTER_WALL_MAX_L: 60,
-  SHELTER_G_CM2_PER_L: 10 / 60, // 10 g/cm2 com a parede cheia (balance.test.ts confere)
-  SHELTER_FILL_STEP_L: 10,
+  SHELTER_WALL_MAX_L: 600,
+  SHELTER_G_CM2_PER_L: 10 / 600, // 10 g/cm2 com a parede cheia (balance.test.ts confere)
+  SHELTER_FILL_STEP_L: 100,
   // Menos que isto no tanque da base nao da para mandar agua para a parede
-  SHELTER_FILL_MIN_L: 1,
+  SHELTER_FILL_MIN_L: 10,
+  // Dica do terminal da base: parede com menos que WALL e tanque com mais que TANK = "ponha agua
+  // na parede antes da proxima tempestade" (regra de jogo)
+  SHELTER_HINT_WALL_L: 200,
+  SHELTER_HINT_TANK_L: 300,
 };
 
 // Espera rapida da tempestade solar dentro do abrigo (issue #228). So com a parede de agua cheia.
@@ -636,8 +642,10 @@ export const CREW_CONFIG = {
   GREENHOUSE_HARVEST_INTERVAL: 20, // segundos de jogo ativo entre colheitas do tripulante
   SUIT_COLORS: [0xf97316, 0x22c55e, 0x3b82f6, 0xeab308, 0xec4899, 0x06b6d4, 0xa855f7, 0xf43f5e],
   OXYGEN_ENERGY_PER_HOUR: 0.75, // % de bateria por tripulante
-  // [Ref] NASA BVAD: ~3 kg de agua por pessoa por dia = 3 L por sol = 0,125 L por hora de jogo
-  WATER_L_PER_HOUR: 3 / 24,
+  // 30 L por pessoa por sol = 1,25 L por hora de jogo: uso total (beber, comida, higiene e
+  // lavagem), desde 15/11/2026 (agua vezes 10). [Ref] NASA BVAD: ~3 kg por pessoa por dia so
+  // para beber e preparar comida (era este o valor ate entao). Fonte do total: numeros-reais.md
+  WATER_L_PER_HOUR: 30 / 24,
   // [Ref] NASA BVAD: ~1,8 kg de comida por pessoa por dia. 1 racao = 1 refeicao de 0,6 kg, entao
   // 3 racoes por sol = 0,125 racao por hora de jogo
   KG_PER_RATION: 0.6,
@@ -681,8 +689,9 @@ export const UTILITY_CONFIG = {
   MEAL_HEAL: 2,
   // B4 reciclador de agua: limpa a agua cinza sozinho e gasta bateria por litro limpo.
   // [Ref] a Estacao Espacial recupera ~98 % da agua (STATION_CONFIG.WATER_RECOVERY). O custo de
-  // energia e regra de jogo: 3 L por hora (STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR) = 0,6 %/h.
-  RECYCLER_POWER_PER_L: 0.2,
+  // energia e regra de jogo: 30 L por hora (STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR) = 0,6 %/h,
+  // o mesmo gasto por hora de quando eram 3 L/h a 0,2 % por litro.
+  RECYCLER_POWER_PER_L: 0.02,
 };
 
 // Radio Terra-Marte (issue #56, A2). Fontes em docs/data/numeros-reais.md.
@@ -710,13 +719,13 @@ export const STATION_CONFIG = {
   REPAIR_PER_HOUR: 0.5,
   LOW_HEALTH: 0.5,
   GREENHOUSE_FOOD_PER_HOUR: 1.2,
-  // Litros do tanque que a estufa da tripulacao usa por racao (escala de jogo; era 1 antes da
-  // #81). Abaixo disso no tanque ela para: a ultima agua fica para beber.
-  GREENHOUSE_WATER_L_PER_FOOD: 0.5,
+  // Litros do tanque que a estufa da tripulacao usa por racao (escala de jogo; 0,5 L ate
+  // 15/11/2026, agua vezes 10). Abaixo disso no tanque ela para: a ultima agua fica para beber.
+  GREENHOUSE_WATER_L_PER_FOOD: 5,
   // [Ref] O sistema de recuperacao de agua da ISS recupera ~98% da agua (NASA, 2023)
   WATER_RECOVERY: 0.98,
-  WATER_RECYCLE_L_PER_HOUR: 3,
-  LOW_WATER_L: 5,
+  WATER_RECYCLE_L_PER_HOUR: 30,
+  LOW_WATER_L: 50,
   // Filtros de CO2 saturados: o O2 da base chega a custar o dobro de energia
   OXYGEN_MAX_COST_MULTIPLIER: 2,
   // Enfermaria: a medica cura o jogador dentro da base e avisa da radiacao alta
@@ -732,6 +741,9 @@ export const STATION_CONFIG = {
 
 // Historia em 3 atos (docs/superpowers/specs/2026-11-14-story-arc-design.md)
 export const STORY_CONFIG = {
+  // Ato 1 (#407): a crianca comeca dentro da base, de frente para o terminal de radio, sem o
+  // traje. eyeAboveFloor: altura dos olhos em pe no piso do habitat.
+  START_INSIDE: { x: 9, z: -8.6, yaw: 0, eyeAboveFloor: 1.75 },
   // Horas de jogo que a janela de lancamento fica aberta. Ela abre no fim do tutorial e a missao
   // inteira cabe nela (gelo, ciencia e a tempestade solar no meio): 1 sol = 24 h de jogo = 20 min
   // reais. Antes eram 8 h, contadas so depois da tempestade. Regra de jogo.
@@ -750,7 +762,7 @@ export const STORY_CONFIG = {
   // o passo, a crianca e mandada buscar. Para o passo voltar, o recurso precisa passar do minimo
   // por esta folga (L de agua, % de bateria, porcoes de comida, % da bateria do rover): sem ela a
   // tarefa ficaria piscando entre o passo e o desvio.
-  DETOUR_RESUME_EXTRA: { water: 2, power: 2, food: 0, roverPower: 5 },
+  DETOUR_RESUME_EXTRA: { water: 20, power: 2, food: 0, roverPower: 5 },
   // Racoes na despensa que o passo de comer pede (UtilityModule.eatRation tira 1)
   TUTORIAL_RATIONS_NEEDED: 1,
 };
@@ -787,9 +799,9 @@ export const GREENHOUSE_PLOT_YIELD = Object.freeze({ garden: 1, inner: 2, outer:
 // rapida, a soja da mais comida por colheita e a batata rende mais por litro e por % de bateria,
 // mas e a mais lenta.
 export const CROP_CONFIG = Object.freeze({
-  lettuce: { water: 1, energy: 2, realDays: 28, seconds: cropSeconds(28), nutrition: 3, strategy: 'Quick snack, small harvest' },
-  potato: { water: 2, energy: 3, realDays: 105, seconds: cropSeconds(105), nutrition: 8, strategy: 'Cheap and filling, slowest to grow' },
-  soy: { water: 3, energy: 5, realDays: 90, seconds: cropSeconds(90), nutrition: 10, strategy: 'Big harvest, thirsty plants' },
+  lettuce: { water: 10, energy: 2, realDays: 28, seconds: cropSeconds(28), nutrition: 3, strategy: 'Quick snack, small harvest' },
+  potato: { water: 20, energy: 3, realDays: 105, seconds: cropSeconds(105), nutrition: 8, strategy: 'Cheap and filling, slowest to grow' },
+  soy: { water: 30, energy: 5, realDays: 90, seconds: cropSeconds(90), nutrition: 10, strategy: 'Big harvest, thirsty plants' },
 });
 
 // Como a planta aparece enquanto cresce (so visual; o tempo e o de CROP_CONFIG.seconds). Logo ao
@@ -860,7 +872,7 @@ export const OXYGEN_PLANT_CONFIG = {
   SABATIER_REGOLITH: 3,
   SABATIER_POWER: 8,
   // Avisos do tripulante: o modo escolhido esta gastando o recurso que esta acabando
-  LOW_WATER_WARN_L: 10,
+  LOW_WATER_WARN_L: 100,
   LOW_BATTERY_WARN_PCT: 25,
 };
 

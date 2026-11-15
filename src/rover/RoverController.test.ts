@@ -148,7 +148,7 @@ describe('RoverController', () => {
 
     const collectResult = controller.collectIce();
     expect(collectResult.success).toBe(true);
-    expect(controller.iceCargo).toBe(10);
+    expect(controller.iceCargo).toBe(WATER_SYSTEM_CONFIG.ICE_PER_DRILL);
     expect(controller.drillCooldown).toBeGreaterThan(0);
 
     // Tenta descarregar na cratera (longe da doca da base)
@@ -160,7 +160,7 @@ describe('RoverController', () => {
 
     const unloadResult = controller.unloadIce();
     expect(unloadResult.success).toBe(true);
-    expect(unloadResult.amount).toBe(10);
+    expect(unloadResult.amount).toBe(WATER_SYSTEM_CONFIG.ICE_PER_DRILL);
     expect(controller.iceCargo).toBe(0);
   });
 
