@@ -93,7 +93,9 @@ describe('resolveScanTarget: base modules', () => {
     expect(baseModuleAt(-18, 15, 0)).toBe('greenhouse');
     expect(baseModuleAt(-22, 11, -21)).toBe('habitat');
     expect(baseModuleAt(17, 11, -20)).toBe('habitat');
-    expect(baseModuleAt(-3, 11, -38)).toBe('habitat');
+    expect(baseModuleAt(-3, 11, -26)).toBe('habitat');
+    // O corredor norte acaba nos modulos de energia e cozinha (o banheiro e a oficina sairam)
+    expect(baseModuleAt(-3, 11, -38)).toBeNull();
     expect(baseModuleAt(30, 10, 30)).toBeNull();
   });
 });
@@ -203,7 +205,8 @@ describe('collectScanBlocks', () => {
     expect(modules.has('gym')).toBe(true);
     expect(blocks.some((b) => b.x <= -12 && b.z >= 7 && b.z <= 13)).toBe(true);
     expect(blocks.some((b) => b.z <= -20)).toBe(true);
-    expect(blocks.some((b) => b.z <= -40)).toBe(true);
+    expect(blocks.some((b) => b.z <= -26)).toBe(true);
+    expect(blocks.some((b) => b.z <= -30)).toBe(false);
     expect(modules.has('lander')).toBe(false);
   });
 

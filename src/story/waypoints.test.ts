@@ -45,7 +45,7 @@ describe('objectiveTarget', () => {
   });
 
   it('has a label for every place', () => {
-    for (const place of ['airlock', 'console', 'science', 'ice', 'mav', 'water', 'kitchen', 'bathroom', 'greenhouse', 'gym']) {
+    for (const place of ['airlock', 'console', 'science', 'ice', 'mav', 'water', 'kitchen', 'greenhouse', 'gym']) {
       expect(WAYPOINT_LABELS[place]).toBeTruthy();
     }
   });

@@ -630,17 +630,10 @@ export const UTILITY_CONFIG = {
   MEAL_WATER_L: 1,
   MEAL_POWER: 2,
   MEAL_HEAL: 2,
-  // B4 banheiro: lavar gasta agua limpa, que vira agua cinza para o reciclador.
-  // [Ref] ISS recupera ~98 % da agua (STATION_CONFIG.WATER_RECOVERY); filtro gasto recupera menos.
-  WASH_WATER_L: 2,
-  WASH_HEAL: 1,
-  FILTER_WEAR_PER_HOUR: 2, // % do filtro do processador de agua por hora de jogo
-  WORN_FILTER: 25, // abaixo disso a recuperacao cai
-  WORN_RECOVERY: 0.7,
-  FILTER_SERVICE_POWER: 3,
-  // B5 oficina: impressora 3D transforma regolito em peca de reposicao
-  PRINT_REGOLITH: 3,
-  PRINT_POWER: 6,
+  // B4 reciclador de agua: limpa a agua cinza sozinho e gasta bateria por litro limpo.
+  // [Ref] a Estacao Espacial recupera ~98 % da agua (STATION_CONFIG.WATER_RECOVERY). O custo de
+  // energia e regra de jogo: 3 L por hora (STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR) = 0,6 %/h.
+  RECYCLER_POWER_PER_L: 0.2,
 };
 
 // Radio Terra-Marte (issue #56, A2). Fontes em docs/data/numeros-reais.md.

@@ -150,9 +150,9 @@ export function missionStatus(mission, source, base = {}) {
       tone: 'danger',
       title: greenhouseDry ? 'No water: the plants stopped growing' : 'Base water almost empty',
       text: (base.graywater ?? 0) >= GRAYWATER_WORTH_RECYCLING
-        ? 'Go to the water recycler and press F to ask a crew member to clean the used water.'
+        ? 'The recycler is cleaning used water. It needs battery and warm pipes: check the power room.'
         : 'Drive the rover to the ice crater, use DRILL, then bring the ice to the base.',
-      target: (base.graywater ?? 0) >= GRAYWATER_WORTH_RECYCLING ? 'recycler' : 'ice',
+      target: (base.graywater ?? 0) >= GRAYWATER_WORTH_RECYCLING ? 'powerroom' : 'ice',
     });
   }
   if (radTone === 'danger' && !shielded && phase !== 'active') {

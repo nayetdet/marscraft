@@ -860,8 +860,7 @@ function createRoomSign(key, x, y, z, rotY) {
 }
 
 // Moveis da ala norte (issue #56). Coordenadas do mundo; cada modulo de NORTH_WING tem ar em
-// 11 x 9 blocos: energia x = -21..-10, z = -25..-16; cozinha x = 6..17, z = -25..-16;
-// banheiro x = -21..-10, z = -39..-30; oficina x = 6..17, z = -39..-30.
+// 11 x 9 blocos: energia x = -21..-10, z = -25..-16; cozinha x = 6..17, z = -25..-16.
 function createNorthModuleModels(mats, y) {
   const objs = [];
   const group = (x, z) => {
@@ -915,43 +914,8 @@ function createNorthModuleModels(mats, y) {
     addBox(stool, 0.1, 0.46, 0.1, mats.lightGray, 0, 0.23, 0);
   }
 
-  // --- B4 Banheiro: processador de agua, pia e cabine ---
-  const processor = group(-20.4, -32.5);
-  addBox(processor, 1.0, 2.4, 1.6, mats.whiteMetal, 0, 1.2, 0);
-  addBox(processor, 0.06, 1.3, 0.7, mats.waterGlass, 0.52, 1.25, -0.35);
-  addBox(processor, 0.06, 0.7, 0.4, mats.screenMat, 0.52, 1.6, 0.45);
-  addBox(processor, 0.06, 0.12, 0.12, mats.greenGlow, 0.52, 1.1, 0.45);
-  const sink = group(-16.0, -38.65);
-  addBox(sink, 1.2, 0.9, 0.6, mats.whiteMetal, 0, 0.45, 0);
-  addBox(sink, 0.8, 0.12, 0.45, mats.darkSlate, 0, 0.95, 0.02);
-  addBox(sink, 1.0, 0.8, 0.04, mats.lightGray, 0, 1.75, -0.28); // espelho
-  addBox(sink, 0.08, 0.3, 0.08, mats.lightGray, 0, 1.15, -0.18);
-  const stall = group(-11.05, -37.9);
-  addBox(stall, 0.08, 2.3, 2.0, mats.lightGray, -0.9, 1.15, 0);
-  addBox(stall, 1.8, 2.3, 0.08, mats.lightGray, 0, 1.15, -1.0);
-  addBox(stall, 0.6, 0.45, 0.6, mats.whiteMetal, 0, 0.23, -0.6); // vaso com coleta de urina
-  addBox(stall, 0.4, 0.06, 0.4, mats.nasaBlue, 0, 0.48, -0.6);
-
-  // --- B5 Oficina: bancada, impressora 3D e prateleira de pecas ---
-  const bench = group(11.5, -38.55);
-  addBox(bench, 4.0, 0.92, 0.8, mats.lightGray, 0, 0.46, 0);
-  addBox(bench, 4.1, 0.08, 0.9, mats.darkSlate, 0, 0.96, 0);
-  addBox(bench, 1.0, 1.0, 0.8, mats.whiteMetal, 0, 1.5, 0); // impressora 3D
-  addBox(bench, 0.8, 0.7, 0.04, mats.waterGlass, 0, 1.5, 0.41);
-  addBox(bench, 0.12, 0.12, 0.12, mats.cyanGlow, 0, 1.75, 0.1);
-  addBox(bench, 0.35, 0.18, 0.35, mats.potato, 0, 1.12, 0.1); // peca de regolito sendo impressa
-  addBox(bench, 0.5, 0.3, 0.04, mats.screenMat, 0.8, 1.25, 0.42);
-  for (const tx of [-1.4, -0.9]) addBox(bench, 0.12, 0.3, 0.12, mats.darkSlate, tx, 1.15, 0.1);
-  const shelf = group(16.6, -33.0);
-  addBox(shelf, 0.7, 2.2, 2.4, mats.darkSlate, 0, 1.1, 0);
-  for (let row = 0; row < 3; row++) {
-    for (let col = 0; col < 3; col++) addBox(shelf, 0.3, 0.25, 0.3, mats.potato, -0.25, 0.5 + row * 0.6, -0.7 + col * 0.7);
-  }
-
   // Placas das salas na parede do corredor central, em cima da porta de cada modulo
   objs.push(createRoomSign('powerRoom', -3.97, 13.45 - 10 + y, -21.5, Math.PI / 2));
   objs.push(createRoomSign('kitchen', -0.03, 13.45 - 10 + y, -21.5, -Math.PI / 2));
-  objs.push(createRoomSign('bathroom', -3.97, 13.45 - 10 + y, -35.5, Math.PI / 2));
-  objs.push(createRoomSign('workshop', -0.03, 13.45 - 10 + y, -35.5, -Math.PI / 2));
   return objs;
 }

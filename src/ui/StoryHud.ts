@@ -160,7 +160,7 @@ export class StoryHud {
     setIcon(this.taskIconEl, view.task.icon);
     setText(this.taskLabelEl, view.task.label);
     setText(this.taskKeyEl, view.task.key ? `[${view.task.key}]` : '');
-    // Tutorial guiado: a dica do passo e "STEP 4/15" (vazios fora do tutorial: o CSS esconde)
+    // Tutorial guiado: a dica do passo e "STEP 4/5" (vazios fora do tutorial: o CSS esconde)
     setText(this.taskHintEl, view.task.hint ?? '');
     setText(this.stepCountEl, view.progress ? `STEP ${view.progress.now}/${view.progress.total}` : '');
     // Cor da secao da base do passo: pinta o icone, o numero do passo e a borda do painel

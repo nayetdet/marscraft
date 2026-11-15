@@ -18,7 +18,7 @@ import { CORE_STEPS, TUTORIAL_STEPS, detourCard, stepCard } from './tutorialStep
 // snapshot = { hours, insideHabitat, iceCount, iceNeeded, stormPhase, stormsSurvived,
 //              propellantPct, dataSent, launched,
 //              drinkCount, mealCount, earthCalls, powerChecks, plantCount, harvestCount,
-//              workoutCount, washCount, shelterWaterL, roverDrives, roverIceKg, scanCount }
+//              workoutCount, shelterWaterL, roverDrives, roverIceKg, scanCount }
 //              (a segunda parte so e lida pelos passos do tutorial)
 //            + { baseWaterL, batteryCharge, foodStock, roverBattery, roverActive }: recursos da
 //              base, lidos pelos desvios do tutorial (issue #237, tutorialDetours.ts)

@@ -17,7 +17,7 @@ export const SHIELD_ZONE = Object.freeze({
   DOMES: Object.freeze([
     dome('habitat', 1, 1, 21), // habitat principal, cúpula, academia, airlock, depósito de gelo e antena
     dome('greenhouse', -27, 0, 16), // redoma da estufa
-    dome('north-wing', -5, -27.5, 28), // corredor norte, os quatro módulos e os painéis solares
+    dome('north-wing', -5, -27.5, 28), // corredor norte, os dois módulos e os painéis solares
     dome('crew-quarters', 21.5, -6, 12.5), // dormitório da tripulação (ala leste)
     dome('launch-pad', 24, 20, 10), // foguete de subida e fábrica de combustível
   ]),

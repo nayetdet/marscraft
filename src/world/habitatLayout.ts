@@ -54,17 +54,16 @@ export const HABITAT_LAYOUT = {
 };
 
 // Ala norte (issue #56, ampliada): um corredor central com janelas sai da parede norte do
-// habitat e liga quatro modulos separados, cada um com a sua funcao. Entre eles fica Marte.
+// habitat e liga dois modulos separados, um de cada lado: energia e cozinha. Entre eles fica Marte.
+// (Eram quatro: o banheiro e a oficina sairam no corte de escopo de 15/11/2026.)
 // Coordenadas de bloco do AR de cada volume (as paredes ficam um bloco para fora).
 // `door` = faixa em z do corredor curto que liga o modulo ao corredor central.
 export const NORTH_WING = {
   // Corredor central com 4 blocos de largura; corredores curtos com 4 de largura e 4 de comprimento
-  SPINE: { xMin: -4, xMax: -1, zMin: -37, zMax: -12 },
+  SPINE: { xMin: -4, xMax: -1, zMin: -25, zMax: -12 },
   ROOMS: [
     { id: 'power', name: 'POWER & HEAT', side: 'west', xMin: -21, xMax: -11, zMin: -25, zMax: -17, door: [-23, -20] },
     { id: 'kitchen', name: 'KITCHEN', side: 'east', xMin: 6, xMax: 16, zMin: -25, zMax: -17, door: [-23, -20] },
-    { id: 'bathroom', name: 'BATHROOM', side: 'west', xMin: -21, xMax: -11, zMin: -39, zMax: -31, door: [-37, -34] },
-    { id: 'workshop', name: 'WORKSHOP', side: 'east', xMin: 6, xMax: 16, zMin: -39, zMax: -31, door: [-37, -34] },
   ],
   // Altura livre dos corredores curtos (3 blocos): sobra parede em cima para a placa da sala
   LINK_HEIGHT: 3,

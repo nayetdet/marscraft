@@ -33,14 +33,14 @@ import { PLANT_NEEDS, detourById } from './tutorialDetours.ts';
 // O que nao tem sala na base ganha uma cor propria.
 export const STEP_COLORS = {
   airlock: SIGNS.airlock.color,
-  water: SIGNS.bathroom.color,
+  water: '#38bdf8', // azul da agua
   kitchen: '#a3e635', // verde-limao: perto do verde da placa da cozinha, sem repetir a estufa
   radio: ZONE_COLORS.quarters,
   power: SIGNS.powerRoom.color,
   greenhouse: ZONE_COLORS.greenhouse,
   gym: ZONE_COLORS.gym,
   shelter: ZONE_COLORS.shelter,
-  rover: SIGNS.workshop.color,
+  rover: '#fb923c', // laranja do rover
   ice: '#7dd3fc',
   rocket: ZONE_COLORS.medical,
   science: '#c084fc',
@@ -294,7 +294,7 @@ export function tutorialStepById(id) {
   return TUTORIAL_STEPS.find((step) => step.id === id) ?? detourById(id);
 }
 
-// Balao do passo: titulo com o numero ("STEP 4/15: CALL EARTH") e as frases do passo.
+// Balao do passo: titulo com o numero ("STEP 2/5: CALL EARTH") e as frases do passo.
 // `step: true` avisa o StoryHud que este balao troca o do passo anterior, sem fila.
 export function stepCard(step, index, total) {
   // `stepId`: o GameEngine usa como gatilho do modal de trade-off da tarefa (tradeoffScenes.ts)

@@ -4,7 +4,7 @@ import { FIRST_TIME_MOMENTS, FirstTimeMoments, momentLogText, type MomentCounts 
 
 const ZERO: MomentCounts = {
   iceCount: 0, roverIceKg: 0, drinkCount: 0, mealCount: 0, earthCalls: 0, powerChecks: 0, plantCount: 0,
-  workoutCount: 0, washCount: 0, shelterWaterL: 0, roverDrives: 0, iceDelivered: 0, stormsSurvived: 0,
+  workoutCount: 0, shelterWaterL: 0, roverDrives: 0, iceDelivered: 0, stormsSurvived: 0,
 };
 
 describe('first-time moments', () => {

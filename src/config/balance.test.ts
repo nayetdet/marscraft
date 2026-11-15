@@ -190,25 +190,40 @@ describe('base water pacing (issue #81)', () => {
   const PANTRY_FOOD = 15;
   const start = () => makeBase({ water: WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER, food: PANTRY_FOOD });
 
-  it('the starting tank lasts at least half a sol with nobody at the recycler and no ice', () => {
+  it('the starting tank lasts at least half a sol with no ice', () => {
     const sim = start();
     runBase(sim, HOURS_WITHOUT_HELP, { night: false });
     expect(sim.base.water).toBeGreaterThan(STATION_CONFIG.LOW_WATER_L);
     expect(sim.crew.members.every((member) => member.state === 'working')).toBe(true);
   });
 
-  it('but it does not last a whole sol: water still needs the recycler or the rover', () => {
+  // Canos congelados (aquecedor desligado de noite): o reciclador para, como se nao existisse
+  const frozen = () => {
     const sim = start();
-    runBase(sim, 24, { night: false });
+    sim.utility.heaterOn = false;
+    return sim;
+  };
+
+  it('with the recycler stopped (frozen pipes) it does not last a whole sol', () => {
+    const sim = frozen();
+    runBase(sim, 24, { night: true });
+    expect(sim.utility.cold).toBe(true);
     expect(sim.base.water).toBeLessThan(STATION_CONFIG.LOW_WATER_L);
   });
 
-  it('most of the used water is waiting as gray water, and the recycler is fast enough to keep up', () => {
-    const sim = start();
-    runBase(sim, HOURS_WITHOUT_HELP, { night: false });
+  it('with the recycler stopped, most of the used water waits as gray water, and the recycler is fast enough to keep up', () => {
+    const sim = frozen();
+    runBase(sim, HOURS_WITHOUT_HELP, { night: true });
     const used = WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER - sim.base.water;
     expect(sim.base.graywater / used).toBeGreaterThan(0.8);
     const grayPerHour = sim.base.graywater / HOURS_WITHOUT_HELP;
     expect(STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR).toBeGreaterThan(grayPerHour);
+  });
+
+  it('the automatic recycler keeps the tank going for a whole sol, paid by the battery', () => {
+    const sim = start();
+    runBase(sim, 24, { night: false });
+    expect(sim.base.water).toBeGreaterThan(STATION_CONFIG.LOW_WATER_L);
+    expect(sim.utility.waterRecycledL).toBeGreaterThan(0);
   });
 });

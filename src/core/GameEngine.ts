@@ -525,8 +525,6 @@ export class GameEngine {
     if (m.dustWeather.panelDust >= 0.5) return 'Your solar panels are dusty. Clean them at the solar field, west of the power room.';
     if (m.battery.percent < 30) return 'Your battery is low. Turn off the fuel factory or the greenhouse lights until the Sun is back, but keep the heater on at night.';
     if (m.shelterWaterL < 20 && this.survival.baseWater > 30) return 'Put some water in the storm shelter wall before the next storm.';
-    if (this.utility.waterFilter < 30) return 'Your water filter is dirty. Clean it in the bathroom so you get back more water.';
-    if ((this.crew?.stations ?? []).some((st) => st.health < 0.5)) return 'A crew station is wearing out. Print a spare part in the workshop.';
     if (this.comms.hoursUntilConjunction < 12) return 'Solar conjunction is coming: the radio will go silent for a while. Plan ahead!';
     return 'Everything looks good from here. Keep collecting ice and science samples.';
   }
@@ -658,9 +656,6 @@ export class GameEngine {
         { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
         { type: 'galley', x: 13.1, y: 11.35, z: -16.2, label: 'Press F: kitchen' },
         { type: 'galley', x: 16.1, y: 11.3, z: -21.0, label: 'Press F: pantry & kitchen' },
-        { type: 'hygiene', x: -16.0, y: 11.1, z: -38.3, label: 'Press F: bathroom & water recycler' },
-        { type: 'hygiene', x: -19.85, y: 11.6, z: -32.5, label: 'Press F: bathroom & water recycler' },
-        { type: 'workshop', x: 11.5, y: 11.5, z: -38.1, label: 'Press F: 3D printer workshop' },
         { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
         ...GREENHOUSE_BASKETS.map(basket => ({ ...basket, cropType: basket.type, type: 'basket', minDot: 0.95, label: `Press F or tap: collect ${basket.type}` })),
         { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
@@ -1736,7 +1731,7 @@ export class GameEngine {
     if (action === 'skip-training') {
       if (this.story.skipTraining()) return 'Tutorial skipped. Press Back, then Play: fill the rocket with ice.';
       return this.story.act === 0
-        ? 'Tutorial is off for this game: only 3 steps (enter the base, call Earth, get 1 ice).'
+        ? 'The tutorial has only 5 steps: enter the base, call Earth, get 1 ice, load the rocket, scan 1 thing.'
         : 'The tutorial is already done or skipped.';
     }
     if (action.startsWith('event:')) return this.triggerEvent(action.slice(6));
@@ -1755,7 +1750,7 @@ export class GameEngine {
     this.powerChecks = 0;
     // O que o jogador ja fez, para os passos do tutorial guiado (src/story/tutorialSteps.ts).
     // Beber, comer e lavar contam a tentativa: quem esta sem sede nao fica preso no passo.
-    this.tutorialCounts = { drink: 0, meal: 0, wash: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0 };
+    this.tutorialCounts = { drink: 0, meal: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0 };
     this.story = new StoryDirector({
       training: false, // tutorial padrao: so os 5 passos que a missao usa (CORE_STEPS)
       replyDelayHours: this.comms.roundTripGameSeconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND,
@@ -1776,7 +1771,7 @@ export class GameEngine {
       stormPhase: 'calm', stormsSurvived: 0, propellantPct: 0, dataSent: false, launched: false,
       needsBase: false, iceForFullTank: MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK, scienceStep: null, sciencePointsLeft: 0, sciencePointsSent: 0,
       powerChecks: 0, harvestCount: 0, workoutCount: 0, shelterWaterL: 0,
-      drinkCount: 0, mealCount: 0, washCount: 0, earthCalls: 0, plantCount: 0,
+      drinkCount: 0, mealCount: 0, earthCalls: 0, plantCount: 0,
       roverDrives: 0, roverIceKg: 0, scanCount: 0, iceDelivered: 0,
       // Recursos da base, para os desvios do tutorial (issue #237, tutorialDetours.ts)
       baseWaterL: 0, batteryCharge: 0, foodStock: 0, roverBattery: 0, roverActive: false,
@@ -1818,17 +1813,15 @@ export class GameEngine {
     return {
       airlock: { x: 0.5, y: ground + 3.2, z: outerDoor.z + 0.5, label: WAYPOINT_LABELS.airlock },
       console: { x: 4, y: ground + 3, z: -9.6, label: WAYPOINT_LABELS.console },
-      // Lugares do tutorial guiado: bebedouro, cozinha e banheiro
+      // Lugares do tutorial guiado: bebedouro e cozinha
       water: { x: WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.x, y: ground + 3, z: WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.z, label: WAYPOINT_LABELS.water },
       kitchen: { x: 13.1, y: ground + 3, z: -16.2, label: WAYPOINT_LABELS.kitchen },
-      bathroom: { x: -16, y: ground + 2.6, z: -38.3, label: WAYPOINT_LABELS.bathroom },
       science: { x: 9.75, y: ground + 3, z: -10.8, label: WAYPOINT_LABELS.science },
       ice: { x: ice.x + 0.5, y: iceTop + 1.6, z: ice.z + 0.5, label: WAYPOINT_LABELS.ice },
       mav: { x: pad.x, y: ground + 9.2, z: pad.z, label: WAYPOINT_LABELS.mav },
       shelter: { x: shelterX, y: ground + 2.2, z: shelterZ, label: 'STORM SHELTER' },
       powerroom: { x: -15.5, y: ground + 2.5, z: -16.5, label: 'POWER & HEAT CONTROL' },
       lifeSupport: { x: 10.6, y: ground + 2.5, z: -3, label: 'LIFE SUPPORT' },
-      recycler: { x: -16, y: ground + 2.2, z: -38.3, label: 'WATER RECYCLER' },
       // Treino de cadete (issue #88): monitor da estufa e academia
       greenhouse: { x: GREENHOUSE_MONITOR_POS.x, y: ground + 3, z: GREENHOUSE_MONITOR_POS.z, label: WAYPOINT_LABELS.greenhouse },
       gym: { x: -7.5, y: ground + 3, z: 10.2, label: WAYPOINT_LABELS.gym },
@@ -2159,7 +2152,6 @@ export class GameEngine {
     const done = this.tutorialCounts;
     s.drinkCount = done.drink;
     s.mealCount = done.meal;
-    s.washCount = done.wash;
     s.earthCalls = done.earthCalls;
     s.roverDrives = done.roverDrives;
     s.roverIceKg = done.roverIceKg;

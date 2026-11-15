@@ -20,7 +20,7 @@ function snap(overrides = {}) {
     hours: 15, insideHabitat: false, iceCount: 0, iceNeeded: 10, stormPhase: 'calm',
     stormsSurvived: 0, propellantPct: 0, dataSent: false, launched: false,
     drinkCount: 0, mealCount: 0, earthCalls: 0, powerChecks: 0, plantCount: 0, harvestCount: 0,
-    workoutCount: 0, washCount: 0, shelterWaterL: 0, roverDrives: 0, roverIceKg: 0, scanCount: 0,
+    workoutCount: 0, shelterWaterL: 0, roverDrives: 0, roverIceKg: 0, scanCount: 0,
     ...overrides,
   };
 }
@@ -225,7 +225,7 @@ describe('tutorial places', () => {
   });
 
   it('routes the indoor stations through the airlock from outside', () => {
-    for (const place of ['powerroom', 'greenhouse', 'gym', 'shelter', 'water', 'kitchen', 'bathroom', 'science', 'console']) {
+    for (const place of ['powerroom', 'greenhouse', 'gym', 'shelter', 'water', 'kitchen', 'science', 'console']) {
       expect(routeWaypoint(place, false)).toBe('airlock');
       expect(routeWaypoint(place, true)).toBe(place);
     }

@@ -14,7 +14,13 @@ function setup({ night = false, charge = 80 } = {}) {
   };
   const mission = { battery: new Battery(charge), chargeRate: night ? 0 : 10, factoryOn: true, iceStock: 0, propellant: 0, shieldOn: false };
   const stations = { freshFood: 0, filter: 100 };
-  const base = { food: 3, graywater: 0 };
+  // Agua limpa e agua cinza no mesmo tanque do jogador, como em createBaseStock
+  const base = {
+    food: 3, graywater: 0,
+    get water() { return survival.baseWater; },
+    set water(liters) { survival.baseWater = liters; },
+    get maxWater() { return survival.maxBaseWater; },
+  };
   return { utility: new UtilityModule({ mission, survival, stations, base }), survival, mission, stations, base, items };
 }
 
@@ -45,7 +51,6 @@ describe('north module (issue #56, part B)', () => {
     utility.toggle('heater');
     utility.update(1);
     expect(utility.cold).toBe(true);
-    expect(utility.washUp()).toMatch(/frozen/);
   });
 
   it('heater cost follows the real InSight air: more at 05:00 (coldest) than at 20:00 of the same sol (issue #108)', () => {
@@ -103,17 +108,52 @@ describe('north module (issue #56, part B)', () => {
     utility.cookMeal();
     expect(items[BLOCK_IDS.HYDRO_PLANT]).toBe(0);
     expect(survival.baseWater).toBe(10 - U.MEAL_WATER_L);
-    // A agua de cozinhar entra no ciclo, como a de lavar (issue #101)
+    // A agua de cozinhar entra no ciclo: vira agua cinza para o reciclador (issue #101)
     expect(base.graywater).toBe(U.MEAL_WATER_L);
     expect(stations.freshFood).toBe(STATION_CONFIG.FRESH_FOOD_DURATION);
   });
 
-  it('washing turns clean water into gray water and a worn filter recovers less', () => {
-    const { utility, base } = setup();
-    utility.washUp();
-    expect(base.graywater).toBe(U.WASH_WATER_L);
-    utility.waterFilter = 10;
-    expect(utility.waterRecovery).toBeLessThan(STATION_CONFIG.WATER_RECOVERY);
+  it('the recycler cleans gray water by itself, gives back 98% and charges the battery per liter', () => {
+    const { utility, survival, base, mission } = setup();
+    utility.toggle('heater'); // aquecedor desligado de dia: so o reciclador gasta bateria
+    base.graywater = 10;
+    utility.update(1);
+    const treated = STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR;
+    expect(base.graywater).toBeCloseTo(10 - treated);
+    expect(survival.baseWater).toBeCloseTo(10 + treated * STATION_CONFIG.WATER_RECOVERY);
+    expect(mission.battery.charge).toBeCloseTo(80 - treated * U.RECYCLER_POWER_PER_L);
+    expect(utility.waterRecycledL).toBeCloseTo(treated * STATION_CONFIG.WATER_RECOVERY);
+    // O painel de energia mostra o que o reciclador gasta
+    const loads = Object.fromEntries(utility.loads().map(([name, rate]) => [name, rate]));
+    expect(loads['Water recycler']).toBeCloseTo(treated * U.RECYCLER_POWER_PER_L);
+  });
+
+  it('the recycler stops with frozen pipes or an empty battery, and never overfills the tank', () => {
+    // Canos congelados: aquecedor desligado de noite
+    const frozen = setup({ night: true });
+    frozen.utility.toggle('heater');
+    frozen.base.graywater = 10;
+    frozen.utility.update(1);
+    expect(frozen.utility.cold).toBe(true);
+    expect(frozen.base.graywater).toBe(10);
+    expect(frozen.survival.baseWater).toBe(10);
+
+    // Bateria vazia: nada e limpo e o painel mostra gasto zero
+    const dead = setup({ charge: 0 });
+    dead.utility.toggle('heater');
+    dead.base.graywater = 10;
+    dead.utility.update(1);
+    expect(dead.base.graywater).toBe(10);
+    expect(dead.utility.recyclerDrawPerHour).toBe(0);
+
+    // Tanque quase cheio: so limpa o que cabe
+    const full = setup();
+    full.utility.toggle('heater');
+    full.survival.baseWater = 99.5;
+    full.base.graywater = 10;
+    full.utility.update(1);
+    expect(full.survival.baseWater).toBeCloseTo(100);
+    expect(full.base.graywater).toBeGreaterThan(9);
   });
 
   it('the power panel shows the greenhouse lights at their real rate per game hour (issue #110)', () => {
@@ -164,14 +204,5 @@ describe('north module (issue #56, part B)', () => {
     expect(utility.greenhouseLightsCost(1 / MISSION_CONFIG.GAME_HOURS_PER_SECOND)).toBeCloseTo(0.6 * U.GREENHOUSE_LIGHTS_PER_HOUR);
     // As escolhas do jogador custam o mesmo: so o consumo passivo e mais brando
     expect(loads['Radiation shield']).toBe(ENERGY_CONFIG.SHIELD_DRAIN_PER_HOUR);
-  });
-
-  it('the 3D printer spends regolith and power to fix the most worn station', () => {
-    const { utility, mission, items } = setup();
-    const stations = [{ name: 'greenhouse', health: 0.9 }, { name: 'water recycler', health: 0.2 }];
-    expect(utility.printPart(stations)).toMatch(/water recycler/);
-    expect(stations[1].health).toBe(1);
-    expect(items[BLOCK_IDS.REGOLITH]).toBe(0);
-    expect(mission.battery.charge).toBe(80 - U.PRINT_POWER);
   });
 });

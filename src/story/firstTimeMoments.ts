@@ -43,7 +43,6 @@ export interface MomentCounts {
   powerChecks: number;
   plantCount: number;
   workoutCount: number;
-  washCount: number;
   shelterWaterL: number;
   roverDrives: number;
   iceDelivered: number;
@@ -153,20 +152,6 @@ export const FIRST_TIME_MOMENTS: FirstTimeMoment[] = [
       { icon: 'heart', tone: 'space', text: 'Daily exercise keeps muscles and bones strong' },
     ],
     source: 'NASA Mars Fact Sheet. NASA International Space Station',
-  },
-  {
-    id: 'wash',
-    keys: ['washCount'],
-    stamp: 'ALL CLEAN!',
-    title: 'WATER COMES BACK',
-    reason: 'You washed up for the first time',
-    accent: '#58b8ee',
-    scene: { from: 'drop', to: 'home', motion: 'recycle' },
-    lines: [
-      { icon: 'drop', tone: 'mars', text: 'Used water goes to the gray water tank' },
-      { icon: 'up', tone: 'space', text: 'The Space Station cleans 98% of its water to use again' },
-    ],
-    source: 'NASA: Space Station water recovery system (2023)',
   },
   {
     id: 'shelter',

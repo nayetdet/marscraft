@@ -17,8 +17,6 @@ const TELEPORTS = [
   ['Habitat center', 0.5, EYE_INSIDE, 1, 0],
   ['Power & heat room', -12, EYE_INSIDE, -21.5, Math.PI / 2],
   ['Kitchen', 8, EYE_INSIDE, -21.5, -Math.PI / 2],
-  ['Bathroom', -12, EYE_INSIDE, -35.5, Math.PI / 2],
-  ['Workshop', 8, EYE_INSIDE, -35.5, -Math.PI / 2],
   ['Airlock', 0.5, EYE_INSIDE, 7.5, Math.PI],
   ['Greenhouse', -21.6, EYE_INSIDE, 0.9, 2.66],
   ['Crew quarters', 19.5, EYE_INSIDE, -7, -Math.PI / 2],
@@ -122,7 +120,7 @@ export class AdminPanel {
       ${group('Water', [['water:add', 'Base tank +20 L'], ['water:empty', 'Base tank 0 L'], ['wall:full', 'Shelter wall full'], ['wall:empty', 'Shelter wall empty']])}
       ${group('Astronaut', [['me:refill', 'Refill astronaut'], ['me:dose', 'Reset radiation dose'], ['me:doseLimit', 'Dose over the limit'], ['me:hurt', 'Health to 25%']])}
       ${group('Base', [['base:dirtySuit', 'Dusty suit'], ['base:contaminate', 'Dust in habitat'], ['base:clean', 'Clean suit + habitat'], ['base:filter', 'CO2 filter 0%']])}
-      ${group('North module', [['north:waterFilter', 'Water filter 10%'], ['north:pantry', 'Pantry +10 rations'], ['north:wear', 'Crew stations 30%'], ['north:regolith', '+6 regolith'], ['north:carrot', '+3 carrots']])}
+      ${group('North module', [['north:pantry', 'Pantry +10 rations'], ['north:wear', 'Crew stations 30%'], ['north:regolith', '+6 regolith'], ['north:carrot', '+3 carrots']])}
       ${group('Mars events (issue #107)', [['event:meteor', 'Meteor'], ['event:marsquake', 'Marsquake'], ['event:eclipse', 'Phobos eclipse'], ['event:dustDevil', 'Dust devil'], ['event:frost', 'Frost'], ['event:aurora', 'Aurora']])}
       ${group('Time', [['time:1', '+1 hour [T: +1.5 h]'], ['time:day', 'Skip to 08:00'], ['time:night', 'Skip to 21:00'], ['time:tired', 'Awake 25 h (tired)']])}
       ${group('Teleport', TELEPORTS.map(([name], i) => [`tp:${i}`, name]))}
@@ -187,8 +185,7 @@ export class AdminPanel {
         return 'Base state changed.';
       case 'north': {
         const { utility, crewStock, crew } = this.engine;
-        if (arg === 'waterFilter') utility.waterFilter = 10;
-        else if (arg === 'pantry') crewStock.food = Math.min(crewStock.maxFood, crewStock.food + 10);
+        if (arg === 'pantry') crewStock.food = Math.min(crewStock.maxFood, crewStock.food + 10);
         else if (arg === 'wear') for (const st of crew?.stations ?? []) st.health = 0.3;
         else {
           const id = arg === 'regolith' ? BLOCK_IDS.REGOLITH : BLOCK_IDS.HYDRO_PLANT;
@@ -256,7 +253,7 @@ export class AdminPanel {
       `Battery: ${mission.battery.percent.toFixed(0)}%   Base tank: ${Math.round(survival.baseWater)} L   Wall: ${Math.round(mission.shelterWaterL)} L`,
       `Health: ${Math.round(survival.health)}/${survival.maxStat}   O2: ${Math.round(survival.oxygen)}   Suit: O2 ${Math.round(survival.suitOxygen)}% Wear ${Math.round(survival.suitWear)}% CO2 ${Math.round(survival.suitScrubber)}% Dust ${Math.round(survival.suitDust)}%`,
       `Radio: ${this.engine.comms.blackout ? 'SILENT' : 'ok'}   Earth: ${Math.round(this.engine.comms.distanceKm / 1e6)} Mkm, ${this.engine.comms.lightMinutes.toFixed(1)} min one way`,
-      `Heater: ${this.engine.utility.heaterOn ? 'on' : 'off'}${this.engine.utility.cold ? ' (FREEZING)' : ''}   Water filter: ${Math.round(this.engine.utility.waterFilter)}%   Pantry: ${Math.floor(this.engine.crewStock.food)}`,
+      `Heater: ${this.engine.utility.heaterOn ? 'on' : 'off'}${this.engine.utility.cold ? ' (FREEZING)' : ''}   Pantry: ${Math.floor(this.engine.crewStock.food)}`,
       this._eventsLine(),
       `Position: ${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)}, ${player.pos.z.toFixed(1)}`,
     ].join('\n');

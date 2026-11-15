@@ -27,7 +27,5 @@ export const SIGNS = {
   shelter: { name: 'STORM SHELTER', color: ZONE_COLORS.shelter },
   powerRoom: { name: 'POWER & HEAT', color: '#facc15' },
   kitchen: { name: 'KITCHEN', color: '#4ade80' },
-  bathroom: { name: 'BATHROOM', color: '#38bdf8' },
-  workshop: { name: 'WORKSHOP', color: '#fb923c' },
 };
 

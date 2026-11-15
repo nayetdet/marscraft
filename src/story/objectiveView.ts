@@ -8,7 +8,7 @@ import { STEP_COLORS, tutorialStepById } from './tutorialSteps.ts';
 //      degraus: cada bloco de gelo entregue acende um;
 //   2. o que fazer agora: um icone grande com 2 ou 3 palavras e, no tutorial, uma linha dizendo
 //      onde ir e o que apertar;
-//   3. onde a crianca esta: "STEP 4/15" no tutorial ou a volta de trabalho que se repete.
+//   3. onde a crianca esta: "STEP 4/5" no tutorial ou a volta de trabalho que se repete.
 // Funcoes puras: o StoryHud so pinta o resultado.
 
 export const GOAL_TITLE = 'GOAL: FLY HOME';
@@ -105,7 +105,7 @@ export function objectiveView(story, s) {
     steps = stepStates(LOOP_STEPS, now);
     loop = true;
   }
-  // "STEP 4/15": onde a crianca esta no tutorial
+  // "STEP 4/5": onde a crianca esta no tutorial
   const progress = step ? { now: story.stepIndex + 1, total: story.steps.length } : null;
   // Cor da secao da base a que o passo pertence (null fora do tutorial)
   const color = step ? STEP_COLORS[step.zone] : null;
