@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { assetPath } from '../config/assetPath.ts';
 
 function LoadingScreen() {
   return (
@@ -22,13 +23,14 @@ export default function GamePage() {
       try {
         // Fast Refresh reruns effects; the Three.js game must only mount once.
         if (shellRef.current?.querySelector('#game-container canvas')) return;
-        const response = await fetch('/game.html', { cache: 'no-store' });
+        const gameShellPath = assetPath('/game.html');
+        const response = await fetch(gameShellPath, { cache: 'no-store' });
         if (!response.ok) throw new Error(`Game shell HTTP ${response.status}`);
         const documentText = await response.text();
         const body = documentText.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] ?? documentText;
         const { startGame } = await import('../main.ts');
         if (disposed || !shellRef.current) return;
-        shellRef.current.innerHTML = body;
+        shellRef.current.innerHTML = body.replaceAll('src="/members/', `src="${assetPath('/members/')}`);
         void startGame();
       } catch (error) {
         console.error('MarsCraft failed to mount:', error);
@@ -43,7 +45,7 @@ export default function GamePage() {
     if (process.env.NODE_ENV !== 'development') return;
 
     // Next does not hot reload files fetched from public/. HEAD checks detect game shell changes.
-    const paths = ['/game.html'];
+    const paths = [assetPath('/game.html')];
     const versions = new Map<string, string>();
     let active = true;
     let checking = false;

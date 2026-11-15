@@ -1,7 +1,9 @@
 // @ts-nocheck
 import * as THREE from 'three';
 
-const TEXTURE_BASE = '/textures/';
+import { assetPath } from '../config/assetPath.ts';
+
+const TEXTURE_BASE = assetPath('/textures/');
 
 export function createStarfield() {
   const starCount = 1200;
