@@ -741,9 +741,6 @@ export const STATION_CONFIG = {
 
 // Historia em 3 atos (docs/superpowers/specs/2026-11-14-story-arc-design.md)
 export const STORY_CONFIG = {
-  // Ato 1 (#407): a crianca comeca dentro da base, de frente para o terminal de radio, sem o
-  // traje. eyeAboveFloor: altura dos olhos em pe no piso do habitat.
-  START_INSIDE: { x: 9, z: -8.6, yaw: 0, eyeAboveFloor: 1.75 },
   // Horas de jogo que a janela de lancamento fica aberta. Ela abre no fim do tutorial e a missao
   // inteira cabe nela (gelo, ciencia e a tempestade solar no meio): 1 sol = 24 h de jogo = 20 min
   // reais. Antes eram 8 h, contadas so depois da tempestade. Regra de jogo.

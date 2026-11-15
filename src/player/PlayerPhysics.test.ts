@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { PlayerPhysics } from './PlayerPhysics.ts';
 import { BLOCK_IDS } from '../config/blockTypes.ts';
 import { PHYSICS_CONFIG } from '../config/constants.ts';
+import { HABITAT_LAYOUT } from '../world/habitatLayout.ts';
 
 function createMockWorld(blocks = {}) {
   return {
@@ -15,6 +16,26 @@ function createMockWorld(blocks = {}) {
 }
 
 describe('PlayerPhysics', () => {
+  it('resets the player outside the airlock at the configured ship ramp spawn', () => {
+    const player = new PlayerPhysics(createMockWorld());
+    player.pos.set(9, 15, -8);
+    player.vel.set(2, 3, 4);
+    player.yaw = 1;
+    player.pitch = 0.8;
+
+    player.resetToShipRamp();
+
+    expect(player.pos.toArray()).toEqual([
+      PHYSICS_CONFIG.SPAWN_POS.x,
+      PHYSICS_CONFIG.SPAWN_POS.y,
+      PHYSICS_CONFIG.SPAWN_POS.z,
+    ]);
+    expect(player.pos.z).toBeGreaterThan(HABITAT_LAYOUT.AIRLOCK_Z_MAX);
+    expect(player.vel.toArray()).toEqual([0, 0, 0]);
+    expect(player.yaw).toBe(PHYSICS_CONFIG.SPAWN_YAW);
+    expect(player.pitch).toBe(PHYSICS_CONFIG.SPAWN_PITCH);
+  });
+
   it('blocks movement into a visible crew member and permits moving away or above them', () => {
     const player = new PlayerPhysics(createMockWorld());
     player.crewAvatars = [{ position: { x: 0, y: 10, z: -1 }, group: { visible: true } }];
