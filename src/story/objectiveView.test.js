@@ -139,7 +139,7 @@ describe('objectiveView', () => {
     step(story, { hours: 16, iceCount: 1 });
 
     let view = step(story, { hours: 18, iceNeeded: 0, propellantPct: 90, stormsSurvived: 1 });
-    expect(view.task).toMatchObject({ label: 'SEND DATA', key: 'G' });
+    expect(view.task).toMatchObject({ label: 'SEND SCIENCE' });
     expect(view.steps).toBeNull();
     expect(view.loop).toBe(false);
     expect(view.rocket).toEqual({ total: 10, loaded: 10, fuel: 9 });

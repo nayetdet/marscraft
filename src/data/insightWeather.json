@@ -1,0 +1,141 @@
+{
+  "source": "NASA InSight Mars Weather Service API (InSight lander, Elysium Planitia)",
+  "query": "https://api.nasa.gov/insight_weather/?feedtype=json&ver=1.0",
+  "note": "Archived feed: InSight ended in 2022. tempC = air temperature (C), pressurePa = pressure (Pa), windMs.gust = strongest wind of the sol (m/s).",
+  "fetched": "2026-11-15",
+  "sols": [
+    {
+      "sol": 675,
+      "firstUtc": "2020-10-19T18:32:20Z",
+      "season": "fall",
+      "tempC": {
+        "min": -96.9,
+        "avg": -62.3,
+        "max": -15.9
+      },
+      "pressurePa": {
+        "min": 722.1,
+        "avg": 750.6,
+        "max": 768.8
+      },
+      "windMs": {
+        "avg": 7.2,
+        "gust": 22.5
+      }
+    },
+    {
+      "sol": 676,
+      "firstUtc": "2020-10-20T19:11:55Z",
+      "season": "fall",
+      "tempC": {
+        "min": -96.9,
+        "avg": -62.8,
+        "max": -16.5
+      },
+      "pressurePa": {
+        "min": 722.5,
+        "avg": 749.1,
+        "max": 767.1
+      },
+      "windMs": {
+        "avg": 8.5,
+        "gust": 26.9
+      }
+    },
+    {
+      "sol": 677,
+      "firstUtc": "2020-10-21T19:51:31Z",
+      "season": "fall",
+      "tempC": {
+        "min": -97.2,
+        "avg": -63.1,
+        "max": -16.9
+      },
+      "pressurePa": {
+        "min": 720.6,
+        "avg": 748.7,
+        "max": 767.4
+      },
+      "windMs": {
+        "avg": 7.9,
+        "gust": 23.2
+      }
+    },
+    {
+      "sol": 678,
+      "firstUtc": "2020-10-22T20:31:06Z",
+      "season": "fall",
+      "tempC": {
+        "min": -97.7,
+        "avg": -62.6,
+        "max": -9.1
+      },
+      "pressurePa": {
+        "min": 717.7,
+        "avg": 743.7,
+        "max": 760.3
+      },
+      "windMs": {
+        "avg": 5.2,
+        "gust": 18.4
+      }
+    },
+    {
+      "sol": 679,
+      "firstUtc": "2020-10-23T21:10:41Z",
+      "season": "fall",
+      "tempC": {
+        "min": -96.6,
+        "avg": -62.6,
+        "max": -11.6
+      },
+      "pressurePa": {
+        "min": 719.4,
+        "avg": 744.5,
+        "max": 763.3
+      },
+      "windMs": {
+        "avg": 5.6,
+        "gust": 19.4
+      }
+    },
+    {
+      "sol": 680,
+      "firstUtc": "2020-10-24T21:50:16Z",
+      "season": "fall",
+      "tempC": {
+        "min": -96.8,
+        "avg": -61.8,
+        "max": -15.3
+      },
+      "pressurePa": {
+        "min": 717.1,
+        "avg": 744,
+        "max": 764
+      },
+      "windMs": {
+        "avg": 6.5,
+        "gust": 24.2
+      }
+    },
+    {
+      "sol": 681,
+      "firstUtc": "2020-10-25T22:29:51Z",
+      "season": "fall",
+      "tempC": {
+        "min": -95.4,
+        "avg": -62.4,
+        "max": -4.4
+      },
+      "pressurePa": {
+        "min": 718.5,
+        "avg": 743.6,
+        "max": 760.2
+      },
+      "windMs": {
+        "avg": 5.6,
+        "gust": 18.6
+      }
+    }
+  ]
+}

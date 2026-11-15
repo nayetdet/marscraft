@@ -151,6 +151,8 @@ curl "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&times
 - **Feed arquivado:** a missão InSight terminou em 2022 e o endpoint devolve sempre os sols 675–681 (19 a 25/10/2020, Elysium Planitia).
 - Campos por sol: `AT` (temperatura do ar, °C), `PRE` (pressão, Pa), `HWS` (vento, m/s). Cada um traz `av`/`mn`/`mx`/`ct`, além de `Season` e `WD` (rosa dos ventos).
 - Amostra limpa: [`samples/insight-weather-sols-675-681.json`](samples/insight-weather-sols-675-681.json)
+- **No jogo (issue #108):** `node scripts/fetch-insight-weather.mjs` lê a chave do `.env` e grava [`src/data/insightWeather.json`](../../src/data/insightWeather.json) (só temperatura, pressão e vento por sol, com data de coleta e a URL sem a chave). Acesso só por `src/data/marsWeather.js`.
+- **Fonte com mais variação (REMS do Curiosity, MEDA do Perseverance no PDS):** ainda não investigada. Fica como próximo passo; se der certo, baixar por script e embutir como JSON, porque o PDS não serve para chamada do navegador.
 
 ## 5. Mars Trek / Moon Trek: mapas e terreno reais
 

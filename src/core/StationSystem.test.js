@@ -1,6 +1,6 @@
 import { SurvivalSystem } from '../player/SurvivalSystem.js';
-import { CROP_ITEM_IDS } from '../config/blockTypes.js';
-import { CROP_CONFIG, STATION_CONFIG, WATER_SYSTEM_CONFIG, CREW_CONFIG } from '../config/constants.js';
+import { BLOCK_IDS, CROP_ITEM_IDS } from '../config/blockTypes.js';
+import { CROP_CONFIG, SCIENCE_CONFIG, STATION_CONFIG, WATER_SYSTEM_CONFIG, CREW_CONFIG } from '../config/constants.js';
 import { describe, it, expect } from 'vitest';
 import { ExpeditionState } from './ExpeditionState.js';
 import { StationSystem } from './StationSystem.js';
@@ -100,14 +100,39 @@ describe('greenhouse and science progression', () => {
     expect(survival.countItem(CROP_ITEM_IDS[type])).toBe(1);
     expect(station.crop).toBeNull();
   });
-  it('requires researched samples and delivers the MAV package only after the delay', () => {
+  it('analyzes a regolith sample collected outside, paying the rock and power', () => {
+    const mission = new ExpeditionState();
+    const station = new StationSystem(mission);
+    const survival = new SurvivalSystem();
+    survival.inventorySlots.fill(null);
+    expect(station.analyzeSample(survival)).toMatch(/Collect a new regolith sample/);
+    station.samples = 1;
+    expect(station.analyzeSample(survival)).toMatch(/Collect regolith/);
+    survival.addBlockToInventory(BLOCK_IDS.REGOLITH);
+    const before = mission.energy;
+    expect(station.analyzeSample(survival)).toMatch(/science package/);
+    expect(station.analyzedSamples).toBe(1);
+    expect(station.samples).toBe(0);
+    expect(station.science).toBe(STATION_CONFIG.SCIENCE_PER_SAMPLE);
+    expect(survival.countItem(BLOCK_IDS.REGOLITH)).toBe(0);
+    expect(mission.energy).toBeCloseTo(before - SCIENCE_CONFIG.ANALYZE_POWER_COST);
+  });
+  it('refuses to analyze without power and keeps the sample', () => {
+    const mission = new ExpeditionState();
+    mission.battery.charge = 0;
+    const station = new StationSystem(mission);
+    const survival = new SurvivalSystem();
+    survival.inventorySlots.fill(null);
+    survival.addBlockToInventory(BLOCK_IDS.REGOLITH);
+    station.samples = 1;
+    expect(station.analyzeSample(survival)).toBe('Not enough power.');
+    expect(station.analyzedSamples).toBe(0);
+    expect(survival.countItem(BLOCK_IDS.REGOLITH)).toBe(1);
+  });
+  it('has no dead MAV transmission left: the science package goes through the mission radio', () => {
     const station = new StationSystem(new ExpeditionState());
-    expect(station.sendMav()).toMatch(/Analyze/);
-    station.analyzedSamples = 2;
-    expect(station.sendMav()).toMatch(/transit/);
-    expect(station.mavSent).toBe(false);
-    station.update(40, true, player(), false);
-    expect(station.mavSent).toBe(true);
+    expect(station.sendMav).toBeUndefined();
+    expect(station.mavSent).toBeUndefined();
   });
   it('does not grow a crop in a contaminated base', () => {
     const mission = new ExpeditionState();

@@ -1,9 +1,10 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { GREENHOUSE_CENTER, PLOT_PLANT_CELLS } from '../world/greenhouseLayout.js';
 import { greenhouseMapSvg, plotMapLabel, plotStatus } from './greenhouseMap.js';
-import { COMMS_CONFIG, CROP_CONFIG, ENERGY_CONFIG, RADIATION_CONFIG, SLEEP_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
+import { COMMS_CONFIG, CROP_CONFIG, ENERGY_CONFIG, RADIATION_CONFIG, SCIENCE_CONFIG, SLEEP_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
 import { doseHistoryText } from '../mission/doseBudget.js';
+import { scienceCountText, scienceMissingText, uploadButtonLabel } from '../mission/sciencePackage.js';
 import { bulletinText, donkiLabel, formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
 import plantResearch from '../data/osdrPlants.json';
@@ -13,6 +14,9 @@ import { GymWorkout } from './gymWorkout.js';
 import { growthChecks } from '../base/greenhouseCare.js';
 import { MEDBAY_BONE_TEXT } from './stationText.js';
 import { OXYGEN_SOURCES, oxygenPlantButtons, oxygenPlantText } from '../mission/oxygenText.js';
+import { INSIGHT_MONTH, WEATHER_RANGE, formatTempC } from '../data/marsWeather.js';
+import { solarReason } from '../mission/weatherText.js';
+import { tauSolarFactor } from '../mission/dustWeather.js';
 
 const DATA_SOURCES = {
   donki: 'https://ccmc.gsfc.nasa.gov/tools/DONKI/',
@@ -802,7 +806,7 @@ export class StationPanel {
     if (action === 'send') return stations.send(this.engine.radioOptions(true));
     if (action === 'upgrade') return stations.upgrade();
     if (action === 'upgradeTool') return stations.upgradeTool();
-    if (action === 'sendMav') return stations.sendMav(this.engine.radioOptions());
+    if (action === 'sendScience') return this.engine.sendSciencePackage();
     if (action.startsWith('seed:')) {
       const cropType = action.slice(5);
       if (Object.hasOwn(CROP_CONFIG, cropType)) {
@@ -844,15 +848,9 @@ export class StationPanel {
       return message;
     }
     if (action === 'analyze') {
-      if (stations.samples < 1) return 'Collect a new regolith sample outside first.';
-      const index = survival.inventorySlots.findIndex(item => item?.id === BLOCK_IDS.REGOLITH && item.count > 0);
-      if (index < 0) return 'Collect regolith before analyzing a sample.';
-      survival.inventorySlots[index].count--;
-      stations.samples--;
-      stations.science += C.SCIENCE_PER_SAMPLE;
-      stations.analyzedSamples++;
+      const message = stations.analyzeSample(survival);
       hud.renderHotbar(survival.slots);
-      return `Sample analyzed: +${C.SCIENCE_PER_SAMPLE} science points.`;
+      return message;
     }
     return '';
   }
@@ -865,8 +863,18 @@ export class StationPanel {
     });
     const lines = loads.map(([name, rate, on]) => `  ${name.padEnd(18)} ${!on ? 'OFF' : rate > 0 ? `-${rate.toFixed(1)}%/h` : 'idle'}`);
     const used = loads.reduce((sum, [, rate, on]) => sum + (on ? rate : 0), 0);
+    // Clima (issues #103 e #108): por que a geracao caiu, poeira nos paineis e ar la fora
+    const dust = mission.dustWeather;
+    const reason = solarReason({ night: utility.isNight, phase: dust.phase, panelDust: dust.panelDust });
+    const temp = utility.outsideTempC;
+    const stormLine = dust.phase === 'storm' || dust.phase === 'clearing'
+      ? `DUST STORM: the dusty air lets through only ${Math.round(tauSolarFactor(dust.tau) * 100)}% of the sunlight.\n`
+      : '';
     return `BATTERY: ${Math.round(mission.battery.percent)}%\n` +
-      `SOLAR PANELS NOW: +${mission.chargeRate.toFixed(1)}%/h ${utility.isNight ? '(night: no sun)' : ''}\n` +
+      `SOLAR PANELS NOW: +${mission.chargeRate.toFixed(1)}%/h (${reason})\n` +
+      `DUST ON THE PANELS: ${Math.round(dust.panelDust * 100)}% (clean them at the solar field, outside to the west)\n` +
+      stormLine +
+      (temp === null ? '' : `OUTSIDE AIR NOW: ${formatTempC(temp)} (real NASA InSight data)\n`) +
       `NUCLEAR RTG: +${ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR}%/h, day and night, only for life support (air and CO2 filter)\n` +
       `${mission.standby ? 'BATTERY EMPTY: STANDBY. Factory, lights, heater and shield stopped. The RTG keeps the air on until the Sun is back.\n' : ''}` +
       `USING ABOUT: -${used.toFixed(1)}%/h (plus your own oxygen)\n` +
@@ -874,7 +882,7 @@ export class StationPanel {
       `WHERE THE POWER GOES:\n${lines.join('\n')}\n\n` +
       `OXYGEN MACHINE: ${mission.oxygenPlant.info.label.toUpperCase()}${mission.oxygenPlant.usesWater ? ' (uses water, less power)' : ' (no water, more power)'}. Change it in Life Support.\n` +
       `HEATER: ${utility.heaterOn ? 'ON' : 'OFF'}${utility.cold ? '   FREEZING! Pipes and plants stopped.' : ''}\n\n` +
-      'Mars nights get down to about -98 C (NASA InSight). At night the panels make nothing and the heater needs more power. ' +
+      `Mars nights get down to about ${formatTempC(WEATHER_RANGE.coldestC)} (real NASA InSight data, ${INSIGHT_MONTH}). The colder it is outside, the more power the heater needs. At night the panels make nothing. ` +
       'Turning systems off saves power, but each one stops doing its job.\n' +
       'Real case: the InSight lander shut down in 2022 when dust covered its solar panels. ' +
       'Curiosity and Perseverance use an RTG instead: a nuclear power source that makes about 110 W day and night (NASA).';
@@ -941,6 +949,25 @@ export class StationPanel {
       `${status}\n${next}${bulletin}\n` +
       'Asking Mission Control costs power, and the answer only tells you what they saw when you asked. ' +
       'About every 26 months the Sun gets between Mars and Earth and the radio goes silent for about 2 weeks. Then the crew decides alone.';
+  }
+
+  // Pacote de ciencia para a Terra (issue #105): o que ja foi, o que vai no proximo envio e o que falta
+  _packageText() {
+    const { mission } = this.engine;
+    const totals = this.engine.scienceTotals();
+    const pkg = this.engine.currentSciencePackage();
+    const state = { ...totals, sentDiscoveries: mission.sentDiscoveries, sentSamples: mission.sentSamples };
+    const next = pkg.items > 0
+      ? `NEXT UPLOAD: ${scienceCountText(pkg.uploadDiscoveries, pkg.uploadSamples)} = ${pkg.items} item${pkg.items === 1 ? '' : 's'}.\n` +
+        `COST: ${SCIENCE_CONFIG.UPLOAD_BASE_COST}% to start the radio + ${pkg.items} x ${SCIENCE_CONFIG.UPLOAD_COST_PER_ITEM}% = ${pkg.cost}% power.` +
+        (pkg.leftAfter > 0 ? `\n${pkg.leftAfter} more items wait for the next upload (max ${SCIENCE_CONFIG.MAX_ITEMS_PER_UPLOAD} per orbiter pass).` : '')
+      : 'NEXT UPLOAD: nothing new yet.';
+    return 'SCIENCE PACKAGE FOR EARTH\n' +
+      `MADE THIS MISSION: ${scienceCountText(totals.discoveries, totals.samples)} (scanned with the scope / analyzed here).\n` +
+      `ALREADY SENT: ${scienceCountText(mission.sentDiscoveries, mission.sentSamples)}.\n` +
+      `${next}\n${scienceMissingText(state)}\n` +
+      'Rovers send most of their data to an orbiter flying over Mars, and the orbiter passes it on to Earth (NASA Mars Relay Network). ' +
+      'A bigger package costs more power. Sending in small parts is allowed, but each part pays the radio start again. Costs are game rules.';
   }
 
   _shelterText(mission, survival) {
@@ -1135,8 +1162,7 @@ export class StationPanel {
         ['harvest', 'Harvest & discover NASA research'], ['cleanBase', 'Clean habitat'],
       ]],
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\n${doseHistoryText(mission.doseBreakdown)}\n\n${MEDBAY_BONE_TEXT}`, [['treat', 'Use medical station']]],
-      science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   SAMPLES: ${s.samples}\n\n${this._radioText(s)}`, [['analyze', 'Analyze regolith'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
-      mav: ['MAV DATA TERMINAL', `ANALYZED SAMPLES: ${s.analyzedSamples}/${C.MAV_REQUIRED_SAMPLES}\nPACKAGE: ${s.mavSent ? 'RECEIVED' : s.message}\n\nAnalyze samples at the science station, then send the package from the MAV.`, [['sendMav', 'Send MAV science package']]],
+      science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   REGOLITH TO ANALYZE: ${s.samples}\n\n${this._packageText()}\n\n${this._radioText(s)}`, [['sendScience', uploadButtonLabel(this.engine.currentSciencePackage())], ['analyze', `Analyze regolith (${SCIENCE_CONFIG.ANALYZE_POWER_COST}% power)`], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
       powerroom: ['POWER & HEAT ROOM', this._powerText(), this._powerButtons()],
       galley: ['KITCHEN & PANTRY', this._galleyText(v), [['eatRation', 'Eat a ration (pantry)'], ['cookMeal', `Cook fresh meal (1 carrot, ${U.MEAL_WATER_L} L, ${U.MEAL_POWER}% power)`]]],
       hygiene: ['BATHROOM & WATER RECYCLER', this._hygieneText(v), [['washUp', `Wash up (${U.WASH_WATER_L} L of water)`], ['serviceFilter', `Clean water filter (${U.FILTER_SERVICE_POWER}% power)`]]],

@@ -1,5 +1,7 @@
-import { MAV_CONFIG } from '../config/constants.js';
+import { MAV_CONFIG, SCIENCE_CONFIG } from '../config/constants.js';
+
 import { smoothNetRate } from '../mission/energy.js';
+import { scienceCountText, scienceMissingText } from '../mission/sciencePackage.js';
 import { missionStatus } from './missionCards.js';
 import { pixelIconSvg } from './pixelIcons.js';
 import { doseClimbingFast, dosePercent, doseTone } from '../mission/doseBudget.js';
@@ -35,7 +37,7 @@ function setText(el, text, className) {
 }
 
 export class MissionHud {
-  constructor({ donkiFetched, onLoadIce, onToggleFactory, onIgnite, onClose }) {
+  constructor({ donkiFetched, onLoadIce, onLoadSample, onUnloadSample, onToggleFactory, onIgnite, onClose }) {
     this.donkiFetched = donkiFetched;
     const $ = (id) => document.getElementById(id);
 
@@ -60,6 +62,11 @@ export class MissionHud {
     this.factoryBtn = $('mav-factory');
     this.stormsEl = $('mav-storms');
     this.dataEl = $('mav-data');
+    this.dataStatusEl = $('mav-data-status');
+    this.tubesEl = $('mav-tubes');
+    this.tubesMathEl = $('mav-tubes-math');
+    this.tubeLoadBtn = $('mav-tube-load');
+    this.tubeUnloadBtn = $('mav-tube-unload');
     this.mavPowerEl = $('mav-power');
     this.igniteBtn = $('mav-ignite');
 
@@ -73,6 +80,8 @@ export class MissionHud {
     this.loadOneBtn.addEventListener('click', () => onLoadIce(1));
     this.loadAllBtn.addEventListener('click', () => onLoadIce(Infinity));
     this.factoryBtn.addEventListener('click', () => onToggleFactory());
+    this.tubeLoadBtn.addEventListener('click', () => onLoadSample?.());
+    this.tubeUnloadBtn.addEventListener('click', () => onUnloadSample?.());
     this.igniteBtn.addEventListener('click', () => onIgnite());
     $('mav-close').addEventListener('click', () => onClose());
     $('play-again-btn').addEventListener('click', () => window.location.reload());
@@ -240,7 +249,9 @@ export class MissionHud {
     this.mavOverlayEl.classList.add('hidden');
   }
 
-  updateMavPanel(mission, iceInBag) {
+  // `analyzedSamples`: amostras analisadas no laboratorio (as que podem virar tubos);
+  // `totals`: ciencia feita nesta partida ({ discoveries, samples }) para dizer o que falta enviar
+  updateMavPanel(mission, iceInBag, analyzedSamples = 0, totals = { discoveries: 0, samples: 0 }) {
     if (!this.isMavPanelOpen) return;
     const progress = mission.progress;
     setText(this.mavOverallEl, `${Math.floor(progress.overallPct)}% ready`);
@@ -267,6 +278,20 @@ export class MissionHud {
 
     setText(this.stormsEl, `${Math.min(mission.stormCredit, MAV_CONFIG.STORMS_TO_SURVIVE)}/${MAV_CONFIG.STORMS_TO_SURVIVE}`);
     setText(this.dataEl, mission.dataSent ? 'Yes' : 'No');
+    setText(this.dataStatusEl, `Sent so far: ${scienceCountText(mission.sentDiscoveries, mission.sentSamples)}. ` +
+      scienceMissingText({ ...totals, sentDiscoveries: mission.sentDiscoveries, sentSamples: mission.sentSamples }), 'mav-status');
+
+    // Tubos de amostra: a conta do gelo a mais aparece inteira
+    const tubes = mission.sampleTubes;
+    const perTube = SCIENCE_CONFIG.ICE_PER_SAMPLE_TUBE;
+    setText(this.tubesEl, `${tubes}/${SCIENCE_CONFIG.MAX_SAMPLE_TUBES}`);
+    setText(this.tubesMathEl,
+      `Ice for a full tank: ${MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK} (empty rocket) + ${tubes} tube${tubes === 1 ? '' : 's'} x ${perTube} = ${mission.iceForFullTank()} ice. ` +
+      `Analyzed samples ready for a tube: ${Math.max(0, analyzedSamples - tubes)}. ` +
+      `(Game rule: a real tube weighs far less than a block of ice.)`, 'mav-status');
+    this.tubeLoadBtn.disabled = tubes >= SCIENCE_CONFIG.MAX_SAMPLE_TUBES || tubes >= analyzedSamples;
+    setText(this.tubeLoadBtn, `Load 1 sample tube (+${perTube} ice needed)`, 'mc-btn');
+    this.tubeUnloadBtn.disabled = tubes <= 0;
     setText(this.mavPowerEl, `Base battery: ${Math.round(mission.battery.percent)}%. Fuel making, the shield, the radio and making oxygen all share this energy.`, 'mav-status');
     this.igniteBtn.disabled = !progress.ready;
   }

@@ -22,6 +22,24 @@ describe('ScanJournal', () => {
     expect(journal.has('earth')).toBe(true);
   });
 
+  it('counts the scans of this mission apart from the permanent journal (issue #105)', () => {
+    const storage = memoryStorage();
+    const first = new ScanJournal({ storage });
+    first.record('earth');
+    first.record('earth');
+    expect(first.missionCount).toBe(1);
+
+    // Nova partida: o diario permanente continua, a contagem da missao comeca do zero
+    const next = new ScanJournal({ storage });
+    expect(next.has('earth')).toBe(true);
+    expect(next.missionCount).toBe(0);
+    expect(next.scannedThisMission('earth')).toBe(false);
+    expect(next.record('earth')).toMatchObject({ isNew: false, missionNew: true, missionCount: 1 });
+    expect(next.record('earth')).toMatchObject({ missionNew: false, missionCount: 1 });
+    expect(next.record('pizza')).toMatchObject({ missionNew: false, missionCount: 1 });
+    expect(JSON.parse(storage.data[KEY])).toEqual(['earth']);
+  });
+
   it('ignores ids that are not in the catalog', () => {
     const journal = new ScanJournal({ storage: memoryStorage() });
     expect(journal.record('pizza').isNew).toBe(false);

@@ -49,6 +49,8 @@ src/core/GameEngine.js     loop principal; instancia e conecta todos os sistemas
 src/mission/               missao: bateria e paineis (energy), tempestades solares do DONKI (solarStorms), radiacao,
                            radio Terra-Marte (commsLink, earthMars), MAV e textos (MissionSystem, missionText),
                            gerador de O2 eletrolise x MOXIE (oxygenPlant, oxygenText)
+                           tempestade de poeira e poeira nos paineis (dustWeather, weatherText)
+src/data/marsWeather.js    clima real do InSight por sol (insightWeather.json): temperatura la fora e relatorio do tempo
 src/config/
   constants.js             WORLD/PHYSICS/CAMERA/SURVIVAL_CONFIG (todo número de balanceamento mora aqui)
   blockTypes.js            BLOCK_IDS e HOTBAR_BLOCKS (inventário inicial, consumíveis)

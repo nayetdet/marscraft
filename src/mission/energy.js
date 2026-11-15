@@ -6,12 +6,14 @@ export function sunElevation(timeOfDay) {
   return Math.max(0, Math.sin(angle));
 }
 
-// % de bateria por hora de jogo gerados pelos paineis solares
-export function solarChargePerHour(timeOfDay) {
+// % de bateria por hora de jogo gerados pelos paineis solares.
+// `weatherFactor`: fracao que sobra com a poeira no ar e nos paineis (dustWeather.js, issue #103)
+export function solarChargePerHour(timeOfDay, weatherFactor = 1) {
   return (
     ENERGY_CONFIG.PANEL_PEAK_CHARGE_EARTH_PER_HOUR *
     ENERGY_CONFIG.MARS_SUNLIGHT_FRACTION *
-    sunElevation(timeOfDay)
+    sunElevation(timeOfDay) *
+    weatherFactor
   );
 }
 

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { SURVIVAL_CONFIG, TERRAIN_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import {
   DUST_STORM_WALL_RADIUS,
+  clampToPlayArea,
+  distanceFromBaseCenter,
   dustStormIntensity,
   dustStormProximity,
   dustStormVisualStrength,
@@ -39,5 +41,14 @@ describe('dust storm zone', () => {
     );
     expect(DUST_STORM_WALL_RADIUS).toBeCloseTo(nearestMapEdge);
     expect(DUST_STORM_WALL_RADIUS).toBeGreaterThan(FATAL);
+  });
+
+  it('stops the player at an invisible wall instead of killing them (issue #103)', () => {
+    const inside = { x: cx + START, z: cz };
+    expect(clampToPlayArea(inside)).toBe(false);
+    expect(inside.x).toBe(cx + START);
+    const outside = { x: cx + FATAL + 10, z: cz + 3 };
+    expect(clampToPlayArea(outside)).toBe(true);
+    expect(distanceFromBaseCenter(outside.x, outside.z)).toBeCloseTo(FATAL);
   });
 });
