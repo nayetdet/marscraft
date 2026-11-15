@@ -5,7 +5,7 @@ import { formatDateDMY } from '../mission/missionText.ts';
 // Telas extras do menu: "Science & Sources", "Options" e "Demo Tools".
 // O menu principal e as telas trocam de lugar com a classe `hidden`, como a tela de controles.
 export class MenuScreens {
-  constructor({ donkiDate, onDemo, volume = 1, onVolumeChange }) {
+  constructor({ donkiDate, onDemo, volume = 1, onVolumeChange, onVolumePreview }) {
     const menuMain = document.getElementById('menu-main');
     const feedback = document.getElementById('demo-feedback');
     this.setDonkiSource(`Real data from ${donkiDate}`);
@@ -40,7 +40,9 @@ export class MenuScreens {
     volumeSlider.addEventListener('input', () => {
       volumeValue.value = `${volumeSlider.value}%`;
       onVolumeChange?.(Number(volumeSlider.value) / 100);
+      onVolumePreview?.();
     });
+    volumeSlider.addEventListener('change', () => onVolumePreview?.({ final: true }));
   }
 
   // Botao "Shaders: On/Off" do menu (sombra do Sol, brilho e raios de luz). Vale no mouse e no toque.

@@ -1,16 +1,8 @@
 // @ts-nocheck
-import { WIND_AMBIENCE_CONFIG } from '../config/constants.ts';
+import { AUDIO_MIX_CONFIG, WIND_AMBIENCE_CONFIG } from '../config/constants.ts';
 
 const AUDIO_BASE_URL = '/audio/';
-const LOOP_VOLUME = 0.45;
-const ROCKET_VOLUME = 0.7;
-const DOOR_VOLUME = 0.12;
-// Chiado de descompressao do airlock (a "fumaca"): bem baixo, so de fundo
-const DECOMPRESSION_VOLUME = 0.05;
-const REGOLITH_PLACE_VOLUME = 0.07;
 const ROCKET_FADE_OUT_SECONDS = 1;
-// Manivela do airlock sem energia: o som da porta tocado devagar fica grave e pesado
-const CRANK_PLAYBACK_RATE = 0.45;
 
 export class AudioManager {
   constructor() {
@@ -20,11 +12,11 @@ export class AudioManager {
       surface: this._createAudio(`${AUDIO_BASE_URL}andando%20na%20areia.wav`, true),
     };
     this.dying = this._createAudio(`${AUDIO_BASE_URL}morrendo.wav`, true);
-    this.rover = this._createAudio(`${AUDIO_BASE_URL}barulho%20do%20carro.wav?v=2`, true);
+    this.rover = this._createAudio(`${AUDIO_BASE_URL}barulho%20do%20carro.wav?v=3`, true);
     this.rocket = this._createAudio(`${AUDIO_BASE_URL}foguete.wav`, true);
     this.sandFall = this._createAudio(`${AUDIO_BASE_URL}queda_areia.wav`);
     this.regolithPlace = this._createAudio(`${AUDIO_BASE_URL}colocando_areia.WAV`);
-    this.regolithBreak = this._createAudio(`${AUDIO_BASE_URL}quebrando_areia.WAV?v=3`);
+    this.regolithBreak = this._createAudio(`${AUDIO_BASE_URL}quebrando_areia.WAV?v=4`);
     this.shipBlockBreak = this._createAudio(`${AUDIO_BASE_URL}quebrando_pedra.WAV`, true);
     this.regolithBreakImpact = this._createAudio(`${AUDIO_BASE_URL}quebrando_areia.WAV`);
     this.shipBlockBreakImpact = this._createAudio(`${AUDIO_BASE_URL}quebrando_pedra.WAV`);
@@ -33,21 +25,37 @@ export class AudioManager {
     this.decompression = this._createAudio(`${AUDIO_BASE_URL}descompressao.wav`);
     this.doorCrank = this._createAudio(`${AUDIO_BASE_URL}porta_fechar.wav`);
     this.uiClick = this._createAudio(`${AUDIO_BASE_URL}ui-click-kenney.ogg`);
+    this.uiHover = this._createAudio(`${AUDIO_BASE_URL}ui-hover-kenney.wav`);
     this.uiConfirm = this._createAudio(`${AUDIO_BASE_URL}ui-confirm-kenney.ogg`);
     this.uiError = this._createAudio(`${AUDIO_BASE_URL}ui-error-kenney.ogg`);
     this.sciFiDoorOpen = this._createAudio(`${AUDIO_BASE_URL}sci-fi-door-open-kenney.ogg`);
     this.sciFiDoorClose = this._createAudio(`${AUDIO_BASE_URL}sci-fi-door-close-kenney.ogg`);
-    this.doorOpen.volume = DOOR_VOLUME;
-    this.doorClose.volume = DOOR_VOLUME;
-    this.decompression.volume = DECOMPRESSION_VOLUME;
-    this.doorCrank.playbackRate = CRANK_PLAYBACK_RATE;
+
+    this.footsteps.habitat.volume = AUDIO_MIX_CONFIG.FOOTSTEPS_VOLUME;
+    this.footsteps.surface.volume = AUDIO_MIX_CONFIG.FOOTSTEPS_VOLUME;
+    this.dying.volume = AUDIO_MIX_CONFIG.DYING_LOOP_VOLUME;
+    this.rover.volume = AUDIO_MIX_CONFIG.ROVER_LOOP_VOLUME;
+    this.rocket.volume = AUDIO_MIX_CONFIG.ROCKET_LOOP_VOLUME;
+    this.sandFall.volume = AUDIO_MIX_CONFIG.LANDING_VOLUME;
+    this.regolithPlace.volume = AUDIO_MIX_CONFIG.REGOLITH_PLACE_VOLUME;
+    this.regolithBreak.volume = AUDIO_MIX_CONFIG.REGOLITH_BREAK_LOOP_VOLUME;
+    this.shipBlockBreak.volume = AUDIO_MIX_CONFIG.BLOCK_BREAK_LOOP_VOLUME;
+    this.regolithBreakImpact.volume = AUDIO_MIX_CONFIG.BLOCK_BREAK_IMPACT_VOLUME;
+    this.shipBlockBreakImpact.volume = AUDIO_MIX_CONFIG.BLOCK_BREAK_IMPACT_VOLUME;
+    this.doorOpen.volume = AUDIO_MIX_CONFIG.DOOR_VOLUME;
+    this.doorClose.volume = AUDIO_MIX_CONFIG.DOOR_VOLUME;
+    this.decompression.volume = AUDIO_MIX_CONFIG.DECOMPRESSION_VOLUME;
+    this.doorCrank.playbackRate = AUDIO_MIX_CONFIG.CRANK_PLAYBACK_RATE;
     this.doorCrank.preservesPitch = false;
-    this.doorCrank.volume = DOOR_VOLUME;
-    this.rocket.volume = ROCKET_VOLUME;
-    this.regolithPlace.volume = REGOLITH_PLACE_VOLUME;
+    this.doorCrank.volume = AUDIO_MIX_CONFIG.DOOR_VOLUME;
+    this.uiHover.volume = AUDIO_MIX_CONFIG.UI_HOVER_VOLUME;
+    this.uiClick.volume = AUDIO_MIX_CONFIG.UI_CLICK_VOLUME;
+    this.uiConfirm.volume = AUDIO_MIX_CONFIG.UI_CONFIRM_VOLUME;
+    this.uiError.volume = AUDIO_MIX_CONFIG.UI_ERROR_VOLUME;
+    this.sciFiDoorOpen.volume = AUDIO_MIX_CONFIG.SCI_FI_DOOR_VOLUME;
+    this.sciFiDoorClose.volume = AUDIO_MIX_CONFIG.SCI_FI_DOOR_VOLUME;
     this._rocketFadeElapsed = null;
-    this._rocketFadeStartVolume = ROCKET_VOLUME;
-    this.rover.volume = LOOP_VOLUME / 2;
+    this._rocketFadeStartVolume = AUDIO_MIX_CONFIG.ROCKET_LOOP_VOLUME;
     this._allAudio.forEach((audio) => { audio._baseVolume = audio.volume; });
     this.setMasterVolume(1, false);
     this._activeFootsteps = null;
@@ -59,13 +67,19 @@ export class AudioManager {
     this._windTime = 0;
     this._lastHealth = null;
     this._damageSoundCooldown = 0;
+    this._lastHoverAt = null;
+    this._lastVolumePreviewAt = null;
+    this._lastVolumePreviewValue = null;
+    this._uiAudioUnlocked = false;
   }
 
   _createAudio(src, loop = false) {
     const audio = new Audio(src);
     audio.preload = 'auto';
     audio.loop = loop;
-    audio.volume = loop ? LOOP_VOLUME : 0.7;
+    audio.volume = loop
+      ? AUDIO_MIX_CONFIG.LOOP_DEFAULT_VOLUME
+      : AUDIO_MIX_CONFIG.ONE_SHOT_DEFAULT_VOLUME;
     this._allAudio.push(audio);
     return audio;
   }
@@ -139,9 +153,39 @@ export class AudioManager {
     this._playOneShot(this.doorCrank);
   }
 
-  playUiClick() { this._playOneShot(this.uiClick); }
-  playUiConfirm() { this._playOneShot(this.uiConfirm); }
-  playUiError() { this._playOneShot(this.uiError); }
+  playUiClick() {
+    this._uiAudioUnlocked = true;
+    this._playOneShot(this.uiClick);
+  }
+
+  playUiConfirm() {
+    this._uiAudioUnlocked = true;
+    this._playOneShot(this.uiConfirm);
+  }
+
+  playUiError() {
+    this._uiAudioUnlocked = true;
+    this._playOneShot(this.uiError);
+  }
+
+  playUiHover() {
+    if (!this._uiAudioUnlocked || this.masterVolume <= 0) return;
+    const now = Date.now();
+    if (this._lastHoverAt !== null && now - this._lastHoverAt < AUDIO_MIX_CONFIG.UI_HOVER_COOLDOWN_MS) return;
+    this._lastHoverAt = now;
+    this._playOneShot(this.uiHover);
+  }
+
+  playUiVolumePreview({ final = false } = {}) {
+    if (this.masterVolume <= 0) return;
+    const now = Date.now();
+    if (final && this._lastVolumePreviewValue === this.masterVolume) return;
+    if (!final && this._lastVolumePreviewAt !== null && now - this._lastVolumePreviewAt < AUDIO_MIX_CONFIG.UI_VOLUME_PREVIEW_COOLDOWN_MS) return;
+    this._lastVolumePreviewAt = now;
+    this._lastVolumePreviewValue = this.masterVolume;
+    this._uiAudioUnlocked = true;
+    this.playUiClick();
+  }
 
   playUiFeedback(success = true) {
     if (success) this.playUiConfirm();
@@ -214,7 +258,7 @@ export class AudioManager {
 
   playRocket() {
     this._rocketFadeElapsed = null;
-    this._setAudioVolume(this.rocket, ROCKET_VOLUME);
+    this._setAudioVolume(this.rocket, AUDIO_MIX_CONFIG.ROCKET_LOOP_VOLUME);
     this.rocket.currentTime = 0;
     this._play(this.rocket);
   }
@@ -229,7 +273,7 @@ export class AudioManager {
     this._rocketFadeElapsed = null;
     this.rocket.pause();
     this.rocket.currentTime = 0;
-    this._setAudioVolume(this.rocket, ROCKET_VOLUME);
+    this._setAudioVolume(this.rocket, AUDIO_MIX_CONFIG.ROCKET_LOOP_VOLUME);
   }
 
   _updateRocketFade(dt) {
@@ -258,7 +302,7 @@ export class AudioManager {
     if (!ctx) return null;
 
     // Buffer de 2 segundos com ruido rosa suave para o vento fino de Marte
-    const length = Math.max(1, Math.floor(ctx.sampleRate * 2));
+    const length = Math.max(1, Math.floor(ctx.sampleRate * WIND_AMBIENCE_CONFIG.AUDIO_BUFFER_SECONDS));
     const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
     const data = buffer.getChannelData(0);
     let b0 = 0; let b1 = 0; let b2 = 0;

@@ -19,9 +19,10 @@ function stubAudio() {
   return audioInstances;
 }
 
-describe('AudioManager rocket sound', () => {
+describe('AudioManager', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it('fades out the looping rocket sound and stops it after touchdown', () => {
@@ -42,7 +43,7 @@ describe('AudioManager rocket sound', () => {
       isGameRunning: false,
       isRoverActive: false,
     });
-    expect(rocket.volume).toBeCloseTo(0.35);
+    expect(rocket.volume).toBeCloseTo(0.28);
     expect(rocket.pause).not.toHaveBeenCalled();
 
     manager.update({
@@ -105,7 +106,7 @@ describe('AudioManager rocket sound', () => {
     expect(decompression.loop).toBe(false);
   });
 
-  it('plays the regolith placement sound quietly as a one-shot', () => {
+  it('plays the regolith placement sound at its balanced mix level', () => {
     const audioInstances = stubAudio();
     const manager = new AudioManager();
     const place = audioInstances.find((audio) => audio.src.includes('colocando_areia.WAV'));
@@ -116,7 +117,7 @@ describe('AudioManager rocket sound', () => {
     expect(place.currentTime).toBe(0);
     expect(place.play).toHaveBeenCalledOnce();
     expect(place.loop).toBe(false);
-    expect(place.volume).toBeCloseTo(0.07);
+    expect(place.volume).toBeCloseTo(0.42);
   });
 
   it('uses one-shot impacts for the matching block material when a block breaks', () => {
@@ -193,12 +194,54 @@ describe('AudioManager rocket sound', () => {
     const habitatSteps = audioInstances.find((audio) => audio.src.includes('dentro%20da%20nave.wav'));
 
     expect(manager.masterVolume).toBe(1);
-    expect(habitatSteps.volume).toBeCloseTo(0.45);
+    expect(habitatSteps.volume).toBeCloseTo(0.4);
 
     manager.setMasterVolume(0.4);
-    expect(habitatSteps.volume).toBeCloseTo(0.18);
+    expect(habitatSteps.volume).toBeCloseTo(0.16);
     manager.playRocket();
-    expect(manager.rocket.volume).toBeCloseTo(0.28);
+    expect(manager.rocket.volume).toBeCloseTo(0.224);
+  });
+
+  it('plays hover feedback after UI audio is unlocked and rate-limits rapid hovers', () => {
+    vi.useFakeTimers();
+    const audioInstances = stubAudio();
+    const manager = new AudioManager();
+    const hover = manager.uiHover;
+
+    manager.playUiHover();
+    expect(hover.play).not.toHaveBeenCalled();
+
+    manager.playUiClick();
+    manager.playUiHover();
+    manager.playUiHover();
+    expect(hover.play).toHaveBeenCalledOnce();
+
+    vi.advanceTimersByTime(85);
+    manager.playUiHover();
+    expect(hover.play).toHaveBeenCalledTimes(2);
+    expect(audioInstances).toContain(hover);
+  });
+
+  it('previews slider changes at the selected volume without rapid duplicate clicks', () => {
+    vi.useFakeTimers();
+    const audioInstances = stubAudio();
+    const manager = new AudioManager();
+    const click = manager.uiClick;
+
+    manager.playUiVolumePreview();
+    manager.setMasterVolume(0.5);
+    manager.playUiVolumePreview();
+    expect(click.play).toHaveBeenCalledOnce();
+
+    manager.playUiVolumePreview({ final: true });
+    expect(click.play).toHaveBeenCalledTimes(2);
+    expect(click.volume).toBeCloseTo(0.18);
+
+    manager.playUiVolumePreview({ final: true });
+    manager.setMasterVolume(0);
+    manager.playUiVolumePreview({ final: true });
+    expect(click.play).toHaveBeenCalledTimes(2);
+    expect(audioInstances).toContain(click);
   });
 
   it('plays a slow, heavy door sound when the airlock is cranked open by hand (issue #79)', () => {
