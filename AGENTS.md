@@ -71,6 +71,8 @@ src/base/                  organizacao visual da base: posteres e placas (basePo
                            telas vivas (baseDisplayText, baseCanvas), mobilia de cenario (baseFurniture) e a decoracao 3D que junta tudo (baseDecor)
 src/sky/                   céu marciano: shader de atmosfera, Sol, Terra+Lua, Fobos/Deimos, ciclo de sols
 src/graphics/              texturas procedurais em canvas e materiais dos blocos
+  shaderMode/              modo "Shaders" do menu: sombra do Sol em tempo real, bloom, raios de luz e tone mapping
+                           (ShaderMode, GodRaysPass), a conta da sombra (shadowRig) e a regra de ligar/desligar (shaderSettings)
 src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades, ordens, avisos), estações
                            (estufa, reciclador de água, gerador de O2, enfermaria), trilhos e avatar voxel
 src/story/                 história em 3 atos: StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
@@ -104,5 +106,6 @@ docs/                      contexto do desafio, APIs e dados reais
 - **Idioma:** código, identificadores e **textos da UI em inglês** (a submissão é em inglês). Docs e parte dos comentários estão em pt-BR. Textos da UI sem emoji (estilo pixel atual).
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`).
 - **Fluxo de PR:** skills do projeto em `.claude/skills/`: `/setup-issue` (sessão só para criar issues, com checagem de duplicata e do código), `/start-issue` (pegar uma issue) e `/send-pr` (rebase, checagens e PR vinculado a uma issue). Repo `nayetdet/nasa-space-apps`, branch base `main`. Nunca faça push direto na `main`.
+- **Modo Shaders:** o botão `Shaders: On/Off` do menu liga sombra do Sol, bloom, raios de luz e tone mapping (`src/graphics/shaderMode/`, números em `GRAPHICS_CONFIG`). Por padrão liga só em GPU de verdade e fora de telas de toque, e se desliga sozinho se o FPS cair. Desligado, o jogo desenha direto na tela, como antes. Fragment shader escrito à mão precisa terminar com `#include <colorspace_fragment>` (ou com `SRGB_AUTHORED_OUTPUT`, de `src/graphics/srgbOutput.js`, se as cores foram escolhidas "como aparecem na tela"), senão fica claro demais com os shaders ligados. Mudança visual deve ser conferida nos dois modos.
 - **Performance:** o loop roda a cada frame. Reaproveite `THREE.Vector3`/`Color` (veja os `_sunDir` e as cores constantes em `MarsSkySystem.js`) e evite alocar dentro do `update`.
 - **Créditos e referências:** todo asset, código ou dado externo usado precisa entrar na lista de *References* da submissão. Mantenha-a atualizada nos docs ou no README.

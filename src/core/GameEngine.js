@@ -30,6 +30,7 @@ import { SurvivalSystem } from '../player/SurvivalSystem.js';
 import { InputController } from '../player/InputController.js';
 import { HudManager } from '../ui/HudManager.js';
 import { DebugOverlay } from '../ui/DebugOverlay.js';
+import { ShaderMode } from '../graphics/shaderMode/ShaderMode.js';
 import { RoverController } from '../rover/RoverController.js';
 import { GymEquipmentController } from '../player/GymEquipmentController.js';
 import { ExpeditionState } from './ExpeditionState.js';
@@ -314,6 +315,25 @@ export class GameEngine {
     this._lookDir = new THREE.Vector3();
 
     this.debug = new DebugOverlay(this.renderer);
+
+    // Modo Shaders (sombra do Sol, bloom, raios de luz): liga sozinho em GPU de verdade, e o
+    // botao do menu troca. Criado antes do compile para os shaders com sombra ja sairem prontos.
+    this.shaderMode = new ShaderMode({
+      renderer: this.renderer,
+      scene: this.scene,
+      camera: this.camera,
+      sky: this.sky,
+      worldGroup: this.world.worldGroup,
+      glowMaterials: [atlas.material],
+      gpuName: this.debug.gpuName,
+      storage: getLocalStorage(),
+      coarsePointer: Boolean(window.matchMedia?.('(pointer: coarse)').matches),
+      onChange: (enabled) => this.menuScreens?.setShadersEnabled(enabled),
+    });
+    this.menuScreens.bindShaders({
+      enabled: this.shaderMode.enabled,
+      onToggle: () => this.shaderMode.toggle(),
+    });
 
     // Compila todos os shaders agora, em vez de travar na primeira vez que algo entra na tela
     this.renderer.compile(this.scene, this.camera);
@@ -1517,6 +1537,7 @@ export class GameEngine {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.shaderMode.setSize();
   }
 
   handleRoverAction() {
@@ -1921,7 +1942,11 @@ export class GameEngine {
         this._weatherFx
       );
       this._updateEvents(dt, isGameRunning);
-      this.renderer.render(this.scene, this.camera);
+      this.shaderMode.update(dt, { inside: this.survival.isPlayerInsideShip(this.camera.position) });
+      this.shaderMode.render();
+      if (isGameRunning && this.shaderMode.sampleFrame(frameMs)) {
+        this.hud.showToast('Shaders turned off to keep the game smooth. Turn them back on in the menu.');
+      }
       this.debug.frame(frameMs);
     };
 

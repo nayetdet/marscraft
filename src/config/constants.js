@@ -40,6 +40,61 @@ export const CAMERA_CONFIG = {
   REACH_DISTANCE: 6.5,
 };
 
+// Modo "Shaders" (src/graphics/shaderMode/): sombra do Sol em tempo real, brilho (bloom), raios de
+// luz e tone mapping (comprime o claro sem mudar as cores). Sao escolhas visuais, nao dados da NASA. Fica desligado em GPU por
+// software e em telas de toque, e se desliga sozinho se o jogo ficar lento.
+export const GRAPHICS_CONFIG = {
+  STORAGE_KEY: 'minemars.shaders',
+  // Sombra do Sol: mapa quadrado que acompanha a camera
+  SHADOW_MAP_SIZE: 2048,
+  // Meio lado (em blocos) da area que recebe sombra
+  SHADOW_EXTENT: 52,
+  // A area de sombra fica adiantada na direcao do olhar (fracao do meio lado)
+  SHADOW_LOOK_AHEAD: 0.45,
+  // Distancia da luz ate o centro da area (so precisa cobrir o relevo inteiro)
+  SHADOW_LIGHT_DISTANCE: 170,
+  // Altura minima da luz (componente y da direcao): evita sombras infinitas no por do sol.
+  // A noite a luz vem espelhada de cima, como um luar fraco.
+  SHADOW_MIN_ELEVATION: 0.2,
+  SHADOW_BIAS: -0.0004,
+  SHADOW_NORMAL_BIAS: 0.045,
+  // Com sombra de verdade o Sol pode ser mais forte e a luz ambiente mais fraca (mais contraste)
+  SUN_SCALE_DAY: 2.3,
+  SUN_SCALE_NIGHT: 0.6,
+  AMBIENT_SCALE: 0.38,
+  HEMISPHERE_SCALE: 0.55,
+  // Lampadas da base: sem o Sol atravessando o teto, elas e que iluminam os comodos
+  INTERIOR_LIGHT_SCALE: 2.8,
+  // Blocos que brilham (luminaria, farol): mais fortes, para passarem do limiar do bloom
+  EMISSIVE_SCALE: 2.4,
+  // Disco do Sol em HDR: precisa ser mais claro que o ceu em volta para o bloom pegar nele
+  SUN_DISC_BOOST: 5,
+  // Exposicao da "camera": abre dentro da base e a noite, fecha no Sol (por segundo, suavizado)
+  EXPOSURE_OUTSIDE: 0.95,
+  EXPOSURE_INSIDE: 1.3,
+  EXPOSURE_NIGHT_BOOST: 1.3,
+  EXPOSURE_SPEED: 1.6,
+  // Acabamento da imagem ja pronta: cor um pouco mais viva, mais contraste e cantos escurecidos
+  GRADE_SATURATION: 1.14,
+  GRADE_CONTRAST: 1.08,
+  GRADE_VIGNETTE: 0.22,
+  BLOOM_STRENGTH: 0.32,
+  BLOOM_RADIUS: 0.55,
+  BLOOM_THRESHOLD: 0.92,
+  // Raios de luz: amostras por pixel (em meia resolucao), alcance, queda e forca
+  GODRAYS_SAMPLES: 40,
+  GODRAYS_DENSITY: 0.92,
+  GODRAYS_DECAY: 0.955,
+  GODRAYS_STRENGTH: 0.3,
+  // Distancia (em blocos) a partir da qual um pixel conta como ceu aberto
+  GODRAYS_SKY_DISTANCE: 300,
+  // Protecao de desempenho (so no modo automatico): media abaixo de MIN_FPS por
+  // GUARD_SECONDS desliga os shaders. Os primeiros segundos sao ignorados (compilacao).
+  GUARD_MIN_FPS: 26,
+  GUARD_SECONDS: 6,
+  GUARD_WARMUP_SECONDS: 4,
+};
+
 export const INPUT_CONFIG = {
   MOUSE_SENSITIVITY: 0.0021, // radianos por pixel
   ZOOM_SENSITIVITY: 0.00055, // mais fina com a luneta (Z)

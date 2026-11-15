@@ -30,6 +30,18 @@ export class MenuScreens {
       const action = event.target.closest('[data-demo]')?.dataset.demo;
       if (action) feedback.textContent = onDemo(action);
     });
+    this.shadersBtn = document.getElementById('shaders-btn');
+  }
+
+  // Botao "Shaders: On/Off" do menu (sombra do Sol, brilho e raios de luz). Vale no mouse e no toque.
+  bindShaders({ enabled, onToggle }) {
+    this.setShadersEnabled(enabled);
+    this.shadersBtn.addEventListener('click', () => onToggle());
+  }
+
+  setShadersEnabled(enabled) {
+    this.shadersBtn.textContent = `Shaders: ${enabled ? 'On' : 'Off'}`;
+    this.shadersBtn.setAttribute('aria-pressed', String(enabled));
   }
 
   // Origem dos dados de tempestade na tela "NASA Data": "Real data from DD/MM/AAAA" ou, depois de
