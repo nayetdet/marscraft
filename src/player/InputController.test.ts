@@ -1,7 +1,8 @@
 // @ts-nocheck
 import { describe, expect, it, vi } from 'vitest';
 import { InputController } from './InputController.ts';
-import { BLOCK_IDS } from '../config/blockTypes.ts';
+import { BLOCK_IDS, SHIP_BLOCK_IDS } from '../config/blockTypes.ts';
+import { BLOCK_INTERACTION_CONFIG } from '../config/constants.ts';
 
 describe('scope equipment', () => {
   it('does not open from the removed touch scope shortcut', () => {
@@ -81,6 +82,58 @@ describe('scope equipment', () => {
     expect(input.isScannerOpen).toBe(false);
     expect(input.isZoomed).toBe(false);
     expect(input.isScanButtonHeld).toBe(false);
+  });
+});
+
+describe('block audio feedback', () => {
+  it('plays placement feedback after a block is successfully placed', () => {
+    const input = Object.create(InputController.prototype);
+    input.hud = { selectedSlot: 0, renderHotbar: vi.fn() };
+    input.survival = {
+      slots: [{ id: BLOCK_IDS.REGOLITH, count: 1 }],
+      useBlockFromSlot: vi.fn(() => true),
+    };
+    input.getTargetedBlock = () => ({
+      hit: true, type: 'block', x: 2, y: 3, z: 4, normal: { x: 0, y: 1, z: 0 },
+    });
+    input.player = { overlapsBlock: vi.fn(() => false) };
+    input.world = { setBlock: vi.fn() };
+    input.playerHand = { triggerSwing: vi.fn() };
+    input._syncHandWithSlot = vi.fn();
+    input.onBlockPlaced = vi.fn();
+
+    input._useSelectedItem();
+
+    expect(input.world.setBlock).toHaveBeenCalledWith(2, 4, 4, BLOCK_IDS.REGOLITH, true);
+    expect(input.onBlockPlaced).toHaveBeenCalledWith(BLOCK_IDS.REGOLITH);
+  });
+
+  it('starts and stops the matching mining audio when a block breaks', () => {
+    const input = Object.create(InputController.prototype);
+    const target = { hit: true, type: 'block', x: 2, y: 3, z: 4, block: BLOCK_IDS.REGOLITH };
+    input.getTargetedBlock = vi.fn(() => target);
+    input.playerHand = { triggerSwing: vi.fn() };
+    input.world = { updateBreakCracks: vi.fn(), clearBreakCracks: vi.fn(), breakBlock: vi.fn() };
+    input.onStartRegolithBreak = vi.fn();
+    input.onStopRegolithBreak = vi.fn();
+    input.onStartShipBlockBreak = vi.fn();
+    input.onStopShipBlockBreak = vi.fn();
+    input.isBreakButtonHeld = true;
+    input.isLocked = true;
+    input.getWorkSpeed = () => 1;
+
+    input._startBreaking();
+    expect(input.onStartRegolithBreak).toHaveBeenCalledOnce();
+    input.update(BLOCK_INTERACTION_CONFIG.BREAK_TIME);
+    expect(input.world.breakBlock).toHaveBeenCalledWith(2, 3, 4);
+    expect(input.onStopRegolithBreak).toHaveBeenCalledOnce();
+
+    target.block = BLOCK_IDS.NASA_HULL;
+    expect(SHIP_BLOCK_IDS).toContain(target.block);
+    input._startBreaking();
+    expect(input.onStartShipBlockBreak).toHaveBeenCalledOnce();
+    input._cancelBreaking();
+    expect(input.onStopShipBlockBreak).toHaveBeenCalledOnce();
   });
 });
 

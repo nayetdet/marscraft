@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { BLOCK_INTERACTION_CONFIG } from '../config/constants.ts';
-import { BLOCK_IDS } from '../config/blockTypes.ts';
+import { BLOCK_IDS, SHIP_BLOCK_IDS } from '../config/blockTypes.ts';
 import { applyMouseLook, requestRawPointerLock } from './mouseLook.ts';
 
 export class InputController {
@@ -34,6 +34,11 @@ export class InputController {
     onToggleJournal = () => {},
     onSaveGame = () => {},
     onBeforeFirstPlay = () => false,
+    onBlockPlaced = () => {},
+    onStartRegolithBreak = () => {},
+    onStopRegolithBreak = () => {},
+    onStartShipBlockBreak = () => {},
+    onStopShipBlockBreak = () => {},
   }) {
     this.onToggleShield = onToggleShield;
     this.onSendData = onSendData;
@@ -66,6 +71,11 @@ export class InputController {
     this.onSaveGame = onSaveGame;
     // Primeiro Play: quem responde `true` assumiu a tela (briefing da missao) e chama `start` depois
     this.onBeforeFirstPlay = onBeforeFirstPlay;
+    this.onBlockPlaced = onBlockPlaced;
+    this.onStartRegolithBreak = onStartRegolithBreak;
+    this.onStopRegolithBreak = onStopRegolithBreak;
+    this.onStartShipBlockBreak = onStartShipBlockBreak;
+    this.onStopShipBlockBreak = onStopShipBlockBreak;
 
     this.keys = {};
     this.isLocked = false;
@@ -214,6 +224,7 @@ export class InputController {
 
     if (!this.player.overlapsBlock(nx, ny, nz) && this.survival.useBlockFromSlot(this.hud.selectedSlot)) {
       this.world.setBlock(nx, ny, nz, slot.id, true);
+      this.onBlockPlaced(slot.id);
       this.hud.renderHotbar(this.survival.slots);
       this._syncHandWithSlot();
     }
@@ -347,13 +358,20 @@ export class InputController {
     this.breakSwingTimer = 0;
     this.playerHand.triggerSwing();
     if (hit.type === 'crop') this.world.updateCropBreakCracks(hit.plant, 0.01);
-    else this.world.updateBreakCracks(hit.x, hit.y, hit.z, 0.01);
+    else {
+      this.world.updateBreakCracks(hit.x, hit.y, hit.z, 0.01);
+      if (hit.block === BLOCK_IDS.REGOLITH) this.onStartRegolithBreak();
+      else if (SHIP_BLOCK_IDS.includes(hit.block)) this.onStartShipBlockBreak();
+    }
   }
 
   _cancelBreaking() {
     if (!this.breakState) return;
+    const blockId = this.breakState.type === 'crop' ? null : this.breakState.block;
     this.breakState = null;
     this.world.clearBreakCracks();
+    if (blockId === BLOCK_IDS.REGOLITH) this.onStopRegolithBreak();
+    else if (SHIP_BLOCK_IDS.includes(blockId)) this.onStopShipBlockBreak();
   }
 
   update(dt) {

@@ -105,6 +105,41 @@ describe('AudioManager rocket sound', () => {
     expect(decompression.loop).toBe(false);
   });
 
+  it('plays the regolith placement sound quietly as a one-shot', () => {
+    const audioInstances = stubAudio();
+    const manager = new AudioManager();
+    const place = audioInstances.find((audio) => audio.src.includes('colocando_areia.WAV'));
+
+    place.currentTime = 1;
+    manager.playRegolithPlace();
+
+    expect(place.currentTime).toBe(0);
+    expect(place.play).toHaveBeenCalledOnce();
+    expect(place.loop).toBe(false);
+    expect(place.volume).toBeCloseTo(0.07);
+  });
+
+  it('stops regolith and ship block break sounds when mining ends', () => {
+    const audioInstances = stubAudio();
+    const manager = new AudioManager();
+    const regolith = audioInstances.find((audio) => audio.src.includes('quebrando_areia.WAV'));
+    const shipBlock = audioInstances.find((audio) => audio.src.includes('quebrando_pedra.WAV'));
+
+    manager.playRegolithBreak();
+    expect(regolith.play).toHaveBeenCalledOnce();
+    regolith.currentTime = 0.6;
+    manager.stopRegolithBreak();
+    expect(regolith.pause).toHaveBeenCalledOnce();
+    expect(regolith.currentTime).toBe(0);
+
+    expect(shipBlock.loop).toBe(true);
+    manager.playShipBlockBreak();
+    expect(shipBlock.play).toHaveBeenCalledOnce();
+    manager.stopShipBlockBreak();
+    expect(shipBlock.pause).toHaveBeenCalledOnce();
+    expect(shipBlock.currentTime).toBe(0);
+  });
+
   it('starts at full volume and scales game sounds with the master volume', () => {
     const audioInstances = stubAudio();
     const manager = new AudioManager();
