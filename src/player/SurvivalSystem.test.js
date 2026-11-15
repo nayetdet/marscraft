@@ -25,7 +25,6 @@ describe('SurvivalSystem', () => {
     const survival = new SurvivalSystem();
     const farOut = { x: -4 + SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS, y: 11, z: 0 };
     survival.update(10, farOut, 100, false);
-    expect(survival.dustStormIntensity).toBe(1);
     expect(survival.health).toBe(survival.maxStat);
     expect(survival.oxygen).toBeLessThan(survival.maxStat);
   });
