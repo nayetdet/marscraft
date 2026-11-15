@@ -12,6 +12,7 @@ export class InputController {
     world,
     sky,
     hud,
+    onUiClick = () => {},
     onToggleZoom,
     onToggleThirdPerson = () => {},
     getTargetedBlock,
@@ -56,6 +57,7 @@ export class InputController {
     this.world = world;
     this.sky = sky;
     this.hud = hud;
+    this.onUiClick = onUiClick;
     this.onToggleZoom = onToggleZoom;
     this.getTargetedBlock = getTargetedBlock;
     this.harvestCrop = harvestCrop;
@@ -154,12 +156,14 @@ export class InputController {
       });
       this._setJoystick(0, 0);
       this.hud.openInventory(this.survival.inventorySlots);
+      this.onUiClick?.();
       if (!this.isTouchMode) document.exitPointerLock();
     }
   }
 
-  _closeInventory({ deferPointerLock = false } = {}) {
+  _closeInventory({ deferPointerLock = false, silent = false } = {}) {
     this.hud.closeInventory();
+    if (!silent) this.onUiClick?.();
     if (!this.isTouchMode) {
       if (deferPointerLock) {
         // Browsers release pointer lock for Escape, so request it after keyup.
@@ -186,6 +190,7 @@ export class InputController {
     this._cancelBreaking();
     this._setJoystick(0, 0);
     this.onToggleJournal(true);
+    this.onUiClick?.();
     if (!this.isTouchMode && document.pointerLockElement) document.exitPointerLock();
   }
 
@@ -464,7 +469,7 @@ export class InputController {
     };
 
     this._showPauseMenu = showPauseMenu;
-    this.hud.inventoryCloseBtn?.addEventListener('click', () => this._closeInventory());
+    this.hud.inventoryCloseBtn?.addEventListener('click', () => this._closeInventory({ silent: true }));
 
     controlsBtn.addEventListener('click', () => {
       menuMain.classList.add('hidden');
@@ -836,6 +841,7 @@ export class InputController {
     if (!changed) return;
     this.onToggleZoom(this.isScannerOpen, this.isZoomed);
     this.hud.updateZoomState(this.isScannerOpen, this.isZoomed);
+    this.onUiClick?.();
   }
 
   // Com o diário aberto, só J (volta ao jogo) e Esc (fecha e mostra o menu) fazem algo.
@@ -845,9 +851,11 @@ export class InputController {
     if (e.code === 'KeyJ') {
       e.preventDefault();
       this.onToggleJournal(false);
+      this.onUiClick?.();
       requestRawPointerLock(this.domElement);
     } else if (e.code === 'Escape') {
       this.onToggleJournal(false);
+      this.onUiClick?.();
       showPauseMenu();
     }
   }

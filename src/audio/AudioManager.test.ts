@@ -119,6 +119,53 @@ describe('AudioManager rocket sound', () => {
     expect(place.volume).toBeCloseTo(0.07);
   });
 
+  it('uses one-shot impacts for the matching block material when a block breaks', () => {
+    const audioInstances = stubAudio();
+    const manager = new AudioManager();
+    const regolithImpact = manager.regolithBreakImpact;
+    const hullImpact = manager.shipBlockBreakImpact;
+
+    manager.playBlockBreakImpact(true);
+    manager.playBlockBreakImpact(false);
+
+    expect(regolithImpact.currentTime).toBe(0);
+    expect(hullImpact.currentTime).toBe(0);
+    expect(regolithImpact.play).toHaveBeenCalledOnce();
+    expect(hullImpact.play).toHaveBeenCalledOnce();
+    expect(regolithImpact.loop).toBe(false);
+    expect(hullImpact.loop).toBe(false);
+    expect(audioInstances).toContain(regolithImpact);
+    expect(audioInstances).toContain(hullImpact);
+  });
+
+  it('plays a rate-limited error cue when health drops', () => {
+    const audioInstances = stubAudio();
+    const manager = new AudioManager();
+    const error = manager.uiError;
+    const player = { justLandedFromJump: false };
+    const survival = { health: 100, isInDanger: false, isDead: false };
+    const update = (dt) => manager.update({
+      dt,
+      player,
+      survival,
+      isGameRunning: false,
+      isRoverActive: false,
+    });
+
+    update(0);
+    survival.health = 99;
+    update(0.1);
+    survival.health = 98;
+    update(0.1);
+    expect(error.play).toHaveBeenCalledOnce();
+
+    update(0.5);
+    survival.health = 97;
+    update(0.1);
+    expect(error.play).toHaveBeenCalledTimes(2);
+    expect(audioInstances).toContain(error);
+  });
+
   it('stops regolith and ship block break sounds when mining ends', () => {
     const audioInstances = stubAudio();
     const manager = new AudioManager();

@@ -172,6 +172,7 @@ describe('block audio feedback', () => {
     input.onStopRegolithBreak = vi.fn();
     input.onStartShipBlockBreak = vi.fn();
     input.onStopShipBlockBreak = vi.fn();
+    input.onBlockBroken = vi.fn();
     input.isBreakButtonHeld = true;
     input.isLocked = true;
     input.getWorkSpeed = () => 1;
@@ -180,6 +181,7 @@ describe('block audio feedback', () => {
     expect(input.onStartRegolithBreak).toHaveBeenCalledOnce();
     input.update(BLOCK_INTERACTION_CONFIG.BREAK_TIME);
     expect(input.world.breakBlock).toHaveBeenCalledWith(2, 3, 4);
+    expect(input.onBlockBroken).toHaveBeenCalledWith(BLOCK_IDS.REGOLITH);
     expect(input.onStopRegolithBreak).toHaveBeenCalledOnce();
 
     target.block = BLOCK_IDS.NASA_HULL;
@@ -188,6 +190,25 @@ describe('block audio feedback', () => {
     expect(input.onStartShipBlockBreak).toHaveBeenCalledOnce();
     input._cancelBreaking();
     expect(input.onStopShipBlockBreak).toHaveBeenCalledOnce();
+  });
+});
+
+describe('interface sound feedback', () => {
+  it('plays one click when the scanner opens or closes, not while its state is unchanged', () => {
+    const input = Object.create(InputController.prototype);
+    input.isScannerOpen = false;
+    input.isZoomed = false;
+    input.isScanButtonHeld = false;
+    input.hud = { updateZoomState: vi.fn() };
+    input.onToggleZoom = vi.fn();
+    input.onUiClick = vi.fn();
+
+    input._setScope(true, true);
+    input._setScope(true, true);
+    input._setScope(false, false);
+
+    expect(input.onUiClick).toHaveBeenCalledTimes(2);
+    expect(input.onToggleZoom).toHaveBeenCalledTimes(2);
   });
 });
 

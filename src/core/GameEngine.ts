@@ -261,8 +261,8 @@ export class GameEngine {
     this._lastStormWarning = false;
     this.audio = new AudioManager();
     document.addEventListener('click', (event) => {
-      const control = event.target?.closest?.('button, [role="button"], a');
-      if (!control || control.disabled || control.closest('[data-action]')) return;
+      const control = event.target?.closest?.('button, [role="button"], a, [data-journal-entry]');
+      if (!control || control.disabled || control.closest('[data-action], [data-gym-step], [data-touch-action]')) return;
       this.audio.playUiClick();
     });
 
@@ -274,6 +274,7 @@ export class GameEngine {
     this.playerHand.setHeldBlock(firstSlot?.id, firstSlot?.count ?? 0);
 
     this.hud = new HudManager(previews, this.survival.slots, {
+      onUiClick: () => this.audio.playUiClick(),
       onOpenJournal: () => this.input.openJournal(),
       getSuitState: () => this._suitContext(),
       onSuitportEquip: () => this._handleSuitportEquip(),
@@ -365,6 +366,7 @@ export class GameEngine {
       world: this.world,
       sky: this.sky,
       hud: this.hud,
+      onUiClick: () => this.audio.playUiClick(),
       onToggleZoom: (scannerOpen, zoomed) => {
         this.isScannerOpen = scannerOpen;
         this.isZoomed = zoomed;
@@ -1050,6 +1052,7 @@ export class GameEngine {
   }
 
   _openMavPanel() {
+    this.audio.playUiClick();
     this.missionHud.openMavPanel();
     this._refreshMavPanel();
     document.exitPointerLock();
@@ -1063,10 +1066,13 @@ export class GameEngine {
   // [G] no terminal de ciencia e radio: o mesmo envio do botao do painel (que e o caminho no toque)
   _sendScienceData() {
     if (this._getInteraction()?.type !== 'science') {
+      this.audio.playUiError();
       this.hud.showToast('Go to the science & radio terminal inside the base to send your science to Earth.');
       return;
     }
-    this.hud.showToast(this.sendSciencePackage(), 6000);
+    const message = this.sendSciencePackage();
+    this.audio.playUiFeedback(!/radio silent|after the solar conjunction|nothing new|not enough|need more/i.test(message));
+    this.hud.showToast(message, 6000);
   }
 
   // Alvo de interacao de um local de amostra (um objeto por local, reaproveitado)
@@ -1182,9 +1188,11 @@ export class GameEngine {
 
   _toggleShield() {
     if (!this.mission.toggleShield()) {
+      this.audio.playUiError();
       this.hud.showToast('The battery is empty: the shield cannot turn on.');
       return;
     }
+    this.audio.playUiConfirm();
     this.hud.showToast(this.mission.shieldOn
       ? 'Radiation shield ON: a magnetic field around the base deflects solar particles. Stay inside the bubble! Uses energy.'
       : 'Radiation shield OFF.');
@@ -2054,6 +2062,7 @@ export class GameEngine {
     const cookAvatar = this.crewAvatars.find((avatar) => avatar.member === member);
     const res = this.utility.takeRation();
     if (!res.ok) {
+      this.audio.playUiError();
       if (res.reason === 'empty') {
         cookAvatar?.startHeadShake(this.player.pos, 1.0);
         this.hud.showCaption(`${member.name}: No food! Grow some in the greenhouse.`);
@@ -2062,6 +2071,7 @@ export class GameEngine {
       }
       return;
     }
+    this.audio.playUiConfirm();
 
     if (!cookAvatar) {
       this.hud.renderHotbar(this.survival.slots);
@@ -2358,15 +2368,17 @@ export class GameEngine {
         );
         this._playGymTone(520, 0.14, 380);
       } else if (res.reason) {
+        this.audio.playUiError();
         this.hud.showToast(res.reason);
       }
     } else if (this.roverController.canCollectIce()) {
       const res = this.roverController.collectIce();
       if (res.success) {
         this.tutorialCounts.roverIceKg += res.amount ?? 1;
-        this._playGymTone(260, 0.14, 480);
+        this._playGymTone(520, 0.14, 480);
       } else if (res.reason) {
         // Cacamba cheia ou bateria baixa: dizer por que a broca nao ligou
+        this.audio.playUiError();
         this.hud.showToast(res.reason);
       }
     }
@@ -2381,6 +2393,7 @@ export class GameEngine {
     if (Math.hypot(rover.pos.x - x, rover.pos.z - z) > DOSE_CONFIG.ROVER_MAV_REACH) return false;
     const blocks = roverMavBlocks(rover.iceCargo, this.mission.iceNeeded());
     if (blocks <= 0) {
+      this.audio.playUiError();
       this.hud.showToast(this.mission.iceNeeded() > 0
         ? `The rocket takes ice in loads of ${DOSE_CONFIG.ROVER_ICE_KG_PER_MAV_BLOCK} kg. Drill more first.`
         : 'The rocket does not need more ice.');
@@ -2479,6 +2492,7 @@ export class GameEngine {
       return;
     }
     if (this.missionHud.isMavPanelOpen) {
+      this.audio.playUiClick();
       this._closeMavPanel();
       return;
     }
@@ -2508,6 +2522,7 @@ export class GameEngine {
       this.toggleRoverMode();
     } else if (this.currentInteraction === 'water_dispenser') {
       const res = this.survival.drinkFromBaseDispenser();
+      this.audio.playUiFeedback(Boolean(res.success));
       this.tutorialCounts.drink++;
       this.hud.showToast(res.message);
     } else if (this.currentInteraction === 'greenhouse') {
@@ -2516,6 +2531,7 @@ export class GameEngine {
   }
 
   toggleRoverMode() {
+    this.audio.playUiClick();
     if (this.roverController.isActive) {
       this.roverController.deactivate();
       this.hud.setRoverMode(false);
