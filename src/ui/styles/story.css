@@ -556,3 +556,44 @@ body.cutscene-active .story-signal { visibility: hidden; }
 
 /* Celular em retrato: a tela de "gire o aparelho" fica por cima e a animacao espera */
 body.portrait-required .cutscene-layer { display: none; }
+
+/* Selo de certificado do treino de cadete (issue #88) */
+.cert-badge {
+  position: fixed;
+  top: 18%;
+  left: 50%;
+  z-index: 30;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: min(420px, 86vw);
+  box-sizing: border-box;
+  padding: 12px 14px;
+  color: #fff;
+  background: rgba(16, 4, 16, 0.92);
+  border: 2px solid #000;
+  box-shadow: inset 0 0 0 2px #ffcf3a, 4px 4px 0 rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+.cert-badge.hidden { display: none; }
+.cert-badge.is-entering { animation: cert-pop 0.45s steps(6) both; }
+.cert-badge-icon { flex: 0 0 52px; width: 52px; height: 52px; color: #ffcf3a; filter: drop-shadow(2px 2px 0 #000); }
+.cert-badge-icon svg { display: block; width: 100%; height: 100%; }
+.cert-badge-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cert-badge-body small { font-size: 11px; letter-spacing: 1px; color: #ffcf3a; }
+.cert-badge-body strong { font-size: 20px; text-shadow: 2px 2px 0 #000; }
+.cert-badge-body span { font-size: 13px; color: #8cff8c; }
+.cert-badge-body i { font-style: normal; font-size: 11px; color: #cfcfcf; }
+.cert-badge-body em { font-style: normal; font-size: 10px; color: #a9a9a9; }
+@keyframes cert-pop {
+  from { transform: translateX(-50%) scale(0.6); opacity: 0; }
+  to { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+@media (max-height: 500px) {
+  .cert-badge { top: 12%; padding: 8px 10px; }
+  .cert-badge-icon { flex-basis: 36px; width: 36px; height: 36px; }
+  .cert-badge-body strong { font-size: 15px; }
+  .cert-badge-body span { font-size: 11px; }
+  .cert-badge-body em { display: none; }
+}

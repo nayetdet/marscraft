@@ -1,4 +1,5 @@
 import { nextRocketJob } from './objectiveView.js';
+import { certificateById } from './storyChapters.js';
 
 // Para onde a seta do objetivo aponta. Funcoes puras: o GameEngine sabe a posicao de cada
 // lugar no mundo, e aqui so se decide QUAL lugar vale para o objetivo atual.
@@ -8,10 +9,13 @@ export const WAYPOINT_LABELS = {
   console: 'COMMAND CONSOLE',
   ice: 'ICE CRATER',
   mav: 'MAV ROCKET',
+  // Estacoes do treino de cadete (issue #88)
+  greenhouse: 'FOOD MONITOR',
+  gym: 'GYM',
 };
 
 // Lugares que ficam dentro da base: de fora, o caminho ate eles passa pelo airlock
-const INDOOR = new Set(['console', 'shelter', 'powerroom', 'lifeSupport', 'recycler', 'brokenWindow']);
+const INDOOR = new Set(['console', 'shelter', 'powerroom', 'lifeSupport', 'recycler', 'brokenWindow', 'greenhouse', 'gym']);
 
 // Lugar de cada trabalho do foguete (nextRocketJob); fabrica trabalhando e tempestades nao tem lugar
 const JOB_PLACES = { ice: 'ice', load: 'mav', base: 'airlock', data: 'console' };
@@ -35,7 +39,8 @@ export function objectiveTarget(objectiveId, s = {}) {
       // A seta segue o mesmo trabalho que o painel do objetivo mostra
       return JOB_PLACES[nextRocketJob(s)] ?? null;
     default:
-      return null;
+      // Certificados do treino de cadete (issue #88): cada um tem o seu lugar
+      return certificateById(objectiveId)?.place ?? null;
   }
 }
 

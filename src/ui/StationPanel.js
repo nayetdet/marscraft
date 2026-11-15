@@ -159,6 +159,15 @@ export class StationPanel {
   open(type) {
     this.type = type;
     this.isOpen = true;
+    // Conferir a bateria vale o certificado de engenharia do treino de cadete (issue #88)
+    if (type === 'powerroom' || type === 'power') this.engine.powerChecks++;
+    // Estufa: abre no campo que ja pode ser colhido, para a crianca ver o GET! de primeira
+    if (type === 'greenhouse') {
+      const st = this.engine.stations;
+      const isReady = (plot) => plot.crop && plot.crop.progress >= CROP_CONFIG[plot.crop.type].seconds;
+      const ready = st.plots.findIndex(isReady);
+      if (ready >= 0 && !isReady(st.plots[st.selectedPlot])) st.selectPlot(ready);
+    }
     this.feedback.textContent = '';
     this.ghNotice = '';
     if (type === 'treadmill' || type === 'bike') {
