@@ -278,10 +278,13 @@ export const ENERGY_CONFIG = {
   MARS_SUNLIGHT_FRACTION: 0.43,
   // Custos (em % de bateria)
   OXYGEN_COST_PER_POINT: 1.5, // reciclar 1 ponto de O2 no habitat (MOXIE + reciclagem)
-  // Blindagem contra radiacao ligada. Era 12,5 com tempestades de 3 h (37,5 % por tempestade);
-  // com a tempestade de 1 h (STORM_CONFIG.DURATION_HOURS) uma tempestade inteira custa 25 %.
-  SHIELD_DRAIN_PER_HOUR: 25,
-  ISRU_DRAIN_PER_HOUR: 25, // fabrica de combustivel ligada
+  // Blindagem contra radiacao ligada. Anda junto com STORM_CONFIG.DURATION_HOURS: com a
+  // tempestade de 0,2 h (10 s reais) uma tempestade inteira custa 22 % da bateria (era 25 %
+  // com a tempestade de 1 h e 25 %/h). Esquecida ligada, esvazia a bateria em ~45 s.
+  SHIELD_DRAIN_PER_HOUR: 110,
+  // Fabrica de combustivel ligada. Anda junto com MAV_CONFIG.ISRU_HOURS_PER_ICE_BLOCK: um bloco
+  // de gelo custa 7,5 % da bateria (era 15 % com 0,6 h por bloco e 25 %/h).
+  ISRU_DRAIN_PER_HOUR: 50,
   // Gerador nuclear (issue #85). [Ref] O MMRTG do Curiosity e do Perseverance gera ~110 W de
   // eletricidade de dia e de noite, com calor do plutonio (NASA). Na base ele so paga o suporte
   // de vida minimo (O2 do jogador e da tripulacao, filtro de CO2): fabrica, blindagem, luz da
@@ -327,10 +330,11 @@ export const RADIATION_CONFIG = {
   // toda tempestade machuque la fora, as fortes machuquem dentro do habitat sem abrigo, e o
   // abrigo com a parede cheia ou a blindagem dentro do habitat protejam em qualquer tempestade.
   // Anda junto com STORM_CONFIG.DURATION_HOURS: a tempestade entrega a mesma dose total em menos
-  // horas de jogo, entao a taxa por hora sobe na mesma proporcao (era 0,5 com 3 h de tempestade).
-  HARM_THRESHOLD_MSV_PER_HOUR: 1.5,
+  // horas de jogo, entao a taxa por hora sobe na mesma proporcao (era 0,5 com 3 h de tempestade
+  // e 1,5 com 1 h; agora a tempestade dura 0,2 h).
+  HARM_THRESHOLD_MSV_PER_HOUR: 7.5,
   // Acima desta taxa o HUD mostra radiacao alta (ainda sem dano)
-  WARN_MSV_PER_HOUR: 0.3, // era 0,1 com 3 h de tempestade
+  WARN_MSV_PER_HOUR: 1.5, // era 0,1 com 3 h de tempestade e 0,3 com 1 h
   DAMAGE_PER_EXCESS_MSV: 3, // pontos de vida por mSv acima do limite (escala de jogo)
   // [Ref] limite de carreira de astronautas da NASA: 600 mSv (NASA-STD-3001, 2022)
   CAREER_LIMIT_MSV: 600,
@@ -347,17 +351,24 @@ export const RADIATION_CONFIG = {
 
 export const STORM_CONFIG = {
   // So entram na fila CMEs com impacto previsto em Marte pelo modelo WSA-ENLIL da NASA (DONKI).
-  // O tempo de aviso e a viagem prevista (saida do Sol ate a chegada em Marte), encolhida:
-  // 1 dia real de viagem da CME = 1 hora de jogo de aviso
+  // Relogio da dose de radiacao: 1 hora de jogo = 1 dia real em Marte (radiation.ts)
   REAL_HOURS_PER_GAME_HOUR: 24,
-  FIRST_WARNING_AFTER_HOURS: 1,
-  GAP_BETWEEN_STORMS_HOURS: 2,
+  // O tempo de aviso e a viagem prevista da CME (saida do Sol ate a chegada em Marte), encolhida.
+  // Teste com jogadores em 15/11/2026: esperar minutos pelo aviso parava o jogo. Agora 500 horas
+  // reais de viagem = 1 hora de jogo: as CMEs do DONKI (38 a 173 h de viagem) dao 7 a 17 s reais
+  // de aviso. CME mais rapida continua dando menos aviso; o minimo e MIN_WARNING_HOURS (7,5 s).
+  WARNING_REAL_HOURS_PER_GAME_HOUR: 500,
+  MIN_WARNING_HOURS: 0.15,
+  // Calmaria antes do primeiro aviso e entre tempestades: 0,4 h de jogo = 20 s reais
+  FIRST_WARNING_AFTER_HOURS: 0.4,
+  GAP_BETWEEN_STORMS_HOURS: 0.4,
   // Horas de jogo de tempestade. Na mesma escala do aviso sao ~3 dias reais; a tempestade de
   // 2017 ficou alta por mais de 2 dias (NASA JPL)
   // Teste com jogadores em 15/11/2026: 3 h de jogo (2,5 min reais) parado no abrigo cansava.
-  // Agora 1 h (50 s reais). A dose total da tempestade nao muda, so chega mais rapido: por isso
-  // HARM_THRESHOLD e WARN de RADIATION_CONFIG subiram na mesma proporcao (x3).
-  DURATION_HOURS: 1,
+  // Passou a 1 h (50 s reais) e, no mesmo dia, a 0,2 h (10 s reais): a espera ainda era longa.
+  // A dose total da tempestade nao muda, so chega mais rapido: por isso HARM_THRESHOLD e WARN de
+  // RADIATION_CONFIG sobem na mesma proporcao.
+  DURATION_HOURS: 0.2,
   // Controle de demo (menu "Demo controls"): aviso curto antes da tempestade chegar (~10 s reais)
   DEMO_LEAD_HOURS: 0.2,
 };
@@ -374,10 +385,10 @@ export const SPACE_WEATHER_CONFIG = {
   FETCH_TIMEOUT_MS: 5000,
   // SEP (particulas solares energeticas) so entra quando o fetch ao vivo trouxe uma; nunca inventamos.
   // Regras do jogo: a cada 3 tempestades, a 3a e um pico de SEP. As particulas voam quase na
-  // velocidade da luz, entao o aviso e curto (~25 s reais). O DONKI nao da a forca da SEP em Marte:
+  // velocidade da luz, entao o aviso e curto (~5 s reais, menor que o de qualquer CME). O DONKI nao da a forca da SEP em Marte:
   // o pico usa a menor tempestade que o Curiosity mediu (RADIATION_CONFIG.STORM_DOSE_MIN_UGY).
   SEP_EVERY_N_STORMS: 3,
-  SEP_WARNING_HOURS: 0.25,
+  SEP_WARNING_HOURS: 0.1,
 };
 
 export const MAV_CONFIG = {
@@ -386,7 +397,9 @@ export const MAV_CONFIG = {
   PAD_RADIUS: 4,
   INTERACT_RADIUS: 6,
   ICE_BLOCKS_FOR_FULL_TANK: 10,
-  ISRU_HOURS_PER_ICE_BLOCK: 0.6,
+  // Horas de jogo para a fabrica transformar 1 bloco de gelo em combustivel: 0,15 h = 7,5 s
+  // reais (era 0,6 h = 30 s; teste com jogadores de 15/11/2026). Escala de jogo.
+  ISRU_HOURS_PER_ICE_BLOCK: 0.15,
   STORMS_TO_SURVIVE: 3,
   // [Ref] um astronauta consome ~0,84 kg de O2 por dia (NASA BVAD), usado para converter
   // os pontos de O2 do jogo em kg no resumo da vitoria
@@ -488,8 +501,10 @@ export const COMMS_CONFIG = {
   CONJUNCTION_SUN_ANGLE_DEG: 2,
   // [Ref] 1 sol = 24 h 39 min = 1,0275 dia da Terra (Mars Fact Sheet): avanca a data real do jogo
   EARTH_DAYS_PER_SOL: 1.0275,
-  // Escala de jogo: cada minuto real de viagem da luz vira 3 s de espera (ida e volta)
-  GAME_SECONDS_PER_LIGHT_MINUTE: 3,
+  // Escala de jogo: cada minuto real de viagem da luz vira 0,35 s de espera. Com Marte a 11
+  // minutos-luz, a resposta volta em ~8 s (era 3 s por minuto = ~66 s; teste de 15/11/2026).
+  // O card do radio continua mostrando o atraso real em minutos.
+  GAME_SECONDS_PER_LIGHT_MINUTE: 0.35,
   // Conjuncao encenada uma vez por partida (a real so volta em 2028): comeca depois de
   // ~1,5 sol de jogo e dura 6 horas de jogo (5 min reais)
   GAME_CONJUNCTION_START_HOURS: 36,

@@ -85,8 +85,10 @@
         <strong id="story-objective-text" aria-live="polite"></strong>
         <span id="story-task-key" class="story-key story-task-key"></span>
       </div>
-      <!-- Ato 1: os 3 passos do tutorial. Atos 2 e 3: a volta de trabalho, que se repete
-           (gelo, foguete, base) -->
+      <!-- Tutorial guiado: onde ir e o que apertar, e em que passo a crianca esta -->
+      <p id="story-task-hint" class="story-task-hint"></p>
+      <b id="story-step-count" class="story-step-count"></b>
+      <!-- Atos 2 e 3: a volta de trabalho, que se repete (gelo, foguete, base) -->
       <div id="story-steps" class="story-steps" aria-hidden="true">
         <span class="story-step"></span><i></i><span class="story-step"></span><i></i><span class="story-step"></span>
       </div>
@@ -421,7 +423,7 @@
             <button class="mc-btn secondary" data-demo="battery">Drain the battery to 10%</button>
             <button class="mc-btn secondary" data-demo="night">Jump to night</button>
             <button class="mc-btn secondary" data-demo="noon">Jump to noon</button>
-            <button class="mc-btn secondary" data-demo="skip-training">Skip cadet training</button>
+            <button class="mc-btn secondary" data-demo="skip-training">Skip the tutorial</button>
             <button class="mc-btn secondary" data-demo="event:meteor">Meteor impact</button>
             <button class="mc-btn secondary" data-demo="event:marsquake">Marsquake</button>
             <button class="mc-btn secondary" data-demo="event:eclipse">Phobos eclipse</button>

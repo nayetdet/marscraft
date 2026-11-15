@@ -4,7 +4,7 @@ import { MissionSystem, mavProgress, oxygenPointsToKg } from './MissionSystem.ts
 import { DOSE_CONFIG, ENERGY_CONFIG, MAV_CONFIG, SCIENCE_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.ts';
 import { TRANSIT_DOSE_MSV } from './doseBudget.ts';
 
-// CME com impacto direto previsto em Marte 3 dias depois (3 horas de jogo de aviso)
+// CME com impacto direto previsto em Marte 3 dias depois (aviso de poucos segundos no jogo)
 const cmes = [{
   id: 'cme', startTime: '2026-11-05T20:00Z', speedKmS: 900,
   headedToMars: true, marsArrivalTime: '2026-11-08T20:00Z', isGlancingBlow: false,
@@ -38,10 +38,12 @@ describe('MissionSystem energy', () => {
   });
 
   it('a dust storm cuts the solar charge and nobody gets hurt by it (issue #103)', () => {
-    const clear = createMission(10);
+    // Sem CME a caminho: so a poeira esta em jogo (uma tempestade solar machucaria)
+    const quiet = (hours) => new MissionSystem({ cmes: [], startHours: hours });
+    const clear = quiet(10);
     clear.dustWeather.panelDust = 0;
     clear.update(11);
-    const dusty = createMission(10);
+    const dusty = quiet(10);
     dusty.dustWeather.panelDust = 0;
     dusty.dustWeather.force('storm');
     const damage = dusty.update(11);
@@ -241,7 +243,7 @@ describe('MissionSystem storms', () => {
     const warning = mission.drainEvents().find((e) => e.type === 'storm-warning');
     expect(warning.storm).toBe(storm);
     // O aviso dura a viagem que a NASA previu para a CME
-    expect(warning.hoursUntil).toBeCloseTo(3, 1);
+    expect(warning.hoursUntil).toBeCloseTo(storm.leadHours, 1);
 
     mission.update(storm.arrival + 0.01, { insideHabitat: true });
     expect(mission.drainEvents().map((e) => e.type)).toContain('storm-start');

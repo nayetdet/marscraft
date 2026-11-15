@@ -551,7 +551,7 @@ export class GameEngine {
         : []),
       { type: 'power', x: 10.6, y: 11.4, z: -3, label: 'Press F: life support' },
       { type: 'console', x: 8.25, y: 11.5, z: -10.8, label: 'Press F: mission computer' },
-      { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth · [G] send science' },
+      { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth (call Earth) · [G] send science' },
       { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
       { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
       { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
@@ -1339,10 +1339,10 @@ export class GameEngine {
         : 'It is now noon on Mars: the solar panels are charging the battery.';
     }
     if (action === 'skip-training') {
-      if (this.story.skipTraining(this._storySnapshot)) return 'Cadet training skipped. Press Back, then Play: go get 1 ice.';
+      if (this.story.skipTraining()) return 'Tutorial skipped. Press Back, then Play: fill the rocket with ice.';
       return this.story.act === 0
-        ? 'Cadet training is off for this game: after calling Earth you go straight to the ice.'
-        : 'Cadet training is already done or skipped.';
+        ? 'Tutorial is off for this game: only 3 steps (enter the base, call Earth, get 1 ice).'
+        : 'The tutorial is already done or skipped.';
     }
     if (action.startsWith('event:')) return this.triggerEvent(action.slice(6));
     if (action === 'battery') {
@@ -1358,8 +1358,11 @@ export class GameEngine {
     // A historia usa o mesmo radio do terminal da base (CommsLink): distancia e atraso de hoje
     // Vezes que o jogador abriu o painel de energia (certificado de engenharia, issue #88)
     this.powerChecks = 0;
+    // O que o jogador ja fez, para os passos do tutorial guiado (src/story/tutorialSteps.ts).
+    // Beber, comer e lavar contam a tentativa: quem esta sem sede nao fica preso no passo.
+    this.tutorialCounts = { drink: 0, meal: 0, wash: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0 };
     this.story = new StoryDirector({
-      training: true, // treino de cadete (issue #88); o menu Demo Tools pode pular
+      training: true, // tutorial guiado completo; o menu Demo Tools pode pular
       replyDelayHours: this.comms.roundTripGameSeconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND,
       comms: {
         millionKm: Math.round(this.comms.distanceKm / 1e6),
@@ -1371,10 +1374,12 @@ export class GameEngine {
     this._objectiveText = '';
     // Retrato do jogo que o diretor le a cada frame (objeto reaproveitado)
     this._storySnapshot = {
-      hours: 0, insideHabitat: false, iceCount: 0, iceNeeded: 0, atConsole: false,
+      hours: 0, insideHabitat: false, iceCount: 0, iceNeeded: 0,
       stormPhase: 'calm', stormsSurvived: 0, propellantPct: 0, dataSent: false, launched: false,
       needsBase: false, iceForFullTank: MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK, scienceStep: null, scansLeft: 0,
       powerChecks: 0, harvestCount: 0, workoutCount: 0, shelterWaterL: 0,
+      drinkCount: 0, mealCount: 0, washCount: 0, earthCalls: 0, plantCount: 0,
+      roverDrives: 0, roverIceKg: 0, scanCount: 0,
     };
     this._scienceState = { discoveries: 0, samples: 0, sentDiscoveries: 0, sentSamples: 0, rawSamples: 0 };
 
@@ -1413,6 +1418,10 @@ export class GameEngine {
     return {
       airlock: { x: 0.5, y: ground + 3.2, z: outerDoor.z + 0.5, label: WAYPOINT_LABELS.airlock },
       console: { x: 4, y: ground + 3, z: -9.6, label: WAYPOINT_LABELS.console },
+      // Lugares do tutorial guiado: bebedouro, cozinha e banheiro
+      water: { x: WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.x, y: ground + 3, z: WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.z, label: WAYPOINT_LABELS.water },
+      kitchen: { x: 13.1, y: ground + 3, z: -16.2, label: WAYPOINT_LABELS.kitchen },
+      bathroom: { x: -16, y: ground + 2.6, z: -38.3, label: WAYPOINT_LABELS.bathroom },
       science: { x: 9.75, y: ground + 3, z: -10.8, label: WAYPOINT_LABELS.science },
       ice: { x: ice.x + 0.5, y: iceTop + 1.6, z: ice.z + 0.5, label: WAYPOINT_LABELS.ice },
       mav: { x: pad.x, y: ground + 9.2, z: pad.z, label: WAYPOINT_LABELS.mav },
@@ -1506,7 +1515,7 @@ export class GameEngine {
     // O lookAt da animacao deixa a camera rolada; _updateCamera so escreve yaw e pitch
     this.camera.rotation.set(0, 0, 0);
     this._updateCamera();
-    this.story.start();
+    this.story.start(this._storySnapshot);
   }
 
   _updateStory(dt) {
@@ -1515,7 +1524,6 @@ export class GameEngine {
     s.insideHabitat = this.survival.insidePressurizedShip;
     s.iceCount = this.survival.countItem(BLOCK_IDS.MARS_ICE);
     s.iceNeeded = this.mission.iceNeeded();
-    s.atConsole = this.currentInteraction === 'rover_terminal';
     s.stormPhase = this.mission.storm.phase;
     s.stormsSurvived = this.mission.stormCredit;
     s.propellantPct = this.mission.propellant;
@@ -1525,6 +1533,15 @@ export class GameEngine {
     s.harvestCount = this.stations.harvestCount;
     s.workoutCount = this.stations.workoutCount;
     s.shelterWaterL = this.mission.shelterWaterL;
+    const done = this.tutorialCounts;
+    s.drinkCount = done.drink;
+    s.mealCount = done.meal;
+    s.washCount = done.wash;
+    s.earthCalls = done.earthCalls;
+    s.roverDrives = done.roverDrives;
+    s.roverIceKg = done.roverIceKg;
+    s.plantCount = this.stations.plantCount;
+    s.scanCount = this.scanJournal.missionCount;
     s.iceForFullTank = this.mission.iceForFullTank();
     const sci = this._scienceState;
     sci.discoveries = this.scanJournal.missionCount;
@@ -1542,6 +1559,7 @@ export class GameEngine {
         this.storyHud.showCertificate(event.badge);
         this._playGymTone(520, 0.22, 780);
       }
+      else if (event.type === 'step-done') this._playGymTone(440, 0.16, 660);
       else if (event.type === 'start-storms') {
         this.mission.startStorms(s.hours);
         this.events.start(s.hours); // eventos aleatorios so depois do tutorial (issue #107)
@@ -1703,6 +1721,7 @@ export class GameEngine {
     } else if (this.roverController.canCollectIce()) {
       const res = this.roverController.collectIce();
       if (res.success) {
+        this.tutorialCounts.roverIceKg += res.amount ?? 1;
         this._playGymTone(260, 0.14, 480);
       } else if (res.reason) {
         // Cacamba cheia ou bateria baixa: dizer por que a broca nao ligou
@@ -1831,6 +1850,7 @@ export class GameEngine {
       this.toggleRoverMode();
     } else if (this.currentInteraction === 'water_dispenser') {
       const res = this.survival.drinkFromBaseDispenser();
+      this.tutorialCounts.drink++;
       this.hud.showToast(res.message);
     } else if (this.currentInteraction === 'greenhouse') {
       this.stationPanel.open('greenhouse');
@@ -1845,6 +1865,7 @@ export class GameEngine {
       this.hud.showToast('Disconnected from Rover Remote Terminal');
     } else if (this.currentInteraction === 'rover_terminal') {
       this.roverController.activate();
+      this.tutorialCounts.roverDrives++;
       this.hud.setRoverMode(true);
       this.playerHand.handGroup.visible = false;
       this.highlightBox.visible = false;

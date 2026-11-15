@@ -17,16 +17,19 @@ const cmes = [
 ];
 
 describe('leadTimeHours', () => {
-  it('is the trip NASA predicted for that CME, with 1 real day = 1 game hour', () => {
-    expect(leadTimeHours(cmes[1])).toBeCloseTo(2.5); // 2 dias e 12 h
-    expect(leadTimeHours(cmes[3])).toBeCloseTo(5); // 5 dias
+  it('is the trip NASA predicted for that CME, shrunk to a few seconds of game time', () => {
+    const scale = STORM_CONFIG.WARNING_REAL_HOURS_PER_GAME_HOUR;
+    expect(leadTimeHours(cmes[3])).toBeCloseTo(120 / scale); // 5 dias
+    // Viagem mais curta = menos aviso, mas nunca abaixo do minimo
+    expect(leadTimeHours(cmes[1])).toBeLessThan(leadTimeHours(cmes[3])); // 2 dias e 12 h
+    expect(leadTimeHours(cmes[1])).toBe(STORM_CONFIG.MIN_WARNING_HOURS);
   });
 
   it('matches the real prediction saved from DONKI: left 01/11 19:00Z, Mars on 07/11 06:00Z', () => {
     const cme = donki.cmes.find((c) => c.id === '2026-11-01T19:00:00-CME-001');
     expect(cme.marsArrivalTime).toBe('2026-11-07T06:00Z');
-    // 5 dias e 11 horas reais = 131 h -> 131 / 24 horas de jogo
-    expect(leadTimeHours(cme)).toBeCloseTo(131 / STORM_CONFIG.REAL_HOURS_PER_GAME_HOUR, 6);
+    // 5 dias e 11 horas reais = 131 h -> 131 / 500 horas de jogo (~13 s reais de aviso)
+    expect(leadTimeHours(cme)).toBeCloseTo(131 / STORM_CONFIG.WARNING_REAL_HOURS_PER_GAME_HOUR, 6);
   });
 });
 

@@ -80,6 +80,7 @@ src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades
                            (estufa, reciclador de água, gerador de O2, enfermaria), trilhos, avatar voxel e
                            crewInstances (desenha as caixas de todos os trajes juntas, com instancing)
 src/story/                 história em 3 atos: StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
+                           tutorialSteps (os passos do tutorial guiado do ato 1, um por vez, em dados),
                            objectiveView (o que o painel do objetivo desenha), waypoints (para onde a seta aponta) e WaypointBeacon (seta 3D)
   cutscene/                animações de chegada e de decolagem: timeline (keyframes), CutscenePlayer, efeitos, cápsula
 src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu), StoryHud

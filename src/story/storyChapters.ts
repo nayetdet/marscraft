@@ -2,7 +2,6 @@
 import { STORY_CONFIG } from '../config/constants.ts';
 import { formatDateDMY } from '../mission/missionText.ts';
 import { shelterDoseFactor } from '../mission/radiation.ts';
-import { TRANSIT_DOSE_MSV, dosePercent } from '../mission/doseBudget.ts';
 
 // Textos da historia (UI em ingles, para criancas de 7 a 12 anos, sem emoji).
 // So dados: quem decide quando cada coisa aparece e o StoryDirector.
@@ -12,25 +11,8 @@ import { TRANSIT_DOSE_MSV, dosePercent } from '../mission/doseBudget.ts';
 //   choices: [{ icon, name, key?, good, bad }]  duas opcoes lado a lado, com o ganho e o custo
 //   link:    { minutes, millionKm }  desenho do sinal de radio indo de Marte ate a Terra
 
+// Os baloes do tutorial (ato 1) ficam em src/story/tutorialSteps.ts, um por passo.
 export const CARDS = {
-  welcome: {
-    title: 'WELCOME TO MARS',
-    lines: [
-      { icon: 'rocket', text: 'Mission: fill the rocket, fly home' },
-      // Issue #104: a viagem de 203 dias ja gastou a maior parte do limite de dose
-      { icon: 'radiation', text: `Trip used ${dosePercent(TRANSIT_DOSE_MSV)}% of radiation limit` },
-      { icon: 'air', text: 'First: your suit air is low' },
-      { icon: 'door', text: 'Go inside the base' },
-    ],
-  },
-  inside: {
-    title: 'SAFE INSIDE',
-    lines: [
-      { icon: 'air', text: 'The base makes your air' },
-      { icon: 'bolt', text: 'Making air uses battery' },
-      { icon: 'radio', text: 'Now call Earth' },
-    ],
-  },
   // A rotina que se repete ate o tanque encher. Tempestades e dados entram depois, cada um na
   // sua hora (card da primeira tempestade, tarefa SEND DATA), para ensinar uma coisa por vez.
   act2: {
@@ -42,21 +24,12 @@ export const CARDS = {
       { icon: 'bolt', text: 'Air and fuel share one battery' },
     ],
   },
-  // Treino de cadete (issue #88): os 4 certificados, um por linha
-  training: {
-    title: 'CADET TRAINING',
-    lines: [
-      { icon: 'bolt', text: 'Engineering: check the battery' },
-      { icon: 'plant', text: 'Botany: harvest 1 plant' },
-      { icon: 'heart', text: 'Health: do 1 workout' },
-      { icon: 'shield', text: 'Shielding: fill the water wall' },
-    ],
-  },
+  // Fim do tutorial guiado: dai em diante o jogo e a rotina de encher o foguete
   trainingDone: {
-    title: 'CADET CERTIFIED',
+    title: 'TRAINING COMPLETE',
     lines: [
-      { icon: 'medal', text: '4 of 4 certificates!' },
-      { icon: 'ice', text: 'Now go outside: get 1 ice' },
+      { icon: 'medal', text: 'You know the whole base!' },
+      { icon: 'storm', text: 'Now solar storms can come' },
     ],
   },
   stormGuide: {
@@ -77,9 +50,8 @@ export const CARDS = {
   },
 };
 
-// Treino de cadete (issue #88): 4 certificados curtos dentro da base, cada um dado por um papel
-// da tripulacao, na ordem do caminho (console -> energia -> estufa -> academia -> abrigo).
-// `place` = lugar da seta (src/story/waypoints.js). O StoryDirector decide quando cada um vale.
+// Certificados de cadete (issue #88): 4 passos do tutorial guiado (tutorialSteps.ts, campo
+// `certificate`) entregam um selo, cada um dado por um papel da tripulacao.
 export const CERTIFICATES = [
   {
     id: 'cert-power',
@@ -140,16 +112,14 @@ export function certificateBadge(cert, { shelterWaterL = 0 } = {}) {
 
 // Card do primeiro relatorio pelo radio. A distancia e o atraso vem do CommsLink (o mesmo radio
 // do terminal da base): { millionKm, oneWayMinutes, dateIso } calculados para a data real do jogo.
-// Com o treino de cadete (issue #88), a espera da resposta vira hora de treinar.
-export function commsCard({ millionKm, oneWayMinutes, dateIso }, { training = false } = {}) {
+// O desenho mostra o atraso real; a espera no jogo e encolhida (COMMS_CONFIG).
+export function commsCard({ millionKm, oneWayMinutes, dateIso }) {
   return {
     title: 'MESSAGE SENT',
     link: { minutes: oneWayMinutes, millionKm },
     lines: [
       { icon: 'clock', text: 'Earth cannot help fast: you decide' },
-      training
-        ? { icon: 'medal', text: 'While you wait: cadet training' }
-        : { icon: 'ice', text: 'Do not wait: go get 1 ice' },
+      { icon: 'check', text: 'Do not wait: keep going' },
     ],
     source: `Distance calculated for ${formatDateDMY(dateIso)} from NASA/JPL planet orbits`,
   };
@@ -167,16 +137,10 @@ export function replyCard({ oneWayMinutes }) {
   };
 }
 
-// Frase curta de cada objetivo (terminal da base). O painel do objetivo mostra a versao em
-// icones: src/story/objectiveView.js.
+// Frase curta de cada objetivo (terminal da base). As dos passos do tutorial ficam em
+// tutorialSteps.ts (`objective`). O painel do objetivo mostra a versao em icones:
+// src/story/objectiveView.ts.
 export const OBJECTIVES = {
-  'enter-base': 'Go inside the base',
-  report: 'Call Earth at the command console',
-  'collect-ice': 'Get 1 block of ice from the ice crater',
-  'cert-power': 'Cadet training: check the battery in the power room',
-  'cert-greenhouse': 'Cadet training: harvest 1 plant at the food monitor',
-  'cert-gym': 'Cadet training: do 1 workout in the gym',
-  'cert-shelter': 'Cadet training: fill the storm shelter water wall',
   act2: 'Get the rocket ready to go home',
   'storm-guide': 'Get safe: storm shelter with water in its wall, or the Shield Remote',
   fuel: 'Fill the rocket with ice',
