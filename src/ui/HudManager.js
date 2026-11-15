@@ -44,9 +44,15 @@ export class HudManager {
     this.envStatusEl = document.getElementById('env-status');
     this.skyLabelsEl = document.getElementById('sky-labels');
     this.zoomOverlayEl = document.getElementById('zoom-overlay');
+    this.captionQueueEl = document.getElementById('caption-queue');
     this.toastEl = document.getElementById('toast');
-    this._toastQueue = [];
+    this._captionQueue = [];
+    this._captionTimer = null;
     this._toastTimer = null;
+    this.systemNoticeEl = document.getElementById('system-notice');
+    this.systemNoticeLabelEl = document.getElementById('system-notice-label');
+    this.systemNoticeMessageEl = document.getElementById('system-notice-message');
+    this._systemNoticeTimer = null;
     this.dangerVignetteEl = document.getElementById('danger-vignette');
     this.damageSourceEl = document.getElementById('damage-source');
     this._damageSourceText = '';
@@ -288,61 +294,75 @@ export class HudManager {
     this.zoomOverlayEl.classList.toggle('is-zoomed', isZoomed);
   }
 
-  showToast(msg, durationMs = 3500) {
-    const text = String(msg ?? '').trim();
-    if (!text || this._toastQueue.some((item) => item.text === text)) return;
-    const shouldStartTimer = this._toastQueue.length === 0;
-    this._toastQueue.push({ text, durationMs });
-    this._renderToastQueue();
-    if (shouldStartTimer) this._scheduleToastAdvance();
+  showToast(msg, durationMs = 2400) {
+    this.toastEl.textContent = String(msg ?? '');
+    this.toastEl.classList.add('visible');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => this.toastEl.classList.remove('visible'), durationMs);
   }
 
-  _scheduleToastAdvance() {
-    const current = this._toastQueue[0];
+  showCaption(msg, durationMs = 3500) {
+    const text = String(msg ?? '').trim();
+    if (!text || this._captionQueue.some((item) => item.text === text)) return;
+    const shouldStartTimer = this._captionQueue.length === 0;
+    this._captionQueue.push({ text, durationMs });
+    this._renderCaptionQueue();
+    if (shouldStartTimer) this._scheduleCaptionAdvance();
+  }
+
+  _scheduleCaptionAdvance() {
+    const current = this._captionQueue[0];
     if (!current) {
-      this._toastTimer = null;
-      this.toastEl.classList.remove('visible');
-      this.toastEl.replaceChildren();
+      this._captionTimer = null;
+      this.captionQueueEl.classList.remove('visible');
+      this.captionQueueEl.replaceChildren();
       return;
     }
 
-    this._toastTimer = setTimeout(() => {
-      this._toastQueue.shift();
-      this._renderToastQueue();
-      this._scheduleToastAdvance();
+    this._captionTimer = setTimeout(() => {
+      this._captionQueue.shift();
+      this._renderCaptionQueue();
+      this._scheduleCaptionAdvance();
     }, current.durationMs);
   }
 
-  _renderToastQueue() {
-    const visibleMessages = this._toastQueue.slice(0, 3);
-    this.toastEl.replaceChildren(...visibleMessages.map((item, index) => this._createToastLine(item.text, index === 0)));
-    const hiddenCount = this._toastQueue.length - visibleMessages.length;
+  _renderCaptionQueue() {
+    const visibleMessages = this._captionQueue.slice(0, 3);
+    this.captionQueueEl.replaceChildren(...visibleMessages.map((item, index) => this._createCaptionLine(item.text, index === 0)));
+    const hiddenCount = this._captionQueue.length - visibleMessages.length;
     if (hiddenCount > 0) {
       const queuedCount = document.createElement('span');
-      queuedCount.className = 'mc-toast-overflow';
+      queuedCount.className = 'mc-caption-overflow';
       queuedCount.textContent = `+${hiddenCount} more messages`;
-      this.toastEl.appendChild(queuedCount);
+      this.captionQueueEl.appendChild(queuedCount);
     }
-    this.toastEl.classList.toggle('visible', this._toastQueue.length > 0);
+    this.captionQueueEl.classList.toggle('visible', this._captionQueue.length > 0);
   }
 
-  _createToastLine(text, isCurrent) {
+  _createCaptionLine(text, isCurrent) {
     const line = document.createElement('div');
-    line.className = `mc-toast-line${isCurrent ? ' is-current' : ''}`;
-    const match = text.match(/^(Ana|Leo|Maya|Sam|Noor|Kai|Iris|Ravi|SYSTEM|AIRLOCK):\s*(.*)$/s);
+    line.className = `mc-caption-line${isCurrent ? ' is-current' : ''}`;
+    const match = text.match(/^(Ana|Leo|Maya|Sam|Noor|Kai|Iris|Ravi):\s*(.*)$/s);
     if (match) {
-      if (match[1] === 'SYSTEM' || match[1] === 'AIRLOCK') line.classList.add(match[1].toLowerCase());
       const speaker = document.createElement('span');
-      speaker.className = `mc-toast-speaker ${match[1].toLowerCase()}`;
+      speaker.className = `mc-caption-speaker ${match[1].toLowerCase()}`;
       speaker.textContent = `${match[1]}:`;
       const message = document.createElement('span');
-      message.className = 'mc-toast-message';
+      message.className = 'mc-caption-message';
       message.textContent = match[2];
       line.append(speaker, message);
     } else {
       line.textContent = text;
     }
     return line;
+  }
+
+  showSystemNotice(msg, label = 'SYSTEM', durationMs = 4500) {
+    this.systemNoticeLabelEl.textContent = label;
+    this.systemNoticeMessageEl.textContent = String(msg ?? '');
+    this.systemNoticeEl.classList.add('visible');
+    clearTimeout(this._systemNoticeTimer);
+    this._systemNoticeTimer = setTimeout(() => this.systemNoticeEl.classList.remove('visible'), durationMs);
   }
 
   showDeathScreen(survival = {}) {

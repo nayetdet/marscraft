@@ -42,6 +42,10 @@
 
   <!-- HUD Estilo Minecraft Survival -->
   <div id="hud" class="hud">
+    <div id="system-notice" class="system-notice" role="status" aria-live="polite">
+      <span id="system-notice-label" class="system-notice-label"></span>
+      <span id="system-notice-message" class="system-notice-message"></span>
+    </div>
     <div id="damage-overlay" class="damage-overlay hidden" aria-hidden="true"></div>
     <div id="breach-overlay" class="breach-overlay hidden" aria-hidden="true"></div>
     <div id="dust-storm-warning" class="dust-storm-warning hidden" aria-live="polite">
@@ -248,6 +252,7 @@
 
     <!-- Area Inferior: Mensagem de Item + Barras Survival + Hotbar 9 Slots -->
     <div class="mc-bottom-area">
+      <div id="caption-queue" class="mc-caption-queue" aria-live="polite"></div>
       <div id="toast" class="mc-toast"></div>
       <div id="selected-block-name" class="mc-item-name">Martian Regolith</div>
 
