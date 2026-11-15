@@ -126,6 +126,14 @@ export const GRAPHICS_CONFIG = {
   GUARD_MIN_FPS: 26,
   GUARD_SECONDS: 6,
   GUARD_WARMUP_SECONDS: 4,
+  // Resolucao adaptativa (resolutionScaler.ts): pixel ratio maximo, degraus abaixo dele e a regra
+  // para descer um degrau (media abaixo de RES_MIN_FPS por RES_SECONDS, depois do aquecimento).
+  // Render por software ja comeca no menor degrau.
+  MAX_PIXEL_RATIO: 1.5,
+  RES_STEPS: [1, 0.75, 0.5],
+  RES_MIN_FPS: 40,
+  RES_SECONDS: 2,
+  RES_WARMUP_SECONDS: 4,
 };
 
 export const INPUT_CONFIG = {
