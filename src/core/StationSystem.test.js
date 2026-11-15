@@ -58,6 +58,7 @@ describe('base stations', () => {
 
 describe('greenhouse and science progression', () => {
   it.each(['potato', 'lettuce', 'soy'])('grows %s with power and harvests fresh food', type => {
+    expect(CROP_CONFIG[type].seconds).toBeLessThan(10);
     const mission = new MissionSystem();
     const station = new StationSystem(mission);
     const survival = new SurvivalSystem();

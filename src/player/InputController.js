@@ -137,9 +137,22 @@ export class InputController {
     }
   }
 
+  openJournal() {
+    this.keys = {};
+    this.touchHeldActions.clear();
+    this._cancelBreaking();
+    this._setJoystick(0, 0);
+    this.onToggleJournal(true);
+    if (!this.isTouchMode && document.pointerLockElement) document.exitPointerLock();
+  }
+
   _useSelectedItem() {
     const slot = this.survival.slots[this.hud.selectedSlot];
     if (!slot || slot.count <= 0) return;
+    if (slot.id === BLOCK_IDS.JOURNAL) {
+      this.openJournal();
+      return;
+    }
     if (slot.id === BLOCK_IDS.SCOPE) {
       this._setScope(!this.isScannerOpen, !this.isScannerOpen);
       return;
@@ -177,7 +190,7 @@ export class InputController {
   }
 
   _handleTouchAction(action, button, pointerId) {
-    if (!this.isTouchMode || !this.isLocked || this.survival.isDead || this.hud.isInventoryOpen || this.isStationOpen?.()) return;
+    if (!this.isTouchMode || !this.isLocked || this.survival.isDead || this.hud.isInventoryOpen || this.isJournalOpen?.() || this.isStationOpen?.()) return;
     if (this.isInputBlocked?.()) return;
 
     if (this.isGymActive?.()) {
@@ -387,7 +400,7 @@ export class InputController {
     // Botão "Done" do diário: o clique é gesto do usuário, então já volta com o mouse travado.
     document.getElementById('journal-done')?.addEventListener('click', () => {
       this.onToggleJournal(false);
-      requestRawPointerLock(this.domElement);
+      if (!this.isTouchMode) requestRawPointerLock(this.domElement);
     });
 
     resetBtn.addEventListener('click', () => window.location.reload());
@@ -515,8 +528,7 @@ export class InputController {
 
       if (e.code === 'KeyJ' && this.isLocked && !e.repeat && !this.isRoverActive()) {
         e.preventDefault();
-        this.onToggleJournal(true);
-        document.exitPointerLock();
+        this.openJournal();
         return;
       }
 

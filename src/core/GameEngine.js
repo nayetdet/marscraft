@@ -169,6 +169,7 @@ export class GameEngine {
     this.playerHand.setHeldBlock(firstSlot?.id, firstSlot?.count ?? 0);
 
     this.hud = new HudManager(previews, this.survival.slots, {
+      onOpenJournal: () => this.input.openJournal(),
       onInventorySwap: (fromIndex, toIndex) => {
         const inventorySlots = this.survival.swapInventorySlots(fromIndex, toIndex);
         this.hud.renderHotbar(this.survival.slots);
@@ -1319,6 +1320,7 @@ export class GameEngine {
         && !this.input.isPortraitRequired
         && !this.survival.isDead
         && !this.hud.isInventoryOpen
+        && !this.scannerHud.isJournalOpen
         && !this.stationPanel.isOpen
         && !this.missionHud.isVictoryShown
         && !cutsceneActive

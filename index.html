@@ -381,7 +381,7 @@
     <section class="inventory-window" aria-label="Inventory">
       <header>
         <h2>Inventory</h2>
-        <span>Click an item, then a slot</span>
+        <span>Choose an item, then a slot. Select the journal twice to open it.</span>
         <button id="inventory-close-btn" class="inventory-close" type="button" aria-label="Close inventory">Close</button>
       </header>
       <div id="inventory-grid" class="inventory-grid"></div>
@@ -390,18 +390,25 @@
     </section>
   </div>
 
-  <div id="journal-overlay" class="journal-overlay hidden">
-    <section class="journal-window" aria-label="Discovery Journal">
+  <div id="journal-overlay" class="station-overlay journal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="journal-title">
+    <section class="station-window journal-window" aria-label="Discovery Journal">
       <header>
-        <h2>Discovery Journal</h2>
-        <span id="journal-progress">0 discovered</span>
+        <span id="journal-title">SPACE JOURNAL</span>
+        <button id="journal-done" type="button" aria-label="Close journal">X</button>
       </header>
-      <p id="journal-rank" class="journal-rank"></p>
-      <div id="journal-body" class="journal-body"></div>
-      <footer class="journal-footer">
-        <span>[J] Back to game</span>
-        <button id="journal-done" class="mc-btn journal-done-btn" type="button">Done</button>
-      </footer>
+      <div class="station-screen journal-screen">
+        <div class="gh-monitor journal-monitor">
+          <div class="gh-top-bar journal-top-bar">
+            <div class="gh-res-pill water" title="Discovered">
+              <strong id="journal-progress">0 / 23</strong>
+            </div>
+            <div class="gh-res-pill power" title="Astronaut Rank">
+              <strong id="journal-rank">CADET</strong>
+            </div>
+          </div>
+          <div id="journal-body" class="journal-body"></div>
+        </div>
+      </div>
     </section>
   </div>
 

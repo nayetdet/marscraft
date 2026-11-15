@@ -14,16 +14,20 @@ export const ZONE_COLORS = {
 };
 
 export const SIGNS = {
-  command: { code: 'CMD-1', name: 'COMMAND', color: ZONE_COLORS.command },
-  lifeSupport: { code: 'LSS-1', name: 'LIFE SUPPORT', color: ZONE_COLORS.lifeSupport },
-  quarters: { code: 'DRM-1', name: 'CREW QUARTERS', color: ZONE_COLORS.quarters },
-  common: { code: 'HAB-1', name: 'COMMON AREA', color: ZONE_COLORS.quarters },
-  greenhouse: { code: 'GRN-1', name: 'GREENHOUSE', color: ZONE_COLORS.greenhouse },
-  medical: { code: 'MED-1', name: 'MEDICAL BAY', color: ZONE_COLORS.medical },
-  gym: { code: 'GYM-1', name: 'GYM', color: ZONE_COLORS.gym },
-  mainHab: { code: 'HAB-1', name: 'MAIN HAB', color: ZONE_COLORS.quarters },
-  airlock: { code: 'AL-1', name: 'AIRLOCK', color: ZONE_COLORS.airlock },
-  shelter: { code: 'SHL-1', name: 'STORM SHELTER', color: ZONE_COLORS.shelter },
+  command: { name: 'COMMAND', color: ZONE_COLORS.command },
+  lifeSupport: { name: 'LIFE SUPPORT', color: ZONE_COLORS.lifeSupport },
+  quarters: { name: 'CREW QUARTERS', color: ZONE_COLORS.quarters },
+  common: { name: 'COMMON AREA', color: ZONE_COLORS.quarters },
+  greenhouse: { name: 'GREENHOUSE', color: ZONE_COLORS.greenhouse },
+  medical: { name: 'MEDICAL BAY', color: ZONE_COLORS.medical },
+  gym: { name: 'GYM', color: ZONE_COLORS.gym },
+  mainHab: { name: 'MAIN HAB', color: ZONE_COLORS.quarters },
+  airlock: { name: 'AIRLOCK', color: ZONE_COLORS.airlock },
+  shelter: { name: 'STORM SHELTER', color: ZONE_COLORS.shelter },
+  powerRoom: { name: 'POWER & HEAT', color: '#facc15' },
+  kitchen: { name: 'KITCHEN', color: '#4ade80' },
+  bathroom: { name: 'BATHROOM', color: '#38bdf8' },
+  workshop: { name: 'WORKSHOP', color: '#fb923c' },
 };
 
 // `donkiDate` = data de coleta do JSON embutido do DONKI, ja em DD/MM/AAAA

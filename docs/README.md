@@ -26,3 +26,9 @@ O conteúdo do desafio pode mudar ("more resources may be added"). Para reextrai
 4. Converta o HTML para markdown e substitua a seção "Texto original" dos arquivos em `challenge/`.
 
 Ao atualizar `data/`, mantenha a data de coleta em cada amostra.
+
+## Referências visuais
+
+- [ISS SSP 57000, Revision R, Appendix O: Instructions for Labels and Decals](https://ntrs.nasa.gov/api/citations/20190001390/downloads/20190001390.pdf), seções O.3.4.5.2.2 e O.3.4.10.1: contraste, uso de cores e fonte das placas de identificação. As placas do jogo são adaptações que identificam os espaços pela função; não usam códigos de módulos fictícios nem alegam reproduzir placas reais específicas.
+
+- [NASA: Quest Airlock](https://www.nasa.gov/international-space-station/quest-airlock/): a ISS usa o nome Quest para seu módulo de airlock; esse nome específico não é atribuído à base fictícia do jogo.

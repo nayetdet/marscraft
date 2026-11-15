@@ -114,3 +114,7 @@ Simplificação a explicar: a "blindagem ligada" (tecla R) é um escudo ativo qu
 | `PHYSICS_CONFIG.MARS_GRAVITY` (`src/config/constants.js`) | `12.0` | 3,71 m/s² | Ajustado para "sensação" de jogo. Se mantiver, explique isso no jogo ou nos créditos; o critério *Validity* olha isso. |
 | Duração de 1 sol (`MISSION_CONFIG.GAME_HOURS_PER_SECOND = 0.01` h/s) | ~40 min reais por dia de 24 h | 24 h 39 min | O relógio usa 24 h. Pode virar 24,65 h para ficar fiel. |
 | Taxas de O2/água/comida (`SURVIVAL_CONFIG`) | arbitrárias | — | Ok ser escala de jogo, mas a **razão** entre elas pode seguir o consumo real de um astronauta (O2 ~0,84 kg/dia, água ~2,5–3,5 kg/dia, comida ~1,8 kg/dia; fonte: NASA ECLSS / BVAD). |
+
+### Crescimento de plantas na estufa
+
+No experimento VEG-04, plantas para salada foram colhidas depois de 28 dias na Estação Espacial Internacional ([NASA, 10/07/2019](https://www.nasa.gov/image-article/growing-veggies-space/)). No jogo, alface, batata e soja levam 5, 7 e 9 segundos, respectivamente: são tempos acelerados para jogar, não medições de cultivo em Marte. A referência de 28 dias se aplica às plantas para salada do experimento, não à batata ou à soja.

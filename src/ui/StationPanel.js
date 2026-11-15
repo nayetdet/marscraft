@@ -771,6 +771,7 @@ export class StationPanel {
     }).join('');
 
     const ghLinks = [
+      ['NASA: 28-day salad crop', 'https://www.nasa.gov/image-article/growing-veggies-space/'],
       ['CSA: food production', 'https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/'],
       ...plantResearch.studies.map(st => [st.id + ': NASA study', st.url]),
     ].map(([label, url]) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`).join(' · ');
@@ -782,6 +783,7 @@ export class StationPanel {
         ${s.contaminated ? `<button type="button" class="mc-btn gh-clean-btn" data-action="cleanBase">CLEAN</button>` : ''}
         <details class="gym-learn"><summary aria-label="NASA info" title="NASA info">i</summary><p>${study ? `${study.id}: ${study.explanation}` : `Real NASA OSDR data (${formatDateDMY(plantResearch.retrieved.slice(0, 10))}).`}<br/>${ghLinks}</p></details>
       </div>
+      <p class="gh-time-note">Plants grow faster in this game. NASA grew salad plants in 28 days on the space station.</p>
       <div class="gh-body">
         <div class="gh-map-wrap">
           ${greenhouseMapSvg(s.plots, s.selectedPlot)}

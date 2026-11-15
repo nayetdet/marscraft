@@ -27,16 +27,26 @@ describe('SurvivalSystem', () => {
     expect(survival.oxygen).toBeCloseTo(20 - 2 * (20 / 360));
   });
 
+  it('starts with a journal that cannot be placed or consumed', () => {
+    const survival = new SurvivalSystem();
+    const index = survival.slots.findIndex((slot) => slot?.id === BLOCK_IDS.JOURNAL);
+    expect(index).toBeGreaterThanOrEqual(0);
+    expect(survival.slots[index].equipment).toBe(true);
+    expect(survival.useBlockFromSlot(index)).toBe(false);
+    expect(survival.slots[index].count).toBe(1);
+  });
+
   it('keeps the scanner and greenhouse crops as distinct items', () => {
     const ids = [BLOCK_IDS.SCOPE, ...Object.values(CROP_ITEM_IDS)];
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('starts with the Scope, carrots and the Shield Remote in the first three slots', () => {
+  it('starts with the equipment before the carrots', () => {
     const survival = new SurvivalSystem();
     expect(survival.slots[0]?.id).toBe(BLOCK_IDS.SCOPE);
-    expect(survival.slots[1]?.id).toBe(BLOCK_IDS.HYDRO_PLANT);
-    expect(survival.slots[2]).toMatchObject({ id: BLOCK_IDS.SHIELD_REMOTE, count: 1, equipment: true });
+    expect(survival.slots[1]).toMatchObject({ id: BLOCK_IDS.SHIELD_REMOTE, count: 1, equipment: true });
+    expect(survival.slots[2]?.id).toBe(BLOCK_IDS.JOURNAL);
+    expect(survival.slots[3]?.id).toBe(BLOCK_IDS.HYDRO_PLANT);
   });
 
   it('detects player inside Main White Habitat, Pressurized Tunnel, and Greenhouse Dome', () => {

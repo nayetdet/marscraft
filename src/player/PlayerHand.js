@@ -27,6 +27,7 @@ export class PlayerHand {
     this._buildHeldBlockMesh();
     this._buildScopeMesh();
     this._buildShieldRemoteMesh();
+    this._buildJournalMesh();
 
     this.heldCrops = {};
     for (const [id, type] of Object.entries(CROP_TYPES_BY_ID)) {
@@ -180,6 +181,26 @@ export class PlayerHand {
     this.handGroup.add(remote);
   }
 
+  _buildJournalMesh() {
+    const book = new THREE.Group();
+    const part = (w, h, d, color, x, y, z) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color }));
+      mesh.position.set(x, y, z);
+      mesh.renderOrder = 999;
+      book.add(mesh);
+    };
+    part(0.32, 0.42, 0.08, 0x152b30, 0, 0, 0);
+    part(0.27, 0.37, 0.085, 0x0e2329, 0.02, 0, 0);
+    part(0.07, 0.42, 0.1, 0x0284c7, -0.13, 0, 0);
+    part(0.11, 0.11, 0.012, 0xea580c, 0.03, 0.03, 0.05);
+    part(0.18, 0.03, 0.014, 0xfacc15, 0.03, 0.03, 0.05);
+    book.position.set(-0.08, 0.14, -0.22);
+    book.rotation.set(-0.3, 0.1, 0.25);
+    book.visible = false;
+    this.heldJournalMesh = book;
+    this.handGroup.add(book);
+  }
+
   // Um clone por tipo de bloco, reaproveitado (antes clonava a cada troca de slot e vazava)
   _getHandMaterial(blockId) {
     if (!this._handMaterials) this._handMaterials = {};
@@ -201,9 +222,10 @@ export class PlayerHand {
     }
     this.heldCarrotMesh.visible = false;
     for (const model of Object.values(this.heldCrops)) model.visible = false;
+    this.heldJournalMesh.visible = blockId === BLOCK_IDS.JOURNAL && count > 0;
     this.heldScopeMesh.visible = blockId === BLOCK_IDS.SCOPE && count > 0;
     this.heldShieldRemoteMesh.visible = blockId === BLOCK_IDS.SHIELD_REMOTE && count > 0;
-    if (this.heldScopeMesh.visible || this.heldShieldRemoteMesh.visible) {
+    if (this.heldScopeMesh.visible || this.heldShieldRemoteMesh.visible || this.heldJournalMesh.visible) {
       this.heldBlockMesh.visible = false;
       this.armMesh.position.set(0.08, -0.06, 0.08);
       return;

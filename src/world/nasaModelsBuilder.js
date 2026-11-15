@@ -6,6 +6,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
 import { HABITAT_LAYOUT } from './habitatLayout.js';
+import { signTexture } from '../base/baseCanvas.js';
+import { SIGNS } from '../base/basePosters.js';
 
 export function buildNasaCustomModels(scene) {
   const group = new THREE.Group();
@@ -865,19 +867,8 @@ function createCommsTerminalModel(mats, x, y, z) {
 }
 
 // Placa com o nome da sala (texto em canvas, sem emoji)
-function createRoomSign(text, x, y, z, rotY) {
-  const { texture } = makeCanvasTexture((ctx) => {
-    ctx.fillStyle = '#0f2a33';
-    ctx.fillRect(0, 0, 128, 32);
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(0, 0, 128, 3);
-    ctx.fillRect(0, 29, 128, 3);
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 15px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, 64, 17);
-  }, 128, 32);
+function createRoomSign(key, x, y, z, rotY) {
+  const texture = signTexture(SIGNS[key], 4);
   const sign = new THREE.Group();
   sign.position.set(x, y, z);
   sign.rotation.y = rotY;
@@ -977,9 +968,9 @@ function createNorthModuleModels(mats, y) {
   }
 
   // Placas das salas na parede do corredor central, em cima da porta de cada modulo
-  objs.push(createRoomSign('POWER & HEAT', -3.97, 13.45 - 10 + y, -21.5, Math.PI / 2));
-  objs.push(createRoomSign('KITCHEN', -0.03, 13.45 - 10 + y, -21.5, -Math.PI / 2));
-  objs.push(createRoomSign('BATHROOM', -3.97, 13.45 - 10 + y, -35.5, Math.PI / 2));
-  objs.push(createRoomSign('WORKSHOP', -0.03, 13.45 - 10 + y, -35.5, -Math.PI / 2));
+  objs.push(createRoomSign('powerRoom', -3.97, 13.45 - 10 + y, -21.5, Math.PI / 2));
+  objs.push(createRoomSign('kitchen', -0.03, 13.45 - 10 + y, -21.5, -Math.PI / 2));
+  objs.push(createRoomSign('bathroom', -3.97, 13.45 - 10 + y, -35.5, Math.PI / 2));
+  objs.push(createRoomSign('workshop', -0.03, 13.45 - 10 + y, -35.5, -Math.PI / 2));
   return objs;
 }

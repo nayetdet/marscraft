@@ -19,6 +19,17 @@ describe('scope equipment', () => {
     expect(input.isScannerOpen).toBe(false);
   });
 
+  it('opens the journal when the journal item is used', () => {
+    const input = Object.create(InputController.prototype);
+    input.hud = { selectedSlot: 0 };
+    input.survival = { slots: [{ id: BLOCK_IDS.JOURNAL, count: 1 }] };
+    input.openJournal = vi.fn();
+    input.getTargetedBlock = vi.fn();
+    input._useSelectedItem();
+    expect(input.openJournal).toHaveBeenCalledOnce();
+    expect(input.getTargetedBlock).not.toHaveBeenCalled();
+  });
+
   it('toggles scanning only while using the selected Scope', () => {
     const input = Object.create(InputController.prototype);
     input.isScannerOpen = false;

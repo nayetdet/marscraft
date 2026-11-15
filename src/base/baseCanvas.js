@@ -52,30 +52,66 @@ export function wrapText(ctx, text, maxWidth) {
   return lines;
 }
 
-// Placa de modulo: faixa colorida com o codigo (CMD-1) e o nome em branco
-export function signTexture({ code, name, color }, aspect) {
+// Placas de identificacao dos locais da base: painel escuro sci-fi com acento luminoso da zona.
+export function signTexture({ name, color = '#38bdf8' }, aspect) {
   const W = 512;
   const H = Math.round(W / aspect);
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = INK;
+
+  // Chassi escuro metalico (contrasta com as paredes claras do habitat)
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+  bgGrad.addColorStop(0, '#17223b');
+  bgGrad.addColorStop(0.5, '#0d1424');
+  bgGrad.addColorStop(1, '#090e1a');
+  ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = color;
+
+  // Scanlines sutis no fundo para textura de painel espacial
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+  for (let y = 6; y < H - 6; y += 6) {
+    ctx.fillRect(6, y, W - 12, 2);
+  }
+
+  // Moldura externa metalica + moldura interna na cor da zona
+  ctx.strokeStyle = '#334155';
   ctx.lineWidth = 6;
   ctx.strokeRect(3, 3, W - 6, H - 6);
 
-  ctx.textBaseline = 'middle';
-  setFont(ctx, Math.round(H * 0.5));
-  const codeW = ctx.measureText(code).width + H * 0.5;
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, codeW, H);
-  ctx.fillStyle = INK;
-  ctx.fillText(code, H * 0.25, H / 2 + 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(10, 10, W - 20, H - 20);
 
-  const room = W - codeW - H * 0.5;
-  fitFont(ctx, name, room, Math.round(H * 0.5));
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText(name, codeW + H * 0.25, H / 2 + 2);
+  // Faixa superior/inferior e barras laterais luminosas na cor da zona
+  const barW = 10;
+  ctx.fillStyle = color;
+  ctx.fillRect(14, 14, barW, H - 28);
+  ctx.fillRect(W - 14 - barW, 14, barW, H - 28);
+
+  // Rebites nos cantos
+  ctx.fillStyle = '#64748b';
+  for (const [rx, ry] of [[30, 18], [W - 36, 18], [30, H - 24], [W - 36, H - 24]]) {
+    ctx.fillRect(rx, ry, 6, 6);
+  }
+
+  // Tipografia do jogo em branco gelo com brilho colorido da zona
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  const maxTextW = W - H * 0.72;
+  const nameSize = fitFont(ctx, name, maxTextW, Math.round(H * 0.44), 12);
+  setFont(ctx, nameSize, true);
+
+  ctx.fillStyle = '#050811';
+  ctx.fillText(name, W / 2 + 2, H / 2 + 3);
+
+  ctx.save();
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillText(name, W / 2, H / 2 + 1);
+  ctx.restore();
+
   return toTexture(canvas);
 }
 

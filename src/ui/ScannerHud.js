@@ -1,9 +1,170 @@
 import { SCAN_CATEGORIES, SCAN_CATALOG, getCategoryLabel, getScanEntry, listCatalogSources } from '../data/scanCatalog.js';
+import { getJournalIcon } from '../graphics/journalIcons.js';
 
 const BAR_SEGMENTS = 20; // a barra enche em degraus, como as barras pixeladas do jogo
 const CARD_DURATION_MS = 6000;
 const DISCOVERY_DURATION_MS = 4200;
 const SLIDE_OUT_MS = 300; // igual à animação scan-slide-out do CSS
+
+const JOURNAL_ICONS = {
+  star: '<svg class="gh-mini-icon power" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M3 0h2v2h3v2H6v2h1v2H5V7H3v1H1V6h1V4H0V2h3Z"/></svg>',
+  scope: '<svg class="gh-mini-icon water" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M1 2h6v4H1Z M0 3h1v2H0Z M7 1h1v6H7Z M3 6h2v2H3Z"/></svg>',
+};
+
+const TAB_LABELS = {
+  sky: 'PLANETS',
+  terrain: 'ROCKS',
+  base: 'BASE',
+  landscape: 'MARS',
+};
+
+// Concise, 7-year-old-friendly card titles, key NASA facts, and 1-line takeaway
+const KID_CARD_META = {
+  sun: {
+    title: 'THE SUN',
+    stat: '43% SUN',
+    pills: ['228M km away', '43% Earth sun (590 W/m²)', '12.7 min light'],
+    tip: 'Our star! Less sun on Mars means solar panels make less power.',
+  },
+  earth: {
+    title: 'EARTH',
+    stat: '3-22m RADIO',
+    pills: ['55-401M km away', '3-22 min radio delay', 'Blue ocean planet'],
+    tip: 'Home! Radio messages take up to 22 minutes to arrive.',
+  },
+  moon: {
+    title: 'THE MOON',
+    stat: '0.17g PULL',
+    pills: ['384,400 km from Earth', '0.17g gravity', '9.2 µGy/h radiation'],
+    tip: "Earth's Moon! Artemis astronauts train there before Mars.",
+  },
+  phobos: {
+    title: 'PHOBOS',
+    stat: '22 KM WIDE',
+    pills: ['22 km wide', '3 orbits a day', 'Draws 1.8m closer/100y'],
+    tip: "Mars' bigger potato moon! Circles Mars 3 times a day.",
+  },
+  deimos: {
+    title: 'DEIMOS',
+    stat: '12 KM WIDE',
+    pills: ['12 km wide', '30h orbit', '23,460 km from Mars'],
+    tip: "Mars' smaller far moon! Looks like a bright star from Mars.",
+  },
+  regolith: {
+    title: 'REGOLITH',
+    stat: 'RUST DUST',
+    pills: ['Iron oxide (rust)', 'Fine as talcum powder', 'Global dust storms'],
+    tip: 'Red rusty dust! Covers solar panels and lowers your power.',
+  },
+  sandstone: {
+    title: 'SANDSTONE',
+    stat: 'OLD WATER',
+    pills: ['Pressed sand & mud', 'Ancient water layers', 'Gale Crater rock'],
+    tip: 'Layered rock that proves water once flowed on Mars!',
+  },
+  'crater-rock': {
+    title: 'BASALT',
+    stat: 'LAVA ROCK',
+    pills: ['Cooled volcanic lava', 'Olympus Mons: 3x Everest', 'Radiation shield'],
+    tip: 'Dark volcanic rock! Thick rock walls block space radiation.',
+  },
+  'water-ice': {
+    title: 'WATER ICE',
+    stat: '-62 °C ICE',
+    pills: ['Poles & underground', 'Air avg: -62 °C', 'Water, O2 & fuel'],
+    tip: 'Frozen water under the ground! Melts into drinking water.',
+  },
+  base: {
+    title: 'OUTPOST',
+    stat: '-98 TO -4°C',
+    pills: ['0.7% Earth air', '-98 to -4 °C outside', '6.9 µGy/h radiation'],
+    tip: 'Your Mars base! Keeps air, heat, water, and power running.',
+  },
+  habitat: {
+    title: 'HABITAT',
+    stat: '0.84 KG O2',
+    pills: ['0.84 kg O2/day', '2.5-3.5 kg water/day', 'Pressurized home'],
+    tip: 'Warm home with breathable air so you can take off your suit.',
+  },
+  airlock: {
+    title: 'AIRLOCK',
+    stat: '2 DOORS',
+    pills: ['2 sealed doors', '0.7% air outside', 'Keeps base air in'],
+    tip: 'Two-door room so the air inside the base never escapes!',
+  },
+  tunnel: {
+    title: 'TUNNEL',
+    stat: 'SEALED WAY',
+    pills: ['Pressurized hallway', 'Links base & dome', 'No suit needed'],
+    tip: 'Sealed walkway connecting the habitat to the greenhouse.',
+  },
+  greenhouse: {
+    title: 'GREENHOUSE',
+    stat: '1.8 KG FOOD',
+    pills: ['1.8 kg food/day', 'ISS Veggie lettuce', '43% Earth sunlight'],
+    tip: 'Uses water and power to grow fresh food on Mars!',
+  },
+  cupola: {
+    title: 'CUPOLA',
+    stat: '7 WINDOWS',
+    pills: ['7 sky windows', 'Like ISS Cupola', 'Storm lookout'],
+    tip: 'Top window dome to scan planets and spot dust storms.',
+  },
+  'solar-panels': {
+    title: 'SOLAR PANEL',
+    stat: '590 W/m²',
+    pills: ['590 W/m² sunlight', '0% power at night', 'Dust blocks light'],
+    tip: 'Turns sunlight into power! Needs batteries at night.',
+  },
+  antenna: {
+    title: 'ANTENNA',
+    stat: '3-22m DELAY',
+    pills: ['3-22 min one-way', 'Orbiter relay link', 'Sends science home'],
+    tip: 'Dish that sends your Mars discoveries back to Earth!',
+  },
+  'ice-depot': {
+    title: 'ICE PLANT',
+    stat: '1 KG = 1 L',
+    pills: ['1 kg ice = 1 L water', '2.5-3.5 kg/day need', 'ISRU Mars tech'],
+    tip: 'Melts ice from the rover into clean drinking water!',
+  },
+  rover: {
+    title: 'MARS ROVER',
+    stat: '899 KG CAR',
+    pills: ['899 kg robot car', '0.14 km/h top speed', 'Drills Mars ice'],
+    tip: 'Robot car that drives outside and drills water ice for you.',
+  },
+  lander: {
+    title: 'ROCKET MAV',
+    stat: '5.0 KM/S',
+    pills: ['5.0 km/s escape speed', '0.38g Mars gravity', 'Takes crew home'],
+    tip: 'Rocket that launches your crew back to orbit to go home!',
+  },
+  'mav-panel': {
+    title: 'MAV SCREEN',
+    stat: '3 CHECKS',
+    pills: ['Ice-made fuel', '3 storm checks', 'Science sent'],
+    tip: 'Checks fuel, storms, and science before rocket launch.',
+  },
+  gym: {
+    title: 'MARS GYM',
+    stat: '0.38g FIT',
+    pills: ['0.38g low gravity', 'Treadmill & bike', 'Protects bones'],
+    tip: 'Daily exercise keeps your muscles and bones strong in 0.38g!',
+  },
+  'crater-rim': {
+    title: 'CRATER RIM',
+    stat: '154 KM WIDE',
+    pills: ['Gale Crater: 154 km', 'Mount Sharp: 5 km tall', 'Ancient rock layers'],
+    tip: 'High crater walls around your base that block some wind.',
+  },
+  atmosphere: {
+    title: 'MARS SKY',
+    stat: '95% CO2',
+    pills: ['95% CO2 gas', '0.7% Earth pressure', 'Blue Mars sunsets'],
+    tip: 'Thin CO2 air with blue sunsets! Always wear a spacesuit outside.',
+  },
+};
 
 function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -20,8 +181,6 @@ function renderSourceLine(entry) {
   return `<p class="scan-source">Source: ${names.map(escapeHtml).join(' · ')} (reference data, not live)</p>`;
 }
 
-// HUD do scanner no estilo Minecraft do jogo: barra de progresso sob a mira, ficha como tooltip de
-// item, toast de descoberta (como o de conquista) e diário como janela de inventário.
 export class ScannerHud {
   constructor() {
     this.overlayEl = document.getElementById('zoom-overlay');
@@ -35,6 +194,26 @@ export class ScannerHud {
     this.journalRankEl = document.getElementById('journal-rank');
     this.journalBodyEl = document.getElementById('journal-body');
     this.isJournalOpen = false;
+    this.activeCategory = 'sky';
+    this.selectedEntryId = null;
+    this._lastJournal = null;
+
+    if (this.journalBodyEl) {
+      this.journalBodyEl.addEventListener('click', (event) => {
+        const tabBtn = event.target.closest('[data-journal-cat]');
+        if (tabBtn && this._lastJournal) {
+          this.activeCategory = tabBtn.dataset.journalCat;
+          this.selectedEntryId = null;
+          this.renderJournal(this._lastJournal);
+          return;
+        }
+        const cardEl = event.target.closest('[data-journal-entry]');
+        if (cardEl && this._lastJournal) {
+          this.selectedEntryId = cardEl.dataset.journalEntry;
+          this.renderJournal(this._lastJournal);
+        }
+      });
+    }
 
     this._last = { mode: null, status: null, name: null, fill: null };
     this.update({ targetId: null, progress: 0, done: false, known: false });
@@ -70,7 +249,6 @@ export class ScannerHud {
       return;
     }
 
-    // O nome aparece letra a letra e termina um pouco antes da barra encher.
     const letters = state.done ? entry.title.length : Math.ceil(entry.title.length * Math.min(1, state.progress * 1.35));
     this._setText(this.nameEl, 'name', entry.title.slice(0, letters));
 
@@ -100,12 +278,11 @@ export class ScannerHud {
     this._slideIn(this.cardEl, CARD_DURATION_MS);
   }
 
-  // Entra pela direita e, depois de `duration`, desliza de volta para a direita e some.
   _slideIn(el, duration) {
     clearTimeout(el._showTimer);
     clearTimeout(el._hideTimer);
     el.classList.remove('hidden', 'is-leaving', 'is-entering');
-    void el.offsetWidth; // reinicia a animação de entrada
+    void el.offsetWidth;
     el.classList.add('is-entering');
     el._showTimer = setTimeout(() => {
       el.classList.remove('is-entering');
@@ -138,48 +315,64 @@ export class ScannerHud {
   }
 
   renderJournal(journal) {
-    this.journalProgressEl.textContent = `${journal.count}/${journal.total} discovered`;
-    const rank = journal.isComplete() ? 'Rank: Junior Astronaut!' : 'Rank: Cadet (scan everything to become a Junior Astronaut)';
-    this.journalRankEl.textContent = `${rank} · Scope: ${journal.scanDuration().toFixed(1)}s scan, ${journal.scanRange()} block range`;
+    this._lastJournal = journal;
+    this.journalProgressEl.innerHTML = `${JOURNAL_ICONS.scope} ${journal.count}/${journal.total}`;
+    this.journalRankEl.innerHTML = `${JOURNAL_ICONS.star} ${journal.isComplete() ? 'ASTRONAUT!' : 'CADET'}`;
     this.journalRankEl.classList.toggle('is-complete', journal.isComplete());
 
-    const sections = SCAN_CATEGORIES.map((cat) => {
+    const topBarEl = this.journalOverlayEl?.querySelector('.journal-top-bar');
+    if (topBarEl && !topBarEl.querySelector('.gym-learn')) {
+      const sourcesHtml = listCatalogSources()
+        .map((s) => (s.url ? `<a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.name)}</a>` : escapeHtml(s.name)))
+        .join(' · ');
+      const infoEl = document.createElement('details');
+      infoEl.className = 'gym-learn';
+      infoEl.innerHTML = `<summary aria-label="NASA info" title="NASA info">i</summary><p>Real NASA data (saved in game).<br/>${sourcesHtml}</p>`;
+      topBarEl.appendChild(infoEl);
+    }
+
+    const tabsHtml = SCAN_CATEGORIES.map((cat) => {
       const { found, total } = journal.categoryProgress(cat.id);
-      const done = found === total;
-      const items = SCAN_CATALOG.filter((e) => e.category === cat.id)
-        .map((entry) => {
-          if (!journal.has(entry.id)) {
-            return '<article class="journal-entry locked"><h4>?</h4><p>Not scanned yet. Use the scope [Z].</p></article>';
-          }
-          return `
-            <article class="journal-entry">
-              <h4>${escapeHtml(entry.title)}</h4>
-              <p>${escapeHtml(entry.summary)}</p>
-              ${renderFacts(entry.facts)}
-              <p class="scan-why">Why it matters: ${escapeHtml(entry.why)}</p>
-            </article>`;
-        })
-        .join('');
-      return `
-        <section class="journal-section">
-          <h3>${escapeHtml(cat.label)} <span class="${done ? 'journal-done' : ''}">${found}/${total}${done ? ' · scope upgraded!' : ''}</span></h3>
-          <div class="journal-grid">${items}</div>
-        </section>`;
+      const isActive = cat.id === this.activeCategory;
+      const isDone = found === total;
+      const label = TAB_LABELS[cat.id] ?? cat.label.toUpperCase();
+      return `<button type="button" class="gym-tab journal-tab ${isActive ? 'active' : ''} ${isDone ? 'done' : ''}" data-journal-cat="${escapeHtml(cat.id)}" aria-pressed="${isActive}">
+        <span>${escapeHtml(label)}</span>
+        <small>${found}/${total}</small>
+      </button>`;
     }).join('');
 
-    const sources = listCatalogSources()
-      .map((s) => (s.url
-        ? `<li><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.name)}</a></li>`
-        : `<li>${escapeHtml(s.name)}</li>`))
-      .join('');
+    const entries = SCAN_CATALOG.filter((entry) => entry.category === this.activeCategory);
+    const activeEntry = entries.find((e) => e.id === this.selectedEntryId) ?? entries[0] ?? null;
 
-    this.journalBodyEl.innerHTML = `${sections}
-      <section class="journal-section">
-        <h3>NASA data sources</h3>
-        <div class="journal-sources">
-          <p>All numbers are built-in reference values from these sources. Nothing here is live data.</p>
-          <ul>${sources}</ul>
-        </div>
-      </section>`;
+    const cardsHtml = entries.map((entry) => {
+      const discovered = journal.has(entry.id);
+      const isSelected = activeEntry?.id === entry.id;
+      const meta = KID_CARD_META[entry.id] ?? {
+        title: entry.title.toUpperCase(),
+        stat: entry.facts[0]?.value ?? '',
+      };
+
+      return `
+        <article class="gh-card journal-card ${discovered ? 'ready' : 'locked'} ${isSelected ? 'selected' : ''}" data-journal-entry="${escapeHtml(entry.id)}">
+          <img class="gh-crop-art journal-art ${escapeHtml(entry.category)}" src="${getJournalIcon(entry.id)}" alt="${escapeHtml(entry.title)}" />
+          <h3>${escapeHtml(meta.title)}</h3>
+          <span class="gh-food-gain">${JOURNAL_ICONS.star} ${escapeHtml(meta.stat)}</span>
+        </article>`;
+    }).join('');
+
+    const activeMeta = activeEntry ? KID_CARD_META[activeEntry.id] : null;
+    const pills = activeMeta?.pills ?? (activeEntry ? activeEntry.facts.map((f) => `${f.label}: ${f.value}`) : []);
+    const pillsHtml = pills.map((p) => `<span class="journal-pill">${escapeHtml(p)}</span>`).join('');
+    const tipText = activeMeta?.tip ?? activeEntry?.summary ?? '';
+
+    this.journalBodyEl.innerHTML = `
+      <div class="gym-tabs journal-tabs" role="group" aria-label="Journal categories">${tabsHtml}</div>
+      <div class="gh-cards journal-cards">${cardsHtml}</div>
+      <div class="journal-fact-bar" role="status">
+        <div class="journal-pills-row">${pillsHtml}</div>
+        <div class="journal-tip-line"><strong>${escapeHtml(activeMeta?.title ?? '')}:</strong> ${escapeHtml(tipText)}</div>
+      </div>
+    `;
   }
 }

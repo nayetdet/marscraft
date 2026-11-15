@@ -349,70 +349,9 @@ body.pause-menu-open .crew-picker { display: none; }
 .victory-summary div { display: flex; justify-content: space-between; gap: 12px; }
 .victory-sources { font-size: 12px; color: #d0d0d0; line-height: 1.4; }
 
-/* Diário de descobertas (tecla J): janela cinza chanfrada igual à do inventário,
-   com cada ficha num "slot" afundado. */
-.journal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(0, 0, 0, .58);
-}
-.journal-overlay.hidden { display: none; }
-.journal-window {
-  display: flex;
-  flex-direction: column;
-  width: min(860px, 96vw);
-  max-height: 90vh;
-  padding: 16px;
-  background: #777;
-  border: 4px solid;
-  border-color: #aaa #383838 #383838 #aaa;
-  outline: 3px solid rgba(0, 0, 0, .8);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, .65);
-}
-.journal-window header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-.journal-window h2 { font-size: 20px; }
-.journal-window header span { font-size: 13px; color: #ffff55; text-shadow: 2px 2px 0 #3f3f00; }
-.journal-rank { margin: 6px 0 12px; font-size: 12px; color: #e5e5e5; }
-.journal-rank.is-complete { color: #55ff55; text-shadow: 2px 2px 0 #153f15; }
-.journal-body { overflow-y: auto; padding-right: 6px; user-select: text; }
-.journal-section { margin-bottom: 14px; }
-.journal-section h3 { font-size: 15px; margin-bottom: 6px; }
-.journal-section h3 span { font-size: 12px; color: #e5e5e5; }
-.journal-section h3 .journal-done { color: #55ff55; text-shadow: 2px 2px 0 #153f15; }
-.journal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px; }
-.journal-entry,
-.journal-sources {
-  padding: 8px 10px;
-  background: #8b8b8b;
-  border-top: 3px solid #373737;
-  border-left: 3px solid #373737;
-  border-right: 3px solid #ffffff;
-  border-bottom: 3px solid #ffffff;
-  font-size: 12px;
-  line-height: 1.4;
-}
-.journal-entry h4 { font-size: 14px; margin-bottom: 3px; }
-.journal-entry p { margin-bottom: 5px; }
-.journal-entry .scan-facts { padding: 0; background: none; border: 0; }
-.journal-entry .scan-fact-label { color: #e0e0e0; }
-.journal-entry .scan-why { margin-bottom: 0; }
-.journal-entry.locked { display: flex; align-items: center; gap: 10px; background: #6b6b6b; color: #c6c6c6; }
-.journal-entry.locked h4 { font-size: 26px; margin: 0; color: #c6c6c6; }
-.journal-entry.locked p { margin: 0; }
-.journal-sources p { margin-bottom: 6px; }
-.journal-sources ul { padding-left: 18px; line-height: 1.6; }
-.journal-sources a { color: #ffff55; text-shadow: 2px 2px 0 #3f3f00; }
-.journal-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; font-size: 12px; color: #e5e5e5; }
-.journal-done-btn { width: auto; min-width: 180px; padding: 8px 16px; font-size: 15px; }
-
 @media (max-width: 600px) {
   .mc-splash { margin-left: 100px; }
   .inventory-window { padding: 10px; }
-  .journal-window { padding: 10px; }
 }
 
 /* Tripulacao (issue #47) */
@@ -669,6 +608,8 @@ body.pause-menu-open .crew-picker { display: none; }
   border-color: #fca5a5 #7f1d1d #7f1d1d #fca5a5;
 }
 
+.gh-time-note { color: #d4e8cf; font-size: 12px; line-height: 1.35; margin: 4px 0; }
+
 .gh-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -907,4 +848,219 @@ body.pause-menu-open .crew-picker { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .gh-plot.is-ready path, .gh-plot.is-ready rect { animation: none; }
+}
+
+/* Monitor visual do Journal (mesmo padrão visual de cards da estufa, tamanho 100% fixo) */
+.journal-overlay {
+  z-index: 40;
+}
+
+.journal-window {
+  width: min(620px, 95vw);
+  height: min(440px, 88dvh);
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.journal-screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 10px 12px;
+}
+
+.journal-monitor {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.journal-top-bar {
+  flex-shrink: 0;
+}
+
+.journal-top-bar #journal-progress,
+.journal-top-bar #journal-rank {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.journal-top-bar #journal-rank.is-complete {
+  color: #4ade80;
+}
+
+.journal-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.journal-tabs {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.journal-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.journal-tab small {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+.journal-tab.done {
+  border-color: #4ade80;
+  color: #bbf7d0;
+}
+
+.journal-cards {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+  align-content: start;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.journal-card {
+  padding: 10px 6px;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.journal-card.locked {
+  background: #1c2427;
+  border-color: #475569;
+  filter: grayscale(1);
+  opacity: 0.65;
+}
+
+.journal-card.locked:hover {
+  opacity: 0.85;
+}
+
+.journal-card h3 {
+  font-size: 13px;
+}
+
+.journal-card .gh-food-gain {
+  font-size: 12px;
+}
+
+.journal-card.selected {
+  outline: 2px solid #fde047;
+  opacity: 1;
+}
+
+.journal-art {
+  width: 56px;
+  height: 56px;
+  padding: 4px;
+  background: radial-gradient(circle at 50% 40%, #16374a, #09131c);
+  border-color: #38bdf8;
+}
+
+.journal-art.terrain,
+.journal-art.landscape {
+  background: radial-gradient(circle at 50% 40%, #4a2416, #1c0d09);
+  border-color: #fb923c;
+}
+
+.journal-art.base {
+  background: radial-gradient(circle at 50% 40%, #1e4638, #0d211b);
+  border-color: #4d7c6b;
+}
+
+.journal-fact-bar {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 10px;
+  background: #0b1c21;
+  border: 2px solid #38bdf8;
+  color: #e6f4f1;
+  overflow: hidden;
+}
+
+.journal-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.journal-pill {
+  padding: 2px 7px;
+  background: #13323c;
+  border: 1px solid #38bdf8;
+  color: #fde047;
+  font-size: 11.5px;
+  font-weight: bold;
+}
+
+.journal-tip-line {
+  font-size: 12px;
+  color: #dcfce7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.journal-tip-line strong {
+  color: #4ade80;
+}
+
+@media (max-width: 620px), (max-height: 500px) {
+  .journal-window {
+    width: min(580px, 96vw);
+    height: min(350px, 92dvh);
+    max-height: 92dvh;
+    padding: 8px;
+  }
+  .journal-screen {
+    padding: 6px 8px;
+  }
+  .journal-cards {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 6px;
+  }
+  .journal-art {
+    width: 44px;
+    height: 44px;
+  }
+  .journal-tab {
+    height: 30px;
+    padding: 2px 6px;
+    font-size: 11px;
+  }
+  .journal-fact-bar {
+    height: 52px;
+    padding: 4px 8px;
+  }
 }

@@ -14,9 +14,10 @@ const STAT_ICON_PATHS = {
 };
 
 export class HudManager {
-  constructor(previews, initialSlots, { onInventorySwap } = {}) {
+  constructor(previews, initialSlots, { onInventorySwap, onOpenJournal } = {}) {
     this.previews = previews;
     this.onInventorySwap = onInventorySwap;
+    this.onOpenJournal = onOpenJournal;
     this.selectedSlot = 0;
     this.inventorySelection = null;
 
@@ -182,6 +183,7 @@ export class HudManager {
   _itemPreview(id) {
     if (id === BLOCK_IDS.SCOPE) return this._scopePreview();
     if (id === BLOCK_IDS.SHIELD_REMOTE) return this._shieldRemotePreview();
+    if (id === BLOCK_IDS.JOURNAL) return `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges"><path fill="#1e293b" d="M5 3h21v26H5z"/><path fill="#0e2329" d="M7 2h18v24H7z"/><path fill="#38bdf8" d="M9 4h14v20H9z"/><path fill="#152b30" d="M10 5h12v18H10z"/><path fill="#0284c7" d="M7 2h3v24H7z"/><path fill="#ea580c" d="M14 9h4v1h1v1h1v4h-1v1h-1v1h-4v-1h-1v-1h-1v-4h1v-1h1z"/><path fill="#fb923c" d="M14 10h3v1h1v2h-1v1h-3v-1h-1v-2h1z"/><path fill="#fef08a" d="M11 13h10v1H11z"/><path fill="#4ade80" d="M12 19h8v2h-8z"/><path fill="#cbd5e1" d="M8 26h17v2H8z"/></svg>')}`;
     return this.previews[id];
   }
 
@@ -217,6 +219,11 @@ export class HudManager {
     }
 
     if (this.inventorySelection === index) {
+      if (this.currentInventorySlots[index]?.id === BLOCK_IDS.JOURNAL) {
+        this.closeInventory();
+        this.onOpenJournal?.();
+        return;
+      }
       this.inventorySelection = null;
       this.renderInventory(this.currentInventorySlots);
       return;

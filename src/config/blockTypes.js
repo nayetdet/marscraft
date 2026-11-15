@@ -20,6 +20,7 @@ export const BLOCK_IDS = {
   SOY: 16,
   SCOPE: 17,
   SHIELD_REMOTE: 18, // item de mao, nao e bloco do mundo
+  JOURNAL: 19,
 };
 
 export const HOTBAR_BLOCKS = [
@@ -31,17 +32,24 @@ export const HOTBAR_BLOCKS = [
     equipment: true,
   },
   {
-    id: BLOCK_IDS.HYDRO_PLANT,
-    name: 'Mars Carrot (Right-click to eat)',
-    initialCount: 3,
-    consumable: { type: 'food', amount: 6, heal: 2 },
-  },
-  {
     id: BLOCK_IDS.SHIELD_REMOTE,
     name: 'Shield Remote (Use to turn the radiation shield on/off)',
     initialCount: 1,
     consumable: null,
     equipment: true,
+  },
+  {
+    id: BLOCK_IDS.JOURNAL,
+    name: "Discovery Journal (Use to open)",
+    initialCount: 1,
+    consumable: null,
+    equipment: true,
+  },
+  {
+    id: BLOCK_IDS.HYDRO_PLANT,
+    name: 'Mars Carrot (Right-click to eat)',
+    initialCount: 3,
+    consumable: { type: 'food', amount: 6, heal: 2 },
   },
   {
     id: BLOCK_IDS.REGOLITH,

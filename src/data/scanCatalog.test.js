@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SCAN_CATALOG, SCAN_CATEGORIES, getScanEntry, listCatalogSources } from './scanCatalog.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
+import { getJournalIcon } from '../graphics/journalIcons.js';
 
 // Todo id que o resolvedor (scanTargeting) ou os colliders (nasaModelsBuilder / GameEngine) podem
 // devolver precisa ter ficha no catálogo.
@@ -52,5 +53,13 @@ describe('scan catalog', () => {
     expect(getScanEntry('nope')).toBeNull();
     const names = listCatalogSources().map((s) => s.name);
     expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('gives every catalog entry its own distinct pixel-art journal icon', () => {
+    const icons = SCAN_CATALOG.map((e) => getJournalIcon(e.id));
+    for (const icon of icons) {
+      expect(icon).toMatch(/^data:image\/svg\+xml,/);
+    }
+    expect(new Set(icons).size).toBe(SCAN_CATALOG.length);
   });
 });
