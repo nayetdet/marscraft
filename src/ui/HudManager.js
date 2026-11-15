@@ -571,7 +571,7 @@ export class HudManager {
     this._updateIconBar(foodBar, survival.food);
     this._updateAirlock(airlock);
 
-    // Os nomes no céu só aparecem com a luneta (Z) aberta, como parte do modo telescópio.
+    // Os nomes no céu só aparecem com a luneta aberta, como parte do modo telescópio.
     if (!isScopeOpen) {
       this._setLabelVisible(this.earthLabel, false);
       this._setLabelVisible(this.phobosLabel, false);

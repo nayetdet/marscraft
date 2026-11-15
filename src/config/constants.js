@@ -118,7 +118,7 @@ export const GRAPHICS_CONFIG = {
 
 export const INPUT_CONFIG = {
   MOUSE_SENSITIVITY: 0.0021, // radianos por pixel
-  ZOOM_SENSITIVITY: 0.00055, // mais fina com a luneta (Z)
+  ZOOM_SENSITIVITY: 0.00055, // mais fina ao usar a luneta
   // Deltas acima disso num unico mousemove sao picos falsos do pointer lock (~60 graus de giro).
   MAX_MOUSE_DELTA: 500,
 };
