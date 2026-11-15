@@ -4,7 +4,7 @@ import { SCAN_CATALOG, SCAN_CATEGORIES } from '../data/scanCatalog.js';
 // A morte não apaga o diário; só o localStorage do navegador guarda o progresso.
 
 export const SCAN_JOURNAL_CONFIG = {
-  STORAGE_KEY: 'minemars.scanJournal.v1',
+  STORAGE_KEY: 'marscraft.scanJournal.v1',
   BASE_SCAN_DURATION: 1.5, // segundos mirando para completar um scan
   MIN_SCAN_DURATION: 0.8, // com todas as categorias completas
   BASE_SCAN_RANGE: 80, // blocos

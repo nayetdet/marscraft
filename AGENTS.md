@@ -4,7 +4,7 @@ Guia para agentes de IA (Claude Code, Codex, Cursor…) e pessoas novas no repo.
 
 ## O que é este projeto
 
-**MineMars**: jogo voxel de sobrevivência em primeira pessoa num posto avançado em Marte, feito para o desafio **[Build a Junior Astronaut Mission Trainer](https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/)** do **NASA Space Apps Challenge 2026**.
+**MarsCraft**: jogo voxel de sobrevivência em primeira pessoa num posto avançado em Marte, feito para o desafio **[Build a Junior Astronaut Mission Trainer](https://www.spaceappschallenge.org/2026/challenges/junior-astronaut-mission-trainer/)** do **NASA Space Apps Challenge 2026**.
 
 O desafio, em uma frase: um jogo em que **crianças de 7 a 12 anos** administram uma base na Lua ou em Marte e aprendem **trade-offs reais de engenharia** (suporte de vida, blindagem contra radiação, energia, comida e atraso de comunicação), **usando dados abertos reais da NASA**.
 

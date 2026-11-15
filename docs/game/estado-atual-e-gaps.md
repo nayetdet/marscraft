@@ -1,4 +1,4 @@
-# MineMars: estado atual × requisitos do desafio
+# MarsCraft: estado atual × requisitos do desafio
 
 > Snapshot de 2026-11-14 (base: `main` em `67604af`). Atualize quando mecânicas mudarem.
 

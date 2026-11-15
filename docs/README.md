@@ -1,6 +1,6 @@
 # Docs: contexto do projeto
 
-Contexto geral do **MineMars**, nossa resposta ao desafio *Build a Junior Astronaut Mission Trainer* do NASA Space Apps Challenge 2026.
+Contexto geral do **MarsCraft**, nossa resposta ao desafio *Build a Junior Astronaut Mission Trainer* do NASA Space Apps Challenge 2026.
 
 | Arquivo | Para quê |
 |---|---|

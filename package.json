@@ -1,5 +1,5 @@
 {
-  "name": "nasa-space-apps-mine",
+  "name": "marscraft",
   "version": "1.0.0",
   "description": "Minecraft-inspired Mars voxel survival game with a NASA habitat and astronomical sky",
   "type": "module",

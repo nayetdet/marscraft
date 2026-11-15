@@ -8,7 +8,7 @@ import { SPACE_WEATHER_CONFIG } from '../config/constants.js';
 import { latestBulletin, summarizeCmes, summarizeSeps } from './donkiNormalize.js';
 
 const API_BASE = 'https://api.nasa.gov/DONKI';
-const CACHE_KEY = 'minemars.spaceWeather.v1';
+const CACHE_KEY = 'marscraft.spaceWeather.v1';
 const DAY_MS = 24 * 3600 * 1000;
 
 // Dado embutido (gravado por scripts/fetch-donki-cme.mjs): "real data from DD/MM/AAAA"

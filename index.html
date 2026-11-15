@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MineMars</title>
+  <title>MarsCraft</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <style>
     html, body { margin: 0; width: 100%; height: 100%; background: #140d09; }
@@ -18,8 +18,8 @@
     .loading-content { box-sizing: border-box; width: min(340px, 76vw); min-height: 54px; }
     .loading-caption { height: 18px; margin: 0 0 10px; font-size: 15px; line-height: 18px; white-space: nowrap; text-shadow: 2px 2px 0 #2b1b12; }
     .loading-track { position: relative; box-sizing: border-box; width: 100%; height: 23px; padding: 2px; overflow: hidden; background: #222; border: 2px solid #000; box-shadow: inset 1px 1px 0 #555; }
-    .loading-progress { position: absolute; top: 2px; bottom: 2px; left: 2px; width: 28%; background: #6ebf3c; animation: mine-mars-loading 1.5s steps(8,end) infinite alternate; }
-    @keyframes mine-mars-loading { from { left: 2px; } to { left: 70%; } }
+    .loading-progress { position: absolute; top: 2px; bottom: 2px; left: 2px; width: 28%; background: #6ebf3c; animation: marscraft-loading 1.5s steps(8,end) infinite alternate; }
+    @keyframes marscraft-loading { from { left: 2px; } to { left: 70%; } }
   </style>
 </head>
 <body>
@@ -35,7 +35,7 @@
   <div class="rotate-device-overlay" role="dialog" aria-modal="true" aria-labelledby="rotate-device-title">
     <div class="rotate-device-icon" aria-hidden="true"></div>
     <h2 id="rotate-device-title">Rotate your device</h2>
-    <p>MineMars is best played in landscape.</p>
+    <p>MarsCraft is best played in landscape.</p>
   </div>
   <div id="danger-vignette" class="danger-vignette hidden" aria-hidden="true"></div>
   <div id="damage-source" class="damage-source" role="status" aria-live="polite"></div>
@@ -340,7 +340,7 @@
   <div id="overlay" class="mc-overlay">
     <div class="mc-menu">
       <div class="mc-title-wrap">
-        <h1 class="mc-title"><span>MINE</span><span>MARS</span></h1>
+        <h1 class="mc-title"><span>MARS</span><span>CRAFT</span></h1>
         <div class="mc-splash">Now with breathable habitats!</div>
       </div>
       <div class="mc-menu-card">
@@ -358,7 +358,7 @@
         </div>
         <section id="sources-screen" class="controls-screen info-screen hidden" aria-labelledby="sources-title">
           <h2 id="sources-title">Where the data comes from</h2>
-          <p class="info-note">The science numbers in MineMars (radiation, sunlight, air, distance, crew needs) come from open NASA data. Speeds, sizes and costs are game rules, and each screen says which is which. Most data is saved inside the game with its date, so it is not live. Only space weather tries to load LIVE from NASA DONKI when the game opens. Without internet, the game uses the saved data and never says LIVE.</p>
+          <p class="info-note">The science numbers in MarsCraft (radiation, sunlight, air, distance, crew needs) come from open NASA data. Speeds, sizes and costs are game rules, and each screen says which is which. Most data is saved inside the game with its date, so it is not live. Only space weather tries to load LIVE from NASA DONKI when the game opens. Without internet, the game uses the saved data and never says LIVE.</p>
           <div class="info-list">
             <div class="info-row"><b>Solar storms</b><span>Real CMEs (clouds of particles thrown by the Sun) that NASA predicted would reach Mars, listed by NASA DONKI. The warning time is the trip NASA predicted, squeezed so 1 real day is 1 game hour. <span id="sources-donki-date"></span>.</span></div>
             <div class="info-row"><b>Space weather live</b><span>When the game opens it asks NASA DONKI for the CMEs of the last 30 days, the bursts of super fast particles (SEP) of the last 60 days and the newest NASA space weather bulletin, shown on the radio at the science station. If NASA sends no SEP, the game does not make one up. If the internet fails or no CME is headed to Mars, the game uses the data saved inside it.</span></div>
@@ -432,7 +432,7 @@
   <div id="pause-overlay" class="mc-overlay pause-overlay hidden" aria-label="Pause menu">
     <div class="mc-menu">
       <div class="mc-title-wrap">
-        <h1 class="mc-title"><span>MINE</span><span>MARS</span></h1>
+        <h1 class="mc-title"><span>MARS</span><span>CRAFT</span></h1>
         <div class="mc-splash">Paused</div>
       </div>
       <div id="pause-menu-card-host"></div>

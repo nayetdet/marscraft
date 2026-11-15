@@ -45,7 +45,7 @@ export const CAMERA_CONFIG = {
 // escolhas visuais, nao dados da NASA. Fica desligado em GPU por
 // software e em telas de toque, e se desliga sozinho se o jogo ficar lento.
 export const GRAPHICS_CONFIG = {
-  STORAGE_KEY: 'minemars.shaders',
+  STORAGE_KEY: 'marscraft.shaders',
   // Sombra do Sol: mapa quadrado que acompanha a camera
   SHADOW_MAP_SIZE: 2048,
   // Meio lado (em blocos) da area que recebe sombra
