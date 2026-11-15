@@ -2,10 +2,10 @@
 import { MARS_TERRAIN, formatCoords } from '../data/marsTerrain.ts';
 import { formatDateDMY } from '../mission/missionText.ts';
 
-// Telas extras do menu: "NASA Data" (fontes dos dados) e "Demo Controls" (atalhos para jurados).
+// Telas extras do menu: "Science & Sources", "Options" e "Demo Tools".
 // O menu principal e as telas trocam de lugar com a classe `hidden`, como a tela de controles.
 export class MenuScreens {
-  constructor({ donkiDate, onDemo }) {
+  constructor({ donkiDate, onDemo, volume = 1, onVolumeChange }) {
     const menuMain = document.getElementById('menu-main');
     const feedback = document.getElementById('demo-feedback');
     this.setDonkiSource(`Real data from ${donkiDate}`);
@@ -27,11 +27,20 @@ export class MenuScreens {
       return screen;
     };
     bind('sources');
+    bind('options');
     bind('demo').addEventListener('click', (event) => {
       const action = event.target.closest('[data-demo]')?.dataset.demo;
       if (action) feedback.textContent = onDemo(action);
     });
     this.shadersBtn = document.getElementById('shaders-btn');
+    const volumeSlider = document.getElementById('volume-slider');
+    const volumeValue = document.getElementById('volume-value');
+    volumeSlider.value = String(Math.round(volume * 100));
+    volumeValue.value = `${volumeSlider.value}%`;
+    volumeSlider.addEventListener('input', () => {
+      volumeValue.value = `${volumeSlider.value}%`;
+      onVolumeChange?.(Number(volumeSlider.value) / 100);
+    });
   }
 
   // Botao "Shaders: On/Off" do menu (sombra do Sol, brilho e raios de luz). Vale no mouse e no toque.

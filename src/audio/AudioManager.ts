@@ -11,6 +11,7 @@ const CRANK_PLAYBACK_RATE = 0.45;
 
 export class AudioManager {
   constructor() {
+    this._allAudio = [];
     this.footsteps = {
       habitat: this._createAudio(`${AUDIO_BASE_URL}andando%20dentro%20da%20nave.wav`, true),
       surface: this._createAudio(`${AUDIO_BASE_URL}andando%20na%20areia.wav`, true),
@@ -33,6 +34,8 @@ export class AudioManager {
     this._rocketFadeElapsed = null;
     this._rocketFadeStartVolume = ROCKET_VOLUME;
     this.rover.volume = LOOP_VOLUME / 2;
+    this._allAudio.forEach((audio) => { audio._baseVolume = audio.volume; });
+    this.setMasterVolume(1, false);
     this._activeFootsteps = null;
     this._wasRoverActive = false;
     this._wasInDanger = false;
@@ -45,7 +48,18 @@ export class AudioManager {
     audio.preload = 'auto';
     audio.loop = loop;
     audio.volume = loop ? LOOP_VOLUME : 0.7;
+    this._allAudio.push(audio);
     return audio;
+  }
+
+  setMasterVolume(volume) {
+    this.masterVolume = Math.max(0, Math.min(1, Number(volume) || 0));
+    this._allAudio.forEach((audio) => this._setAudioVolume(audio, audio._baseVolume));
+  }
+
+  _setAudioVolume(audio, baseVolume) {
+    audio._baseVolume = baseVolume;
+    audio.volume = baseVolume * this.masterVolume;
   }
 
   _play(audio) {
@@ -89,6 +103,7 @@ export class AudioManager {
   }
 
   _playSuitTone(ctx, freq, startOffset, duration, type = 'triangle', peak = 0.06) {
+    peak *= this.masterVolume;
     const t0 = ctx.currentTime + startOffset;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -123,7 +138,7 @@ export class AudioManager {
 
   playRocket() {
     this._rocketFadeElapsed = null;
-    this.rocket.volume = ROCKET_VOLUME;
+    this._setAudioVolume(this.rocket, ROCKET_VOLUME);
     this.rocket.currentTime = 0;
     this._play(this.rocket);
   }
@@ -131,14 +146,14 @@ export class AudioManager {
   fadeOutRocket() {
     if (this._rocketFadeElapsed !== null) return;
     this._rocketFadeElapsed = 0;
-    this._rocketFadeStartVolume = this.rocket.volume;
+    this._rocketFadeStartVolume = this.rocket._baseVolume;
   }
 
   stopRocket() {
     this._rocketFadeElapsed = null;
     this.rocket.pause();
     this.rocket.currentTime = 0;
-    this.rocket.volume = ROCKET_VOLUME;
+    this._setAudioVolume(this.rocket, ROCKET_VOLUME);
   }
 
   _updateRocketFade(dt) {
@@ -149,7 +164,7 @@ export class AudioManager {
       this._rocketFadeElapsed + Math.max(0, dt)
     );
     const progress = this._rocketFadeElapsed / ROCKET_FADE_OUT_SECONDS;
-    this.rocket.volume = this._rocketFadeStartVolume * (1 - progress);
+    this._setAudioVolume(this.rocket, this._rocketFadeStartVolume * (1 - progress));
 
     if (this._rocketFadeElapsed >= ROCKET_FADE_OUT_SECONDS) this.stopRocket();
   }

@@ -282,6 +282,8 @@ export class GameEngine {
     this.menuScreens = new MenuScreens({
       donkiDate: formatDateDMY(this.spaceWeather.fetchedAt),
       onDemo: (action) => this._runDemo(action),
+      volume: this.audio.masterVolume,
+      onVolumeChange: (volume) => this.audio.setMasterVolume(volume),
     });
 
     this.input = new InputController({
@@ -637,7 +639,7 @@ export class GameEngine {
     if (secondFreq) {
       oscillator.frequency.setValueAtTime(secondFreq, audio.currentTime + duration * 0.45);
     }
-    gain.gain.setValueAtTime(0.03, audio.currentTime);
+    gain.gain.setValueAtTime(0.03 * this.audio.masterVolume, audio.currentTime);
     gain.gain.linearRampToValueAtTime(0, audio.currentTime + duration);
     oscillator.connect(gain).connect(audio.destination);
     oscillator.start();
@@ -1357,7 +1359,7 @@ export class GameEngine {
     // Vezes que o jogador abriu o painel de energia (certificado de engenharia, issue #88)
     this.powerChecks = 0;
     this.story = new StoryDirector({
-      training: true, // treino de cadete (issue #88); o menu Demo Controls pode pular
+      training: true, // treino de cadete (issue #88); o menu Demo Tools pode pular
       replyDelayHours: this.comms.roundTripGameSeconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND,
       comms: {
         millionKm: Math.round(this.comms.distanceKm / 1e6),
