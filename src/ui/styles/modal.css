@@ -252,6 +252,55 @@ body.pause-menu-open .crew-picker { display: none; }
 #menu-main > #start-btn,
 #menu-main > .menu-row { grid-column: 1 / -1; }
 
+.participants-panel {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  padding: 6px 7px 5px;
+  background: rgba(0, 0, 0, .48);
+  border-top: 2px solid #777;
+  border-left: 2px solid #777;
+  border-right: 2px solid #373737;
+  border-bottom: 2px solid #373737;
+}
+.participants-panel h2 {
+  margin: 0 0 5px;
+  color: #ffffa0;
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  text-shadow: 1px 1px #333;
+}
+.participants-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.participant-card {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+  color: #f4eee6;
+  font-size: 9px;
+  line-height: 1.1;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.participant-card img {
+  display: block;
+  width: 40px;
+  height: 40px;
+  max-width: 100%;
+  border: 2px solid #d4a16a;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #25201e;
+}
+
 .controls-screen {
   width: 100%;
   box-sizing: border-box;
@@ -1104,6 +1153,9 @@ body.pause-menu-open .crew-picker { display: none; }
   .mc-menu { gap: 6px; }
   .mc-title { font-size: clamp(44px, 9vw, 60px); letter-spacing: -2px; }
   .mc-title-wrap { margin-bottom: 20px; }
+  .pause-overlay .mc-title { display: none; }
+  .pause-overlay .mc-title-wrap { margin-bottom: 4px; }
+  .pause-overlay .mc-splash { margin: 0; transform: none; }
   .mc-splash { font-size: 12px; margin-left: 100px; }
   .mc-menu-card { padding-top: 4px; gap: 5px; }
   #menu-main { gap: 6px; }
@@ -1111,6 +1163,11 @@ body.pause-menu-open .crew-picker { display: none; }
   .mc-menu-card .menu-row .mc-btn { font-size: 11px; padding: 7px 5px; }
   .mc-menu-card .mc-btn:has(.menu-icon) { grid-template-columns: 16px auto; column-gap: 10px; }
   .mc-menu-card .menu-icon { width: 16px; height: 16px; flex-basis: 16px; }
+  .participants-panel { margin-top: 1px; padding: 4px 5px 3px; }
+  .participants-panel h2 { margin-bottom: 3px; font-size: 10px; }
+  .participants-grid { gap: 2px; }
+  .participant-card { gap: 2px; font-size: 8px; }
+  .participant-card img { width: 30px; height: 30px; }
   .controls-screen.info-screen { max-height: calc(100dvh - 48px); }
 }
 
