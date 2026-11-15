@@ -103,6 +103,41 @@
 }
 .story-task-hint:empty, .story-step-count:empty { display: none; }
 
+/* Ato 4: contagem do passo, por tipo de amostra ou por pista ("SULFUR 2/3") */
+.story-tally { display: flex; flex-wrap: wrap; gap: 3px 4px; margin-top: 6px; }
+.story-tally span {
+  padding: 1px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  color: #c9d3d8;
+  background: #303940;
+  box-shadow: inset 0 0 0 1px #59636a;
+}
+.story-tally span.some { color: #ffffff; box-shadow: inset 0 0 0 1px #38bdf8; }
+.story-tally span.done { color: #17231c; background: var(--hud-good); box-shadow: none; }
+
+/* Contador de ciencia (ato 4): achados nesta partida | enviados sobre a meta */
+.story-science {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  text-shadow: 1px 1px 0 #000;
+}
+.story-science b { display: inline-block; color: #c084fc; font-variant-numeric: tabular-nums; }
+.story-science-sep { color: #59636a; }
+.story-science b.is-up { animation: story-science-up var(--flash-ms, 900ms) steps(6, end); }
+@keyframes story-science-up {
+  0%, 40%, 80% { color: #ffffff; transform: scale(1.5); }
+  20%, 60% { color: #fde047; transform: scale(1.5); }
+  100% { color: #c084fc; transform: scale(1); }
+}
+
 /* Passo do tutorial: o painel ganha a cor da secao da base (a mesma das placas das salas) */
 .story-objective.is-step { box-shadow: inset 0 0 0 2px var(--step-color), 3px 3px 0 rgba(0, 0, 0, 0.45); }
 .story-objective.is-step .story-task-icon { background: var(--step-color); }
@@ -192,6 +227,8 @@
 
 /* No modo rover as leituras do rover usam o mesmo canto: elas descem para baixo do painel */
 .hud:has(.story-objective:not(.hidden)) #rover-info { margin-top: 152px; }
+/* Com o contador de ciencia (ato 4) o painel fica uma linha mais alto */
+.hud:has(.story-science:not(.hidden)) #rover-info { margin-top: 174px; }
 
 /* Seta do objetivo na tela. O elemento fica no ponto exato (transform vem do WaypointHud). */
 .waypoint {
@@ -540,12 +577,17 @@ body.touch-device .story-card-ok { min-height: 44px; min-width: 110px; }
   .story-task strong { font-size: 14px; }
   .story-task-hint { margin-top: 4px; font-size: 11px; }
   .story-step-count { margin-top: 3px; font-size: 10px; }
+  .story-tally { gap: 2px 3px; margin-top: 4px; }
+  .story-tally span { font-size: 9px; padding: 1px 3px; }
+  .story-science { margin-top: 4px; font-size: 10px; }
+  .story-science .story-goal-icon { width: 13px; height: 13px; }
   .story-steps { margin-top: 6px; }
   .story-rocket { margin-bottom: 5px; }
   .story-segs i { height: 10px; }
   .story-step { width: 20px; height: 20px; padding: 3px; }
   .story-timer { margin-top: 5px; }
   .hud:has(.story-objective:not(.hidden)) #rover-info { margin-top: 128px; }
+  .hud:has(.story-science:not(.hidden)) #rover-info { margin-top: 144px; }
 }
 
 /* ---------- Animacoes (cutscenes) ---------- */

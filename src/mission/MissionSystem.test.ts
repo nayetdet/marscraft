@@ -6,12 +6,23 @@ import { TRANSIT_DOSE_MSV } from './doseBudget.ts';
 import { discoveryItem, sampleItem } from './sciencePackage.ts';
 
 // `n` descobertas comuns do scanner (1 ponto de ciencia cada)
-// As 3 amostras que sao as pistas da missao (issue #344): 2 + 3 + 4 = 9 pontos
+// As amostras das 3 pistas da missao (issues #344 e #410): 3 de cada tipo, 27 pontos
 const clueRocks = () => [
-  sampleItem(100, { typeId: 'sample-ice-core', name: 'Buried Ice Core', points: 2 }),
-  sampleItem(101, { typeId: 'sample-mudstone', name: 'Layered Mudstone', points: 3 }),
-  sampleItem(102, { typeId: 'sample-sulfur', name: 'Yellow Sulfur Crystals', points: 4 }),
+  ...[0, 1, 2].map((i) => sampleItem(100 + i, { typeId: 'sample-ice-core', name: 'Buried Ice Core', points: 2 })),
+  ...[0, 1, 2].map((i) => sampleItem(110 + i, { typeId: 'sample-mudstone', name: 'Layered Mudstone', points: 3 })),
+  ...[0, 1, 2].map((i) => sampleItem(120 + i, { typeId: 'sample-sulfur', name: 'Yellow Sulfur Crystals', points: 4 })),
 ];
+// Envia tudo o que espera, uma passagem do orbitador por vez, com a bateria sempre cheia
+const sendAll = (mission, items) => {
+  let last = null;
+  for (let pass = 0; pass < 20; pass += 1) {
+    mission.battery.charge = 100;
+    const result = mission.sendData(items);
+    if (result.status !== 'sent') break;
+    last = result;
+  }
+  return last;
+};
 const scienceScans = (n) => Array.from({ length: n }, (_, i) => discoveryItem({ id: `thing-${i}`, title: `Thing ${i}`, category: 'base' }));
 
 // CME com impacto direto previsto em Marte 3 dias depois (aviso de poucos segundos no jogo)
@@ -174,15 +185,19 @@ describe('MissionSystem science points (issues #105 and #269)', () => {
 
     const second = mission.sendData(found);
     // Os pontos chegaram, mas a Terra ainda nao tem as pistas da missao (issue #344)
-    expect(second).toMatchObject({ status: 'sent', items: MAX_ITEMS_PER_UPLOAD - 1, dataSent: false });
+    expect(second).toMatchObject({ status: 'sent', items: MAX_ITEMS_PER_UPLOAD, dataSent: false });
+    expect(mission.battery.charge).toBeCloseTo(100 - (2 * BASE + (3 + MAX_ITEMS_PER_UPLOAD) * PER_ITEM));
+    sendAll(mission, found);
     expect(mission.dataSent).toBe(false);
     expect(mission.sentPoints).toBe(POINTS_TO_LAUNCH);
-    expect(mission.uploads).toBe(2);
-    expect(mission.battery.charge).toBeCloseTo(100 - (2 * BASE + POINTS_TO_LAUNCH * PER_ITEM));
+    expect(mission.uploads).toBe(1 + Math.ceil((POINTS_TO_LAUNCH - 3) / MAX_ITEMS_PER_UPLOAD));
 
+    // As 9 amostras das pistas nao cabem numa passagem: a meta so fecha com a ultima
     mission.battery.charge = 100;
     const third = mission.sendData([...found, ...clueRocks()]);
-    expect(third).toMatchObject({ status: 'sent', items: 3, points: 9, dataSent: true });
+    expect(third).toMatchObject({ status: 'sent', items: MAX_ITEMS_PER_UPLOAD, dataSent: false });
+    const last = sendAll(mission, [...found, ...clueRocks()]);
+    expect(last).toMatchObject({ status: 'sent', items: 9 - MAX_ITEMS_PER_UPLOAD, dataSent: true });
     expect(mission.dataSent).toBe(true);
   });
 
@@ -205,7 +220,7 @@ describe('MissionSystem science points (issues #105 and #269)', () => {
     expect(mission.spendScience(found.slice(0, 3), 4)).toBe(0);
     expect(mission.spendScience(found, 4)).toBe(4);
     expect(mission.scienceStatus(found)).toMatchObject({ usedPoints: 4, pendingPoints: POINTS_TO_LAUNCH - 4 });
-    mission.sendData(found);
+    sendAll(mission, found);
     expect(mission.sentPoints).toBe(POINTS_TO_LAUNCH - 4);
     expect(mission.dataSent).toBe(false);
   });
@@ -632,9 +647,7 @@ describe('MissionSystem dose budget', () => {
     mission.stormsSurvived = MAV_CONFIG.STORMS_TO_SURVIVE;
     mission.battery.charge = 100;
     const science = [...scienceScans(SCIENCE_CONFIG.POINTS_TO_LAUNCH), ...clueRocks()];
-    expect(mission.sendData(science).status).toBe('sent');
-    mission.battery.charge = 100;
-    mission.sendData(science);
+    expect(sendAll(mission, science).status).toBe('sent');
     expect(mission.ignite()).toBe(true);
   });
 

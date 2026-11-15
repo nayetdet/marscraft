@@ -86,9 +86,18 @@
       <!-- Tutorial guiado: onde ir e o que apertar, e em que passo a crianca esta -->
       <p id="story-task-hint" class="story-task-hint"></p>
       <b id="story-step-count" class="story-step-count"></b>
+      <!-- Ato 4: contagem do passo, por tipo de amostra ou por pista ("SULFUR 2/3") -->
+      <div id="story-tally" class="story-tally hidden"></div>
       <!-- Atos 2 e 3: a volta de trabalho, que se repete (gelo, foguete, base) -->
       <div id="story-steps" class="story-steps" aria-hidden="true">
         <span class="story-step"></span><i></i><span class="story-step"></span><i></i><span class="story-step"></span>
+      </div>
+      <!-- Contador de ciencia (ato 4): pontos achados nesta partida | enviados sobre a meta -->
+      <div id="story-science" class="story-science hidden" title="Science points found this mission | sent to Earth out of the launch goal">
+        <span class="story-goal-icon" data-icon="scope"></span>
+        <span>SCIENCE <b id="story-science-found">0</b></span>
+        <span class="story-science-sep">|</span>
+        <span>SENT <b id="story-science-sent">0</b><span id="story-science-goal"></span></span>
       </div>
       <!-- Relogio da janela de lancamento fechando (ato 3) -->
       <div id="story-timer" class="story-timer">

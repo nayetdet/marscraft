@@ -44,9 +44,10 @@ describe('SCIENCE FOR EARTH panel', () => {
     const all = { sentIds: new Set(items.map((i) => i.id)), usedIds: new Set<string>() };
     const big = [
       ...Array.from({ length: SCIENCE_CONFIG.POINTS_TO_LAUNCH }, (_, i) => discoveryItem({ id: `t${i}`, title: `T${i}`, category: 'base' })),
-      sampleItem(100, { typeId: 'sample-ice-core', name: 'Ice', points: 2 }),
-      sampleItem(101, { typeId: 'sample-mudstone', name: 'Mudstone', points: 3 }),
-      sampleItem(102, { typeId: 'sample-sulfur', name: 'Sulfur', points: 4 }),
+      // 3 amostras de cada pista (ato 4, issue #410)
+      ...[0, 1, 2].map((i) => sampleItem(100 + i, { typeId: 'sample-ice-core', name: 'Ice', points: 2 })),
+      ...[0, 1, 2].map((i) => sampleItem(110 + i, { typeId: 'sample-mudstone', name: 'Mudstone', points: 3 })),
+      ...[0, 1, 2].map((i) => sampleItem(120 + i, { typeId: 'sample-sulfur', name: 'Sulfur', points: 4 })),
     ];
     const done = { sentIds: new Set(big.map((i) => i.id)), usedIds: new Set<string>() };
     expect(sciencePanelModel(scienceStatus(items, all), sciencePackage(items, all)).met).toBe(false);

@@ -25,11 +25,11 @@ const {
 const scans = (n: number, from = 0): ScienceItem[] => Array.from({ length: n }, (_, i) => discoveryItem({ id: `thing-${from + i}`, title: `Thing ${from + i}`, category: 'base' }));
 // Amostra bonus (nao e pista da missao)
 const rock = (order: number, points: number) => sampleItem(order, { typeId: 'sample-meteorite', name: 'Iron Meteorite', points });
-// As 3 amostras que sao as pistas da missao (issue #344): 2 + 3 + 4 = 9 pontos
+// As amostras das 3 pistas da missao (issues #344 e #410): 3 de cada tipo, 3 x (2 + 3 + 4) = 27 pontos
 const clueRocks = () => [
-  sampleItem(100, { typeId: 'sample-ice-core', name: 'Buried Ice Core', points: 2 }),
-  sampleItem(101, { typeId: 'sample-mudstone', name: 'Layered Mudstone', points: 3 }),
-  sampleItem(102, { typeId: 'sample-sulfur', name: 'Yellow Sulfur Crystals', points: 4 }),
+  ...[0, 1, 2].map((i) => sampleItem(100 + i, { typeId: 'sample-ice-core', name: 'Buried Ice Core', points: 2 })),
+  ...[0, 1, 2].map((i) => sampleItem(110 + i, { typeId: 'sample-mudstone', name: 'Layered Mudstone', points: 3 })),
+  ...[0, 1, 2].map((i) => sampleItem(120 + i, { typeId: 'sample-sulfur', name: 'Yellow Sulfur Crystals', points: 4 })),
 ];
 const ledger = (sent: ScienceItem[] = [], used: ScienceItem[] = []) => ({ sentIds: new Set(sent.map((i) => i.id)), usedIds: new Set(used.map((i) => i.id)) });
 
@@ -62,9 +62,13 @@ describe('science points', () => {
     // Pontos sobrando, mas sem as pistas: o foguete nao decola
     const onlyScans = scans(POINTS_TO_LAUNCH + 5);
     expect(scienceStatus(onlyScans, ledger(onlyScans))).toMatchObject({ met: false, cluesSent: false, clues: ['todo', 'todo', 'todo'] });
-    // Uma pista analisada espera o envio; enviada, fica verde
-    const [ice, mud] = clueRocks();
-    expect(scienceStatus([ice, mud], ledger([ice])).clues).toEqual(['sent', 'found', 'todo']);
+    // Uma pista com as 3 amostras analisadas espera o envio; com as 3 enviadas, fica verde
+    const rocks = clueRocks();
+    const ice = rocks.slice(0, 3);
+    const mud = rocks.slice(3, 6);
+    expect(scienceStatus([...ice, ...mud], ledger(ice)).clues).toEqual(['sent', 'found', 'todo']);
+    // Com menos de 3 a pista ainda esta a caminho, mesmo com amostra ja enviada (ato 4, issue #410)
+    expect(scienceStatus([...ice.slice(0, 2), mud[0]], ledger(ice.slice(0, 2))).clues).toEqual(['bag', 'bag', 'todo']);
   });
 });
 
@@ -93,9 +97,13 @@ describe('sciencePackage', () => {
 
   it('tells when this upload closes the goal', () => {
     expect(sciencePackage(scans(POINTS_TO_LAUNCH - 1)).metAfter).toBe(false);
-    expect(sciencePackage([...scans(1), ...clueRocks()]).metAfter).toBe(true);
-    // Pontos bastam, mas falta uma pista neste envio
-    expect(sciencePackage([...scans(6), ...clueRocks().slice(1)]).metAfter).toBe(false);
+    // O que falta cabe numa passagem do orbitador: este envio fecha os pontos e as pistas
+    const items = [...scans(POINTS_TO_LAUNCH - 27), ...clueRocks()];
+    const home = ledger(items.slice(0, items.length - MAX_ITEMS_PER_UPLOAD));
+    expect(sciencePackage(items, home).metAfter).toBe(true);
+    // Pontos bastam, mas falta uma amostra de uma pista neste envio
+    const short = [...scans(POINTS_TO_LAUNCH), ...clueRocks().slice(0, -1)];
+    expect(sciencePackage(short, ledger(scans(POINTS_TO_LAUNCH))).metAfter).toBe(false);
   });
 });
 

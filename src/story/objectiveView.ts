@@ -9,7 +9,9 @@ import { STEP_COLORS, tutorialStepById } from './tutorialSteps.ts';
 //      degraus: cada bloco de gelo entregue acende um;
 //   2. o que fazer agora: um icone grande com 2 ou 3 palavras e, no tutorial, uma linha dizendo
 //      onde ir e o que apertar;
-//   3. onde a crianca esta: "STEP 4/5" no tutorial ou a volta de trabalho que se repete.
+//   3. onde a crianca esta: "STEP 4/5" no tutorial ou a volta de trabalho que se repete;
+//   4. no ato 4 (issue #410), a contagem do passo ("SULFUR 2/3") e o contador de ciencia
+//      ("SCIENCE 12 | SENT 8/30"), a vista do ato 2 em diante.
 // Funcoes puras: o StoryHud so pinta o resultado.
 
 export const GOAL_TITLE = 'GOAL: FLY HOME';
@@ -96,6 +98,19 @@ function rocketMeter(s) {
   return { total, loaded, fuel };
 }
 
+// Contador de ciencia (ato 4, issue #410): pontos achados nesta partida (esperando envio +
+// enviados) e pontos ja na Terra sobre a meta. Aparece do ato 2 em diante (quando a crianca
+// recebe a luneta) ou assim que ela acha o primeiro ponto. null = escondido.
+export function scienceCounter(story, s = {}) {
+  const sent = s.sciencePointsSent ?? 0;
+  const found = Math.max(s.sciencePointsFound ?? 0, sent);
+  const stepAct = story.step?.act ?? 1;
+  if (found <= 0 && story.act < 2 && stepAct < 2) return null;
+  return { found, sent, goal: SCIENCE_CONFIG.POINTS_TO_LAUNCH };
+}
+
+export const scienceCounterText = (counter) => `SCIENCE ${counter.found} | SENT ${counter.sent}/${counter.goal}`;
+
 // story: StoryDirector; s: o mesmo retrato do jogo que o diretor le.
 // Devolve null enquanto a historia nao comecou.
 export function objectiveView(story, s) {
@@ -173,6 +188,9 @@ export function objectiveView(story, s) {
     steps,
     loop,
     goals,
+    // Contagem do passo atual: [{ label, have, need }] ou null (Act4Controller.fillSnapshot)
+    tally: step ? s.objectiveTally ?? null : null,
+    science: scienceCounter(story, s),
     timer,
     signal,
   };

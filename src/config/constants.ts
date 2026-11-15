@@ -945,7 +945,9 @@ export const WEATHER_CONFIG = {
 export const SCIENCE_CONFIG = {
   // Uma moeda so: pontos de ciencia (issue #269). Cada coisa que a crianca acha vale pontos, e o
   // foguete so decola com POINTS_TO_LAUNCH pontos enviados para a Terra. Regras de jogo.
-  POINTS_TO_LAUNCH: 10,
+  // Ato 4 (issue #410): as 15 amostras do mapa somam 42 pontos; com a meta em 30 da para decolar
+  // sem escanear tudo, mas nao sem a coleta.
+  POINTS_TO_LAUNCH: 30,
   // Descoberta do scanner: comum (terreno, base) x rara (ceu e paisagem, mais dificeis de achar)
   POINTS_PER_DISCOVERY: 1,
   POINTS_PER_RARE_DISCOVERY: 2,
@@ -977,15 +979,21 @@ export const SCIENCE_CONFIG = {
 // real. Os fatos de cada tipo sao reais (src/data/sampleTypes.ts, docs/data/numeros-reais.md).
 export const SAMPLE_SITE_CONFIG = {
   SEED: 2026,
-  COUNT: 10,
+  // Ato 4 (issue #410): 3 amostras de cada um dos 5 tipos. Cada tipo fica num campo so, com as
+  // pedrinhas a poucos blocos uma da outra: sao 5 saidas, nao 15. Regra de jogo.
+  COUNT: 15,
+  PER_TYPE: 3,
+  FIELD_RADIUS: 4, // blocos do centro do campo ate cada pedrinha
+  FIELD_MIN_GAP: 2, // blocos entre duas pedrinhas do mesmo campo
+  FIELD_TRIES: 40, // sorteios por campo antes de tentar outro centro
   // Distancia do centro da base, em blocos: longe o bastante para ser um passeio de EVA
   MIN_RADIUS: 40,
   MAX_RADIUS: 78,
-  MIN_SPACING: 12, // blocos entre dois locais
+  MIN_SPACING: 12, // blocos entre os centros de dois campos
   PLACEMENT_TRIES: 600,
   // Amostras de gelo ficam perto da cratera de gelo (anel em volta do centro dela)
   ICE_RING: [13, 18],
-  // Pistas da missao (issue #344): o primeiro local de cada tipo fica num anel proprio em volta
+  // Pistas da missao (issue #344): o campo de cada tipo fica num anel proprio em volta
   // da base, cada vez mais longe (o gelo ja fica perto, na cratera de gelo). Regra de jogo.
   CLUE_RINGS: { 'sample-mudstone': [40, 48], 'sample-sulfur': [64, 76] } as Record<string, [number, number]>,
   INTERACT_RADIUS: 3.2, // blocos: de perto, olhando para a amostra
@@ -1107,6 +1115,8 @@ export const ACT3_CONFIG = {
 // Ato 4 (issue #410): traje, 3 amostras de cada tipo, analise e envio.
 // Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
 export const ACT4_CONFIG = {
+  // Tempo que o numero do contador de ciencia pisca quando os pontos sobem (ms, so interface)
+  COUNTER_FLASH_MS: 900,
 };
 
 // Ato 5 (issue #411): a corrida final, a decolagem e o que vem depois (Continue).
