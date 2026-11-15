@@ -2,7 +2,7 @@
 import { GREENHOUSE_MONITOR_POS } from './greenhouseLayout.ts';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.ts';
+import { MAV_CONFIG, ROVER_CONFIG, WORLD_CONFIG } from '../config/constants.ts';
 import { makeCanvasTexture } from '../graphics/textureGenerator.ts';
 import { EAST_WING, HABITAT_LAYOUT, SOLAR_FIELD } from './habitatLayout.ts';
 import { signTexture } from '../base/baseCanvas.ts';
@@ -547,6 +547,7 @@ function createGreenhouseMonitorModel(mats, x, y, z) {
 function createMarsRoverModel(mats, x, y, z) {
   const r = new THREE.Group();
   r.position.set(x, y, z);
+  r.rotation.y = ROVER_CONFIG.SPAWN_YAW;
   const wheels = [];
 
   for (const wx of [-1.2, 1.2]) {
