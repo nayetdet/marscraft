@@ -1,6 +1,4 @@
-import { GREENHOUSE_MONITOR_POS, initialGreenhouseCrop } from './greenhouseLayout.js';
-import { createCropPlantModel } from '../graphics/cropModels.js';
-import { BLOCK_IDS } from '../config/blockTypes.js';
+import { GREENHOUSE_MONITOR_POS } from './greenhouseLayout.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
@@ -43,8 +41,6 @@ export function buildNasaCustomModels(scene) {
       emissiveIntensity: 0.35,
     }),
     goldFoil: new THREE.MeshLambertMaterial({ color: 0xf59e0b }),
-    plantStem: new THREE.MeshLambertMaterial({ color: 0x16a34a }),
-    plantLeaf: new THREE.MeshLambertMaterial({ color: 0x4ade80 }),
     potato: new THREE.MeshLambertMaterial({ color: 0xd97706 }),
     labGlass: new THREE.MeshLambertMaterial({ color: 0x89d8ed, transparent: true, opacity: 0.25, depthWrite: false }),
     waterGlass: new THREE.MeshLambertMaterial({
@@ -495,33 +491,11 @@ function createCrewQuartersModel(mats, x, y, z) {
 function createGreenhouseCropsModel(mats, centerX, floorTopY, centerZ) {
   const cropsGroup = new THREE.Group();
   cropsGroup.position.set(centerX, floorTopY, centerZ);
+  // As plantas da estufa vem do monitor (StationSystem.plots): nenhuma planta solta nasce pronta,
+  // senao ela se mistura com a que o jogador plantou e a colheita parece menor que a plantacao.
   const plants = [];
-  const R = HABITAT_LAYOUT.DOME_RADIUS;
 
   const growLight = new THREE.MeshLambertMaterial({ color: 0xf0abfc, emissive: 0xd946ef, emissiveIntensity: 0.7 });
-
-  for (let dx = -R; dx <= R; dx++) {
-    for (let dz = -R; dz <= R; dz++) {
-      const px = dx + 0.5;
-      const pz = dz + 0.5;
-
-      // Jardim: as duas plantas que ja nascem prontas para colher
-      const type = initialGreenhouseCrop(dx, dz);
-      if (type) {
-        const plant = type === 'potato' ? createCropPlantModel('potato') : new THREE.Group();
-        plant.position.set(px, 0, pz);
-        plant.userData.cropItemId = type === 'potato' ? BLOCK_IDS.POTATO : BLOCK_IDS.HYDRO_PLANT;
-        if (type === 'carrot') {
-          addBox(plant, 0.14, 0.48, 0.14, mats.plantStem, 0, 0.24, 0);
-          addBox(plant, 0.52, 0.22, 0.22, mats.plantLeaf, 0, 0.36, 0);
-          addBox(plant, 0.22, 0.22, 0.52, mats.plantLeaf, 0, 0.42, 0);
-          addBox(plant, 0.18, 0.14, 0.18, mats.potato, 0.16, 0.07, 0.14);
-        }
-        cropsGroup.add(plant);
-        plants.push(plant);
-      }
-    }
-  }
 
   // Luzes de cultivo rosa/roxas sobre o anel de dentro e barras azuis sobre o de fora
   const c = 0.5; // centro do bloco central da redoma

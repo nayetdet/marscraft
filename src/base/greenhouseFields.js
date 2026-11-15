@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { CROP_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { HABITAT_LAYOUT } from '../world/habitatLayout.js';
-import { GREENHOUSE_PLOTS, plotIndexAt } from '../world/greenhouseLayout.js';
+import { GREENHOUSE_PLOTS, PLOT_PLANT_CELLS, plotIndexAt } from '../world/greenhouseLayout.js';
 
 // Plantas 3D dos campos da estufa. Cada campo (GREENHOUSE_PLOTS, menos o canteiro do jardim) tem
 // uma malha pronta por tipo de cultura; so a da cultura plantada aparece, crescendo com o
-// progresso. Assim a estufa inteira mostra o que o jogador plantou, com poucas malhas na tela.
+// progresso. Cada planta vira um item na colheita: o campo mostra uma planta por item
+// (PLOT_PLANT_CELLS), nas bandejas de terra que cobrem o campo todo.
 
 // Formato de cada cultura numa bandeja: [largura, altura, profundidade, cor, x, y, z]
 const CROP_SHAPES = {
@@ -70,12 +71,13 @@ export function buildGreenhouseFields(scene) {
   const soil = cells.flatMap((list) => list.map(([px, pz]) => coloredBox(SOIL, px, pz, color)));
   root.add(mergedMesh(soil, material));
 
-  const fields = cells.map((list, index) => {
-    if (index === 0 || list.length === 0) return null;
+  const fields = PLOT_PLANT_CELLS.map((plantCells, index) => {
+    if (index === 0) return null;
     const group = new THREE.Group();
     const meshes = {};
     for (const [type, shape] of Object.entries(CROP_SHAPES)) {
-      const mesh = mergedMesh(list.flatMap(([px, pz]) => shape.map((part) => coloredBox(part, px, pz, color))), material);
+      const boxes = plantCells.flatMap(({ dx, dz }) => shape.map((part) => coloredBox(part, dx + 0.5, dz + 0.5, color)));
+      const mesh = mergedMesh(boxes, material);
       mesh.visible = false;
       group.add(mesh);
       meshes[type] = mesh;

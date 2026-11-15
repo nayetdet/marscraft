@@ -148,8 +148,10 @@ export class GameEngine {
     this.expedition = new ExpeditionState(this.mission.battery);
     this.airlock = new Airlock(this.scene, colliders, this.expedition);
     this.stations = new StationSystem(this.expedition);
-    // Campos da estufa: plantas 3D por campo; um campo de dentro ja comeca com alface crescendo
+    // Campos da estufa: plantas 3D por campo. O jardim ja comeca com uma batata pronta para colher
+    // e um campo de dentro com alface crescendo.
     this.greenhouseFields = buildGreenhouseFields(this.scene);
+    this.stations.plots[0].crop = { type: 'potato', progress: CROP_CONFIG.potato.seconds };
     this.stations.plots[1].crop = { type: 'lettuce', progress: CROP_CONFIG.lettuce.seconds / 2 };
     this.airlock.stations = this.stations;
     this.airlock.onEvent = (type) => this._onAirlockEvent(type);

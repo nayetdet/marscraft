@@ -1,7 +1,7 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.js';
+import { GREENHOUSE_CENTER, GREENHOUSE_PLOTS, PLOT_PLANT_CELLS } from '../world/greenhouseLayout.js';
 import { greenhouseMapSvg, plotMapLabel, plotStatus } from './greenhouseMap.js';
-import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U } from '../config/constants.js';
+import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
 import { formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
@@ -583,11 +583,11 @@ export class StationPanel {
       return '';
     }
     if (action === 'harvest') {
-      // A colheita cai ao lado do monitor (no canteiro do jardim), um item por vez
+      // Cada planta do campo vira um item, que cai na bandeja onde ela cresceu
+      const plantCells = PLOT_PLANT_CELLS[stations.selectedPlot];
       const message = stations.harvest(survival, (id, i) => {
-        const position = this.engine.stationCrop.position.clone();
-        position.x += (i % 2) * 0.5;
-        position.z += Math.floor(i / 2) * 0.5;
+        const { dx, dz } = plantCells[i];
+        const position = { x: GREENHOUSE_CENTER.x + dx + 0.5, y: WORLD_CONFIG.GROUND_LEVEL + 2, z: GREENHOUSE_CENTER.z + dz + 0.5 };
         this.engine.world.spawnCropDrop(position, id);
       });
       this.engine.updateCropVisuals?.();
@@ -806,8 +806,8 @@ export class StationPanel {
         </div>
         <div class="gh-side">
           <div class="gh-plot-title">FIELD ${plotDef.id}: ${plotDef.name.toUpperCase()}<small>${plotDef.yield > 1
-            ? `Big field: drinks ${plotDef.yield}x the water, costs ${plotDef.yield}x the power, gives ${plotDef.yield} meals.`
-            : 'Small bed: 1 meal per harvest.'} ${s.plantedPlotCount()}/${s.plots.length} fields planted.</small></div>
+            ? `Big field: ${plotDef.yield} plants, drinks ${plotDef.yield}x the water, costs ${plotDef.yield}x the power. Each plant gives 1 food.`
+            : 'Small bed: 1 plant, 1 food per harvest.'} ${s.plantedPlotCount()}/${s.plots.length} fields planted.</small></div>
           <div class="gh-cards">${cardsHtml}</div>
         </div>
       </div>
