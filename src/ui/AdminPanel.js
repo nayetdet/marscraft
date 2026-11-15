@@ -2,7 +2,6 @@ import { HABITAT_LAYOUT } from '../world/habitatLayout.js';
 import { MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import './styles/admin.css';
 
 // Painel de admin para testar a base sem esperar o jogo: forcar tempestade, mexer na bateria,
 // na agua, no tempo e teleportar para as salas. Abre com F8 no `npm run dev` ou com `?admin`
@@ -29,7 +28,7 @@ const TELEPORTS = [
 ];
 
 function isEnabled() {
-  return import.meta.env.DEV || new URLSearchParams(window.location.search).has('admin');
+  return process.env.NODE_ENV === 'development' || new URLSearchParams(window.location.search).has('admin');
 }
 
 export class AdminPanel {

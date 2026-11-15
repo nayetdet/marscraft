@@ -13,7 +13,7 @@ describe('medbay text (issue #111)', () => {
 });
 
 describe('NASA Data screen (issue #111)', () => {
-  const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../../public/game.html', import.meta.url), 'utf8');
   const screen = html.slice(html.indexOf('id="sources-screen"'), html.indexOf('id="demo-screen"'));
   const firstNote = screen.match(/<p class="info-note">([^<]*)<\/p>/)[1];
 

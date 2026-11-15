@@ -3,13 +3,13 @@
 > Tudo aqui foi **testado em 2026-11-14** a partir de uma máquina local (curl). Amostras reais e reduzidas ficam em [`samples/`](samples/).
 > Os números prontos para usar na mecânica do jogo estão em [`numeros-reais.md`](numeros-reais.md).
 
-## Resumo: o que dá para chamar direto do navegador
+## Resumo: acesso às APIs no jogo
 
-O jogo é um site estático (Vite → GitHub Pages), sem backend. Uma API só pode ser chamada **do navegador** se responder com o cabeçalho CORS `Access-Control-Allow-Origin`.
+O jogo usa Next.js e é publicado na Vercel. Dados que precisam de chave passam pelas rotas de servidor; a chave fica na variável `NASA_API_KEY` da Vercel e nunca é enviada ao navegador. APIs sem chave e assets públicos ainda podem ser carregados diretamente quando tiverem CORS.
 
 | API | Chave | CORS (navegador) | Situação | Estratégia recomendada |
 |---|---|---|---|---|
-| `api.nasa.gov/DONKI/*` | sim (`api_key`) | ✅ `*` | CME, SEP e notifications OK. **FLR retorna 404.** Janela máxima de 60 dias. | Fetch ao vivo **com fallback** para um JSON embutido (feito: `src/data/spaceWeather.js`, #100) |
+| `api.nasa.gov/DONKI/*` | sim (`api_key`) | ✅ `*` | CME, SEP e notifications OK. **FLR retorna 404.** Janela máxima de 60 dias. | Rota de servidor `/api/space-weather`, com fallback para JSON embutido (`src/data/spaceWeather.js`) |
 | `api.nasa.gov/insight_weather` | sim | ✅ `*` | OK (feed arquivado, sols 675–681 de out/2020) | Embutir (é estático, não muda) |
 | `api.nasa.gov/planetary/apod` | sim | ✅ `*` | deu 500 e depois 429 | Opcional (imagem do dia na tela inicial) |
 | `api.nasa.gov/mars-photos` | sim | — | ❌ **fora do ar** ("No such app", 404) | Não usar. Use a NASA Image Library. |
@@ -21,7 +21,7 @@ O jogo é um site estático (Vite → GitHub Pages), sem backend. Uma API só po
 | HiRISE DTM `uahirise.org/PDS/DTM` | não | não testado | OK, aceita `Range` | **Baixar o recorte por script e embutir** (`scripts/fetch-mars-terrain.mjs`) |
 | NASA Image Library `images-api.nasa.gov` | não | ✅ `*` | OK | Fetch direto (fotos reais de Marte/Artemis) |
 
-**Limite da `DEMO_KEY`:** o cabeçalho devolveu `X-Ratelimit-Limit: 10` por hora por IP, e estourou em poucos minutos de teste. **Peça uma chave grátis em <https://api.nasa.gov/>** (1.000 req/h). Em site estático a chave fica visível no bundle; para uma chave gratuita da api.nasa.gov isso é aceitável. Mesmo assim, nunca dependa só do fetch ao vivo, e mantenha sempre um fallback embutido.
+**Limite da `DEMO_KEY`:** o cabeçalho devolveu `X-Ratelimit-Limit: 10` por hora por IP, e estourou em poucos minutos de teste. **Peça uma chave grátis em <https://api.nasa.gov/>** (1.000 req/h) e cadastre-a como `NASA_API_KEY` na Vercel. Mesmo assim, nunca dependa só do fetch ao vivo, e mantenha sempre um fallback embutido.
 
 **Regra do desafio:** dado embutido é aceito, mas **não pode aparecer como "ao vivo"**. Mostre "dados de DD/MM/AAAA" para dado embutido e "ao vivo" só quando o fetch funcionou.
 
@@ -78,7 +78,7 @@ cp .env.example .env
 npm run fetch:donki                    # ou: npm run fetch:donki -- 2025-11-14 2026-11-13
 ```
 
-**Nunca commite a chave.** A `NASA_API_KEY` do `.env` só é lida pelos scripts de coleta e não vai para o bundle. A `VITE_NASA_API_KEY` (do fetch ao vivo, abaixo) vai para o bundle e fica pública: use nela só uma chave gratuita da api.nasa.gov, de preferência separada.
+**Nunca commite a chave.** A `NASA_API_KEY` do `.env` é lida pelos scripts de coleta locais; em produção, cadastre o mesmo nome apenas nas variáveis de ambiente da Vercel. Ela não vai para o bundle.
 
 `speed` e `isGlancingBlow` viram a força da tempestade por uma regra do jogo (ver `numeros-reais.md`).
 
@@ -90,7 +90,7 @@ npm run fetch:donki                    # ou: npm run fetch:donki -- 2025-11-14 2
   - `CME` dos últimos 30 dias → normalizado pelo mesmo `summarizeCmes` do script (`src/data/donkiNormalize.js`), então o formato é igual ao de `donkiCme.json` (`headedToMars`, `marsArrivalTime`, `isGlancingBlow`).
   - `SEP` dos últimos 60 dias (limite da API) → `{ id, eventTime, seenBy, link }`.
   - `notifications?type=all` dos últimos 7 dias → só o boletim mais novo: `{ type, issueTime, url }`. O `messageBody` não é usado.
-- **Chave:** `import.meta.env.VITE_NASA_API_KEY`, ou `DEMO_KEY` se vazia. No GitHub Pages vem do secret `NASA_API_KEY` do repositório (`.github/workflows/deploy.yml`). **Ela fica visível no bundle**; para a chave gratuita isso é aceitável. Sem o secret, o site usa a `DEMO_KEY` (10 pedidos por hora por IP; cada abertura sem cache faz 3).
+- **Chave:** a rota Next `/api/space-weather` lê `process.env.NASA_API_KEY` no servidor. O navegador chama somente essa rota, sem receber a chave. Sem a variável, a rota usa `DEMO_KEY` como fallback (10 pedidos por hora por IP).
 - **Cache:** `localStorage` (`marscraft.spaceWeather.v1`), só de resultado ao vivo, por 45 min (`SPACE_WEATHER_CONFIG.CACHE_TTL_MINUTES`). Reabrir dentro da validade não chama a API, e o rótulo mostra a hora do fetch original.
 - **Fallback para `donkiCme.json`** em qualquer falha do pedido de CME: sem rede, HTTP diferente de 200 (inclusive 429 e o 400 de janela grande, que vem em texto puro), corpo vazio, JSON inválido, resposta que não é lista, tempo esgotado ou **nenhuma CME para Marte** na janela. Falha só no SEP ou no boletim não derruba o modo ao vivo: o jogo segue sem SEP e sem boletim. Com 0 SEP, o jogo não inventa uma.
 - **Quando vale:** se o resultado chega antes do primeiro Play (e antes da fila de tempestades começar), a partida usa as CMEs ao vivo e todos os rótulos trocam para **"LIVE from NASA DONKI, fetched HH:MM"** (hora local). Se chega depois, fica no cache para a próxima abertura. Sem fetch, os rótulos dizem **"real data from DD/MM/AAAA"**.

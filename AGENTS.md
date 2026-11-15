@@ -33,17 +33,18 @@ O desafio, em uma frase: um jogo em que **crianças de 7 a 12 anos** administram
 
 ## Stack e comandos
 
-- **JavaScript (ES modules) puro + [Three.js](https://threejs.org/) `^0.181` + Vite 6.** Sem framework de UI: o HUD é HTML/CSS em `index.html` e `src/ui/`.
-- `npm install` · `npm run dev` (Vite com `--host`) · `npm run build` (gera `dist/`) · `npm run preview`
+- **JavaScript (ES modules) puro + [Three.js](https://threejs.org/) `^0.181` + Next.js.** O React é somente a camada obrigatória de montagem do Next (`src/app/page.jsx`); HUD e jogo continuam em HTML/CSS/JS puro, no shell `public/game.html` e em `src/ui/`.
+- `npm install` · `npm run dev` (Next com `--hostname`) · `npm run build` · `npm run start`
 - **Painel de admin (testes manuais):** `F8` no `npm run dev`, ou `?admin` na URL (também no Pages, com botão ADMIN para touch). Força tempestade, mexe em bateria, água e tempo, e teleporta para as salas (`src/ui/AdminPanel.js`).
 - **Testes:** `npm test` (Vitest, `vitest run`). Os testes ficam ao lado do arquivo (`src/**/<nome>.test.js`) e cobrem lógica pura: física, sobrevivência, terreno. Não há linter. Há `shell.nix` (Node 22) para quem usa Nix.
-- **Deploy:** push na `main` dispara `.github/workflows/deploy.yml`, que publica no GitHub Pages. O `vite.config.js` usa `base: '/nasa-space-apps/'`, então caminhos de assets precisam ser relativos ou usar `import.meta.env.BASE_URL`.
-- **Sem backend.** Qualquer API chamada em runtime precisa liberar CORS. Veja a tabela em `docs/data/apis-nasa.md`: DONKI (`api.nasa.gov`), tiles do Trek e NASA Images podem ser chamados do navegador; **RadLab e OSDR não**, então devem ser baixados por script e embutidos como JSON.
+- **Deploy:** push na `main` dispara `.github/workflows/deploy.yml`, que publica na Vercel. Configure os secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` e `NASA_API_KEY` no GitHub. O workflow entrega a chave à build e ao ambiente de produção da Vercel, nunca ao navegador.
+- **API:** dados com chave passam por rotas de servidor do Next. O DONKI usa `/api/space-weather`, portanto a chave nunca entra no bundle. RadLab e OSDR continuam baixados por script e embutidos como JSON.
 
 ## Mapa do código
 
 ```
-index.html                 HUD, menus e tela de morte (markup + ids usados pelo HudManager)
+public/game.html           HUD, menus e tela de morte (markup + ids usados pelo HudManager)
+src/app/                   casca Next e rota de servidor /api/space-weather; nao converte o jogo em React
 src/main.js                bootstrap → new GameEngine(container).start()
 src/core/GameEngine.js     loop principal; instancia e conecta todos os sistemas
 src/mission/               missao: bateria e paineis (energy), tempestades solares do DONKI (solarStorms), radiacao,

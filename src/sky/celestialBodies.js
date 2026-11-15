@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-const TEXTURE_BASE = `${import.meta.env.BASE_URL}textures/`;
+const TEXTURE_BASE = '/textures/';
 
 export function createStarfield() {
   const starCount = 1200;

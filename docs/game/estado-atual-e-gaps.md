@@ -4,7 +4,7 @@
 
 ## O que o jogo já é
 
-Jogo voxel em primeira pessoa **no navegador** (Three.js + Vite, sem backend, deploy no GitHub Pages). O jogador sobrevive numa cratera de Marte ao redor de uma base/nave.
+Jogo voxel em primeira pessoa **no navegador** (Three.js + Next.js, deploy na Vercel). O jogo permanece em JavaScript puro; a rota de servidor `/api/space-weather` protege a chave da NASA. O jogador sobrevive numa cratera de Marte ao redor de uma base/nave.
 
 | Sistema | Onde | O que faz hoje |
 |---|---|---|
