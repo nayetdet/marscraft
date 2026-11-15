@@ -467,3 +467,28 @@ export const DOSE_CONFIG = {
   // Distancia do rover ao centro da plataforma do MAV para descarregar o gelo (blocos)
   ROVER_MAV_REACH: 8,
 };
+
+// Gerador de O2 com dois modos (issue #102). Fontes em docs/data/numeros-reais.md.
+// "Air from water" = eletrolise, como o OGA da Estacao Espacial: 2 H2O -> 2 H2 + O2.
+// "Air from Mars air" = MOXIE do rover Perseverance: tira o O2 do CO2 do ar de Marte.
+export const OXYGEN_PLANT_CONFIG = {
+  // [Ref] Quimica da eletrolise: 36 g de agua dao 32 g de O2 (NASA ICES 2024; OGA, NASA 2015)
+  WATER_KG_PER_O2_KG: 36 / 32,
+  // [Ref] NASA BVAD: 0,84 kg de O2 por pessoa por dia. Com a razao acima: 0,945 L de agua por
+  // pessoa por sol. Agua e contada como 1 kg = 1 L, como no resto do jogo.
+  O2_KG_PER_PERSON_DAY: 0.84,
+  // Escala de jogo (nao ha potencia oficial para uma base): por ponto de O2, o MOXIE gasta
+  // MOXIE_ENERGY_FACTOR vezes a energia da eletrolise. A eletrolise usa os custos que ja existiam
+  // (ENERGY_CONFIG.OXYGEN_COST_PER_POINT e CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR).
+  ELECTROLYSIS_ENERGY_FACTOR: 1,
+  MOXIE_ENERGY_FACTOR: 2,
+  // [Ref] Sabatier (ISS): CO2 + 4 H2 -> CH4 + 2 H2O. O hidrogenio que sai no metano limita a
+  // recuperacao a ~50 % (NASA ICES 2024): devolve metade da agua da eletrolise.
+  SABATIER_WATER_RETURN: 0.5,
+  // Custo de montar o reator de Sabatier na impressora 3D (escala de jogo)
+  SABATIER_REGOLITH: 3,
+  SABATIER_POWER: 8,
+  // Avisos do tripulante: o modo escolhido esta gastando o recurso que esta acabando
+  LOW_WATER_WARN_L: 10,
+  LOW_BATTERY_WARN_PCT: 25,
+};

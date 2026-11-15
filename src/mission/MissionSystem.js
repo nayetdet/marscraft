@@ -5,21 +5,17 @@ import {
   MISSION_CONFIG,
   STORM_CONFIG,
   RADIATION_CONFIG,
-  SURVIVAL_CONFIG,
 } from '../config/constants.js';
 import { Battery, solarChargePerHour } from './energy.js';
 import { doseRateMsvPerHour, missionDoseMsvPerHour, radiationDamage } from './radiation.js';
 import { DOSE_LIMIT_MSV, createDoseLedger, doseBreakdown, doseSourceFor } from './doseBudget.js';
+import { OxygenPlant } from './oxygenPlant.js';
 import { buildStormSchedule, rescheduleStorms, stormStateAt } from './solarStorms.js';
 
 const PROPELLANT_PER_ICE = 100 / MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
 
-// Converte pontos de O2 do jogo em kg: um sol inteiro respirando la fora = 0,84 kg (NASA BVAD)
-export function oxygenPointsToKg(points) {
-  const secondsPerSol = 24 / MISSION_CONFIG.GAME_HOURS_PER_SECOND;
-  const pointsPerSol = SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE * secondsPerSol;
-  return (points / pointsPerSol) * MAV_CONFIG.OXYGEN_KG_PER_DAY;
-}
+// Converte pontos de O2 do jogo em kg (mora em oxygenPlant.js, junto da conta da agua)
+export { oxygenPointsToKg } from './oxygenPlant.js';
 
 export function mavProgress({ propellant, stormsSurvived, dataSent }) {
   const propellantPart = Math.min(1, propellant / 100);
@@ -89,6 +85,8 @@ export class MissionSystem {
     this.events = [];
     // Filtros de ar gastos encarecem o O2 do habitat (gerador de O2 da tripulacao, issue #47)
     this.oxygenCostMultiplier = 1;
+    // Gerador de O2: eletrolise (agua) ou MOXIE (ar de Marte), issue #102
+    this.oxygenPlant = new OxygenPlant();
   }
 
   // A fila de tempestades comecou, mas os dados nao tem nenhuma CME com destino a Marte
@@ -297,14 +295,21 @@ export class MissionSystem {
     return this.battery.percent < ENERGY_CONFIG.STANDBY_BELOW;
   }
 
-  // O2 que a bateria e o RTG conseguem pagar agora
-  oxygenRefillBudget() {
-    return this.battery.lifeSupportAvailable / (ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier);
+  // % de bateria por ponto de O2 no modo atual do gerador (MOXIE custa mais que a eletrolise)
+  oxygenEnergyPerPoint() {
+    return ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier * this.oxygenPlant.energyFactor;
   }
 
-  chargeOxygen(points) {
+  // O2 que a bateria (e, na eletrolise, o tanque `tank.water`) consegue pagar agora
+  oxygenRefillBudget(tank = null) {
+    return this.oxygenPlant.refillBudget(this.battery.lifeSupportAvailable / this.oxygenEnergyPerPoint(), tank);
+  }
+
+  chargeOxygen(points, tank = null) {
     if (points <= 0) return;
-    this.battery.drainLifeSupport(points * ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier);
+    // O RTG paga o ar antes da bateria (#85); no modo eletrolise o tanque paga a agua (#102)
+    this.battery.drainLifeSupport(points * this.oxygenEnergyPerPoint());
+    this.oxygenPlant.useWaterForPoints(points, tank);
     this.oxygenProducedPoints += points;
   }
 

@@ -6,7 +6,7 @@ import { separateCrew } from '../crew/separateCrew.js';
 import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
 import { createBaseStock } from '../crew/baseStock.js';
-import { createStations } from '../crew/stations.js';
+import { createStations, problemText } from '../crew/stations.js';
 import { EMBEDDED_SPACE_WEATHER } from '../data/spaceWeather.js';
 import { MissionSystem, oxygenPointsToKg } from '../mission/MissionSystem.js';
 import { NO_STORM_DATA_TEXT, donkiCredit, donkiLabel, formatDateDMY, formatDose, formatHours, stormEventMessage } from '../mission/missionText.js';
@@ -39,6 +39,7 @@ import { AdminPanel } from '../ui/AdminPanel.js';
 import { UtilityModule } from './UtilityModule.js';
 import { CommsLink } from '../mission/commsLink.js';
 import { passiveDemandFactor } from '../mission/pacing.js';
+import { oxygenModeWarning } from '../mission/oxygenPlant.js';
 import { AudioManager } from '../audio/AudioManager.js';
 import { getCategoryLabel } from '../data/scanCatalog.js';
 import { ScanJournal } from '../scanner/scanJournal.js';
@@ -742,8 +743,10 @@ export class GameEngine {
 
   // Sobrevivencia com o O2 do habitat pago pela bateria
   _updateSurvival(dt) {
-    this.survival.update(dt, this.player.pos, this.mission.oxygenRefillBudget(), this.world.brokenBaseWindows.size > 0);
-    this.mission.chargeOxygen(this.survival.lastOxygenRefilled);
+    // Gerador de O2 (issue #102): na eletrolise o ar tambem gasta agua do tanque da base
+    this.survival.update(dt, this.player.pos, this.mission.oxygenRefillBudget(this.crewStock), this.world.brokenBaseWindows.size > 0);
+    this.survival.oxygenShortage = this.mission.oxygenPlant.limitedBy;
+    this.mission.chargeOxygen(this.survival.lastOxygenRefilled, this.crewStock);
   }
 
   _refreshMavPanel() {
@@ -932,6 +935,8 @@ export class GameEngine {
       shieldOn: m.shieldOn,
       factoryOn: m.factoryOn,
       factoryBusy: m.factoryOn && m.iceStock > 0 && m.propellant < 100,
+      oxygenMode: m.oxygenPlant.mode,
+      oxygenBlocked: m.oxygenPlant.limitedBy,
       greenhousePowered: this.expedition.greenhousePowered,
       dusty: this.stations.contaminated,
       storm: {
@@ -1279,6 +1284,7 @@ export class GameEngine {
       && !this.cutscenes.isActive && !this.storyHud.isWindowClosedShown;
 
     if (active) this.crew.updateMovement(dt);
+    if (active) this._warnOxygenMode(dt);
 
     this.mission.oxygenCostMultiplier = 1;
     // Numa animacao quem posiciona a tripulacao e a propria animacao (o embarque no foguete)
@@ -1298,6 +1304,21 @@ export class GameEngine {
         this.hud.showCaption(`${speaker.name}: ${replies[speaker.name]}`);
       }
     }
+  }
+
+  // Issue #102: quem cuida do gerador de O2 avisa quando o modo escolhido gasta o recurso que
+  // esta acabando (agua com eletrolise, bateria com MOXIE). Mesmo intervalo dos avisos da tripulacao.
+  _warnOxygenMode(dt) {
+    this._oxygenWarnTimer = (this._oxygenWarnTimer ?? CREW_CONFIG.ALERT_COOLDOWN_S) + dt;
+    if (this._oxygenWarnTimer < CREW_CONFIG.ALERT_COOLDOWN_S) return;
+    const problem = oxygenModeWarning(this.mission.oxygenPlant, {
+      water: this.survival.baseWater, batteryPct: this.mission.battery.percent,
+    });
+    const station = this.crew.stationFor('oxygen');
+    if (!problem || !station) return;
+    this._oxygenWarnTimer = 0;
+    const speaker = this.crew.members.find((m) => m.task === 'oxygen') ?? this.crew.members[0];
+    this.hud.showToast(`${speaker.name}: ${problemText(station, problem)}`, 6000);
   }
 
   _onResize() {

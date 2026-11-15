@@ -389,3 +389,80 @@ describe('MissionSystem dose budget', () => {
     expect(mission.doseBreakdown.eva).toBe(0);
   });
 });
+
+// Issue #102: o gerador de O2 do habitat tem dois modos com custos opostos
+describe('MissionSystem oxygen modes (issue #102)', () => {
+  // Recarrega `points` de O2 em passos pequenos, como o motor faz a cada frame
+  function breathe(mission, tank, points) {
+    let delivered = 0;
+    while (delivered < points - 1e-9) {
+      const give = Math.min(0.5, points - delivered, mission.oxygenRefillBudget(tank));
+      if (give <= 1e-9) break;
+      mission.chargeOxygen(give, tank);
+      delivered += give;
+    }
+    return delivered;
+  }
+
+  const pointsPerSol = (24 / MISSION_CONFIG.GAME_HOURS_PER_SECOND) * SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE; // pontos de O2 por sol
+
+  it('electrolysis drains the base tank at the real ratio while oxygen refills', () => {
+    const mission = createMission(12);
+    mission.battery.charge = 100;
+    const tank = { water: 20 };
+    // 0,84 kg de O2 (um sol de ar) pedem 0,945 L de agua
+    mission.chargeOxygen(pointsPerSol, tank);
+    expect(20 - tank.water).toBeCloseTo(0.945, 3);
+    expect(mission.oxygenPlant.waterUsedL).toBeCloseTo(0.945, 3);
+  });
+
+  it('with an empty tank electrolysis stops refilling oxygen and says the tank is the reason', () => {
+    const mission = createMission(12);
+    mission.battery.charge = 100;
+    expect(mission.oxygenRefillBudget({ water: 0 })).toBe(0);
+    expect(mission.oxygenPlant.limitedBy).toBe('water');
+  });
+
+  it('MOXIE keeps the tank full but each oxygen point costs more power', () => {
+    const water = createMission(12);
+    const moxie = createMission(12);
+    moxie.oxygenPlant.setMode('moxie');
+    expect(moxie.oxygenEnergyPerPoint()).toBeGreaterThan(water.oxygenEnergyPerPoint());
+    moxie.battery.charge = 100;
+    const tank = { water: 20 };
+    moxie.chargeOxygen(10, tank);
+    expect(tank.water).toBe(20);
+    expect(moxie.battery.charge).toBeCloseTo(100 - 10 * moxie.oxygenEnergyPerPoint());
+    expect(moxie.oxygenRefillBudget({ water: 0 })).toBeGreaterThan(0);
+  });
+
+  it('night with no sun: air from water is the right choice', () => {
+    const run = (mode) => {
+      const mission = createMission(0); // meia-noite: os paineis nao geram
+      mission.oxygenPlant.setMode(mode);
+      mission.battery.charge = 30;
+      mission.update(6);
+      expect(mission.chargeRate).toBe(0);
+      return breathe(mission, { water: 30 }, 15);
+    };
+    expect(run('electrolysis')).toBeCloseTo(15);
+    expect(run('moxie')).toBeLessThan(15);
+  });
+
+  it('tank almost empty: air from Mars air is the right choice', () => {
+    const run = (mode) => {
+      const mission = createMission(12);
+      mission.oxygenPlant.setMode(mode);
+      mission.battery.charge = 100;
+      const tank = { water: 0.05 };
+      const delivered = breathe(mission, tank, 20);
+      return { delivered, water: tank.water };
+    };
+    const water = run('electrolysis');
+    expect(water.delivered).toBeLessThan(20);
+    expect(water.water).toBeCloseTo(0);
+    const moxie = run('moxie');
+    expect(moxie.delivered).toBeCloseTo(20);
+    expect(moxie.water).toBe(0.05);
+  });
+});
