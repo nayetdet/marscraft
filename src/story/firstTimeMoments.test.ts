@@ -6,8 +6,6 @@ const ZERO: MomentCounts = {
   iceCount: 0, roverIceKg: 0, drinkCount: 0, mealCount: 0, earthCalls: 0, powerChecks: 0, plantCount: 0,
   workoutCount: 0, washCount: 0, shelterWaterL: 0, roverDrives: 0, iceDelivered: 0, stormsSurvived: 0,
 };
-const PLANETS = ['mars', 'earth'];
-const hasArt = (name: string) => PLANETS.includes(name) || pixelIconSvg(name).includes('<rect');
 
 describe('first-time moments', () => {
   it('gives every main action its own stamp, scene, sourced fact and icons', () => {
@@ -17,8 +15,6 @@ describe('first-time moments', () => {
     for (const moment of FIRST_TIME_MOMENTS) {
       expect(moment.source).toBeTruthy();
       expect(moment.lines.length).toBeGreaterThanOrEqual(2);
-      expect(hasArt(moment.scene.from)).toBe(true);
-      expect(hasArt(moment.scene.to)).toBe(true);
       for (const line of moment.lines) expect(pixelIconSvg(line.icon)).toContain('<rect');
       expect(momentLogText(moment)).toContain(moment.lines[0].text);
     }

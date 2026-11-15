@@ -17,7 +17,7 @@ export interface MomentLine {
 }
 
 export interface MomentScene {
-  from: string; // icone (pixelIcons) ou planeta ('mars', 'earth')
+  from: string; // desenho colorido de src/ui/pixelSprites.ts
   to: string;
   motion: SceneMotion;
 }

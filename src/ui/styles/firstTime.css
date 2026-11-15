@@ -293,13 +293,13 @@
 @media (max-height: 500px) {
   .first-time-burst { top: 60%; gap: 5px; padding: 14px 30px; }
   .ft-stamp, .ft-stamp.is-long { font-size: 24px; letter-spacing: 2px; text-shadow: 3px 3px 0 #11171b; }
-  .first-time-burst .ft-scene { --ft-art: 34px; --ft-dot: 10px; --ft-run: 94px; width: 170px; }
+  .first-time-burst .ft-scene { --ft-art: 36px; --ft-dot: 10px; --ft-run: 92px; width: 170px; }
   .ft-burst-reason { font-size: 13px; }
 
   .ft-head { padding: 5px 8px 4px; }
   .ft-titles small { font-size: 9px; }
   .ft-titles strong { font-size: 11px; }
-  .ft-head .ft-scene { --ft-art: 18px; --ft-dot: 6px; --ft-run: 30px; width: 76px; }
+  .ft-head .ft-scene { --ft-dot: 6px; --ft-run: 36px; width: 90px; }
   .ft-reason { display: none; } /* ja apareceu na abertura */
   .ft-lines { gap: 4px; margin: 5px 9px 0; }
   .ft-lines li { gap: 7px; font-size: 11px; }

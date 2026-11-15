@@ -85,7 +85,7 @@ src/story/                 história em 3 atos: StoryDirector (objetivos, janela
                            firstTimeMoments (a animacao e o fato real da primeira vez de cada acao principal, em dados; quem desenha e o FirstTimeHud)
   cutscene/                animações de chegada e de decolagem: timeline (keyframes), CutscenePlayer, efeitos, cápsula
 src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu), StoryHud
-                           (card de rádio), WaypointHud (seta na tela), CutsceneHud (legendas, pular), FirstTimeHud (abertura e card das animações de primeira vez) + CSS
+                           (card de rádio), WaypointHud (seta na tela), CutsceneHud (legendas, pular), FirstTimeHud (abertura e card das animações de primeira vez; desenhos coloridos 12x12 em pixelSprites) + CSS
 docs/                      contexto do desafio, APIs e dados reais
 ```
 

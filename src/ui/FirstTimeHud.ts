@@ -1,66 +1,18 @@
 import type { MomentScene, MomentView } from '../story/firstTimeMoments.ts';
 import { pixelIconSvg } from './pixelIcons.ts';
+import { hasPixelSprite, pixelSpriteSvg } from './pixelSprites.ts';
 import './styles/firstTime.css';
 
 // Animacao de "primeira vez" (src/story/firstTimeMoments.ts) e da recompensa "Space science on
 // Earth" da estufa (issue #216): uma abertura curta no meio da tela (a palavra do momento e a
 // cena dele se mexendo) e depois o card com o fato, na coluna da direita, com as frases entrando
-// uma a uma. Cada momento tem a sua cor, os seus icones e o seu jeito de se mexer
+// uma a uma. Cada momento tem a sua cor, os seus desenhos coloridos e o seu jeito de se mexer
 // (`scene.motion`). Nao pausa o jogo e nao recebe toque.
 
 const LEAVE_MS = 300; // igual as animacoes de saida do CSS
 const SPARKS = 10;
 const SPARK_RADIUS_PX = 120;
 const TRACK_DOTS = 3;
-
-// Planetas em pixel art 12x12: cada letra e uma cor
-const PLANETS: Record<string, { colors: Record<string, string>; rows: string[] }> = {
-  mars: {
-    colors: { R: '#c8552d', D: '#8f3a1e', L: '#e58a5a' },
-    rows: [
-      '....RRRR....',
-      '..RRLLRRRR..',
-      '.RLLRRRRDRR.',
-      '.RLRRRRDDRR.',
-      'RRRRDRRRRRRR',
-      'RRRDDRRRRLRR',
-      'RRRRRRRRRRRR',
-      'RRLRRRRDDRRD',
-      '.RRRRRRDRRD.',
-      '.RRRDRRRRDD.',
-      '..RRRRRDDD..',
-      '....DDDD....',
-    ],
-  },
-  earth: {
-    colors: { B: '#2f7fd1', G: '#4fbf6b', W: '#e9f4ff', N: '#1f5aa3' },
-    rows: [
-      '....WWBB....',
-      '..BBGGBBWW..',
-      '.BGGGGBBBBB.',
-      '.BGGGBBBGGB.',
-      'BBGGBBBGGGGB',
-      'BBBGBBBGGGBB',
-      'BWWBBBBBGGBB',
-      'BBBBGGBBBBBN',
-      '.BBGGGGBBBN.',
-      '.BBBGGBBBNN.',
-      '..BBBBWWNN..',
-      '....NNNN....',
-    ],
-  },
-};
-
-function planetSvg(name: string): string {
-  const { colors, rows } = PLANETS[name];
-  const rects: string[] = [];
-  rows.forEach((row, y) => {
-    [...row].forEach((c, x) => {
-      if (colors[c]) rects.push(`<rect x="${x}" y="${y}" width="1" height="1" fill="${colors[c]}"/>`);
-    });
-  });
-  return `<svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true">${rects.join('')}</svg>`;
-}
 
 function el(tag: string, className: string, text = ''): HTMLElement {
   const node = document.createElement(tag);
@@ -69,11 +21,12 @@ function el(tag: string, className: string, text = ''): HTMLElement {
   return node;
 }
 
-// Uma ponta da cena: um planeta colorido ou um icone do HUD na cor do momento
+// Uma ponta da cena: um desenho colorido (pixelSprites). Sem desenho com esse nome, cai no
+// icone de uma cor so do HUD, pintado com a cor do momento.
 function artEl(name: string, end: 'from' | 'to'): HTMLElement {
-  const isPlanet = Object.hasOwn(PLANETS, name);
-  const art = el('span', `ft-art is-${end} ${isPlanet ? 'is-planet' : 'is-icon'}`);
-  art.innerHTML = isPlanet ? planetSvg(name) : pixelIconSvg(name);
+  const colored = hasPixelSprite(name);
+  const art = el('span', `ft-art is-${end} ${colored ? 'is-sprite' : 'is-icon'}`);
+  art.innerHTML = colored ? pixelSpriteSvg(name) : pixelIconSvg(name);
   return art;
 }
 
