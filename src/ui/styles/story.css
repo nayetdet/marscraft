@@ -591,7 +591,7 @@ body.portrait-required .cutscene-layer { display: none; }
   to { transform: translateX(-50%) scale(1); opacity: 1; }
 }
 @media (max-height: 500px) {
-  .cert-badge { top: 12%; padding: 8px 10px; }
+  .cert-badge { top: 36%; padding: 8px 10px; }
   .cert-badge-icon { flex-basis: 36px; width: 36px; height: 36px; }
   .cert-badge-body strong { font-size: 15px; }
   .cert-badge-body span { font-size: 11px; }

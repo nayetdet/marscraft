@@ -77,3 +77,9 @@ describe('smoothNetRate', () => {
     expect(smoothNetRate(5, 2, 0)).toBe(5);
   });
 });
+
+describe('smoothNetRate spikes', () => {
+  it('limits one-off spends so the HUD never shows thousands per hour', () => {
+    expect(smoothNetRate(null, -35, 0.0005)).toBe(-60);
+  });
+});

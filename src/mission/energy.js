@@ -17,9 +17,12 @@ export function solarChargePerHour(timeOfDay) {
 
 // Fluxo liquido da bateria (% por hora de jogo) suavizado, para o HUD mostrar "+4/h" sem
 // tremer a cada quadro (issue #85). `windowHours` = quanto tempo de jogo a media cobre.
+// Gastos de uma vez (plantar, enviar dados, o controle de demo) dariam picos de milhares de %/h:
+// a taxa de cada quadro fica limitada a NET_RATE_LIMIT, o maximo que a base gera ou gasta.
+export const NET_RATE_LIMIT = 60;
 export function smoothNetRate(previous, deltaPct, deltaHours, windowHours = 0.3) {
   if (!(deltaHours > 0)) return previous;
-  const rate = deltaPct / deltaHours;
+  const rate = Math.max(-NET_RATE_LIMIT, Math.min(NET_RATE_LIMIT, deltaPct / deltaHours));
   if (previous === null || previous === undefined) return rate;
   const k = Math.min(1, deltaHours / windowHours);
   return previous + (rate - previous) * k;
