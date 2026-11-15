@@ -38,15 +38,15 @@ function gym({ food = MAX, water = MAX } = {}) {
 }
 
 describe('gym trade-off (#421): what a workout costs', () => {
-  it('costs 10% food, 15% water, 2 hours and 3% battery', () => {
-    expect(WORKOUT_COST).toEqual({ power: 3, foodPct: 10, waterPct: 15, hours: 2 });
+  it('costs 10% food, 15% water, 2 hours and the battery of STATION_CONFIG.EXERCISE_COST', () => {
+    expect(WORKOUT_COST).toEqual({ power: STATION_CONFIG.EXERCISE_COST, foodPct: 10, waterPct: 15, hours: 2 });
     expect(WORKOUT_COST.power).toBe(STATION_CONFIG.EXERCISE_COST);
     expect(workoutNeeds(MAX)).toEqual({ food: MAX * 0.1, water: MAX * 0.15 });
 
     const { mission, station, passed } = gym();
     const energy = mission.energy;
     expect(station.exercise('treadmill')).toMatch(/treadmill/i);
-    expect(mission.energy).toBeCloseTo(energy - 3, 6);
+    expect(mission.energy).toBeCloseTo(energy - STATION_CONFIG.EXERCISE_COST, 6);
     expect(station.body.food).toBeCloseTo(MAX * 0.9, 6);
     expect(station.body.water).toBeCloseTo(MAX * 0.85, 6);
     expect(passed).toEqual([2]);
@@ -57,7 +57,7 @@ describe('gym trade-off (#421): what a workout costs', () => {
     const { mission, station, passed } = gym();
     const energy = mission.energy;
     station.exercise('bike');
-    expect(mission.energy).toBeCloseTo(energy - 3, 6);
+    expect(mission.energy).toBeCloseTo(energy - STATION_CONFIG.EXERCISE_COST, 6);
     expect(station.body.food).toBeCloseTo(MAX * 0.9, 6);
     expect(station.body.water).toBeCloseTo(MAX * 0.85, 6);
     expect(passed).toEqual([2]);
@@ -101,9 +101,9 @@ describe('gym trade-off (#421): what a workout costs', () => {
   });
 
   it('the gym panel shows the three costs and the battery, in 3 languages', () => {
-    expect(WORKOUT_COST_TEXT).toBe('Each set: −3% power, −10% food, −15% water, 2 hours');
-    expect(translate(WORKOUT_COST_TEXT, 'pt-BR')).toBe('Cada série: −3% de energia, −10% de comida, −15% de água, 2 horas');
-    expect(translate(WORKOUT_COST_TEXT, 'es')).toBe('Cada serie: −3% de energía, −10% de comida, −15% de agua, 2 horas');
+    expect(WORKOUT_COST_TEXT).toBe(`Each set: −${STATION_CONFIG.EXERCISE_COST}% power, −10% food, −15% water, 2 hours`);
+    expect(translate(WORKOUT_COST_TEXT, 'pt-BR')).toBe(`Cada série: −${STATION_CONFIG.EXERCISE_COST}% de energia, −10% de comida, −15% de água, 2 horas`);
+    expect(translate(WORKOUT_COST_TEXT, 'es')).toBe(`Cada serie: −${STATION_CONFIG.EXERCISE_COST}% de energía, −10% de comida, −15% de agua, 2 horas`);
     expect(translate(TOO_HUNGRY, 'pt-BR')).not.toBe(TOO_HUNGRY);
     expect(translate(TOO_THIRSTY, 'es')).not.toBe(TOO_THIRSTY);
   });
