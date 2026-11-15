@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { CREW_CONFIG, STATION_CONFIG } from '../config/constants.js';
+import { CREW_CONFIG, OXYGEN_PLANT_CONFIG, STATION_CONFIG } from '../config/constants.js';
 import { Battery } from '../mission/energy.js';
 import { CrewManager } from './CrewManager.js';
 import { createStations } from './stations.js';
+import { ELECTROLYSIS_WATER_L_PER_PERSON_SOL, OxygenPlant } from '../mission/oxygenPlant.js';
 import { findRoute, routeLength } from './crewRails.js';
 
 function makeBase(overrides = {}) {
@@ -329,5 +330,72 @@ describe('CrewManager oxygen', () => {
     const freshUsed = 100 - fresh.base.battery.charge;
     const wornUsed = 100 - worn.base.battery.charge;
     expect(wornUsed).toBeGreaterThan(freshUsed);
+  });
+});
+
+// Issue #102: a tripulacao respira no mesmo modo do gerador de O2 escolhido pelo jogador
+describe('CrewManager air follows the oxygen machine mode (issue #102)', () => {
+  function crewWithPlant(mode, baseOverrides = {}) {
+    const plant = new OxygenPlant(mode);
+    const { crew, base } = makeCrew(2, { oxygenPlant: plant, ...baseOverrides });
+    restAll(crew); // ninguem trabalhando: so as necessidades gastam
+    return { crew, base, plant };
+  }
+
+  it('air from water spends crew water at the real ratio (~0.95 L per person per sol)', () => {
+    const { crew, base, plant } = crewWithPlant('electrolysis', { water: 50 });
+    crew.update(24, 0);
+    expect(plant.waterUsedL).toBeCloseTo(2 * ELECTROLYSIS_WATER_L_PER_PERSON_SOL, 3);
+    // A agua da eletrolise sai do ciclo; a que eles bebem vai para a agua cinza
+    expect(base.water + base.graywater + plant.waterUsedL).toBeCloseTo(50, 6);
+  });
+
+  it('air from Mars air spends no water but more power', () => {
+    const water = crewWithPlant('electrolysis', { water: 50 });
+    const moxie = crewWithPlant('moxie', { water: 50 });
+    water.crew.update(10, 0);
+    moxie.crew.update(10, 0);
+    expect(moxie.plant.waterUsedL).toBe(0);
+    expect(moxie.base.water + moxie.base.graywater).toBeCloseTo(50, 6);
+    // Sem operador o gerador estraga igual nos dois casos: compara a proporcao
+    const waterPower = 100 - water.base.battery.charge;
+    const moxiePower = 100 - moxie.base.battery.charge;
+    expect(waterPower).toBeGreaterThanOrEqual(2 * 10 * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR);
+    expect(moxiePower).toBeCloseTo(waterPower * OXYGEN_PLANT_CONFIG.MOXIE_ENERGY_FACTOR);
+  });
+
+  it('night with no sun: with little battery only air from water keeps the crew breathing', () => {
+    const lackingAir = (mode) => {
+      const { crew } = crewWithPlant(mode, { battery: new Battery(40), water: 50 });
+      crew.update(12, 0); // a noite inteira, sem Sol para recarregar
+      return crew.drainEvents().some((e) => e.type === 'weak' && e.lacking.includes('air'));
+    };
+    expect(lackingAir('electrolysis')).toBe(false);
+    expect(lackingAir('moxie')).toBe(true);
+  });
+
+  it('empty tank: only air from Mars air keeps the crew breathing', () => {
+    const lackingAir = (mode) => {
+      const { crew } = crewWithPlant(mode, { water: 0 });
+      crew.update(1, 0);
+      return crew.drainEvents().some((e) => e.type === 'weak' && e.lacking.includes('air'));
+    };
+    expect(lackingAir('electrolysis')).toBe(true);
+    expect(lackingAir('moxie')).toBe(false);
+  });
+
+  it('the engineer at the oxygen machine warns when the mode drains the resource running out', () => {
+    const low = makeCrew(2, { oxygenPlant: new OxygenPlant('electrolysis'), water: 4 });
+    low.crew.update(0.01, 0);
+    const waterAlert = low.crew.drainEvents().find((e) => e.type === 'alert' && e.station.kind === 'oxygen');
+    expect(waterAlert.problem).toBe('air-water-low');
+    expect(waterAlert.member.name).toBe('Ana');
+    expect(waterAlert.text).toMatch(/Mars air/);
+
+    const moxie = makeCrew(2, { oxygenPlant: new OxygenPlant('moxie'), battery: new Battery(10) });
+    moxie.crew.update(0.01, 0);
+    const powerAlert = moxie.crew.drainEvents().find((e) => e.type === 'alert' && e.station.kind === 'oxygen');
+    expect(powerAlert.problem).toBe('air-power-low');
+    expect(powerAlert.text).toMatch(/Air from water/);
   });
 });

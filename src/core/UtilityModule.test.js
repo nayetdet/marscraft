@@ -92,7 +92,7 @@ describe('north module (issue #56, part B)', () => {
     const loads = Object.fromEntries(utility.loads({ crewSize: 2, operatingStations: 2 }).map(([name, rate]) => [name, rate]));
     expect(loads.Heater).toBeCloseTo(0.6 * U.HEATER_NIGHT_PER_HOUR);
     expect(loads['Greenhouse lights']).toBeCloseTo(0.6 * U.GREENHOUSE_LIGHTS_PER_HOUR);
-    expect(loads['Crew oxygen']).toBeCloseTo(0.6 * 2 * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR);
+    expect(loads['Crew air: water']).toBeCloseTo(0.6 * 2 * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR);
     expect(loads['Crew at work']).toBeCloseTo(0.6 * 2 * STATION_CONFIG.WORK_ENERGY_PER_HOUR);
     expect(utility.greenhouseLightsCost(1 / MISSION_CONFIG.GAME_HOURS_PER_SECOND)).toBeCloseTo(0.6 * U.GREENHOUSE_LIGHTS_PER_HOUR);
     // As escolhas do jogador custam o mesmo: so o consumo passivo e mais brando

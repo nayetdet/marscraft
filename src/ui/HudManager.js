@@ -585,11 +585,15 @@ export class HudManager {
       this.coordsEl.textContent = coordsText;
     }
 
-    const envKey = `${survival.insidePressurizedShip}:${Boolean(survival.oxygenNeedsPower)}:${Boolean(survival.baseBreached)}`;
+    const envKey = `${survival.insidePressurizedShip}:${Boolean(survival.oxygenNeedsPower)}:${Boolean(survival.baseBreached)}:${survival.oxygenShortage ?? ''}`;
     if (envKey !== this._lastInsideShip) {
       this._lastInsideShip = envKey;
       if (survival.insidePressurizedShip && survival.baseBreached) {
         this.envStatusEl.textContent = 'Environment: Habitat breach (oxygen leaking)';
+        this.envStatusEl.style.color = '#ff5555';
+      } else if (survival.insidePressurizedShip && survival.oxygenNeedsPower && survival.oxygenShortage === 'water') {
+        // Issue #102: no modo "Air from water" o tanque vazio tambem para o ar
+        this.envStatusEl.textContent = 'Environment: Pressurized Habitat (WATER TANK EMPTY: no water to make oxygen)';
         this.envStatusEl.style.color = '#ff5555';
       } else if (survival.insidePressurizedShip && survival.oxygenNeedsPower) {
         this.envStatusEl.textContent = 'Environment: Pressurized Habitat (NO POWER: oxygen is not refilling)';
