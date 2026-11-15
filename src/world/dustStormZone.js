@@ -13,8 +13,7 @@ export const DUST_STORM_WALL_RADIUS = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS;
 // Gradua a nevoa sentida pelo jogador ao se aproximar da barreira; nao aplica dano.
 export function dustStormVisualStrength(x, z) {
   const distance = distanceFromBaseCenter(x, z);
-  const progress = Math.max(0, Math.min(1, (distance - EDGE_FOG_START) / EDGE_FOG_RANGE));
-  return progress * progress * (3 - 2 * progress);
+  return Math.max(0, Math.min(1, (distance - EDGE_FOG_START) / EDGE_FOG_RANGE));
 }
 
 export function distanceFromBaseCenter(x, z) {

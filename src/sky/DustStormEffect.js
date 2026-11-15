@@ -237,7 +237,7 @@ export class DustStormEffect {
     const weatherFogDensity = V.FOG_BASE_DENSITY + (W.WEATHER_FOG_DENSITY - V.FOG_BASE_DENSITY) * haze;
     const edgeFogDensity = V.FOG_BASE_DENSITY + (V.EDGE_FOG_MAX_DENSITY - V.FOG_BASE_DENSITY) * edgeStrength;
     fog.density = Math.max(weatherFogDensity, edgeFogDensity);
-    fog.color.lerp(_dust, Math.max(haze * 0.85, edgeStrength * 0.7));
+    fog.color.lerp(_dust, Math.max(edgeStrength, haze * 0.85));
 
     // A unica parede de nevoa marca a borda do mapa e nao causa dano.
     this.wall.visible = true;
@@ -255,7 +255,7 @@ export class DustStormEffect {
     }
 
     // A poeira perto da borda acompanha a camera; a tempestade climatica continua global.
-    const edgeParticles = V.EDGE_PARTICLE_OPACITY * edgeStrength;
+    const edgeParticles = edgeStrength;
     const weatherParticles = weather.indoors ? 0 : W.WEATHER_PARTICLE_OPACITY * haze;
     const particleOpacity = Math.max(edgeParticles, weatherParticles);
     this.particles.visible = particleOpacity > 0.01;
