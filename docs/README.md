@@ -31,7 +31,7 @@ Ao atualizar `data/`, mantenha a data de coleta em cada amostra.
 
 ## Referências visuais
 
-- Fundo espacial do menu inicial (`public/images/mars-menu-space.webp`): ilustração original gerada com assistência de IA a partir da composição descrita para o projeto, exportada em 1920 × 1080. Não usa imagens ou marcas da NASA.
+- Fundo espacial do menu inicial (`src/assets/images/mars-menu-space.webp`): ilustração original gerada com assistência de IA a partir da composição descrita para o projeto, exportada em 1920 × 1080. Não usa imagens ou marcas da NASA.
 
 - [Monocraft](https://github.com/IdreesInc/Monocraft), fonte inspirada na tipografia da interface do Minecraft, usada na interface e nos textos desenhados da base. Licença SIL Open Font License 1.1; cópia incluída em `src/assets/fonts/OFL-1.1.txt`. É uma recriação de fã, não a fonte oficial Mojangles.
 
