@@ -12,7 +12,7 @@ import { OCCLUSION_BRIGHTNESS, naturalTint, vertexOcclusion } from './voxelShadi
 import { addVoxelOutcrops, createSurfaceOutcrops, createSurfaceRocks, removeSurfaceRocksSupportedBy } from './surfaceRocks.ts';
 import { HABITAT_LAYOUT } from './habitatLayout.ts';
 
-const CHUNK_SIZE = 16;
+const CHUNK_SIZE = WORLD_CONFIG.MESH_CHUNK_SIZE;
 
 // Cada face: normal, vizinho a checar e 4 cantos em ordem anti-horaria vista de fora
 // (inferior-esquerdo, inferior-direito, superior-direito, superior-esquerdo).

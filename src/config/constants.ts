@@ -49,6 +49,8 @@ export const WORLD_CONFIG = {
   SIZE_Y: 48,
   SIZE_Z: 224,
   GROUND_LEVEL: 8,
+  // Chunks maiores cortam chamadas de desenho; 24 blocos mantem as edicoes locais baratas.
+  MESH_CHUNK_SIZE: 24,
 };
 
 // Disco nivelado sob a base (terrainGenerator.js). O nivel de referencia do terreno real
@@ -183,7 +185,8 @@ export const GRAPHICS_CONFIG = {
   // para descer um degrau (media abaixo de RES_MIN_FPS por RES_SECONDS, depois do aquecimento).
   // Render por software ja comeca no menor degrau.
   MAX_PIXEL_RATIO: 1.5,
-  RES_STEPS: [1, 0.75, 0.5],
+  // Ultimo degrau e uma reserva para aparelhos que seguem abaixo de 40 FPS em 0.5.
+  RES_STEPS: [1, 0.75, 0.5, 0.375],
   RES_MIN_FPS: 40,
   RES_SECONDS: 2,
   RES_WARMUP_SECONDS: 4,
