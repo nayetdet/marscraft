@@ -97,6 +97,38 @@
   display: none;
 }
 
+.danger-warning {
+  position: fixed;
+  top: max(118px, calc(env(safe-area-inset-top) + 96px));
+  left: 50%;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  width: max-content;
+  max-width: min(90vw, 620px);
+  padding: 9px 12px;
+  transform: translateX(-50%);
+  color: #fff;
+  background: rgba(76, 8, 8, .94);
+  border: 2px solid #ff6860;
+  box-shadow: 3px 3px 0 #160707;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+  text-shadow: 1px 1px #240000;
+  pointer-events: none;
+}
+
+.danger-warning.hidden { display: none; }
+
+@media (max-width: 700px) {
+  .danger-warning { gap: 3px 7px; padding: 7px 9px; font-size: 13px; }
+}
+
 @keyframes danger-pulse {
   from { opacity: 0.55; }
   to { opacity: 1; }
