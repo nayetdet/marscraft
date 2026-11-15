@@ -36,6 +36,20 @@ describe('MissionSystem energy', () => {
     expect(night.battery.charge).toBe(10);
   });
 
+  it('a dust storm cuts the solar charge and nobody gets hurt by it (issue #103)', () => {
+    const clear = createMission(10);
+    clear.dustWeather.panelDust = 0;
+    clear.update(11);
+    const dusty = createMission(10);
+    dusty.dustWeather.panelDust = 0;
+    dusty.dustWeather.force('storm');
+    const damage = dusty.update(11);
+    expect(dusty.dustWeather.phase).toBe('storm');
+    expect(dusty.chargeRate).toBeLessThan(clear.chargeRate * 0.7);
+    expect(dusty.chargeRate).toBeGreaterThan(0); // de dia nunca zera
+    expect(damage).toBe(0);
+  });
+
   it('worn air filters (crew oxygen generator) make habitat oxygen cost more', () => {
     const mission = createMission(0);
     mission.battery.charge = 6;

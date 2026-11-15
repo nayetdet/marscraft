@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DUST_STORM_VISUAL_CONFIG as V } from '../config/constants.js';
+import { DUST_STORM_VISUAL_CONFIG as V, DUST_WEATHER_CONFIG as W } from '../config/constants.js';
 import {
   DUST_STORM_CENTER,
   DUST_STORM_WALL_RADIUS,
@@ -11,6 +11,9 @@ import {
 //   2. Cupula de poeira em volta da camera: tinge o ceu, que a neblina nao alcanca.
 //   3. Particulas de poeira carregadas pelo vento, que sopra de volta para a base.
 // A neblina da cena engrossa junto. Cada parte so e desenhada quando aparece.
+// A tempestade de poeira do clima (issue #103, src/mission/dustWeather.js) usa as mesmas tres
+// partes no mapa todo: a parede vira a frente de poeira no horizonte durante o aviso, e a
+// neblina, a cupula e as particulas engrossam com a opacidade do ar (`weather.haze`).
 
 // Poeira da tempestade de dia: ferrugem escura, bem diferente do ceu caramelo, para a parede
 // aparecer de longe. A noite escurece junto com a neblina do ceu, mas nunca some no escuro.
@@ -21,6 +24,8 @@ const _skyFog = new THREE.Color();
 const _dust = new THREE.Color();
 const _wind = new THREE.Vector3();
 const WALL_NOISE_PERIOD = 24;
+// Clima sem poeira (padrao do update)
+const NO_WEATHER = Object.freeze({ haze: 0, front: 0, indoors: false });
 
 function luma(c) {
   return c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
@@ -127,6 +132,7 @@ export class DustStormEffect {
     this.renderer = renderer;
     this.time = 0;
     this.strength = 0;
+    this.haze = 0;
 
     this._buildWall();
     this._buildDome();
@@ -217,10 +223,14 @@ export class DustStormEffect {
   // `focus`: onde o jogador (ou o rover) esta, para medir a tempestade.
   // `camera`: de onde a cena e vista, para posicionar a cupula e as particulas.
   // Chamar depois do MarsSkySystem.update, que acerta a cor da neblina do horario.
-  update(dt, focus, camera) {
+  // `weather`: { haze, front, indoors } da tempestade de poeira do clima (0 a 1)
+  update(dt, focus, camera, weather = NO_WEATHER) {
     this.time += dt;
     const strength = dustStormVisualStrength(focus.x, focus.z);
+    const proximity = dustStormProximity(focus.x, focus.z);
+    const haze = weather.haze;
     this.strength = strength;
+    this.haze = haze;
 
     // Cor da poeira a partir da neblina do horario (o ceu acabou de escrever nela)
     const fog = this.scene.fog;
@@ -228,9 +238,12 @@ export class DustStormEffect {
     _dust.copy(STORM_DUST_COLOR).multiplyScalar(THREE.MathUtils.clamp(luma(_skyFog) / DAY_FOG_LUMA, NIGHT_DUST_BRIGHTNESS, 1));
 
     // Neblina: engrossa devagar no comeco e fecha a vista perto do raio fatal
-    fog.density = V.FOG_BASE_DENSITY + (V.FOG_MAX_DENSITY - V.FOG_BASE_DENSITY) * strength;
+    fog.density = Math.max(
+      V.FOG_BASE_DENSITY + (V.FOG_MAX_DENSITY - V.FOG_BASE_DENSITY) * strength,
+      V.FOG_BASE_DENSITY + (W.WEATHER_FOG_DENSITY - V.FOG_BASE_DENSITY) * haze
+    );
     // A cor vira poeira logo: passar da parede nunca deixa a vista mais limpa que a propria parede
-    fog.color.lerp(_dust, THREE.MathUtils.smoothstep(strength, 0, 0.25));
+    fog.color.lerp(_dust, Math.max(THREE.MathUtils.smoothstep(strength, 0, 0.25), haze * 0.85));
 
     // A parede marca a borda do mapa; o shader esmaece apenas o trecho muito perto da camera.
     this.wall.visible = true;
@@ -239,7 +252,10 @@ export class DustStormEffect {
     this.wallUniforms.uColor.value.copy(_dust);
 
     // Cupula: mesma cor da neblina, para o chao e o ceu sumirem juntos na poeira
-    const domeOpacity = V.DOME_MAX_OPACITY * THREE.MathUtils.smoothstep(strength, 0, 0.25);
+    const domeOpacity = Math.max(
+      V.DOME_MAX_OPACITY * THREE.MathUtils.smoothstep(strength, 0, 0.25),
+      W.WEATHER_DOME_OPACITY * haze
+    );
     this.dome.visible = domeOpacity > 0.01;
     if (this.dome.visible) {
       this.dome.position.copy(camera.position);
@@ -247,23 +263,33 @@ export class DustStormEffect {
       this.domeMaterial.opacity = domeOpacity;
     }
 
-    // Particulas aparecem junto com a neblina, apenas na aproximacao da borda do mapa.
-    const particleOpacity = THREE.MathUtils.smoothstep(strength, 0, 0.35);
+    // Particulas: algumas rajadas ja perto da borda, nuvem cheia dentro da tempestade
+    // Dentro da base a poeira do clima fica la fora (so a da borda segue a camera)
+    const edgeParticles = Math.min(1, THREE.MathUtils.smoothstep(strength, 0, 0.35) + proximity * 0.25);
+    const weatherParticles = weather.indoors ? 0 : W.WEATHER_PARTICLE_OPACITY * haze;
+    const particleOpacity = Math.max(edgeParticles, weatherParticles);
     this.particles.visible = particleOpacity > 0.01;
-    if (this.particles.visible) this._updateParticles(dt, focus, particleOpacity);
+    if (this.particles.visible) this._updateParticles(dt, focus, particleOpacity, weatherParticles > edgeParticles);
   }
 
-  _updateParticles(dt, focus, opacity) {
-    // Vento que gira em volta da base e empurra de volta para ela
-    const rx = focus.x - DUST_STORM_CENTER.x;
-    const rz = focus.z - DUST_STORM_CENTER.z;
-    const len = Math.hypot(rx, rz) || 1;
-    const outX = rx / len;
-    const outZ = rz / len;
-    const push = V.WIND_PUSH;
-    _wind.set(-outZ * (1 - push) - outX * push, -0.08, outX * (1 - push) - outZ * push)
-      .normalize()
-      .multiplyScalar(V.WIND_SPEED * (0.6 + 0.4 * this.strength));
+  _updateParticles(dt, focus, opacity, weatherWind) {
+    if (weatherWind) {
+      // Vento da tempestade do clima: sopra numa direcao so, no mapa todo
+      _wind.set(W.WEATHER_WIND.x, -0.05, W.WEATHER_WIND.z)
+        .normalize()
+        .multiplyScalar(V.WIND_SPEED * (0.6 + 0.4 * this.haze));
+    } else {
+      // Vento que gira em volta da base e empurra de volta para ela
+      const rx = focus.x - DUST_STORM_CENTER.x;
+      const rz = focus.z - DUST_STORM_CENTER.z;
+      const len = Math.hypot(rx, rz) || 1;
+      const outX = rx / len;
+      const outZ = rz / len;
+      const push = V.WIND_PUSH;
+      _wind.set(-outZ * (1 - push) - outX * push, -0.08, outX * (1 - push) - outZ * push)
+        .normalize()
+        .multiplyScalar(V.WIND_SPEED * (0.6 + 0.4 * this.strength));
+    }
 
     const box = this.particleUniforms.uBox.value;
     const offset = this.particleUniforms.uOffset.value;

@@ -1,0 +1,19 @@
+/* Linha do clima no painel da base (issues #103 e #108): temperatura la fora e poeira */
+.res-weather {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 14px;
+  color: #cfcfcf;
+  text-shadow: 1px 1px 0 #000;
+  letter-spacing: 0.5px;
+}
+.res-weather b { color: #9fe7ff; font-weight: normal; }
+.res-weather .res-dust { color: #e0b27a; }
+.res-weather .res-dust.warn { color: #ffd23f; }
+.res-weather .res-dust.alert { color: #ff8a4b; animation: mission-blink 1s steps(2, end) infinite; }
+
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  .res-weather { font-size: 9px; line-height: 11px; }
+}

@@ -11,6 +11,7 @@ import { doseRateMsvPerHour, missionDoseMsvPerHour, radiationDamage } from './ra
 import { DOSE_LIMIT_MSV, createDoseLedger, doseBreakdown, doseSourceFor } from './doseBudget.js';
 import { OxygenPlant } from './oxygenPlant.js';
 import { buildStormSchedule, rescheduleStorms, stormStateAt } from './solarStorms.js';
+import { DustWeather } from './dustWeather.js';
 
 const PROPELLANT_PER_ICE = 100 / MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
 
@@ -36,7 +37,7 @@ export class MissionSystem {
   // `stormsStarted: false` deixa o clima espacial calmo ate `startStorms()` (a historia so
   // solta as tempestades no ato 2, para nenhuma CME cair no meio do tutorial).
   // `seps`: SEPs reais do fetch ao vivo do DONKI (issue #100); vazio no dado embutido.
-  constructor({ cmes, seps = [], startHours, stormsStarted = true }) {
+  constructor({ cmes, seps = [], startHours, stormsStarted = true, rng = Math.random }) {
     this.battery = new Battery();
     this.cmes = cmes;
     this.seps = seps;
@@ -77,6 +78,10 @@ export class MissionSystem {
     // Tempestades: horas jogadas nelas e, dessas, horas protegido (dose abaixo do dano). Boletim #90.
     this.stormHours = 0;
     this.protectedStormHours = 0;
+
+    // Tempestade de poeira e poeira nos paineis (issue #103). Comeca junto com as tempestades
+    // solares: a historia solta o clima no ato 2, longe do tutorial.
+    this.dustWeather = new DustWeather({ rng, startHours, started: stormsStarted });
 
     this.storm = stormStateAt(this.schedule, startHours);
     this._phaseKey = this._keyFor(this.storm);
@@ -128,7 +133,8 @@ export class MissionSystem {
     const previousTime = ((((this.lastHours - h) % 24) + 24) % 24);
     const timeOfDay = ((this.lastHours % 24) + 24) % 24;
 
-    this.chargeRate = solarChargePerHour(timeOfDay);
+    this.dustWeather.step(h, this.lastHours);
+    this.chargeRate = solarChargePerHour(timeOfDay, this.dustWeather.solarFactor);
     this.solarEnergyCollected += this.battery.add(this.chargeRate * h);
     // O RTG gera de dia e de noite, so para o suporte de vida (issue #85)
     this.battery.addLifeSupportPower(
@@ -209,6 +215,7 @@ export class MissionSystem {
   startStorms(hours) {
     if (this.stormsStarted) return;
     this.stormsStarted = true;
+    this.dustWeather.start(hours);
     this.schedule = buildStormSchedule(this.cmes, hours, undefined, this.seps);
     this.storm = stormStateAt(this.schedule, hours);
     this._phaseKey = this._keyFor(this.storm);

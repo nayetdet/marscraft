@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MISSION_CONFIG } from '../config/constants.js';
+import { DUST_WEATHER_CONFIG, MISSION_CONFIG } from '../config/constants.js';
 import { createAtmosphereDome } from './atmosphereShader.js';
 import { advanceSolClock } from './solClock.js';
 import {
@@ -24,6 +24,9 @@ export class MarsSkySystem {
     this.timeOfDay = 9; // Manhã: mais tempo de luz no início da missão
     this.solCount = 1;
     this.autoAdvanceSpeed = MISSION_CONFIG.GAME_HOURS_PER_SECOND;
+    // Tempestade de poeira do clima (issue #103): 0 = ceu limpo, 1 = poeira no maximo.
+    // O GameEngine escreve aqui a cada frame (DustWeather.haze).
+    this.dustHaze = 0;
 
     this.celestialGroup = new THREE.Group();
     this.scene.add(this.celestialGroup);
@@ -105,15 +108,19 @@ export class MarsSkySystem {
 
     this.sunLight.position.copy(sunDir).multiplyScalar(120).add(playerPos);
     // A noite fica igual a antes; so o dia ganha mais Sol e menos luz ambiente
-    this.sunLight.intensity = 0.45 + dayStrength * 1.15;
+    // A poeira apaga a luz direta do Sol e encolhe o disco ate um ponto fraco
+    const dust = this.dustHaze;
+    this.sunLight.intensity = 0.45 + dayStrength * 1.15 * (1 - DUST_WEATHER_CONFIG.SUN_DIM * dust);
+    this.sunGroup.scale.setScalar(1 - DUST_WEATHER_CONFIG.SUN_SHRINK * dust);
+    this.skyUniforms.uDust.value = dust;
 
     this.sunLight.color
       .copy(SUN_NIGHT_COLOR)
       .lerp(SUN_DAY_COLOR, dayStrength)
       .lerp(SUN_TWILIGHT_COLOR, twilightStrength * 0.55);
 
-    this.ambientLight.intensity = 0.55 + dayStrength * 0.45;
-    this.baseAmbient.intensity = 0.5 + dayStrength * 0.2;
+    this.ambientLight.intensity = 0.55 + dayStrength * 0.45 * (1 - 0.5 * dust);
+    this.baseAmbient.intensity = 0.5 + dayStrength * 0.2 * (1 - 0.5 * dust);
 
     this.scene.fog.color
       .copy(FOG_NIGHT_COLOR)

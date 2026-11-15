@@ -34,10 +34,6 @@ const BIOLOGICAL_DETAILS = {
     diagnosis: 'Your body ran out of food.',
     protocol: 'Harvest a ready crop or keep food in your pack before leaving the base.',
   },
-  'dust-storm-exposure': {
-    diagnosis: 'The dust storm damaged your suit until your health ran out.',
-    protocol: 'Turn back when the storm warning begins and return to the habitat.',
-  },
   'contaminated-air': {
     diagnosis: 'Dust brought inside on your suit made the habitat air unsafe.',
     science: 'ECLSS filters help keep dust and other contaminants out of the air.',
@@ -75,7 +71,6 @@ const DAMAGE_FEEDBACK = {
 const BIOLOGICAL_DAMAGE_FEEDBACK = {
   'water-depleted': { source: 'WATER', message: 'Your water is empty. Drink at the base or bring ice with the rover.' },
   'food-depleted': { source: 'FOOD', message: 'Your food is empty. Eat before leaving the base.' },
-  'dust-storm-exposure': { source: 'DUST STORM', message: 'The storm is damaging your suit. Turn back to the habitat.' },
   'contaminated-air': { source: 'DUST IN BASE AIR', message: 'Clean your suit and the habitat at life support.' },
   'bad-base-air': { source: 'BASE AIR', message: 'Replace the air filter at life support.' },
 };
