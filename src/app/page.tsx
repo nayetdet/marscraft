@@ -2,6 +2,17 @@
 
 import { useEffect, useRef } from 'react';
 
+function LoadingScreen() {
+  return (
+    <div id="loading-overlay" role="status" aria-live="polite">
+      <div className="loading-content">
+        <p className="loading-caption">Loading terrain...</p>
+        <div className="loading-track"><div className="loading-progress" /></div>
+      </div>
+    </div>
+  );
+}
+
 export default function GamePage() {
   const shellRef = useRef(null);
 
@@ -10,7 +21,7 @@ export default function GamePage() {
     async function mount() {
       try {
         // Fast Refresh reruns effects; the Three.js game must only mount once.
-        if (shellRef.current?.querySelector('#game-container')) return;
+        if (shellRef.current?.querySelector('#game-container canvas')) return;
         const response = await fetch('/game.html', { cache: 'no-store' });
         if (!response.ok) throw new Error(`Game shell HTTP ${response.status}`);
         const documentText = await response.text();
@@ -70,5 +81,9 @@ export default function GamePage() {
     };
   }, []);
 
-  return <div ref={shellRef} />;
+  return (
+    <div ref={shellRef}>
+      <LoadingScreen />
+    </div>
+  );
 }
