@@ -132,8 +132,10 @@ export class CrewManager {
       if (member.state !== 'walking') {
         if (!this.ambient) continue;
         member.ambientPause = (member.ambientPause ?? 0) + dtSeconds;
-        if (member.ambientPause >= 4) {
+        const pauseTarget = member.ambientPauseTarget ?? 4;
+        if (member.ambientPause >= pauseTarget) {
           member.ambientPause = 0;
+          member.ambientPauseTarget = 2.4 + Math.random() * 3.2;
           const choices = member.ambientNodes.filter((destination) => destination !== member.node);
           const destination = choices[Math.floor(Math.random() * choices.length)];
           member.route = findRoute(member.node, destination);

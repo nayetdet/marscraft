@@ -6,17 +6,20 @@ import { greenhouseMapSvg, plotMapLabel, plotStatus } from './greenhouseMap.js';
 const emptyPlots = () => GREENHOUSE_PLOTS.map(() => ({ crop: null }));
 
 describe('greenhouse map', () => {
-  it('draws one clickable area per plot and marks the selected one', () => {
+  it('draws one clickable area per plot with its yield multiplier and marks the selected one', () => {
     const svg = greenhouseMapSvg(emptyPlots(), 3);
     GREENHOUSE_PLOTS.forEach((plot, i) => {
       expect(svg).toContain(`data-action="plot:${i}"`);
-      expect(svg).toContain(`>${plot.id}</text>`);
+      expect(svg).toContain(`data-plot-id="${plot.id}"`);
+      expect(svg).toContain(`>${plot.yield}x</text>`);
     });
+    expect(svg).toContain('shape-rendering="crispEdges"');
+    expect(svg).toContain('gh-bed-tile');
     expect(svg.match(/is-selected/g)).toHaveLength(1);
     expect(svg).toMatch(/class="gh-plot is-empty is-selected" data-action="plot:3"/);
   });
 
-  it('shows growth as a percentage and then READY', () => {
+  it('shows growth as a percentage with crop art and then READY', () => {
     const plots = emptyPlots();
     plots[1].crop = { type: 'lettuce', progress: CROP_CONFIG.lettuce.seconds / 2 };
     plots[5].crop = { type: 'soy', progress: CROP_CONFIG.soy.seconds };
@@ -26,5 +29,14 @@ describe('greenhouse map', () => {
     const svg = greenhouseMapSvg(plots, 0);
     expect(svg).toMatch(/is-growing" data-action="plot:1"/);
     expect(svg).toMatch(/is-ready" data-action="plot:5"/);
+    expect(svg).toContain('gh-map-crop');
+  });
+
+  it('marks empty plots as locked when water or power is not enough for the selected crop', () => {
+    const svg = greenhouseMapSvg(emptyPlots(), -1, { selectedCrop: 'soy', water: 4, energy: 80 });
+    // Garden (1x) needs 3 L -> affordable; inner (2x) needs 6 L and outer (3x) needs 9 L -> locked
+    expect(svg).toMatch(/class="gh-plot is-empty" data-action="plot:0"/);
+    expect(svg).toMatch(/class="gh-plot is-empty is-locked" data-action="plot:1"/);
+    expect(svg).toMatch(/class="gh-plot is-empty is-locked" data-action="plot:5"/);
   });
 });

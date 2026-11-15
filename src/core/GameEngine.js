@@ -2,6 +2,7 @@ import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS } from '../w
 import { createCropPlantModel } from '../graphics/cropModels.js';
 import * as THREE from 'three';
 import { CAMERA_CONFIG, CROP_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { separateCrew } from '../crew/separateCrew.js';
 import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
 import { createBaseStock } from '../crew/baseStock.js';
@@ -1031,6 +1032,7 @@ export class GameEngine {
     this.previewFlame.group.removeFromParent();
     this.previewFlame.group.visible = false;
     for (const avatar of this.crewAvatars) avatar.update(0);
+    separateCrew(this.crewAvatars);
 
     this.input.keys = {};
     this.player.yaw = PHYSICS_CONFIG.SPAWN_YAW;
@@ -1137,6 +1139,7 @@ export class GameEngine {
     this.mission.oxygenCostMultiplier = 1;
     // Numa animacao quem posiciona a tripulacao e a propria animacao (o embarque no foguete)
     for (const avatar of this.crewAvatars) avatar.update(dt);
+    separateCrew(this.crewAvatars);
     if (active) {
       this._crewChatterTimer = (this._crewChatterTimer ?? 0) + dt;
       if (this._crewChatterTimer >= 35 && this.crew.members.length > 1) {

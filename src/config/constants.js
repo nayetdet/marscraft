@@ -67,8 +67,8 @@ export const SURVIVAL_CONFIG = {
   // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
   HEAL_MIN_OXYGEN: 5,
   // Tempestade de poeira na borda da area jogavel, medida a partir de TERRAIN_CONFIG.BASE_CENTER
-  DUST_STORM_START_RADIUS: 52,
-  DUST_STORM_FATAL_RADIUS: 82,
+  DUST_STORM_START_RADIUS: 70,
+  DUST_STORM_FATAL_RADIUS: 100,
   DUST_STORM_DAMAGE_RATE: 20,
   // Intensidade (0..1) a partir da qual a tempestade machuca; antes disso e so aviso
   DUST_STORM_DAMAGE_START: 0.55,
@@ -252,6 +252,7 @@ export const PACING_CONFIG = {
 // Issue #81: ar, agua e comida cortados em 40-50 % (eram 1,5 / 0,5 / 0,3), mantendo a proporcao.
 // O O2 do tripulante e pago em energia, como o O2 do jogador no habitat (reciclagem + MOXIE).
 export const CREW_CONFIG = {
+  COLLISION_DISTANCE: 0.9,
   MAX_CREW: 8,
   DEFAULT_CREW: 2,
   NAMES: ['Ana', 'Leo', 'Maya', 'Sam', 'Noor', 'Kai', 'Iris', 'Ravi'],
