@@ -142,6 +142,12 @@ export function plotMapLabel(plot) {
   return plotStatus(plot).label;
 }
 
+// Progress ring around a planted bed's badge (issue #139): stroke-dasharray over pathLength=100
+export function plotRingDash(plot) {
+  const { pct } = plotStatus(plot);
+  return `${pct} 100`;
+}
+
 function canAffordPlot(def, options) {
   const { selectedCrop, water, energy } = options;
   if (!selectedCrop || !Object.hasOwn(CROP_CONFIG, selectedCrop)) return true;
@@ -184,7 +190,10 @@ export function greenhouseMapSvg(plots, selected = -1, options = {}) {
       const boxH = def.kind === 'garden' ? 18 : 22;
       const iconDy = def.kind === 'garden' ? -3 : -4;
       const textDy = def.kind === 'garden' ? 8 : 10;
-      badge = `<rect class="gh-badge-bg" x="${tx - boxW / 2}" y="${ty - boxH / 2}" width="${boxW}" height="${boxH}"/>`
+      const ringR = def.kind === 'garden' ? 13 : 16;
+      badge = `<circle class="gh-plot-ring-track" cx="${tx}" cy="${ty}" r="${ringR}"/>`
+        + `<circle class="gh-plot-ring" data-plot-ring="${i}" cx="${tx}" cy="${ty}" r="${ringR}" pathLength="100" stroke-dasharray="${plotRingDash(plots[i])}" transform="rotate(-90 ${tx} ${ty})"/>`
+        + `<rect class="gh-badge-bg" x="${tx - boxW / 2}" y="${ty - boxH / 2}" width="${boxW}" height="${boxH}"/>`
         + `<g transform="translate(${tx}, ${ty + iconDy})">${cropIconSvg(crop.type, iconScale)}</g>`
         + `<text class="gh-plot-pct" data-plot-pct="${i}" x="${tx}" y="${ty + textDy}">${status.label}</text>`;
     } else {

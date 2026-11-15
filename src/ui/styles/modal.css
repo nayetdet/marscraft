@@ -373,6 +373,15 @@ body.pause-menu-open .crew-picker { display: none; }
 .crew-picker-note { font-size: 11px; color: #c8c8c8; margin: 2px 0; }
 .station-overlay { position: fixed; inset: 0; z-index: 34; display: grid; place-items: center; background: rgba(0,0,0,.78); padding: 16px; }
 .station-overlay.hidden { display: none; }
+/* Abrir e fechar com escala rapida (issue #139); o fechamento espera MODAL_CLOSE_MS em modalTransition.js */
+.station-overlay:not(.hidden) { animation: modal-fade-in 150ms ease-out; }
+.station-overlay:not(.hidden) .station-window { animation: modal-pop-in 150ms ease-out; }
+.station-overlay.is-closing { animation: modal-fade-out 120ms ease-in forwards; pointer-events: none; }
+.station-overlay.is-closing .station-window { animation: modal-pop-out 120ms ease-in forwards; }
+@keyframes modal-fade-in { from { background: rgba(0,0,0,0); } }
+@keyframes modal-fade-out { to { background: rgba(0,0,0,0); } }
+@keyframes modal-pop-in { from { opacity: 0; transform: translateY(10px) scale(0.94); } }
+@keyframes modal-pop-out { to { opacity: 0; transform: translateY(6px) scale(0.96); } }
 .station-window { box-sizing: border-box; width: min(680px, 100%); max-height: 92vh; overflow: auto; padding: 14px; color: #fff; background: #696e70; border: 4px solid #252b2d; box-shadow: inset 3px 3px #b5bdbb, 6px 6px #111; font-family: 'Monocraft', monospace; }
 .station-window header { display: flex; justify-content: space-between; align-items: center; padding: 8px; font-weight: bold; font-size: 18px; }
 .station-window header button { background: #9d4641; color: white; border: 2px solid #ddd; font: inherit; cursor: pointer; }
@@ -608,6 +617,52 @@ body.pause-menu-open .crew-picker { display: none; }
 .gh-res-pill.water { border-color: #0284c7; }
 .gh-res-pill.power { border-color: #ca8a04; }
 .gh-res-pill.beds { border-color: #2e7d5b; }
+.gh-top-bar .gh-res-pill { position: relative; }
+/* Flash do que o plantio gasta (issue #139) */
+.gh-res-pill.water.is-spent { animation: gh-spend-water 0.9s steps(6); }
+.gh-res-pill.power.is-spent { animation: gh-spend-power 0.9s steps(6); }
+@keyframes gh-spend-water { 0%, 34% { background: #0369a1; box-shadow: 0 0 0 2px #7dd3fc; } }
+@keyframes gh-spend-power { 0%, 34% { background: #854d0e; box-shadow: 0 0 0 2px #fde047; } }
+.gh-spend-tag {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  z-index: 2;
+  padding: 1px 5px;
+  background: #071418;
+  border: 2px solid currentColor;
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: gh-spend-rise 0.9s ease-out forwards;
+}
+.gh-res-pill.water .gh-spend-tag { color: #7dd3fc; }
+.gh-res-pill.power .gh-spend-tag { color: #fde047; }
+@keyframes gh-spend-rise {
+  from { opacity: 1; transform: translate(-50%, 4px); }
+  70% { opacity: 1; }
+  to { opacity: 0; transform: translate(-50%, -14px); }
+}
+
+/* Particulas verdes no canteiro recem-plantado (issue #139) */
+.gh-plant-fx { position: fixed; z-index: 45; width: 0; height: 0; pointer-events: none; }
+.gh-plant-fx i {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  background: #4ade80;
+  box-shadow: 0 0 0 1px #14532d;
+  animation: gh-plant-burst 0.6s ease-out forwards;
+}
+.gh-plant-fx i:nth-child(3n) { background: #bbf7d0; }
+.gh-plant-fx i:nth-child(4n) { width: 4px; height: 4px; background: #a3e635; }
+@keyframes gh-plant-burst {
+  from { opacity: 1; transform: translate(0, 0) scale(1.2); }
+  to { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.6); }
+}
 
 .gh-alert-pill {
   padding: 4px 10px;
@@ -870,6 +925,14 @@ body.pause-menu-open .crew-picker { display: none; }
 .gh-map-crop { pointer-events: none; }
 @keyframes gh-ready-blink { 50% { fill: #2f6c47; } }
 
+/* Anel de progresso dos canteiros plantados (issue #139): quanto falta para colher */
+.gh-plot-ring-track,
+.gh-plot-ring { fill: none; stroke-width: 3; pointer-events: none; }
+.gh-plot-ring-track { stroke: #071418; stroke-opacity: 0.7; }
+.gh-plot-ring { stroke: var(--crop, #4ade80); transition: stroke-dasharray 0.25s linear; }
+.gh-plot.is-ready .gh-plot-ring { stroke: #fde047; animation: gh-ring-pulse 0.85s steps(2) infinite; }
+@keyframes gh-ring-pulse { 50% { stroke: #86efac; } }
+
 .gh-side { flex: 0 0 272px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .gh-step-bar {
   font-size: 12px;
@@ -1008,6 +1071,12 @@ body.pause-menu-open .crew-picker { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .gh-plot.is-ready .gh-bed-tile { animation: none; }
+  .gh-plot.is-ready .gh-plot-ring { animation: none; }
+  .station-overlay:not(.hidden),
+  .station-overlay:not(.hidden) .station-window,
+  .station-overlay.is-closing,
+  .station-overlay.is-closing .station-window { animation-duration: 1ms; }
+  .gh-plant-fx { display: none; }
 }
 
 /* Monitor visual do Journal (mesmo padrão visual de cards da estufa, tamanho 100% fixo) */
@@ -1044,17 +1113,6 @@ body.pause-menu-open .crew-picker { display: none; }
 
 .journal-top-bar {
   flex-shrink: 0;
-}
-
-.journal-top-bar #journal-progress,
-.journal-top-bar #journal-rank {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.journal-top-bar #journal-rank.is-complete {
-  color: #4ade80;
 }
 
 .journal-body {

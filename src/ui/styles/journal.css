@@ -5,10 +5,6 @@
   gap: 6px;
 }
 
-.journal-top-bar:not(.is-discoveries) .gh-res-pill {
-  display: none;
-}
-
 .journal-modes {
   display: flex;
   gap: 4px;
@@ -61,6 +57,68 @@
   flex-direction: column;
   gap: 5px;
 }
+
+/* Descobertas e patente ficam no cabecalho, para as abas do topo terem a largura toda (issue #139) */
+.journal-window header { gap: 8px; }
+.journal-window header #journal-title { margin-right: auto; }
+.journal-head-pills { display: flex; gap: 6px; align-items: center; }
+.journal-head-pills .gh-res-pill { padding: 3px 8px; }
+.journal-head-pills .gh-res-pill strong { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.journal-head-pills #journal-rank.is-complete { color: #4ade80; }
+
+/* Barra de patente CADET -> SPECIALIST -> COMMANDER (issue #139) */
+.journal-rank-bar {
+  position: relative;
+  display: inline-block;
+  width: 64px;
+  height: 8px;
+  background: #1c2427;
+  border: 1px solid #ca8a04;
+}
+
+.journal-rank-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #fde047;
+  transition: width 0.4s steps(8);
+}
+
+.journal-rank-tick {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  background: #0e2227;
+}
+
+#journal-rank.is-complete .journal-rank-fill { background: #4ade80; }
+.gh-res-pill.is-rank-up { animation: journal-rank-up 1.2s steps(6); }
+@keyframes journal-rank-up { 0%, 50% { background: #854d0e; box-shadow: 0 0 0 3px #fde047; } }
+
+/* Selo NEW! nas abas e nos cards do que foi escaneado e ainda nao foi visto (issue #139) */
+.journal-tab { position: relative; }
+.journal-tabs { padding-top: 7px; }
+
+.journal-new-badge {
+  position: absolute;
+  top: -7px;
+  right: -2px;
+  z-index: 1;
+  padding: 1px 4px;
+  background: #ea580c;
+  border: 2px solid #fed7aa;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1.1;
+  pointer-events: none;
+  animation: journal-new-pulse 0.9s steps(2) infinite;
+}
+
+.journal-card { position: relative; }
+.journal-card .journal-new-badge { top: 3px; right: 3px; }
+.journal-card.is-new { border-color: #fb923c; }
+@keyframes journal-new-pulse { 50% { background: #fde047; color: #7c2d12; transform: scale(1.08); } }
 
 /* Diario de bordo */
 .mlog-empty,
@@ -221,8 +279,9 @@
 
 @media (max-width: 620px), (max-height: 500px) {
   .journal-mode { min-height: 30px; font-size: 10.5px; padding: 2px 4px; }
-  .journal-top-bar .gh-res-pill { padding: 3px 6px; }
-  .journal-top-bar .gh-res-pill strong { font-size: 12px; }
+  .journal-rank-bar { width: 40px; }
+  .journal-head-pills .gh-res-pill { padding: 2px 5px; }
+  .journal-head-pills .gh-res-pill strong { font-size: 11px; gap: 4px; }
   .journal-page { font-size: 11px; }
   .mlog-time { min-width: 84px; }
   .radlab-row { grid-template-columns: 124px 1fr 36px; }
@@ -230,3 +289,8 @@
 
 /* Telas da estufa e da academia escondem o texto da estacao: o grafico some junto */
 #station-content.hidden + .station-radlab { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .journal-new-badge,
+  .gh-res-pill.is-rank-up { animation: none; }
+}
