@@ -212,8 +212,10 @@ export class SleepSystem {
       }
       this.engine.utility?.update(subStep);
 
-      // 4. Advance base station systems
-      this.engine.stations?.update(subStep * 3600, true, this.engine.survival, false);
+      // 4. Advance base station systems (game hours -> real simulation seconds, with sleep metabolic reduction)
+      const speed = this.engine.sky?.autoAdvanceSpeed ?? 0.01;
+      const stationDt = (subStep / speed) * 0.5;
+      this.engine.stations?.update(stationDt, true, this.engine.survival, false);
 
       // 5. Drain player food and water
       const survival = this.engine.survival;
@@ -257,6 +259,10 @@ export class SleepSystem {
 
     if (mission?.battery?.level <= 0) {
       return 'Base power alert! Battery depleted and life support is offline.';
+    }
+
+    if (this.engine.stations?.co2 >= 80) {
+      return 'Life support alert! High CO2 in habitat — replace filter at ECLSS.';
     }
 
     const survival = this.engine.survival;

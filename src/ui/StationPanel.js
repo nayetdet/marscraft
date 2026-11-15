@@ -720,11 +720,13 @@ export class StationPanel {
   _bunkText(v, m) {
     const sleep = this.engine.sleepSystem;
     const sky = this.engine.sky;
+    const s = this.engine.stations;
     const hoursAwake = sleep ? sleep.getHoursAwake().toFixed(1) : '0';
     const fatigueText = sleep?.isFatigued ? 'FATIGUED (>24h awake: -25% work speed penalty)' : 'RESTED (100% work speed)';
     const sunriseHours = sleep ? sleep.getHoursUntilSunrise() : 8;
     const check = sleep?.canSleep();
     const alert = check && !check.allowed ? `\n⚠ WARNING: ${check.reason}\n` : '';
+    const filterWarn = s && s.filter < 30 ? `\n⚠ WARNING: CO2 filter is low (${Math.round(s.filter)}%). Replace at ECLSS before a long sleep.\n` : '';
 
     return `MARS TIME: ${sky?.getFormattedTime?.()?.clockText ?? ''}\n` +
       `REST STATUS: ${fatigueText}\n` +
@@ -732,7 +734,8 @@ export class StationPanel {
       `HOURS UNTIL SUNRISE: ${sunriseHours} h\n` +
       `BATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\n` +
       `FOOD: ${Math.round(v.food)}/${v.maxStat}   WATER: ${Math.round(v.water)}/${v.maxStat}\n` +
-      alert +
+      `CO2 FILTER: ${Math.round(s?.filter ?? 100)}%   CO2: ${Math.round(s?.co2 ?? 0)}%\n` +
+      alert + filterWarn +
       `\nSleeping advances the sol clock and restores fatigue, but drains food and water.\nBase systems (battery charging/discharge, greenhouse, crew needs) tick forward.\nEmergencies (solar storms, power failure, hull breach) will wake you up.`;
   }
 
