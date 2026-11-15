@@ -351,16 +351,28 @@
       <div class="mc-menu-card">
         <div id="menu-main">
           <button id="start-btn" class="mc-btn primary">Play</button>
+          <button id="controls-btn" class="mc-btn secondary">Controls</button>
+          <button id="options-btn" class="mc-btn secondary">Options</button>
           <div class="menu-row">
-            <button id="controls-btn" class="mc-btn secondary">Controls</button>
-            <button id="shaders-btn" class="mc-btn secondary" aria-pressed="false" title="Real-time sun shadows, glow and light rays. Turn off if the game feels slow.">Shaders: Off</button>
+            <button id="sources-btn" class="mc-btn secondary">Science &amp; Sources</button>
+            <button id="demo-btn" class="mc-btn secondary">Demo Tools</button>
           </div>
           <button id="reset-btn" class="mc-btn secondary">Quit</button>
-          <div class="menu-row">
-            <button id="sources-btn" class="mc-btn secondary">NASA Data</button>
-            <button id="demo-btn" class="mc-btn secondary">Demo Controls</button>
-          </div>
         </div>
+        <section id="options-screen" class="controls-screen info-screen hidden" aria-labelledby="options-title">
+          <h2 id="options-title">Options</h2>
+          <div class="options-list">
+            <label class="option-row" for="volume-slider">
+              <div><h3>Volume</h3><p>Adjust the volume of game sounds.</p></div>
+              <div class="volume-control"><input id="volume-slider" type="range" min="0" max="100" step="1" value="100" aria-label="Game volume"><output id="volume-value" for="volume-slider">100%</output></div>
+            </label>
+            <div class="option-row">
+              <div><h3>Graphics</h3><p>Real-time sun shadows, glow and light rays. Turn off if the game feels slow.</p></div>
+              <button id="shaders-btn" class="mc-btn secondary" aria-pressed="false">Shaders: Off</button>
+            </div>
+          </div>
+          <button id="options-back-btn" class="mc-btn secondary">Back</button>
+        </section>
         <section id="sources-screen" class="controls-screen info-screen hidden" aria-labelledby="sources-title">
           <h2 id="sources-title">Where the data comes from</h2>
           <p class="info-note">The science numbers in MarsCraft (radiation, sunlight, air, distance, crew needs) come from open NASA data. Speeds, sizes and costs are game rules, and each screen says which is which. Most data is saved inside the game with its date, so it is not live. Only space weather tries to load LIVE from NASA DONKI when the game opens. Without internet, the game uses the saved data and never says LIVE.</p>
@@ -386,7 +398,7 @@
           <button id="sources-back-btn" class="mc-btn secondary">Back</button>
         </section>
         <section id="demo-screen" class="controls-screen info-screen hidden" aria-labelledby="demo-title">
-          <h2 id="demo-title">Demo Controls</h2>
+          <h2 id="demo-title">Demo Tools</h2>
           <p class="info-note">For judges and for recording the demo. These skip the waiting, they do not change the rules. Storms still come from the real NASA DONKI list.</p>
           <div class="demo-grid">
             <button class="mc-btn secondary" data-demo="storm">Start a solar storm</button>

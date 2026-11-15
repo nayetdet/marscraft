@@ -22,6 +22,9 @@
 
 .mc-menu-card #reset-btn { display: none; }
 body.pause-menu-open .mc-menu-card #reset-btn { display: block; }
+body.pause-menu-open .mc-menu-card #demo-btn { display: block; }
+body:not(.pause-menu-open) .mc-menu-card #demo-btn { display: none; }
+body:not(.pause-menu-open) .mc-menu-card #sources-btn { grid-column: 1 / -1; }
 body.pause-menu-open .crew-picker { display: none; }
 
 .mc-overlay.hidden,
@@ -911,18 +914,60 @@ body.pause-menu-open .crew-picker { display: none; }
   border-left: 3px solid #bd603c;
 }
 .info-row b { color: #ffffa0; }
+.options-list { grid-column: 1 / -1; display: grid; gap: 10px; }
+.option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.48);
+  border-top: 2px solid #373737;
+  border-left: 2px solid #373737;
+  border-right: 2px solid #777;
+  border-bottom: 2px solid #777;
+}
+.option-row h3 { margin: 0 0 4px; color: #ffffa0; font-size: 14px; text-shadow: 1px 1px #333; }
+.option-row p { margin: 0; color: #d6d0c8; font-size: 12px; line-height: 1.4; }
+.option-row > .mc-btn { width: auto; min-width: 145px; min-height: 44px; }
+.volume-control { display: flex; align-items: center; gap: 10px; min-width: 180px; }
+.volume-control input {
+  width: 100%; height: 18px; margin: 0; padding: 0;
+  appearance: none; -webkit-appearance: none;
+  background: #3b3b3b;
+  border-top: 2px solid #222; border-left: 2px solid #222;
+  border-right: 2px solid #888; border-bottom: 2px solid #888;
+  cursor: pointer;
+}
+.volume-control input::-webkit-slider-thumb {
+  width: 16px; height: 22px; appearance: none; -webkit-appearance: none;
+  background: #bd603c; border-top: 2px solid #e08a61; border-left: 2px solid #e08a61;
+  border-right: 2px solid #71351f; border-bottom: 2px solid #71351f;
+}
+.volume-control input::-moz-range-thumb {
+  width: 12px; height: 18px; border-radius: 0;
+  background: #bd603c; border: 2px solid #e08a61; border-right-color: #71351f; border-bottom-color: #71351f;
+}
+.volume-control output { width: 42px; color: #fff; text-align: right; font-size: 13px; text-shadow: 1px 1px #333; }
 .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .mc-menu-card .demo-grid .mc-btn { min-height: 44px; font-size: 13px; padding: 8px; }
 .demo-feedback { min-height: 34px; margin-top: 10px; color: #ffffa0; }
 .controls-screen.info-screen > .mc-btn { margin-top: 10px; }
 
-/* Celular em paisagem: botoes mais baixos; Controls e Shaders dividem uma linha e Quit (so na pausa) ocupa a sua */
+/* Celular em paisagem: botoes mais baixos e opcoes permanecem abaixo dos controles */
 @media (max-height: 460px) {
   #menu-main { display: grid; grid-template-columns: 1fr 1fr; }
   #menu-main.hidden { display: none; }
-  #menu-main > #start-btn, #menu-main > #reset-btn, #menu-main > .menu-row { grid-column: 1 / -1; }
+  #menu-main > #start-btn, #menu-main > #controls-btn, #menu-main > #options-btn,
+  #menu-main > #reset-btn, #menu-main > .menu-row { grid-column: 1 / -1; }
   .mc-menu-card .mc-btn { min-height: 44px; padding: 8px 10px; }
   .controls-screen.info-screen { max-height: calc(100dvh - 48px); }
+}
+
+@media (max-width: 520px) {
+  .option-row { align-items: stretch; flex-direction: column; gap: 8px; }
+  .option-row > .mc-btn { width: 100%; }
+  .volume-control { min-width: 0; }
 }
 
 /* Monitor de comida: previsualizacao pixelada em blocos da estufa + arrastar cultura */

@@ -16,7 +16,7 @@ import { CARDS, CERTIFICATE_IDS, OBJECTIVES, certificateBadge, certificateById, 
 //
 // Treino de cadete (issue #88, `training: true`): entre avisar a Terra e buscar o gelo, 4
 // certificados curtos dentro da base (energia, estufa, academia e abrigo). Cada um solta um
-// evento 'certificate' com o selo. `skipTraining()` pula o que falta (menu Demo Controls).
+// evento 'certificate' com o selo. `skipTraining()` pula o que falta (menu Demo Tools).
 // O diretor escreve `needsBase` de volta no retrato, para o painel e a seta lerem a mesma rotina.
 export class StoryDirector {
   // `replyDelayHours`: horas de jogo ate a resposta da Terra chegar (ida e volta do sinal).
@@ -168,7 +168,7 @@ export class StoryDirector {
     return CERTIFICATE_IDS.includes(this.objectiveId);
   }
 
-  // Menu Demo Controls: pula o treino (para demonstracoes rapidas). No meio dele, vai direto ao gelo.
+  // Menu Demo Tools: pula o treino (para demonstracoes rapidas). No meio dele, vai direto ao gelo.
   skipTraining(s = { iceCount: 0 }) {
     const was = this.inTraining;
     this.training = false;
