@@ -22,6 +22,7 @@ import { ACT4_STEPS } from '../story/acts/act4Steps.ts';
 import { ASTRONAUT_SLEEP_FACT } from '../player/sleep.ts';
 import { getSuitTelemetryView } from '../player/suitTelemetry.ts';
 import { HANDOVER_CHOICES, handoverCard, handoverSummary } from '../story/acts/act5Handover.ts';
+import { AUDIT_TEMPLATE_SAMPLES } from './i18nAuditCopy.ts';
 import {
   LANGUAGE_LABELS,
   LANGUAGE_STORAGE_KEY,
@@ -190,6 +191,25 @@ describe('game language catalog', () => {
       .toBe('Uma tempestade solar está chegando. Fique acordado e vá para o abrigo!');
     expect(translate('Nothing yet. Scan with the scope or bring samples from the map.', 'es'))
       .toBe('Aún no hay nada. Escanea con la mira o trae muestras del mapa.');
+  });
+
+  it('translates every dynamic message found by the localization audit, keeping its values', () => {
+    for (const language of ['pt-BR', 'es'] as const) {
+      const untranslated = AUDIT_TEMPLATE_SAMPLES.filter((sample) => translate(sample, language) === sample);
+      expect(untranslated, language).toEqual([]);
+    }
+    expect(translate('CO2 12%: replace filter', 'pt-BR')).toBe('CO₂ 12%: troque o filtro');
+    expect(translate('Mission Control: OK', 'es')).toBe('Control de Misión: OK');
+    // The more specific template wins over the shorter one that would also match
+    expect(translate('Source: NASA RadLab (reference data, not live)', 'pt-BR')).toBe('Fonte: NASA RadLab (dados de referência, não ao vivo)');
+    expect(translate('Journal rank: 7', 'es')).toBe('Rango del diario: 7');
+  });
+
+  it('translates the fixed texts found by the localization audit', () => {
+    expect(translate('NIGHT IS COMING', 'es')).toBe('LLEGA LA NOCHE');
+    expect(translate('Airlock cycling. Please wait.', 'pt-BR')).toBe('A câmara de ar está trabalhando. Espere um pouco.');
+    expect(translate('FREE PLAY', 'pt-BR')).toBe('MODO LIVRE');
+    expect(translate('Exercise bike', 'es')).toBe('Bicicleta estática');
   });
 
   it('keeps long source copy in the game and HTML translated in both locales', () => {
