@@ -428,6 +428,13 @@ export class VoxelWorld {
     this.dirtyChunks.clear();
   }
 
+  // Refaz de uma vez a malha dos chunks de varias colunas mudadas com setBlock(..., false)
+  // (cratera do meteoro, issue #107). cells = [[x, z], ...]
+  rebuildColumns(cells) {
+    for (const [x, z] of cells) this._markDirtyAround(Math.floor(x) + this.halfX, Math.floor(z) + this.halfZ);
+    this._rebuildDirtyChunks();
+  }
+
   rebuildMeshes() {
     for (const chunk of this.chunks) {
       this._rebuildChunk(chunk);

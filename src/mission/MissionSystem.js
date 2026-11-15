@@ -102,6 +102,8 @@ export class MissionSystem {
     this.oxygenCostMultiplier = 1;
     // Gerador de O2: eletrolise (agua) ou MOXIE (ar de Marte), issue #102
     this.oxygenPlant = new OxygenPlant();
+    // Fracao da luz do Sol que chega aos paineis (1 = normal; o eclipse de Fobos baixa, issue #107)
+    this.sunlightFactor = 1;
   }
 
   // A fila de tempestades comecou, mas os dados nao tem nenhuma CME com destino a Marte
@@ -145,6 +147,7 @@ export class MissionSystem {
 
     this.dustWeather.step(h, this.lastHours);
     this.chargeRate = solarChargePerHour(timeOfDay, this.dustWeather.solarFactor);
+    this.chargeRate *= this.sunlightFactor; // eclipse de Fobos (issue #107)
     this.solarEnergyCollected += this.battery.add(this.chargeRate * h);
     // O RTG gera de dia e de noite, so para o suporte de vida (issue #85)
     this.battery.addLifeSupportPower(

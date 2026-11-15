@@ -233,6 +233,23 @@ Escala de jogo (`SLEEP_CONFIG` em `src/config/constants.js`, regras em `src/play
 - Aviso de tempestade, bateria vazia, vazamento de ar, alarme da base (frio, CO2 ≥ 40 %, poeira) ou fome/sede ≤ 4 acordam o jogador; o relógio para naquele passo.
 - Mais de 1 sol (24 h de jogo) acordado deixa o trabalho mais lento (o mesmo 0,6× de `getWorkSpeed`). Cada hora dormida paga 3 h acordado.
 
+## Eventos aleatórios de Marte (issue #107)
+
+Cada evento mostra um card com o fato abaixo, a data e a fonte (`src/mission/eventText.js`). Os fatos foram conferidos nas fontes em 14/11/2026. Quando cada evento acontece e o tamanho do efeito são **escala de jogo**, sorteados pela semente da partida (`src/mission/eventDirector.js`, números em `EVENTS_CONFIG`).
+
+| Evento | Fato real usado no card | Fonte |
+|---|---|---|
+| Meteoro | Em **24/12/2021** um meteoroide atingiu Marte; o InSight sentiu um tremor de **magnitude 4** e o MRO achou a cratera nova (**~150 m** de diâmetro), com **pedaços de gelo do tamanho de pedregulhos** jogados para fora | [NASA JPL, 27/10/2022](https://www.jpl.nasa.gov/news/nasas-insight-lander-detects-stunning-meteoroid-impact-on-mars/) |
+| Tremor de Marte | O InSight detectou **mais de 1.313 tremores**; o maior, de **magnitude 5**, em **04/05/2022** | [NASA JPL, 09/05/2022](https://www.jpl.nasa.gov/news/nasas-insight-records-monster-quake-on-mars/) |
+| Eclipse de Fobos | O Perseverance filmou Fobos cruzando o Sol em **02/04/2022** (sol 397); o eclipse durou **um pouco mais de 40 segundos** | [NASA JPL, 20/04/2022](https://www.jpl.nasa.gov/news/nasas-perseverance-rover-captures-video-of-solar-eclipse-on-mars) |
+| Redemoinho de poeira | No sol 420 do Spirit (**09/03/2005**) a poeira saiu dos painéis e a energia subiu **cerca de 50 %**; no dia seguinte o Spirit filmou redemoinhos. **Não confirmado** que foi um redemoinho: a própria NASA pergunta se foi coincidência, e o card diz isso | [NASA/JPL MER, 14/03/2005 (via Spaceflight Now)](https://spaceflightnow.com/mars/mera/050314dustdevil.html); [NASA Photojournal PIA03608](https://science.nasa.gov/photojournal/solar-panel-dust-accumulation-and-cleanings/) ("wind events" que limpam os painéis, sol 420) |
+| Geada ao amanhecer | O Viking Lander 2 fez a primeira foto clara de geada no chão de Marte em **13/09/1977** (Utopia Planitia). **Não se sabe** se era gelo de água, gelo seco (CO2) ou os dois; o card diz isso | [NASA Photojournal PIA00530](https://science.nasa.gov/photojournal/frost-on-utopia-planitia) |
+| Aurora | Depois de uma erupção solar em **15/03/2024**, o Perseverance detectou uma aurora **verde** (557,7 nm), a primeira em luz visível vista da superfície de outro planeta | [NASA JPL, 14/05/2025](https://www.jpl.nasa.gov/news/nasa-observes-first-visible-light-auroras-at-mars/) |
+
+Correções em relação ao texto da issue: a foto da geada (PIA00530) é de **1977**, não de 1979, e a fonte **não** diz que era gelo de água. O texto do redemoinho ficou como hipótese, não como fato.
+
+Escala de jogo (não é dado real): a cratera do meteoro tem raio de 4 blocos (a real tem ~150 m); o tremor tira 35 % da saúde de uma estação da tripulação; o eclipse corta até 40 % da luz e da carga solar (Fobos é menor que o Sol visto de Marte, então o eclipse real também é parcial, mas o jogo não usa a fração real); o redemoinho limpa 30 % da poeira dos painéis (quando a poeira nos painéis existir, issue #103). As durações em segundos reais (`EVENTS_CONFIG.DURATION_SECONDS`) são o tempo da animação; só a do eclipse (40 s) segue o evento real.
+
 ## Calibração atual do jogo vs. realidade
 
 A aba **REAL VS GAME** do diário [J] (`src/data/realVsGame.js`, issue #106) mostra para a criança onde o jogo muda a realidade: gravidade, duração do sol, airlock, bateria, tempestade, parede do abrigo, plantas, rádio e conjunção. Os valores do jogo vêm de `constants.js`; os reais, das tabelas deste arquivo.

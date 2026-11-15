@@ -1,0 +1,44 @@
+/* Eventos aleatorios (issue #107) */
+
+/* Poeira do redemoinho: fecha a visao por alguns segundos. Fica abaixo do HUD e dos controles
+   de toque (z-index 9, igual ao aviso de CO2) e nunca recebe clique. */
+.event-dust-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(214, 160, 110, 0.55), transparent 55%),
+    radial-gradient(circle at 70% 60%, rgba(190, 130, 85, 0.6), transparent 60%),
+    rgba(176, 118, 74, 0.82);
+  transition: opacity 0.6s steps(6, end);
+}
+
+.event-dust-overlay.is-on { opacity: 1; }
+
+/* Fato real no card do evento (o card e o mesmo do radio da historia) */
+.story-fact {
+  margin: 2px 0 0;
+  padding: 6px 8px;
+  color: #ffe9b0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+  background: #16232e;
+  box-shadow: inset 0 0 0 1px #2c4354;
+}
+
+@media (max-height: 480px) {
+  .story-fact { padding: 4px 6px; font-size: 10px; line-height: 1.25; }
+}
+
+/* Celular em paisagem: o card do evento mostra so a primeira frase, o fato e a fonte, para
+   ficar baixo e nao tampar a mira nem os controles de toque */
+@media (max-height: 480px) {
+  .story-card-body:has(.story-fact) .story-line:nth-child(n + 2) { display: none; }
+  .story-card-body:has(.story-fact) .story-line { font-size: 12px; }
+  .story-card-body:has(.story-fact) .story-line-icon { width: 20px; height: 20px; padding: 3px; }
+  .story-card:has(.story-fact) small { margin-top: 3px; font-size: 9px; }
+  .story-card:has(.story-fact) .story-card-ok { margin-top: 4px; min-height: 44px; }
+}

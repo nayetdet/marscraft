@@ -164,8 +164,8 @@ export class DustWeather {
   }
 
   // Limpeza a mao: tira CLEAN_STEP de poeira. Devolve quanto saiu (0 = ja estava limpo).
-  cleanPanels() {
-    const removed = Math.min(this.panelDust, D.CLEAN_STEP);
+  cleanPanels(amount = D.CLEAN_STEP) {
+    const removed = Math.min(this.panelDust, amount);
     this.panelDust -= removed;
     return removed;
   }
