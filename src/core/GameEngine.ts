@@ -1,12 +1,14 @@
 // @ts-nocheck
 import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS, GREENHOUSE_BASKETS } from '../world/greenhouseLayout.ts';
-import { createCropPlantModel } from '../graphics/cropModels.ts';
+import { createCropItemModel, createCropPlantModel } from '../graphics/cropModels.ts';
+import { createSpaceRationModel } from '../graphics/rationModel.ts';
 import * as THREE from 'three';
 import { CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
 import { separateCrew } from '../crew/separateCrew.ts';
 import { CrewManager } from '../crew/CrewManager.ts';
 import { CrewAvatar } from '../crew/CrewAvatar.ts';
 import { CrewInstances } from '../crew/crewInstances.ts';
+import { buildIvaAstronautRig, buildSpacesuitRig } from '../graphics/spacesuitModel.ts';
 import { createBaseStock } from '../crew/baseStock.ts';
 import { createStations, problemText } from '../crew/stations.ts';
 import { EMBEDDED_SPACE_WEATHER } from '../data/spaceWeather.ts';
@@ -23,6 +25,8 @@ import { BLOCK_IDS } from '../config/blockTypes.ts';
 import { createBlockMaterials } from '../graphics/blockMaterials.ts';
 import { MarsSkySystem } from '../sky/MarsSkySystem.ts';
 import { DustStormEffect } from '../sky/DustStormEffect.ts';
+import { MarsWindEffect } from '../sky/MarsWindEffect.ts';
+import { createWindState, updateWindState } from '../sky/windState.ts';
 import { VoxelWorld } from '../world/VoxelWorld.ts';
 import { buildNasaCustomModels } from '../world/nasaModelsBuilder.ts';
 import { targetCrop } from '../world/cropInteraction.ts';
@@ -57,7 +61,8 @@ import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.ts
 import { resolveScanTarget, collectScanBlocks } from '../scanner/scanTargeting.ts';
 import { ScanHighlight } from '../scanner/scanHighlight.ts';
 import { isInsideShieldZone, SHIELD_ZONE } from '../mission/shieldZone.ts';
-import { HABITAT_LAYOUT, SOLAR_FIELD_CENTER, isInsideShelter } from '../world/habitatLayout.ts';
+import { HABITAT_LAYOUT, SOLAR_FIELD, SOLAR_FIELD_CENTER, isInsideKitchen, isInsideShelter } from '../world/habitatLayout.ts';
+import { rationDeliveryCropOnEntry } from './rationDeliveryTrigger.ts';
 import { ShieldBubble } from '../graphics/shieldBubble.ts';
 import { IceSensorEffect } from '../scanner/iceSensor.ts';
 import { ScannerHud } from '../ui/ScannerHud.ts';
@@ -83,6 +88,7 @@ import { WeatherHud } from '../ui/WeatherHud.ts';
 import { LANDER_NOZZLE_Y, createLander, landerCollider } from '../story/cutscene/landerModel.ts';
 import { createArrivalCutscene } from '../story/cutscene/arrivalCutscene.ts';
 import { MAV_NOZZLE_Y, createLaunchCutscene } from '../story/cutscene/launchCutscene.ts';
+import { createRationDeliveryCutscene } from '../story/cutscene/rationDeliveryCutscene.ts';
 import { EventDirector, inWindow, seedFromSearch } from '../mission/eventDirector.ts';
 import { DUST_DEVIL_HIT_TOAST, ECLIPSE_END_TOAST, compassDirection, dustDevilPanelsToast, eventCard, eventsSummary, meteorToast, quakeToast } from '../mission/eventText.ts';
 import { MarsEventEffects } from '../sky/MarsEventEffects.ts';
@@ -141,6 +147,9 @@ export class GameEngine {
     this.sky = new MarsSkySystem(this.scene);
     this.dustStorm = new DustStormEffect(this.scene, this.renderer);
     this.world = new VoxelWorld(this.scene, materials, atlas, carrot.texture);
+    this._windState = createWindState();
+    this._windInput = { time: 0, haze: 0, edgeStrength: 0, windAvgMs: 6, gustMs: 14 };
+    this.windEffect = new MarsWindEffect(this.scene, (x, z) => this._groundSurfaceY(x, z));
 
     // Modelos 3D detalhados estilo Mod de Minecraft + Caixas de Colisão AABB
     const { group: customModels, colliders, plants, rover, roverWheels, rocket, solarPanelMaterial } = buildNasaCustomModels(this.scene);
@@ -279,6 +288,7 @@ export class GameEngine {
     this.stationPanel.studyReveals = this.studyReveals;
     this.crewAvatars = [];
     this._buildCrew(CREW_CONFIG.NAMES.length);
+    this._initRationVisuals();
     this.menuScreens = new MenuScreens({
       donkiDate: formatDateDMY(this.spaceWeather.fetchedAt),
       onDemo: (action) => this._runDemo(action),
@@ -363,8 +373,10 @@ export class GameEngine {
     this._updateUtility();
     const greenhouseLit = this.utility.greenhouseLightsOn && !this.utility.cold;
     this.expedition.greenhousePowered = greenhouseLit && this.expedition.spend(this.utility.greenhouseLightsCost(dt));
+    this._maybePlayRationDeliveryCutscene();
     this.stations.update(dt, insideCore, this.survival, !inside);
     this.stations.updateCrewHarvest(dt, this.crew.members.some(member => member.task === 'greenhouse' && member.stationary && member.canWork));
+    this.utility.updateRations(dt, this.crew.members.some(member => member.task === 'kitchen' && member.stationary && member.canWork));
     this._updateShelterWater();
     this.updateCropVisuals();
     this.airlock.update(dt, this.player.pos);
@@ -1106,7 +1118,7 @@ export class GameEngine {
       if (message && !onAlertCard) this.hud.showToast(message, event.type.startsWith('dose-') ? 8000 : 4500);
       this.missionLogFeed.onMissionEvent(event, this._skyHours());
     }
-    this._updateWeather();
+    this._updateWeather(dt);
     this._updateMissionLog();
 
     this.missionHud.update(this.mission, { survival: this.survival, stations: this.stations, world: this.world });
@@ -1130,9 +1142,22 @@ export class GameEngine {
     // A poeira cobre o vidro azul escuro: brilho proprio cor de ferrugem, para aparecer
     this._panelDustGlow = new THREE.Color(0x9a5530);
     this._panelDustShown = -1;
+    this._solarLookDir = new THREE.Vector3();
+    this.panelCleanDustPuffs = new ParticlePuffs(this.scene, { count: 48, color: 0xc47e54 });
+    this._panelCleanAnim = {
+      active: false,
+      elapsed: 0,
+      duration: DUST_WEATHER_CONFIG.CLEAN_ANIM_DURATION,
+      dustBefore: 0,
+      dustAfter: 0,
+      panelX: SOLAR_FIELD_CENTER.x,
+      panelY: WORLD_CONFIG.GROUND_LEVEL + 2.47,
+      panelZ: SOLAR_FIELD.z,
+      emitDebt: 0,
+    };
   }
 
-  _updateWeather() {
+  _updateWeather(dt) {
     const dust = this.mission.dustWeather;
     for (const event of dust.drainEvents()) {
       const message = dustEventMessage(event.type);
@@ -1144,20 +1169,87 @@ export class GameEngine {
     const fx = this._weatherFx;
     fx.haze = dust.haze;
     fx.front = dust.frontProgress;
-    fx.indoors = this.survival.insidePressurizedShip && !this.roverController.isActive;
+    fx.indoors = this.survival.isPlayerInsideShip(this.camera.position);
     this.sky.dustHaze = dust.haze;
 
     // Paineis avermelhados com a poeira: so troca a cor quando muda 1 %
-    const shown = Math.round(dust.panelDust * 100);
+    const visualDust = this._updatePanelCleanAnim(dt);
+    const shown = Math.round(visualDust * 100);
     if (shown !== this._panelDustShown && this.solarPanelMaterial) {
       this._panelDustShown = shown;
-      this.solarPanelMaterial.color.copy(this._panelColorClean).lerp(this._panelColorDusty, dust.panelDust);
-      this.solarPanelMaterial.emissive.copy(this._panelDustGlow).multiplyScalar(dust.panelDust);
+      this.solarPanelMaterial.color.copy(this._panelColorClean).lerp(this._panelColorDusty, visualDust);
+      this.solarPanelMaterial.emissive.copy(this._panelDustGlow).multiplyScalar(visualDust);
     }
 
     const hours = this._skyHours();
     this.weatherHud.update(outsideTemperatureC(hours), dust);
     this._maybeWeatherReport(hours);
+  }
+
+  _groundSurfaceY(x, z) {
+    const ix = Math.floor(x);
+    const iz = Math.floor(z);
+    for (let y = this.world.sizeY - 1; y > 0; y--) {
+      if (this.world.getBlock(ix, y, iz) !== BLOCK_IDS.AIR) return y + 1;
+    }
+    return WORLD_CONFIG.GROUND_LEVEL + 1;
+  }
+
+  _nearestSolarPanelPos() {
+    const look = this.player.getLookDirection(this._solarLookDir);
+    const aimX = this.player.pos.x + look.x * 2.0;
+    const aimZ = this.player.pos.z + look.z * 2.0;
+    let bestX = SOLAR_FIELD.xFirst;
+    let bestDist = Infinity;
+    for (let i = 0; i < SOLAR_FIELD.count; i++) {
+      const px = SOLAR_FIELD.xFirst + i * SOLAR_FIELD.spacing;
+      const dist = Math.hypot(aimX - px, aimZ - SOLAR_FIELD.z);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestX = px;
+      }
+    }
+    return {
+      x: bestX,
+      y: WORLD_CONFIG.GROUND_LEVEL + 1 + 1.47,
+      z: SOLAR_FIELD.z,
+    };
+  }
+
+  _updatePanelCleanAnim(dt) {
+    const anim = this._panelCleanAnim;
+    let visualDust = this.mission.dustWeather.panelDust;
+    if (anim.active) {
+      anim.elapsed += dt;
+      const p = Math.min(1, anim.elapsed / anim.duration);
+      visualDust = anim.dustBefore + (anim.dustAfter - anim.dustBefore) * p;
+      if (p >= 0.08 && p <= 0.90) {
+        anim.emitDebt += dt * 36;
+        const sweep = Math.sin(p * Math.PI * 5);
+        const sweepDir = Math.cos(p * Math.PI * 5) >= 0 ? 1 : -1;
+        while (anim.emitDebt >= 1) {
+          anim.emitDebt -= 1;
+          const localZ = (Math.random() - 0.5) * 1.1;
+          const px = anim.panelX + sweep * 1.15 + (Math.random() - 0.5) * 0.35;
+          const pz = anim.panelZ + localZ;
+          const py = anim.panelY + 0.08 - Math.sin(0.38) * localZ;
+          this.panelCleanDustPuffs.spawn(
+            px, py, pz,
+            sweepDir * (0.45 + Math.random() * 0.75),
+            0.55 + Math.random() * 0.75,
+            0.3 + Math.random() * 0.65,
+            0.45 + Math.random() * 0.35,
+            0.14 + Math.random() * 0.11
+          );
+        }
+      }
+      if (p >= 1) {
+        anim.active = false;
+        visualDust = this.mission.dustWeather.panelDust;
+      }
+    }
+    this.panelCleanDustPuffs.update(dt);
+    return visualDust;
   }
 
   // Relatorio do tempo no nascer do Sol, com o sol real do InSight. Nunca no tutorial.
@@ -1184,6 +1276,7 @@ export class GameEngine {
 
   // Limpar os paineis a mao: restaura a geracao, mas gasta ar do traje (issue #103)
   _cleanSolarPanels() {
+    if (this._panelCleanAnim?.active) return;
     const dust = this.mission.dustWeather;
     const cost = DUST_WEATHER_CONFIG.CLEAN_O2_COST;
     if (dust.panelDust < 0.01) {
@@ -1194,8 +1287,23 @@ export class GameEngine {
       this.hud.showToast('Your suit air is too low to keep working. Go back inside!', 4500);
       return;
     }
+    const dustBefore = dust.panelDust;
     this.survival.spendBreathableOxygen(cost);
     const removed = dust.cleanPanels();
+    const dustAfter = dust.panelDust;
+    const panelPos = this._nearestSolarPanelPos();
+    const anim = this._panelCleanAnim;
+    anim.active = true;
+    anim.elapsed = 0;
+    anim.duration = DUST_WEATHER_CONFIG.CLEAN_ANIM_DURATION;
+    anim.dustBefore = dustBefore;
+    anim.dustAfter = dustAfter;
+    anim.panelX = panelPos.x;
+    anim.panelY = panelPos.y;
+    anim.panelZ = panelPos.z;
+    anim.emitDebt = 0;
+    this.playerHand.triggerCleanSolar();
+    this.audio.playSolarClean();
     const left = Math.round(dust.panelDust * 100);
     const storm = dust.phase === 'storm' ? ' The storm keeps adding more dust!' : '';
     let message = `Brushed ${Math.round(removed * 100)}% of the dust off the panels (used suit air). Panel dust: ${left}%.${storm}`;
@@ -1509,6 +1617,214 @@ export class GameEngine {
     this.story.start();
   }
 
+  _initRationVisuals() {
+    this._wasInsideRationKitchen = false;
+    this._rationObserver = new THREE.Group();
+    this._rationObserver.visible = false;
+    this._rationObserverEva = buildSpacesuitRig({
+      accentColor: 0xea580c,
+      suitColor: 0xf8fafc,
+      includeUpgradeTrim: true,
+    });
+    this._rationObserverIva = buildIvaAstronautRig({ accentColor: 0xea580c });
+    for (const rig of [this._rationObserverEva, this._rationObserverIva]) {
+      rig.armL.rotation.set(-0.08, 0, -0.1);
+      rig.armR.rotation.set(-0.08, 0, 0.1);
+      rig.elbowL.rotation.x = -0.16;
+      rig.elbowR.rotation.x = -0.16;
+      this._rationObserver.add(rig.bodyGroup);
+    }
+    this._syncRationObserverAppearance();
+    this.scene.add(this._rationObserver);
+    this._rationDeliveryCropProps = Object.fromEntries(
+      ['potato', 'lettuce', 'soy'].map((type) => {
+        const model = createCropItemModel(type);
+        model.visible = false;
+        this.scene.add(model);
+        return [type, model];
+      })
+    );
+    this._rationCutsceneProp = createSpaceRationModel();
+    this._rationCutsceneProp.visible = false;
+    this.scene.add(this._rationCutsceneProp);
+
+    this._handoffRationProp = createSpaceRationModel();
+    this._handoffRationProp.scale.setScalar(0.38);
+    this._handoffRationProp.visible = false;
+    this.scene.add(this._handoffRationProp);
+
+    this._activeRationHandoff = null;
+    this._handoffStart = new THREE.Vector3();
+    this._handoffEnd = new THREE.Vector3();
+    this._handoffForward = new THREE.Vector3();
+    this._handoffRight = new THREE.Vector3();
+  }
+
+  // Usa o mesmo rig duplo do inventario e da bicicleta (IVA dentro da base, EVA com traje)
+  _syncRationObserverAppearance() {
+    if (!this._rationObserverEva || !this._rationObserverIva) return;
+    const suited = Boolean(this.survival?.suitEquipped);
+    this._rationObserverEva.bodyGroup.visible = suited;
+    this._rationObserverIva.bodyGroup.visible = !suited;
+    for (const mesh of this._rationObserverEva.upgradeTrimMeshes) {
+      mesh.visible = suited && Boolean(this.stations?.upgraded);
+    }
+  }
+
+  _maybePlayRationDeliveryCutscene() {
+    const inside = isInsideKitchen(this.player.pos.x, this.player.pos.y, this.player.pos.z);
+    const crop = rationDeliveryCropOnEntry(this._wasInsideRationKitchen, inside, this.stations.harvestBaskets, this.utility.base.food, this.utility.lastRationCrop);
+    if (!crop) { this._wasInsideRationKitchen = inside; return; }
+    if (!this._arrivalPlayed || this.cutscenes.isActive) return;
+    if (this.mission.storm?.phase === 'active') return;
+    if (!this.input.isLocked || this.input.isPortraitRequired || this.survival.isDead) return;
+    if (this.roverController.isActive || this.gymController.isActive) return;
+    if (this.stationPanel.isOpen || this.hud.isInventoryOpen || this.scannerHud.isJournalOpen) return;
+    this._wasInsideRationKitchen = inside;
+    this._playRationDeliveryCutscene(crop);
+  }
+
+  _playRationDeliveryCutscene(cropType) {
+    this._finishRationHandoffEarly();
+    this.input.keys = {};
+    this.playerHand.handGroup.visible = false;
+    this.highlightBox.visible = false;
+    this.hud.setInteractionPrompt(false);
+
+    const botanist =
+      this.crewAvatars.find((avatar) => avatar.member.task === 'greenhouse') ??
+      this.crewAvatars[1] ??
+      this.crewAvatars[0];
+    const cook =
+      this.crewAvatars.find((avatar) => avatar.member.task === 'kitchen') ??
+      this.crewAvatars[4] ??
+      this.crewAvatars[0];
+    if (!botanist || !cook) return;
+
+    const cropProp = this._rationDeliveryCropProps[cropType] ?? this._rationDeliveryCropProps.potato;
+    this._syncRationObserverAppearance();
+
+    this.cutscenes.play(
+      createRationDeliveryCutscene({
+        camera: this.camera,
+        botanist,
+        cook,
+        cropProp,
+        rationProp: this._rationCutsceneProp,
+        observer: this._rationObserver,
+        observerPosition: { x: this.player.pos.x, z: this.player.pos.z },
+        cropType,
+        botanistName: botanist.member.name,
+        cookName: cook.member.name,
+        floorY: WORLD_CONFIG.GROUND_LEVEL + 2,
+        onHandoff: () => this._playGymTone(460, 0.08, 600),
+        onPacked: () => this._playGymTone(560, 0.12, 780),
+        onEnd: () => this._endRationDeliveryCutscene(),
+      })
+    );
+  }
+
+  _endRationDeliveryCutscene() {
+    for (const avatar of this.crewAvatars) {
+      avatar.cutsceneControlled = false;
+      avatar.update(0);
+    }
+    separateCrew(this.crewAvatars);
+    this.input.keys = {};
+    this.playerHand.handGroup.visible = !this.isZoomed;
+    this.camera.rotation.set(0, 0, 0);
+    this._updateCamera();
+  }
+
+  _finishRationHandoffEarly() {
+    if (!this._activeRationHandoff) return;
+    this._handoffRationProp.visible = false;
+    if (!this._activeRationHandoff.delivered) {
+      this._activeRationHandoff.delivered = true;
+      this.hud.renderHotbar(this.survival.slots);
+      const heldSlot = this.survival.slots[this.hud.selectedSlot];
+      this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
+    }
+    this._activeRationHandoff = null;
+  }
+
+  _giveRationFromCook(member) {
+    if (this._activeRationHandoff) return;
+    const cookAvatar = this.crewAvatars.find((avatar) => avatar.member === member);
+    const res = this.utility.takeRation();
+    if (!res.ok) {
+      if (res.reason === 'empty') {
+        cookAvatar?.startHeadShake(this.player.pos, 1.0);
+        this.hud.showCaption(`${member.name}: No food! Grow some in the greenhouse.`);
+      } else {
+        this.hud.showToast(res.message);
+      }
+      return;
+    }
+
+    if (!cookAvatar) {
+      this.hud.renderHotbar(this.survival.slots);
+      const heldSlot = this.survival.slots[this.hud.selectedSlot];
+      this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
+      this.hud.showToast(res.message);
+      return;
+    }
+
+    cookAvatar.startHandoff(this.player.pos, 1.2);
+    cookAvatar.getRightHandWorldPosition(this._handoffStart);
+    this._handoffRationProp.position.copy(this._handoffStart);
+    this._handoffRationProp.rotation.set(0.1, cookAvatar.group.rotation.y, 0);
+    this._handoffRationProp.visible = true;
+    this.hud.showCaption(`${member.name}: Here is a ration! ${res.remaining} left.`);
+    this._activeRationHandoff = {
+      cookAvatar,
+      elapsed: 0,
+      duration: 0.85,
+      delivered: false,
+      message: res.message,
+    };
+  }
+
+  _updateRationHandoff(dt) {
+    const h = this._activeRationHandoff;
+    if (!h) return;
+    h.elapsed += dt;
+    const t = Math.min(1, h.elapsed / h.duration);
+
+    if (t < 0.28) {
+      h.cookAvatar.getRightHandWorldPosition(this._handoffStart);
+      this._handoffRationProp.position.copy(this._handoffStart);
+      this._handoffRationProp.rotation.set(0.15, h.cookAvatar.group.rotation.y, 0);
+    } else {
+      const flight = (t - 0.28) / 0.72;
+      const eased = flight * flight * (3 - 2 * flight);
+      this.player.getLookDirection(this._handoffForward);
+      this._handoffRight.set(-this._handoffForward.z, 0, this._handoffForward.x).normalize();
+      this._handoffEnd
+        .copy(this.player.pos)
+        .addScaledVector(this._handoffForward, 0.55)
+        .addScaledVector(this._handoffRight, 0.34);
+      this._handoffEnd.y -= 0.26;
+
+      this._handoffRationProp.position.lerpVectors(this._handoffStart, this._handoffEnd, eased);
+      this._handoffRationProp.position.y += Math.sin(flight * Math.PI) * 0.2;
+      this._handoffRationProp.rotation.y += dt * 5.2;
+      this._handoffRationProp.rotation.x = 0.2 * (1 - eased);
+    }
+
+    if (t >= 1) {
+      this._handoffRationProp.visible = false;
+      h.delivered = true;
+      this.playerHand.triggerReceive();
+      this.hud.renderHotbar(this.survival.slots);
+      const heldSlot = this.survival.slots[this.hud.selectedSlot];
+      this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
+      this._playGymTone(560, 0.09, 760);
+      this.hud.showToast(h.message);
+      this._activeRationHandoff = null;
+    }
+  }
+
   _updateStory(dt) {
     const s = this._storySnapshot;
     s.hours = this._skyHours();
@@ -1646,8 +1962,12 @@ export class GameEngine {
 
     this.mission.oxygenCostMultiplier = 1;
     // Numa animacao quem posiciona a tripulacao e a propria animacao (o embarque no foguete)
-    for (const avatar of this.crewAvatars) avatar.update(dt);
-    separateCrew(this.crewAvatars, active && !this.roverController.isActive && !this.gymController.isActive ? this.player : null);
+    for (const avatar of this.crewAvatars) {
+      if (!avatar.cutsceneControlled) avatar.update(dt);
+    }
+    if (!this.cutscenes.isActive) {
+      separateCrew(this.crewAvatars, active && !this.roverController.isActive && !this.gymController.isActive ? this.player : null);
+    }
     if (active) {
       this._crewChatterTimer = (this._crewChatterTimer ?? 0) + dt;
       if (this._crewChatterTimer >= 35 && this.crew.members.length > 1) {
@@ -1656,8 +1976,8 @@ export class GameEngine {
         const speaker = pair[Math.floor(Math.random() * pair.length)];
         const replies = {
           Ana: 'The habitat feels quiet today.', Leo: 'I was just checking on the plants.', Maya: 'The view of Mars never gets old.',
-          Sam: 'I am doing a quick habitat check.', Noor: 'The corridor is clear for the next shift.', Kai: 'I spotted a dust plume outside.',
-          Iris: 'The rock layers outside look fascinating.', Ravi: 'Earth will get our message when the signal window opens.',
+          Sam: 'Checking the base!', Noor: 'The corridor is clear!', Kai: 'I spotted dust outside!',
+          Iris: 'Look at those Mars rocks!', Ravi: 'Our message will reach Earth!',
         };
         this.hud.showCaption(`${speaker.name}: ${replies[speaker.name]}`);
       }
@@ -1750,7 +2070,15 @@ export class GameEngine {
     if (member) {
       this.currentInteraction = 'crew';
       this.talkTarget = member;
-      this.hud.setInteractionPrompt(true, `[F] Talk to ${member.name}`);
+      if (member.task === 'kitchen') {
+        const count = Math.floor(this.crewStock.food);
+        const prompt = count >= 1
+          ? `[F] Get space ration from ${member.name} (${count} in pantry)`
+          : `[F] Talk to ${member.name} (pantry empty)`;
+        this.hud.setInteractionPrompt(true, prompt);
+      } else {
+        this.hud.setInteractionPrompt(true, `[F] Talk to ${member.name}`);
+      }
       return;
     }
 
@@ -1765,6 +2093,10 @@ export class GameEngine {
     // Campo solar (issue #103): limpar a poeira dos paineis gasta ar do traje
     if (this._isAtSolarField()) {
       this.currentInteraction = 'solar_panels';
+      if (this._panelCleanAnim?.active) {
+        this.hud.setInteractionPrompt(true, 'Cleaning solar panels...');
+        return;
+      }
       const dust = Math.round(this.mission.dustWeather.panelDust * 100);
       this.hud.setInteractionPrompt(true, `[F] Clean the solar panels (dust ${dust}%, uses suit air)`);
       return;
@@ -1798,7 +2130,11 @@ export class GameEngine {
   handlePlayerInteract() {
     if (this.missionHud.isVictoryShown) return;
     if (this.currentInteraction === 'crew' && this.talkTarget) {
-      this.hud.showCaption(`${this.talkTarget.name}: ${this.talkTarget.dialogue}`);
+      if (this.talkTarget.task === 'kitchen') {
+        this._giveRationFromCook(this.talkTarget);
+      } else {
+        this.hud.showCaption(`${this.talkTarget.name}: ${this.talkTarget.dialogue}`);
+      }
       return;
     }
     if (this.missionHud.isMavPanelOpen) {
@@ -1945,6 +2281,7 @@ export class GameEngine {
     const { iceBlocks, cells } = carveImpactCrater(this.world, { x, z });
     this.world.rebuildColumns(cells);
     hideRocksNear(this.world.surfaceRocks, x, z, EVENTS_CONFIG.METEOR_CRATER_RADIUS + 2);
+    hideRocksNear(this.world.surfaceOutcrops, x, z, EVENTS_CONFIG.METEOR_CRATER_RADIUS + 2);
     this.iceSensor.activate(this.world, { x, z });
     const me = this.player.pos;
     this.hud.showToast(meteorToast({
@@ -2061,6 +2398,8 @@ export class GameEngine {
         isRoverActive: this.roverController.isActive,
         roverSpeed: this.roverController.speed,
         sprinting: Boolean(this.input.keys['Sprint']),
+        outdoorFactor: this.dustStorm.outdoorBlend,
+        windIntensity: this._windState.intensity,
       });
 
       const pickedUpBlocks = this.world.updateDrops(dt, this.player.pos, (id) => id === BLOCK_IDS.HYDRO_PLANT ? this.survival.addHarvestedCrop() : this.survival.addBlockToInventory(id));
@@ -2086,15 +2425,36 @@ export class GameEngine {
       if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
       this._updateMission(dt);
       this._updateCrew(dt);
+      this._updateRationHandoff(dt);
       this._updateBaseDisplays(dt);
       if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
       if (isGameRunning) this._updateStory(dt);
 
+      const focusPos = this.roverController.isActive ? this.roverController.pos : this.player.pos;
+      this._weatherFx.indoors = this.survival.isPlayerInsideShip(this.camera.position);
+      const insightNow = solWeather(this._skyHours());
+      this._windInput.time = this.dustStorm.time + dt;
+      this._windInput.haze = this._weatherFx.haze;
+      this._windInput.edgeStrength = this.dustStorm.strength;
+      this._windInput.windAvgMs = insightNow.windAvgMs;
+      this._windInput.gustMs = insightNow.gustMs;
+      updateWindState(this._windState, this._windInput);
+
       this.dustStorm.update(
         dt,
-        this.roverController.isActive ? this.roverController.pos : this.player.pos,
+        focusPos,
         this.camera,
-        this._weatherFx
+        this._weatherFx,
+        this._windState,
+        this.sky.twilightStrength,
+      );
+      this.windEffect.update(
+        dt,
+        focusPos,
+        this.camera,
+        this._windState,
+        this.dustStorm.outdoorBlend,
+        this._weatherFx.haze,
       );
       this._updateEvents(dt, isGameRunning);
       // Trajes da tripulacao: copia a pose de cada peca para o desenho unico (instancing)

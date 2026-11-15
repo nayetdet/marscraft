@@ -36,3 +36,6 @@ Ao atualizar `data/`, mantenha a data de coleta em cada amostra.
 - [ISS SSP 57000, Revision R, Appendix O: Instructions for Labels and Decals](https://ntrs.nasa.gov/api/citations/20190001390/downloads/20190001390.pdf), seções O.3.4.5.2.2 e O.3.4.10.1: contraste, uso de cores e fonte das placas de identificação. As placas do jogo são adaptações que identificam os espaços pela função; não usam códigos de módulos fictícios nem alegam reproduzir placas reais específicas.
 
 - [NASA: Quest Airlock](https://www.nasa.gov/international-space-station/quest-airlock/): a ISS usa o nome Quest para seu módulo de airlock; esse nome específico não é atribuído à base fictícia do jogo.
+# Food system reference
+
+NASA describes prepackaged, heat-stabilized meals and the use of fresh crops as a supplement in its [space food systems overview](https://www.nasa.gov/directorates/esdmd/hhp/space-food-systems/) and [plant research overview](https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/). The game's conversion of a harvested crop into a ration is a simplified model of a future Mars kitchen, not a claim about current ISS food production.

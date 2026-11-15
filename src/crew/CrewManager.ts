@@ -58,17 +58,18 @@ export class CrewManager {
       ['dormDoor', 'hub', 'tunnelEast'],
       ['tunnelWest', 'tunnelEast', 'dormLink'],
     ];
-    const fixedStations = ['oxygen', 'greenhouse', 'water', 'medbay'];
+    const fixedStations = ['oxygen', 'greenhouse', 'water', 'medbay', 'kitchen'];
     this.members.forEach((member, index) => {
       const fixed = index < fixedStations.length;
       const destination = fixed ? fixedStations[index] : 'rest';
       member.stationary = fixed;
       member.dialogue = {
-        oxygen: 'This oxygen machine can split water, or pull oxygen out of Mars air with more power. Pick the mode in Life Support.',
-        greenhouse: 'Plants grow food here, but they need water, warmth, and light.',
-        water: 'The recycler cleans used water so the habitat can use it again.',
-        medbay: 'The medbay is where we check our health and recover after a tough trip outside.',
-        rest: 'The habitat protects us from the cold, thin air, and radiation outside.',
+        oxygen: 'Make air from water or Mars air!',
+        greenhouse: 'Plants need water, warmth and light.',
+        water: 'I clean water so we can reuse it!',
+        medbay: 'Come here to rest and get better.',
+        kitchen: 'Crops and power make rations!',
+        rest: 'Our base keeps us safe on Mars.',
       }[destination];
       member.ambientPause = 0;
       member.task = destination;

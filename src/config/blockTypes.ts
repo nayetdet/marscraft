@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { CROP_CONFIG } from './constants.ts';
+import { CROP_CONFIG, UTILITY_CONFIG } from './constants.ts';
 
 export const BLOCK_IDS = {
   AIR: 0,
@@ -22,6 +22,7 @@ export const BLOCK_IDS = {
   SCOPE: 17,
   SHIELD_REMOTE: 18, // item de mao, nao e bloco do mundo
   JOURNAL: 19,
+  RATION: 20, // racao embalada estilo NASA, consumivel no inventario
 };
 
 export const HOTBAR_BLOCKS = [
@@ -113,7 +114,17 @@ const BASE_BLOCK_ITEMS = [
 ].map((item) => ({ ...item, initialCount: 0, consumable: null }));
 
 // Item registry is independent of the nine initial hotbar slots.
-export const ITEM_DEFINITIONS = [...HOTBAR_BLOCKS, ...BASE_BLOCK_ITEMS, ...Object.entries(CROP_ITEM_IDS).map(([type, id]) => ({
-  id, name: 'Mars ' + type + ' (Use to eat)', initialCount: 0,
-  consumable: { type: 'food', amount: CROP_CONFIG[type].nutrition, heal: 0 },
-}))];
+export const ITEM_DEFINITIONS = [
+  ...HOTBAR_BLOCKS,
+  ...BASE_BLOCK_ITEMS,
+  {
+    id: BLOCK_IDS.RATION,
+    name: 'Space Ration (Use to eat)',
+    initialCount: 0,
+    consumable: { type: 'food', amount: UTILITY_CONFIG.RATION_FOOD, heal: 0 },
+  },
+  ...Object.entries(CROP_ITEM_IDS).map(([type, id]) => ({
+    id, name: 'Mars ' + type + ' (Use to eat)', initialCount: 0,
+    consumable: { type: 'food', amount: CROP_CONFIG[type].nutrition, heal: 0 },
+  })),
+];
