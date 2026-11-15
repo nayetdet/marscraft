@@ -1137,7 +1137,7 @@ export const ACT2_CONFIG = {
   STORY_REPAIR_FETCH_SECONDS: 10,
   // Trade-off "quem sai do posto para ajudar" (issue #415, act2CrewHelp.ts). Regra de jogo.
   CREW_HELP_CARD_SECONDS: 15, // tempo do card da escolha na tela
-  CREW_HELP_DEFAULT_SECONDS: 20, // sem resposta neste tempo (segundos reais), vem o engenheiro
+  CREW_HELP_DEFAULT_SECONDS: 20, // sem resposta neste tempo (segundos reais), vem a opcao padrao
   CREW_HELP_HOURS: 1, // horas de jogo que a maquina de quem ajuda fica parada (50 s reais)
   REPAIR_REACH: 4.5, // blocos: distancia maxima para trocar a janela rachada
 };
