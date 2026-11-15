@@ -97,6 +97,27 @@ describe('scope equipment', () => {
     expect(input.onToggleZoom).not.toHaveBeenCalled();
   });
 
+  it('does not capture the wheel while the scope is open without zoom', () => {
+    const input = Object.create(InputController.prototype);
+    input.isZoomed = false;
+    input.isScannerOpen = true;
+    const event = { deltaY: -100, preventDefault: vi.fn() };
+
+    expect(input._handleScopeWheel(event)).toBe(false);
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('uses the wheel for zoom only while zoom is active', () => {
+    const input = Object.create(InputController.prototype);
+    input.isZoomed = true;
+    input._setScope = vi.fn();
+    const event = { deltaY: -100, preventDefault: vi.fn() };
+
+    expect(input._handleScopeWheel(event)).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(input._setScope).toHaveBeenCalledWith(true, true);
+  });
+
   it('opens the scope with right-click and closes it on the next right-click', () => {
     const input = Object.create(InputController.prototype);
     input.isScannerOpen = false;
