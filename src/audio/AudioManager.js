@@ -4,6 +4,7 @@ const ROCKET_VOLUME = 0.7;
 const DOOR_VOLUME = 0.12;
 // Chiado de descompressao do airlock (a "fumaca"): bem baixo, so de fundo
 const DECOMPRESSION_VOLUME = 0.05;
+const REGOLITH_PLACE_VOLUME = 0.07;
 const ROCKET_FADE_OUT_SECONDS = 1;
 // Manivela do airlock sem energia: o som da porta tocado devagar fica grave e pesado
 const CRANK_PLAYBACK_RATE = 0.45;
@@ -18,6 +19,9 @@ export class AudioManager {
     this.rover = this._createAudio(`${AUDIO_BASE_URL}barulho%20do%20carro.wav?v=2`, true);
     this.rocket = this._createAudio(`${AUDIO_BASE_URL}foguete.wav`, true);
     this.sandFall = this._createAudio(`${AUDIO_BASE_URL}queda_areia.wav`);
+    this.regolithPlace = this._createAudio(`${AUDIO_BASE_URL}colocando_areia.WAV`);
+    this.regolithBreak = this._createAudio(`${AUDIO_BASE_URL}quebrando_areia.WAV?v=3`);
+    this.shipBlockBreak = this._createAudio(`${AUDIO_BASE_URL}quebrando_pedra.WAV`, true);
     this.doorOpen = this._createAudio(`${AUDIO_BASE_URL}porta_abrir.wav`);
     this.doorClose = this._createAudio(`${AUDIO_BASE_URL}porta_fechar.wav`);
     this.decompression = this._createAudio(`${AUDIO_BASE_URL}descompressao.wav`);
@@ -29,6 +33,7 @@ export class AudioManager {
     this.doorCrank.preservesPitch = false;
     this.doorCrank.volume = DOOR_VOLUME;
     this.rocket.volume = ROCKET_VOLUME;
+    this.regolithPlace.volume = REGOLITH_PLACE_VOLUME;
     this._rocketFadeElapsed = null;
     this._rocketFadeStartVolume = ROCKET_VOLUME;
     this.rover.volume = LOOP_VOLUME / 2;
@@ -71,6 +76,30 @@ export class AudioManager {
 
   playDecompression() {
     this._playOneShot(this.decompression);
+  }
+
+  playRegolithPlace() {
+    this._playOneShot(this.regolithPlace);
+  }
+
+  playRegolithBreak() {
+    this.regolithBreak.currentTime = 0;
+    this._play(this.regolithBreak);
+  }
+
+  stopRegolithBreak() {
+    this.regolithBreak.pause();
+    this.regolithBreak.currentTime = 0;
+  }
+
+  playShipBlockBreak() {
+    this.shipBlockBreak.currentTime = 0;
+    this._play(this.shipBlockBreak);
+  }
+
+  stopShipBlockBreak() {
+    this.shipBlockBreak.pause();
+    this.shipBlockBreak.currentTime = 0;
   }
 
   // Abertura manual do airlock (sem energia): som mecanico pesado

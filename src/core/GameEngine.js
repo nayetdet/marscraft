@@ -302,6 +302,13 @@ export class GameEngine {
       onRoverLook: (dx, dy) => this.roverController.look(dx, dy),
       onToggleShield: () => this._toggleShield(),
       onSendData: () => this._sendScienceData(),
+      onBlockPlaced: (blockId) => {
+        if (blockId === BLOCK_IDS.REGOLITH) this.audio.playRegolithPlace();
+      },
+      onStartRegolithBreak: () => this.audio.playRegolithBreak(),
+      onStopRegolithBreak: () => this.audio.stopRegolithBreak(),
+      onStartShipBlockBreak: () => this.audio.playShipBlockBreak(),
+      onStopShipBlockBreak: () => this.audio.stopShipBlockBreak(),
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown
         || this.storyHud.isWindowClosedShown,

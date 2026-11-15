@@ -104,6 +104,53 @@ describe('AudioManager rocket sound', () => {
     expect(decompression.loop).toBe(false);
   });
 
+  it('plays the regolith placement sound as a one-shot', () => {
+    const audioInstances = stubAudio();
+    const manager = new AudioManager();
+    const regolithPlace = audioInstances.find((audio) => audio.src.includes('colocando_areia.WAV'));
+
+    regolithPlace.currentTime = 1;
+    manager.playRegolithPlace();
+
+    expect(regolithPlace.currentTime).toBe(0);
+    expect(regolithPlace.play).toHaveBeenCalledOnce();
+    expect(regolithPlace.loop).toBe(false);
+    expect(regolithPlace.volume).toBe(0.07);
+  });
+
+  it('stops the regolith breaking sound when breaking ends', () => {
+    const audioInstances = stubAudio();
+    const manager = new AudioManager();
+    const regolithBreak = audioInstances.find((audio) => audio.src.includes('quebrando_areia.WAV'));
+
+    expect(regolithBreak.src).toContain('quebrando_areia.WAV?v=3');
+    expect(regolithBreak.loop).toBe(false);
+    manager.playRegolithBreak();
+    expect(regolithBreak.currentTime).toBe(0);
+    expect(regolithBreak.play).toHaveBeenCalledOnce();
+
+    regolithBreak.currentTime = 0.6;
+    manager.stopRegolithBreak();
+    expect(regolithBreak.pause).toHaveBeenCalledOnce();
+    expect(regolithBreak.currentTime).toBe(0);
+  });
+
+  it('loops the ship block breaking sound until it is stopped', () => {
+    const audioInstances = stubAudio();
+    const manager = new AudioManager();
+    const shipBlockBreak = audioInstances.find((audio) => audio.src.includes('quebrando_pedra.WAV'));
+
+    expect(shipBlockBreak.loop).toBe(true);
+    manager.playShipBlockBreak();
+    expect(shipBlockBreak.currentTime).toBe(0);
+    expect(shipBlockBreak.play).toHaveBeenCalledOnce();
+
+    shipBlockBreak.currentTime = 1;
+    manager.stopShipBlockBreak();
+    expect(shipBlockBreak.pause).toHaveBeenCalledOnce();
+    expect(shipBlockBreak.currentTime).toBe(0);
+  });
+
   it('plays a slow, heavy door sound when the airlock is cranked open by hand (issue #79)', () => {
     const audioInstances = stubAudio();
     const manager = new AudioManager();
