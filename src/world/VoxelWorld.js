@@ -7,7 +7,7 @@ import { buildNasaSpaceshipAndBase } from './nasaSpaceshipBuilder.js';
 import { raycastVoxel } from './voxelRaycaster.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
 import { OCCLUSION_BRIGHTNESS, naturalTint, vertexOcclusion } from './voxelShading.js';
-import { createSurfaceRocks } from './surfaceRocks.js';
+import { createSurfaceRocks, removeSurfaceRocksSupportedBy } from './surfaceRocks.js';
 
 const CHUNK_SIZE = 16;
 
@@ -179,6 +179,7 @@ export class VoxelWorld {
     this.clearBreakCracks();
     // Reconstroi so o chunk do bloco (e o vizinho, se estiver na borda)
     this.setBlock(x, y, z, BLOCK_IDS.AIR, true);
+    removeSurfaceRocksSupportedBy(this.surfaceRocks, x, y, z);
     this._spawnBreakParticles(x, y, z, blockId);
     this._spawnDrop(x, y, z, blockId);
     return blockId;
