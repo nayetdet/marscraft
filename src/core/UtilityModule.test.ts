@@ -32,7 +32,7 @@ describe('north module (issue #56, part B)', () => {
     stations.harvestBaskets = { potato: 1, lettuce: 1, soy: 0 };
     utility.updateRations(U.RATION_PREP_SECONDS, false);
     expect(base.food).toBe(0);
-    utility.updateRations(U.RATION_PREP_SECONDS, true);
+    expect(utility.updateRations(U.RATION_PREP_SECONDS, true)).toBe('potato');
     expect(base.food).toBe(1);
     expect(stations.harvestBaskets).toEqual({ potato: 0, lettuce: 1, soy: 0 });
     expect(mission.battery.charge).toBeCloseTo(80 - U.RATION_PREP_POWER);

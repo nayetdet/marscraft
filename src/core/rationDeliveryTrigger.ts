@@ -1,9 +1,7 @@
-/** Choose a crop for the kitchen scene once harvested food is available during this visit. */
+/** Keep a prepared delivery pending until the player can see it in the kitchen. */
 export function rationDeliveryCropWhileInside(
   isInside: boolean,
-  waitingForCrop: boolean,
-  baskets: Record<string, number>,
+  pendingCrop: string | null,
 ): string | null {
-  if (!isInside || !waitingForCrop) return null;
-  return Object.keys(baskets).find((crop) => baskets[crop] > 0) ?? null;
+  return isInside ? pendingCrop : null;
 }

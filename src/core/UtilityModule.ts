@@ -57,6 +57,7 @@ export class UtilityModule {
     this.rationIngredients.push(type);
     this.lastRationCrop = type;
     this.rationPrepTimer = 0;
+    return type;
   }
 
   get isNight() {

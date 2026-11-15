@@ -537,7 +537,8 @@ export class GameEngine {
     this._maybePlayRationDeliveryCutscene();
     this.stations.update(dt, insideCore, this.survival, !inside);
     this.stations.updateCrewHarvest(dt, this.crew.members.some(member => member.task === 'greenhouse' && member.stationary && member.canWork));
-    this.utility.updateRations(dt, this.crew.members.some(member => member.task === 'kitchen' && member.stationary && member.canWork));
+    const deliveredCrop = this.utility.updateRations(dt, this.crew.members.some(member => member.task === 'kitchen' && member.stationary && member.canWork));
+    if (deliveredCrop) this._pendingRationDeliveryCrop = deliveredCrop;
     const cookedCrop = this.utility.updatePlayerRation(dt);
     if (cookedCrop) this._deliverPlayerRation(cookedCrop);
     this._updateShelterWater();
@@ -2261,8 +2262,7 @@ export class GameEngine {
   }
 
   _initRationVisuals() {
-    this._wasInsideRationKitchen = false;
-    this._rationKitchenWaitingForCrop = false;
+    this._pendingRationDeliveryCrop = null;
     this._rationObserver = new THREE.Group();
     this._rationObserver.visible = false;
     this._rebuildRationObserver();
@@ -2304,20 +2304,13 @@ export class GameEngine {
 
   _maybePlayRationDeliveryCutscene() {
     const inside = isInsideKitchen(this.player.pos.x, this.player.pos.y, this.player.pos.z);
-    if (!inside) {
-      this._wasInsideRationKitchen = false;
-      this._rationKitchenWaitingForCrop = false;
-      return;
-    }
-    if (!this._wasInsideRationKitchen) this._rationKitchenWaitingForCrop = true;
-    this._wasInsideRationKitchen = true;
-    const crop = rationDeliveryCropWhileInside(inside, this._rationKitchenWaitingForCrop, this.stations.harvestBaskets);
+    const crop = rationDeliveryCropWhileInside(inside, this._pendingRationDeliveryCrop);
     if (!crop || !this._arrivalPlayed || this.cutscenes.isActive) return;
     if (this.mission.storm?.phase === 'active') return;
     if (!this.input.isLocked || this.input.isPortraitRequired || this.survival.isDead) return;
     if (this.roverController.isActive || this.gymController.isActive) return;
     if (this.stationPanel.isOpen || this.hud.isInventoryOpen || this.scannerHud.isJournalOpen) return;
-    this._rationKitchenWaitingForCrop = false;
+    this._pendingRationDeliveryCrop = null;
     this._playRationDeliveryCutscene(crop);
   }
 
