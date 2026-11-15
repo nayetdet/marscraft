@@ -20,8 +20,10 @@ const TERRAIN_BLOCKS = {
   [BLOCK_IDS.SANDSTONE]: 'sandstone',
   [BLOCK_IDS.BASALT]: 'crater-rock',
   [BLOCK_IDS.MARS_ICE]: 'water-ice',
-  [BLOCK_IDS.METEOR_ICE]: 'water-ice',
+  [BLOCK_IDS.METEOR_ICE]: 'meteor-ice',
 };
+
+const ICE_TERRAIN_IDS = new Set(['water-ice', 'meteor-ice']);
 
 // Diz a qual módulo da base pertence um bloco estrutural (paredes incluídas), ou null.
 export function baseModuleAt(bx, by, bz) {
@@ -65,7 +67,7 @@ function classifyBlockAt(block, x, y, z) {
   const terrainId = TERRAIN_BLOCKS[block];
   const module = baseModuleAt(x, y, z);
   if (terrainId) {
-    if (terrainId !== 'water-ice' && Math.hypot(x, z) > SCAN_TARGETING_CONFIG.CRATER_RIM_RADIUS) return 'crater-rim';
+    if (!ICE_TERRAIN_IDS.has(terrainId) && Math.hypot(x, z) > SCAN_TARGETING_CONFIG.CRATER_RIM_RADIUS) return 'crater-rim';
     return terrainId;
   }
   if (block === BLOCK_IDS.HYDRO_PLANT) return 'greenhouse';
@@ -78,7 +80,7 @@ function classifyBlock(hit) {
 
   if (terrainId) {
     // O foguete pousa numa plataforma de basalto: ela é parte do foguete, não terreno solto.
-    if (terrainId !== 'water-ice' && Math.hypot(hit.x, hit.z) > SCAN_TARGETING_CONFIG.CRATER_RIM_RADIUS) {
+    if (!ICE_TERRAIN_IDS.has(terrainId) && Math.hypot(hit.x, hit.z) > SCAN_TARGETING_CONFIG.CRATER_RIM_RADIUS) {
       return 'crater-rim';
     }
     return terrainId;
@@ -186,6 +188,9 @@ export function resolveScanTarget({ world, origin, dir, objects = [], skyBodies 
 const BASE_REGION = { X_MIN: -24, X_MAX: 20, Y_MIN: 8, Y_MAX: 22, Z_MIN: -42, Z_MAX: 14 };
 const PATCH_RADIUS = 3; // terreno: mancha em volta do bloco mirado
 const NEIGHBORS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+const MARS_ICE_SCAN_RADIUS = 10; // Covers the natural deposit, which is 4.8 blocks from its center.
+const METEOR_ICE_SCAN_RADIUS = 20; // Covers the crater and ejecta field when aiming at its edge.
+const ICE_SCAN_VERTICAL_RADIUS = 8;
 
 function isExposed(world, x, y, z) {
   return NEIGHBORS.some(([dx, dy, dz]) => world.getBlock(x + dx, y + dy, z + dz) === BLOCK_IDS.AIR);
@@ -224,6 +229,40 @@ export function collectScanBlocks(world, target, maxBlocks = Infinity) {
 
   if (!target.hit) return blocks;
   const { x: hx, y: hy, z: hz } = target.hit;
+
+  if (target.id === 'water-ice' || target.id === 'meteor-ice') {
+    const iceType = world.getBlock(hx, hy, hz);
+    if (target.id === 'water-ice' && iceType === BLOCK_IDS.MARS_ICE) {
+      const radiusSq = MARS_ICE_SCAN_RADIUS * MARS_ICE_SCAN_RADIUS;
+      for (let x = hx - MARS_ICE_SCAN_RADIUS; x <= hx + MARS_ICE_SCAN_RADIUS; x++) {
+        for (let z = hz - MARS_ICE_SCAN_RADIUS; z <= hz + MARS_ICE_SCAN_RADIUS; z++) {
+          const dx = x - hx;
+          const dz = z - hz;
+          if (dx * dx + dz * dz > radiusSq) continue;
+          for (let y = hy - ICE_SCAN_VERTICAL_RADIUS; y <= hy + ICE_SCAN_VERTICAL_RADIUS; y++) {
+            if (world.getBlock(x, y, z) === iceType && isExposed(world, x, y, z)) add(x, y, z);
+          }
+        }
+      }
+      return blocks;
+    }
+
+    if (target.id === 'meteor-ice' && iceType === BLOCK_IDS.METEOR_ICE) {
+      const radiusSq = METEOR_ICE_SCAN_RADIUS * METEOR_ICE_SCAN_RADIUS;
+      for (let x = hx - METEOR_ICE_SCAN_RADIUS; x <= hx + METEOR_ICE_SCAN_RADIUS; x++) {
+        for (let z = hz - METEOR_ICE_SCAN_RADIUS; z <= hz + METEOR_ICE_SCAN_RADIUS; z++) {
+          const dx = x - hx;
+          const dz = z - hz;
+          if (dx * dx + dz * dz > radiusSq) continue;
+          for (let y = hy - ICE_SCAN_VERTICAL_RADIUS; y <= hy + ICE_SCAN_VERTICAL_RADIUS; y++) {
+            if (world.getBlock(x, y, z) === iceType && isExposed(world, x, y, z)) add(x, y, z);
+          }
+        }
+      }
+      return blocks;
+    }
+  }
+
   for (let x = hx - PATCH_RADIUS; x <= hx + PATCH_RADIUS; x++) {
     for (let y = hy - PATCH_RADIUS; y <= hy + PATCH_RADIUS; y++) {
       for (let z = hz - PATCH_RADIUS; z <= hz + PATCH_RADIUS; z++) {

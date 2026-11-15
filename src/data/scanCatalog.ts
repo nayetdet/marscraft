@@ -163,6 +163,17 @@ export const SCAN_CATALOG = [
     why: 'Shipping water from Earth costs a fortune. Finding ice is mission priority number one!',
     reward: { items: [{ blockId: BLOCK_IDS.MARS_ICE, count: 1 }], iceSensor: true },
   },
+  {
+    id: 'meteor-ice',
+    category: 'terrain',
+    title: 'Meteor-Exposed Ice',
+    summary: 'A recent impact exposed fresh water ice beneath the Martian surface.',
+    facts: [
+      { label: 'Formation', value: 'Shallow ice uncovered by a meteor impact', source: GAME_RULE },
+      { label: 'Resource', value: 'Water for life support and rocket fuel', source: SOURCES.marsScience },
+    ],
+    why: 'Fresh craters can reveal ice that was hidden below the surface.',
+  },
 
   // ---------- Base ----------
   {
