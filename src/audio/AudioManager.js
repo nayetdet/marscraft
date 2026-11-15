@@ -1,5 +1,7 @@
 const AUDIO_BASE_URL = `${import.meta.env.BASE_URL}audio/`;
 const LOOP_VOLUME = 0.45;
+const ROCKET_VOLUME = 0.7;
+const ROCKET_FADE_OUT_SECONDS = 1;
 
 export class AudioManager {
   constructor() {
@@ -9,11 +11,19 @@ export class AudioManager {
     };
     this.dying = this._createAudio(`${AUDIO_BASE_URL}morrendo.wav`, true);
     this.rover = this._createAudio(`${AUDIO_BASE_URL}barulho%20do%20carro.wav?v=2`, true);
-    this.rocket = this._createAudio(`${AUDIO_BASE_URL}foguete.wav`);
+    this.rocket = this._createAudio(`${AUDIO_BASE_URL}foguete.wav`, true);
+    this.sandFall = this._createAudio(`${AUDIO_BASE_URL}queda_areia.wav`);
+    this.doorOpen = this._createAudio(`${AUDIO_BASE_URL}porta_abrir.wav`);
+    this.doorClose = this._createAudio(`${AUDIO_BASE_URL}porta_fechar.wav`);
+    this.decompression = this._createAudio(`${AUDIO_BASE_URL}descompressao.wav`);
+    this.rocket.volume = ROCKET_VOLUME;
+    this._rocketFadeElapsed = null;
+    this._rocketFadeStartVolume = ROCKET_VOLUME;
     this.rover.volume = LOOP_VOLUME / 2;
     this._activeFootsteps = null;
     this._wasRoverActive = false;
     this._wasInDanger = false;
+    this._wasLandingFromJump = false;
     this._lastPosition = null;
   }
 
@@ -34,14 +44,54 @@ export class AudioManager {
     }
   }
 
+  _playOneShot(audio) {
+    audio.currentTime = 0;
+    this._play(audio);
+  }
+
+  playDoorOpen() {
+    this._playOneShot(this.doorOpen);
+  }
+
+  playDoorClose() {
+    this._playOneShot(this.doorClose);
+  }
+
+  playDecompression() {
+    this._playOneShot(this.decompression);
+  }
+
   playRocket() {
+    this._rocketFadeElapsed = null;
+    this.rocket.volume = ROCKET_VOLUME;
     this.rocket.currentTime = 0;
     this._play(this.rocket);
   }
 
+  fadeOutRocket() {
+    if (this._rocketFadeElapsed !== null) return;
+    this._rocketFadeElapsed = 0;
+    this._rocketFadeStartVolume = this.rocket.volume;
+  }
+
   stopRocket() {
+    this._rocketFadeElapsed = null;
     this.rocket.pause();
     this.rocket.currentTime = 0;
+    this.rocket.volume = ROCKET_VOLUME;
+  }
+
+  _updateRocketFade(dt) {
+    if (this._rocketFadeElapsed === null) return;
+
+    this._rocketFadeElapsed = Math.min(
+      ROCKET_FADE_OUT_SECONDS,
+      this._rocketFadeElapsed + Math.max(0, dt)
+    );
+    const progress = this._rocketFadeElapsed / ROCKET_FADE_OUT_SECONDS;
+    this.rocket.volume = this._rocketFadeStartVolume * (1 - progress);
+
+    if (this._rocketFadeElapsed >= ROCKET_FADE_OUT_SECONDS) this.stopRocket();
   }
 
   _stopFootsteps() {
@@ -51,7 +101,15 @@ export class AudioManager {
     this._activeFootsteps = null;
   }
 
-  update({ player, survival, isGameRunning, isRoverActive, roverSpeed = 0, sprinting }) {
+  update({ dt = 0, player, survival, isGameRunning, isRoverActive, roverSpeed = 0, sprinting }) {
+    this._updateRocketFade(dt);
+
+    const landedFromJump = Boolean(player.justLandedFromJump);
+    if (landedFromJump && !this._wasLandingFromJump) {
+      this._playOneShot(this.sandFall);
+    }
+    this._wasLandingFromJump = landedFromJump;
+
     const inDanger = survival.isInDanger && !survival.isDead;
     if (inDanger && !this._wasInDanger) {
       this.dying.currentTime = 0;

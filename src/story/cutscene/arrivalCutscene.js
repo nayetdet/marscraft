@@ -11,7 +11,7 @@ const _lander = [0, 0, 0];
 const _cam = [0, 0, 0];
 
 // `millionKm`: distancia Terra-Marte de hoje, em milhoes de km (CommsLink)
-export function createArrivalCutscene({ camera, lander, flame, dust, site, groundY, millionKm, onEnd }) {
+export function createArrivalCutscene({ camera, lander, flame, dust, site, groundY, millionKm, onTouchdown, onEnd }) {
   const landerKeys = [
     { t: 0, v: [site.x + 40, groundY + 150, site.z - 30] },
     { t: CHASE_END, v: [site.x + 6, groundY + 55, site.z - 5] },
@@ -57,6 +57,7 @@ export function createArrivalCutscene({ camera, lander, flame, dust, site, groun
       if (t >= 8.2 && t < TOUCHDOWN) dust.emit(dt, 30, site.x, groundY + 0.2, site.z, 5, 1.2);
       if (t >= TOUCHDOWN && !touchedDown) {
         touchedDown = true;
+        onTouchdown?.();
         dust.burstRing(site.x, groundY, site.z, 40, 7);
       }
       dust.update(dt);

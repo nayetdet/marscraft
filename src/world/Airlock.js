@@ -16,7 +16,7 @@ export class Airlock {
     this.cleanNeeded = false;
     this.cleanPossible = true;
     this.stations = null; // StationSystem, ligado pelo GameEngine (traje sujo e limpeza)
-    this.onEvent = null; // (tipo) => void: 'suit-cleaned' | 'clean-skipped'
+    this.onEvent = null; // Emits door and suit-cleaning events.
     this.doors = [this.makeDoor(scene, 6.15, 'inner'), this.makeDoor(scene, 8.85, 'outer')];
     this.vapor = new THREE.Group();
     const vaporMaterial = new THREE.MeshBasicMaterial({ color: 0xbfe2ed, transparent: true, opacity: 0.5, depthWrite: false });
@@ -69,11 +69,14 @@ export class Airlock {
     if (this.pending) return 'Airlock cycling. Please wait.';
     if (door.target === 1) {
       if (Math.abs(player.z - door.z) < 0.8 && player.x > -1.4 && player.x < 2.4) return 'Move clear of the door.';
-      door.target = 0; return 'Closing airlock door.';
+      door.target = 0;
+      this.onEvent?.('door-close');
+      return 'Closing airlock door.';
     }
     const other = this.doors.find(d => d !== door);
     if (other.openness > 0 && Math.abs(player.z - other.z) < 0.8 && player.x > -1.4 && player.x < 2.4) return 'Move clear of the other door.';
     if (!this.mission.spend(C.AIRLOCK_COST)) return 'Not enough energy for the airlock.';
+    if (other.target !== 0) this.onEvent?.('door-close');
     other.target = 0;
     this.pending = door;
     this.stepIndex = 0;
@@ -114,7 +117,9 @@ export class Airlock {
   }
 
   _startStep() {
-    if (this.steps[this.stepIndex] !== 'clean') return;
+    const step = this.steps[this.stepIndex];
+    if (step === 'depressurize') this.onEvent?.('depressurize');
+    if (step !== 'clean') return;
     this.cleanNeeded = Boolean(this.stations?.dirtySuit);
     this.cleanPossible = this.mission.energy >= STATION_CONFIG.DECONTAMINATION_COST;
   }
@@ -132,8 +137,7 @@ export class Airlock {
   _advance(dt) {
     const step = this.steps[this.stepIndex];
     if (step === 'close') {
-      const other = this.doors.find(d => d !== this.pending);
-      if (other.openness > 0) return;
+      if (this.doors.some((door) => door.openness > 0)) return;
     } else {
       this.stepTime += dt;
       if (this.stepTime < this._stepDuration(step)) return;
@@ -143,6 +147,7 @@ export class Airlock {
     this.stepTime = 0;
     if (this.stepIndex >= this.steps.length) {
       this.pending.target = 1;
+      this.onEvent?.('door-open');
       this.pending = null;
       this.steps = [];
       return;
