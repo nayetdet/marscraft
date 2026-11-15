@@ -41,13 +41,55 @@ export class CrewMember {
 // Tripulacao NPC: necessidades (do estoque compartilhado da base), ordens, estacoes e avisos.
 // Sem Three.js nem DOM. O tempo chega em horas de jogo; o cooldown dos avisos, em segundos reais.
 export class CrewManager {
-  constructor({ size, stations, base }) {
+  constructor({ size, stations, base, ambient = false }) {
     const count = Math.max(1, Math.min(CREW_CONFIG.MAX_CREW, size));
     this.members = CREW_CONFIG.NAMES.slice(0, count).map((name, i) => new CrewMember(i, name, CREW_CONFIG.ROLES[i]));
     this.stations = stations;
     this.base = base;
     this.events = [];
     this._lastAlertAt = new Map();
+    this.ambient = ambient;
+    if (!ambient) return;
+    // Roamers use corridor and exploration nodes only; fixed station nodes are never destinations.
+    const roamingZones = [
+      ['quarters', 'dormLink', 'dormDoor'],
+      ['tunnelWest', 'tunnelEast', 'hub'],
+      ['dormDoor', 'hub', 'tunnelEast'],
+      ['tunnelWest', 'tunnelEast', 'dormLink'],
+    ];
+    const fixedStations = ['oxygen', 'greenhouse', 'water', 'medbay'];
+    this.members.forEach((member, index) => {
+      const fixed = index < fixedStations.length;
+      const destination = fixed ? fixedStations[index] : 'rest';
+      member.stationary = fixed;
+      member.dialogue = {
+        oxygen: 'This oxygen generator splits water into breathable oxygen and hydrogen. It needs power to run.',
+        greenhouse: 'Plants grow food here, but they need water, warmth, and light.',
+        water: 'The recycler cleans used water so the habitat can use it again.',
+        medbay: 'The medbay is where we check our health and recover after a tough trip outside.',
+        rest: 'The habitat protects us from the cold, thin air, and radiation outside.',
+      }[destination];
+      member.ambientPause = 0;
+      member.task = destination;
+      if (fixed) {
+        // Spawn fixed crew directly at their post; they should never walk there.
+        member.node = TASK_NODE[destination];
+        member.route = [member.node];
+        member.routeLength = 0;
+      } else {
+        const zoneIndex = index - fixedStations.length;
+        member.ambientNodes = roamingZones[zoneIndex % roamingZones.length];
+        // Start in separate corners, then circulate within each roamer's own area.
+        const starts = ['quarters', 'tunnelWest', 'dormDoor', 'tunnelEast'];
+        const stops = ['dormDoor', 'tunnelEast', 'hub', 'tunnelWest'];
+        member.node = starts[zoneIndex % starts.length];
+        const firstStop = stops[zoneIndex % stops.length];
+        member.route = findRoute(member.node, firstStop);
+        member.routeLength = routeLength(member.route);
+      }
+      member.distance = 0;
+      member.state = member.routeLength > 0 ? 'walking' : 'resting';
+    });
   }
 
   stationFor(task) {
@@ -86,11 +128,25 @@ export class CrewManager {
 
   updateMovement(dtSeconds) {
     for (const member of this.members) {
-      if (member.state !== 'walking') continue;
+      if (this.ambient && member.stationary) continue;
+      if (member.state !== 'walking') {
+        if (!this.ambient) continue;
+        member.ambientPause = (member.ambientPause ?? 0) + dtSeconds;
+        if (member.ambientPause >= 4) {
+          member.ambientPause = 0;
+          const choices = member.ambientNodes.filter((destination) => destination !== member.node);
+          const destination = choices[Math.floor(Math.random() * choices.length)];
+          member.route = findRoute(member.node, destination);
+          member.routeLength = routeLength(member.route);
+          member.distance = 0;
+          member.state = member.routeLength > 0 ? 'walking' : 'resting';
+        }
+        continue;
+      }
       member.distance = Math.min(member.routeLength, member.distance + CREW_CONFIG.WALK_SPEED * dtSeconds);
       if (member.distance >= member.routeLength) {
         member.node = member.route.at(-1);
-        member.state = member.dutyState;
+        member.state = this.ambient ? 'resting' : member.dutyState;
       }
     }
   }
