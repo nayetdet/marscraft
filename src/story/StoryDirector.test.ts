@@ -194,7 +194,8 @@ describe('StoryDirector', () => {
     expect(director.windowHoursLeft).toBeCloseTo(WINDOW);
     const events = director.drainEvents();
     expect(events.filter((e) => e.type === 'start-storms')).toHaveLength(1);
-    expect(events.some((e) => e.type === 'card' && /FILL THE ROCKET/.test(e.card.title))).toBe(true);
+    // O card da rotina e, logo depois, o que ensina a luneta (o passo scan saiu do ato 1)
+    expect(events.filter((e) => e.type === 'card').map((e) => e.card.title)).toEqual(['FILL THE ROCKET', 'USE YOUR SCOPE']);
 
     director.update(snap({ hours: 16.3, iceNeeded: 5 }));
     expect(director.drainEvents().filter((e) => e.type === 'start-storms')).toHaveLength(0);
