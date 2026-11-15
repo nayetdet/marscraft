@@ -143,14 +143,6 @@
           <b class="res-value">LOW</b>
           <span class="res-key" title="Radiation shield: use the Shield Remote in your hotbar">S</span>
         </div>
-        <!-- Dose acumulada (issue #104): comeca com a viagem ate Marte e so sobe -->
-        <div id="res-dose" class="res-row" data-icon="radiation" title="Dose is how much radiation your body has collected. It only goes up. NASA limit: 600 mSv.">
-          <span class="res-icon"></span>
-          <span class="res-name">DOSE</span>
-          <span class="res-meter"><i class="res-fill"></i></span>
-          <b class="res-value">60%</b>
-          <span class="res-trend"></span>
-        </div>
         <div id="res-weather" class="res-weather" title="Outside air: real NASA InSight weather. Dust: how dusty the solar panels are.">
           <span>OUTSIDE <b id="res-weather-temp">-60 C</b></span>
           <span id="res-weather-dust" class="res-dust">PANELS CLEAN</span>
@@ -307,11 +299,15 @@
       <div id="toast" class="mc-toast"></div>
       <div id="selected-block-name" class="mc-item-name">Martian Regolith</div>
 
-      <!-- Barras de Status Estilo Minecraft (Oxigenio, Vida, Agua, Comida) -->
+      <!-- Barras de Status Estilo Minecraft (Dose, Oxigenio, Vida, Agua, Comida) -->
       <div class="mc-status-band">
         <div class="mc-status-container">
           <div class="mc-status-col left">
             <div id="suit-thermal" class="suit-thermal">SUIT HEAT 100%</div>
+            <div class="mc-bar-row">
+              <span class="mc-bar-label">DOSE</span>
+              <div id="radiation-bar" class="mc-icon-row" role="meter" aria-label="Radiation dose" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0% of the NASA career limit"></div>
+            </div>
             <div class="mc-bar-row">
               <span class="mc-bar-label">OXYGEN</span>
               <div id="oxygen-bar" class="mc-icon-row"></div>

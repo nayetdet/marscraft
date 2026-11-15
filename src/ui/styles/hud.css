@@ -698,6 +698,8 @@
   min-width: 44px;
 }
 
+.mc-status-col.left .mc-bar-label { flex: 0 0 52px; min-width: 52px; }
+
 .mc-bar-row.right-align .mc-bar-label {
   text-align: right;
 }
@@ -730,6 +732,8 @@
   stroke: none;
 }
 
+.mc-stat-icon svg rect { fill: currentColor; }
+
 .mc-stat-icon.empty { color: #55514b; }
 .mc-stat-icon.half { opacity: .62; }
 .mc-stat-icon.heart.full { color: #dc3540; }
@@ -737,6 +741,9 @@
 .mc-stat-icon.water.full { color: #3982df; }
 .mc-stat-icon.food.full { color: #d98738; }
 .mc-stat-icon.energy.full { color: #f2d43d; }
+#radiation-bar[data-tone="ok"] .mc-stat-icon.radiation:not(.empty) { color: var(--hud-good); }
+#radiation-bar[data-tone="warn"] .mc-stat-icon.radiation:not(.empty) { color: var(--hud-warn); }
+#radiation-bar[data-tone="danger"] .mc-stat-icon.radiation:not(.empty) { color: var(--hud-danger); }
 
 /* Painel da base no canto superior direito (estilo jogos de gestao + tooltip do Minecraft):
    cada recurso = icone, nome, barra, valor e tendencia. Alertas aparecem embaixo so quando
@@ -840,14 +847,6 @@
 #res-water.danger .res-value, #res-air.danger .res-value { color: var(--hud-danger); animation: mission-blink 1s steps(2, end) infinite; }
 #res-water.danger .res-fill, #res-air.danger .res-fill { background: var(--hud-danger); }
 .res-trend.dry { color: #c7743a; animation: mission-blink 1s steps(2, end) infinite; }
-
-/* Dose acumulada (issue #104): roxa, amarela perto do limite, vermelha acima dele */
-#res-dose .res-icon, #res-dose .res-value { color: #d58cff; }
-#res-dose .res-fill { background: #b061e8; }
-#res-dose.warn .res-value { color: #ffd23f; }
-#res-dose.warn .res-fill { background: #ffd23f; }
-#res-dose.danger .res-value, #res-dose.danger .res-icon { color: #ff4b4b; animation: mission-blink 1s steps(2, end) infinite; }
-#res-dose.danger .res-fill { background: #ff4b4b; }
 
 /* "+12 L" / "-2 L" saindo da linha da agua, para a esquerda do painel */
 .res-row { position: relative; }
@@ -994,6 +993,7 @@
   .mc-icon-row { gap: 2px; }
   .mc-stat-icon { width: 12px; height: 12px; }
   .mc-bar-label { min-width: 38px; font-size: 10px; }
+  .mc-status-col.left .mc-bar-label { flex-basis: 46px; min-width: 46px; }
   .mc-slot { width: 36px; height: 36px; }
   .mc-slot-icon { width: 25px; height: 25px; }
 }

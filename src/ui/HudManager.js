@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { airlockProgress } from './airlockProgress.js';
 import { roverBatteryText } from '../rover/roverText.js';
 import { getDamageFeedback, getDeathReport } from '../player/deathReport.js';
 import { getSuitTelemetryView } from '../player/suitTelemetry.js';
 import { InventorySuitPreview } from './InventorySuitPreview.js';
+import { DOSE_LIMIT_MSV, dosePercent, doseTone } from '../mission/doseBudget.js';
 
 const ICONS_PER_BAR = 10;
 
@@ -15,6 +16,7 @@ const STAT_ICON_PATHS = {
   water: '<path d="M3 0h2v1h1v1h1v1h1v3H7v1H6v1H2V7H1V6H0V3h1V2h1V1h1Z"/>',
   energy: '<path d="M4 0h3v1H6v2h2v1H7v1H6v1H5v1H4v1H3V6h1V5H1V4h1V3h1V2h1Z"/>',
   food: '<path d="M1 0h3v1h1v1h1v2H5v2H4v1H2V5H1V3H0V1h1Z M6 5h2v3H6Z"/>',
+  radiation: '<rect x="1" y="0" width="2" height="1"/><rect x="5" y="0" width="2" height="1"/><rect x="0" y="1" width="3" height="2"/><rect x="5" y="1" width="3" height="2"/><rect x="3" y="3" width="2" height="2"/><rect x="2" y="5" width="4" height="1"/><rect x="1" y="6" width="6" height="1"/><rect x="2" y="7" width="4" height="1"/>',
 };
 
 export class HudManager {
@@ -68,6 +70,7 @@ export class HudManager {
     this.isInventoryOpen = false;
 
     this.healthBarEl = document.getElementById('health-bar');
+    this.radiationBarEl = document.getElementById('radiation-bar');
     this.oxygenBarEl = document.getElementById('oxygen-bar');
     this.suitThermalEl = document.getElementById('suit-thermal');
     this.waterBarEl = document.getElementById('water-bar');
@@ -79,6 +82,7 @@ export class HudManager {
       this._createIconBar(this.waterBarEl, 'water'),
       this._createIconBar(this.foodBarEl, 'food'),
     ];
+    this.radiationDoseBar = this._createIconBar(this.radiationBarEl, 'radiation');
     this.airlockEl = document.getElementById('airlock-progress');
     this.airlockTitleEl = this.airlockEl.querySelector('.airlock-progress-title');
     this.airlockFillEl = this.airlockEl.querySelector('.airlock-progress-track i');
@@ -512,6 +516,19 @@ export class HudManager {
     }
   }
 
+  _updateRadiationDoseBar(mission) {
+    const totalDose = mission?.totalDoseMsv ?? 0;
+    const percent = Math.max(0, Math.min(100, dosePercent(totalDose)));
+    this._updateIconBar(this.radiationDoseBar, percent / 5);
+
+    const tone = doseTone(totalDose);
+    if (this.radiationBarEl.dataset.tone !== tone) this.radiationBarEl.dataset.tone = tone;
+    if (this.radiationBarEl.getAttribute('aria-valuenow') !== String(percent)) {
+      this.radiationBarEl.setAttribute('aria-valuenow', String(percent));
+      this.radiationBarEl.setAttribute('aria-valuetext', `${percent}% of the ${DOSE_LIMIT_MSV} mSv NASA career limit`);
+    }
+  }
+
   // Barra do ciclo do airlock: so reescreve o DOM quando algo muda
   _updateAirlock(airlock) {
     const view = airlockProgress(airlock?.status() ?? null);
@@ -748,6 +765,7 @@ export class HudManager {
     // Atualiza barras de status Survival estilo Minecraft
     const [healthBar, oxygenBar, waterBar, foodBar] = this.statBars;
     this._updateIconBar(healthBar, survival.health);
+    this._updateRadiationDoseBar(mission);
     this._updateIconBar(oxygenBar, survival.oxygen);
     const thermalText = survival.suitEquipped
       ? `SUIT HEAT ${Math.ceil(survival.suitThermal)}%`
