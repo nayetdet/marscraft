@@ -116,6 +116,9 @@ export const MISSION_CONFIG = {
   // Limpeza eletrostatica do traje no airlock (segundos). Sem energia, o aviso fica na tela
   // SUIT_CLEAN_SKIP_TIME e a poeira entra na base. Ver docs/data/airlock-e-poeira.md
   SUIT_CLEAN_TIME: 0.8, SUIT_CLEAN_SKIP_TIME: 0.6,
+  // Sem energia para o ciclo (AIRLOCK_COST), a porta abre na manivela: nunca tranca o jogador
+  // la fora, mas demora estes segundos a mais (issue #79). Escala de jogo.
+  AIRLOCK_MANUAL_EXTRA_SECONDS: 3,
 
   // Hora de jogo por segundo real (igual a MarsSkySystem.autoAdvanceSpeed): 1 hora de jogo
   // = 100 s reais e 1 sol de 24 h = 40 min reais. Toda taxa "por hora" do jogo usa este relogio.

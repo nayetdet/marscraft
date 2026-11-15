@@ -102,11 +102,100 @@ describe('airlock', () => {
     expect(events).toEqual(['clean-skipped', 'door-open']);
   });
 
-  it('refuses a cycle with no power', () => {
+  // Segundos ate a porta pedida abrir por completo, com o jogador parado em `player`
+  const secondsToOpen = (airlock, door, player) => {
+    airlock.request(door, player);
+    let elapsed = 0;
+    while (door.openness < 1 && elapsed < 30) {
+      airlock.update(0.05, player);
+      elapsed += 0.05;
+    }
+    return elapsed;
+  };
+  // Airlock com o jogador na camara e a porta de dentro aberta, pronto para sair para Marte
+  const readyToLeave = (energy) => {
+    const mission = new ExpeditionState();
+    const airlock = new Airlock(new THREE.Scene(), [], mission);
+    airlock.request(airlock.doors[0], away);
+    run(airlock, away, 2);
+    mission.energy = energy;
+    return { mission, airlock };
+  };
+
+  it('never locks the player out: with no power the door opens by hand, 3 s slower (issue #79)', () => {
+    expect(C.AIRLOCK_MANUAL_EXTRA_SECONDS).toBe(3);
+
+    // Saindo: da camara para Marte
+    const powered = readyToLeave(50);
+    const dead = readyToLeave(0);
+    const poweredOut = secondsToOpen(powered.airlock, powered.airlock.doors[1], inChamber);
+    const manualOut = secondsToOpen(dead.airlock, dead.airlock.doors[1], inChamber);
+    expect(powered.airlock.doors[1].openness).toBe(1);
+    expect(dead.airlock.doors[1].openness).toBe(1);
+    expect(manualOut - poweredOut).toBeCloseTo(C.AIRLOCK_MANUAL_EXTRA_SECONDS, 1);
+    expect(powered.mission.energy).toBe(50 - C.AIRLOCK_COST);
+    expect(dead.mission.energy).toBe(0);
+
+    // Voltando: de fora, com a base sem energia, abre a porta externa e depois a interna
+    dead.airlock.request(dead.airlock.doors[1], outside); // fecha a porta externa atras de si
+    run(dead.airlock, outside, 1);
+    expect(dead.airlock.doors[1].openness).toBe(0);
+    const manualBackOuter = secondsToOpen(dead.airlock, dead.airlock.doors[1], outside);
+    expect(dead.airlock.doors[1].openness).toBe(1);
+    expect(manualBackOuter).toBeGreaterThanOrEqual(C.AIRLOCK_MANUAL_EXTRA_SECONDS);
+
+    const manualIn = secondsToOpen(dead.airlock, dead.airlock.doors[0], inChamber);
+    powered.airlock.request(powered.airlock.doors[1], outside);
+    run(powered.airlock, outside, 1);
+    secondsToOpen(powered.airlock, powered.airlock.doors[1], outside);
+    const poweredIn = secondsToOpen(powered.airlock, powered.airlock.doors[0], inChamber);
+    expect(dead.airlock.doors[0].openness).toBe(1);
+    expect(manualIn - poweredIn).toBeCloseTo(C.AIRLOCK_MANUAL_EXTRA_SECONDS, 1);
+  });
+
+  it('tells the player and the HUD that the door is being cranked by hand', () => {
     const mission = new ExpeditionState();
     mission.energy = 0;
     const airlock = new Airlock(new THREE.Scene(), [], mission);
-    expect(airlock.request(airlock.doors[0], away)).toMatch(/energy/);
+    const events = [];
+    airlock.onEvent = (type) => events.push(type);
+    airlock.pressurized = false;
+
+    expect(airlock.request(airlock.doors[1], outside)).toMatch(/by hand/);
+    expect(airlock.manual).toBe(true);
+    run(airlock, outside, C.AIRLOCK_MANUAL_EXTRA_SECONDS / 2);
+    expect(airlock.status()).toMatchObject({ step: 'manual', manual: true });
+    expect(airlock.doors[1].openness).toBe(0);
+    expect(events).toEqual(['manual-open']);
+    run(airlock, outside, C.AIRLOCK_MANUAL_EXTRA_SECONDS);
+    expect(airlock.doors[1].openness).toBe(1);
+    expect(events).toEqual(['manual-open', 'door-open']);
+
+    // Com energia de novo o ciclo volta ao normal, sem manivela
+    mission.energy = 50;
+    airlock.request(airlock.doors[1], outside); // fecha
+    run(airlock, outside, 1);
+    expect(airlock.request(airlock.doors[1], outside)).not.toMatch(/by hand/);
+    expect(airlock.manual).toBe(false);
+    expect(airlock.steps).not.toContain('manual');
+  });
+
+  it('entering by hand still lets the dust in: no power means no suit cleaning', () => {
+    const mission = new ExpeditionState();
+    const stations = new StationSystem(mission);
+    const events = [];
+    const airlock = new Airlock(new THREE.Scene(), [], mission);
+    airlock.stations = stations;
+    airlock.onEvent = (type) => events.push(type);
+    airlock.pressurized = false;
+    stations.dirtySuit = true;
+    mission.energy = 0;
+
+    airlock.request(airlock.doors[0], inChamber);
+    run(airlock, inChamber, 8);
+    expect(airlock.doors[0].openness).toBe(1);
+    expect(stations.dirtySuit).toBe(true);
+    expect(events).toEqual(['clean-skipped', 'manual-open', 'door-open']);
   });
 });
 

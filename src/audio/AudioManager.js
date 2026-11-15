@@ -2,6 +2,8 @@ const AUDIO_BASE_URL = `${import.meta.env.BASE_URL}audio/`;
 const LOOP_VOLUME = 0.45;
 const ROCKET_VOLUME = 0.7;
 const ROCKET_FADE_OUT_SECONDS = 1;
+// Manivela do airlock sem energia: o som da porta tocado devagar fica grave e pesado
+const CRANK_PLAYBACK_RATE = 0.45;
 
 export class AudioManager {
   constructor() {
@@ -16,6 +18,10 @@ export class AudioManager {
     this.doorOpen = this._createAudio(`${AUDIO_BASE_URL}porta_abrir.wav`);
     this.doorClose = this._createAudio(`${AUDIO_BASE_URL}porta_fechar.wav`);
     this.decompression = this._createAudio(`${AUDIO_BASE_URL}descompressao.wav`);
+    this.doorCrank = this._createAudio(`${AUDIO_BASE_URL}porta_fechar.wav`);
+    this.doorCrank.playbackRate = CRANK_PLAYBACK_RATE;
+    this.doorCrank.preservesPitch = false;
+    this.doorCrank.volume = 0.9;
     this.rocket.volume = ROCKET_VOLUME;
     this._rocketFadeElapsed = null;
     this._rocketFadeStartVolume = ROCKET_VOLUME;
@@ -59,6 +65,11 @@ export class AudioManager {
 
   playDecompression() {
     this._playOneShot(this.decompression);
+  }
+
+  // Abertura manual do airlock (sem energia): som mecanico pesado
+  playManualCrank() {
+    this._playOneShot(this.doorCrank);
   }
 
   playRocket() {
