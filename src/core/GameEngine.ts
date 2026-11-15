@@ -2008,6 +2008,8 @@ export class GameEngine {
         && !this.storyHud.isWindowClosedShown
         && !this.sleep.isPanelOpen
         && !this.sleep.isSleeping;
+      if (this._wasGameRunning && !isGameRunning) this.player.stopJumpMomentum();
+      this._wasGameRunning = isGameRunning;
       if (isGameRunning) {
         if (this.roverController.isActive) {
           if (this.scanHighlight.mesh) this.scanHighlight.clear();

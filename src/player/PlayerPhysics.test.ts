@@ -62,6 +62,19 @@ describe('PlayerPhysics', () => {
     expect(fallingPlayer.justLandedFromJump).toBe(false);
   });
 
+  it('clears upward jump momentum when the game is paused', () => {
+    const player = new PlayerPhysics(createMockWorld());
+    player.pos.set(0, 20, 0);
+    player.vel.y = PHYSICS_CONFIG.JUMP_SPEED;
+    player._jumpInProgress = true;
+
+    player.stopJumpMomentum();
+    player.update(0.05, {});
+
+    expect(player.vel.y).toBeLessThan(0);
+    expect(player._jumpInProgress).toBe(false);
+  });
+
   it('sprints with the sprint flag or Shift, and walks otherwise', () => {
     const player = new PlayerPhysics(createMockWorld());
     player.yaw = 0;
