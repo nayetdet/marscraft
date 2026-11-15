@@ -1,8 +1,54 @@
 // @ts-nocheck
 import { describe, it, expect } from 'vitest';
-import { Battery, solarChargePerHour, sunElevation } from './energy.ts';
-import { DUST_WEATHER_CONFIG, ENERGY_CONFIG } from '../config/constants.ts';
+import { Battery, batteryAtSunrise, solarChargePerHour, sunElevation } from './energy.ts';
+import { DUST_WEATHER_CONFIG, ENERGY_CONFIG, MISSION_CONFIG, UTILITY_CONFIG } from '../config/constants.ts';
+import { MissionSystem } from './MissionSystem.ts';
 import { DustWeather } from './dustWeather.ts';
+
+// Issue #420: a previsao do card LIGHTS ON x LIGHTS OFF tem que bater com a bateria de verdade
+describe('batteryAtSunrise (night forecast)', () => {
+  const SUNSET = ENERGY_CONFIG.SUNSET_WARNING_HOUR;
+  const BASE = 5; // % por hora que a base gasta sem a luz da estufa (numero do teste)
+  const LIGHTS = UTILITY_CONFIG.GREENHOUSE_LIGHTS_PER_HOUR;
+
+  // A noite de verdade: o MissionSystem carrega com o Sol e a base gasta a cada passo
+  function playNight(drainPerHour, charge) {
+    const mission = new MissionSystem({ cmes: [], startHours: SUNSET, stormsStarted: false });
+    mission.battery.charge = charge;
+    const step = MISSION_CONFIG.MAX_STEP_HOURS;
+    const end = 24 + MISSION_CONFIG.SUNRISE_HOUR;
+    const steps = Math.round((end - SUNSET) / step);
+    for (let i = 1; i <= steps; i++) {
+      mission.update(SUNSET + i * step, { insideHabitat: true, active: false });
+      mission.battery.drain(drainPerHour * step);
+    }
+    return mission.battery.charge;
+  }
+
+  it('matches the real battery at sunrise, with the greenhouse lights on and off', () => {
+    for (const drain of [BASE, BASE + LIGHTS]) {
+      // A poeira de agora entra na conta, como no jogo (Act3Controller.nightForecast)
+      const weatherFactor = new MissionSystem({ cmes: [], startHours: SUNSET, stormsStarted: false }).dustWeather.solarFactor;
+      const forecast = batteryAtSunrise({ charge: 90, timeOfDay: SUNSET, drainPerHour: drain, weatherFactor });
+      expect(Math.abs(forecast - playNight(drain, 90))).toBeLessThanOrEqual(1);
+      expect(forecast).toBeGreaterThan(0);
+      expect(forecast).toBeLessThan(90);
+    }
+  });
+
+  it('lights on all night cost their hourly rate times the hours until sunrise', () => {
+    const on = batteryAtSunrise({ charge: 90, timeOfDay: SUNSET, drainPerHour: BASE + LIGHTS });
+    const off = batteryAtSunrise({ charge: 90, timeOfDay: SUNSET, drainPerHour: BASE });
+    expect(off - on).toBeCloseTo(LIGHTS * (24 + MISSION_CONFIG.SUNRISE_HOUR - SUNSET), 1);
+  });
+
+  it('never goes below empty or above full, and takes a drain that changes with the hour', () => {
+    expect(batteryAtSunrise({ charge: 10, timeOfDay: SUNSET, drainPerHour: 50 })).toBe(0);
+    expect(batteryAtSunrise({ charge: 100, timeOfDay: 9, drainPerHour: 0 })).toBe(100);
+    const colder = batteryAtSunrise({ charge: 90, timeOfDay: 20, drainPerHour: (elapsed) => (elapsed > 5 ? 4 : 2) });
+    expect(colder).toBeCloseTo(90 - 5 * 2 - 5 * 4, 0);
+  });
+});
 
 describe('sunElevation', () => {
   it('is zero at night and peaks at noon', () => {

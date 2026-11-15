@@ -157,7 +157,7 @@ export class MissionLogFeed {
     }
     if (stations.harvestCount !== this._harvests) {
       this._harvests = stations.harvestCount;
-      this.log.consequence('Harvest! Fresh food from the greenhouse makes the crew work faster.', { hours, causeKey: 'plant', weight: 1 });
+      this.log.consequence('Harvest! The cook can turn each plant into a ration for the crew.', { hours, causeKey: 'plant', weight: 1 });
     }
   }
 

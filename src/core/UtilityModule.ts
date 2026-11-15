@@ -1,13 +1,18 @@
 // @ts-nocheck
-import { BLOCK_IDS } from '../config/blockTypes.ts';
+import { BLOCK_IDS, CROP_ITEM_IDS } from '../config/blockTypes.ts';
 import { CREW_CONFIG, ENERGY_CONFIG, MISSION_CONFIG, STATION_CONFIG, UTILITY_CONFIG as U } from '../config/constants.ts';
 import { OXYGEN_MODE_INFO } from '../mission/oxygenPlant.ts';
 import { coldFraction, outsideTemperatureC } from '../data/marsWeather.ts';
 
+// Plantas que a crianca pode entregar ao cozinheiro: as 3 culturas colhidas na estufa. A cenoura
+// de Marte que ja vem na mochila nao conta: ela e o lanche de emergencia, comido direto.
+const PLAYER_CROPS = Object.entries(CROP_ITEM_IDS);
+
 // Regras do modulo norte (issue #56, parte B). Sem DOM nem Three.js, para testar com Vitest.
 // Nenhuma acao e de graca: tudo cobra energia, agua, comida da despensa ou regolito.
 //   B1/B2 energia e aquecimento: aquecedor, luz da estufa e corte de carga
-//   B3 cozinha: racao (acaba, e a tripulacao come da mesma despensa) x refeicao fresca
+//   B3 cozinha: racao (acaba, e a tripulacao come da mesma despensa); a planta colhida vira racao
+//      com o cozinheiro, sem painel (ato 3, #409)
 //   B4 reciclador de agua: a agua cinza (cozinha, plantas, beber) volta limpa sozinha, gastando
 //      bateria. Sem bateria ou com os canos congelados ele para. (O banheiro e a oficina sairam
 //      no corte de escopo de 15/11/2026.)
@@ -15,7 +20,7 @@ export class UtilityModule {
   constructor({ mission, survival, stations, base }) {
     this.mission = mission; // MissionSystem (bateria, escudo, fabrica)
     this.survival = survival; // jogador, agua da base, inventario
-    this.stations = stations; // StationSystem (filtro de CO2, comida fresca)
+    this.stations = stations; // StationSystem (filtro de CO2, cestos da colheita)
     this.base = base; // estoque da tripulacao (racoes, agua cinza)
     this.heaterOn = true;
     this.greenhouseLightsOn = true;
@@ -30,6 +35,9 @@ export class UtilityModule {
     this.lastRationCrop = null;
     this.rationIngredients = [];
     this.eatenRationCrop = null;
+    // Racao que o cozinheiro esta preparando com a planta da crianca: { crop, timer } ou null
+    this.playerRation = null;
+    this.playerRationsMade = 0; // racoes feitas com planta entregue pela crianca (ato 3)
   }
 
   // One harvested item becomes one ration. Processing consumes battery power.
@@ -62,7 +70,12 @@ export class UtilityModule {
   // % de bateria por hora de jogo que o aquecedor gasta agora. Cresce com o frio la fora: do
   // HEATER_DAY_PER_HOUR no ar mais quente do InSight ate o HEATER_NIGHT_PER_HOUR no mais frio.
   get heaterRatePerHour() {
-    const temp = this.outsideTempC;
+    return this.heaterRateAt(this.mission.lastHours);
+  }
+
+  // O mesmo gasto na hora `hours` do relogio da missao (previsao da noite, issue #420)
+  heaterRateAt(hours) {
+    const temp = Number.isFinite(hours) ? outsideTemperatureC(hours) : null;
     const rate = temp === null
       ? (this.isNight ? U.HEATER_NIGHT_PER_HOUR : U.HEATER_DAY_PER_HOUR)
       : U.HEATER_DAY_PER_HOUR + (U.HEATER_NIGHT_PER_HOUR - U.HEATER_DAY_PER_HOUR) * coldFraction(temp);
@@ -161,6 +174,21 @@ export class UtilityModule {
     ];
   }
 
+  // Previsao da noite (issue #420): % de bateria por hora de jogo que a base gasta com tudo como
+  // esta agora, SEM a luz da estufa e SEM o aquecedor (ele muda com o frio: `heaterRateAt`). O ar
+  // da tripulacao (primeira linha de `loads`) sai primeiro do RTG (issue #85): so o que passar
+  // dele pesa na bateria.
+  steadyDrainPerHour(counts) {
+    const rows = this.loads(counts);
+    let total = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const [, rate, on, id] = rows[i];
+      if (!on || id === 'lights' || id === 'heater') continue;
+      total += i === 0 ? Math.max(0, rate - ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR) : rate;
+    }
+    return total;
+  }
+
   eatRation() {
     const s = this.survival;
     if (this.base.food < 1) return 'The pantry is empty! Grow food in the greenhouse.';
@@ -200,18 +228,44 @@ export class UtilityModule {
     };
   }
 
-  cookMeal() {
+  // Ato 3 (#409): a crianca entrega 1 planta colhida ao cozinheiro com [F], sem painel. Ele gasta
+  // a planta e bateria (RATION_PREP_POWER) e a racao fica pronta em RATION_PREP_SECONDS
+  // (`updatePlayerRation`). Uma racao por vez. Devolve { ok, reason, crop, message }.
+  startPlayerRation() {
     const s = this.survival;
-    if (s.countItem(BLOCK_IDS.HYDRO_PLANT) < 1) return 'You need a carrot from the greenhouse to cook.';
-    if (s.baseWater < U.MEAL_WATER_L) return 'Not enough water in the base tank.';
-    if (this.cold) return 'The kitchen water is frozen. Turn the heater on.';
-    if (!this.mission.battery.spend(U.MEAL_POWER)) return 'Not enough power to cook.';
-    s.removeItems(BLOCK_IDS.HYDRO_PLANT, 1);
-    s.baseWater -= U.MEAL_WATER_L;
-    this.base.graywater += U.MEAL_WATER_L;
-    s.food = s.maxStat;
-    s.health = Math.min(s.maxStat, s.health + U.MEAL_HEAL);
-    this.stations.freshFood = STATION_CONFIG.FRESH_FOOD_DURATION;
-    return 'Cooked a fresh meal: full and healthy, and you work faster for a while!';
+    if (this.playerRation) return { ok: false, reason: 'busy', message: 'Your ration is still cooking.' };
+    const crop = PLAYER_CROPS.find((entry) => entry[0] === this.playerCrop());
+    if (!crop) return { ok: false, reason: 'no-plant', message: 'You have no harvested plant to cook.' };
+    if (!this.mission.battery.spend(U.RATION_PREP_POWER)) {
+      return { ok: false, reason: 'power', message: 'Not enough power to cook a ration.' };
+    }
+    s.removeItems(crop[1], 1);
+    this.playerRation = { crop: crop[0], timer: 0 };
+    return { ok: true, crop: crop[0], message: `Cooking your ${crop[0]}: ready in ${U.RATION_PREP_SECONDS} seconds.` };
+  }
+
+  // Planta colhida que a crianca tem na mochila para entregar (nome da cultura) ou null
+  playerCrop() {
+    for (const crop of PLAYER_CROPS) if (this.survival.countItem(crop[1]) > 0) return crop[0];
+    return null;
+  }
+
+  // Segundos que faltam para a racao da crianca ficar pronta (0 = nada cozinhando ou pronta)
+  get playerRationSecondsLeft() {
+    return this.playerRation ? Math.max(0, U.RATION_PREP_SECONDS - this.playerRation.timer) : 0;
+  }
+
+  // Anda o preparo da racao da crianca. Quando fica pronta, a racao vai para a mochila e a funcao
+  // devolve a cultura usada (uma vez); com a mochila cheia ela espera pronta ate caber.
+  updatePlayerRation(dt) {
+    const cooking = this.playerRation;
+    if (!cooking) return null;
+    cooking.timer = Math.min(U.RATION_PREP_SECONDS, cooking.timer + dt);
+    if (cooking.timer < U.RATION_PREP_SECONDS) return null;
+    if (!this.survival.addBlockToInventory?.(BLOCK_IDS.RATION)) return null;
+    this.playerRation = null;
+    this.playerRationsMade++;
+    this.eatenRationCrop = cooking.crop;
+    return cooking.crop;
   }
 }

@@ -684,11 +684,9 @@ export const UTILITY_CONFIG = {
   HEATER_NIGHT_PER_HOUR: 2,
   // Luz de cultivo da estufa: so gasta com a luz ligada (escala de jogo; era 2,5 antes da #81)
   GREENHOUSE_LIGHTS_PER_HOUR: 1.25,
-  // B3 cozinha: racao da despensa (compartilhada com a tripulacao) x refeicao fresca da estufa
+  // B3 cozinha: racao da despensa (compartilhada com a tripulacao). A refeicao fresca saiu no
+  // ato 3 (#409): a planta colhida vira racao nas maos do cozinheiro (RATION_PREP_*)
   RATION_FOOD: 6,
-  MEAL_WATER_L: 1,
-  MEAL_POWER: 2,
-  MEAL_HEAL: 2,
   // B4 reciclador de agua: limpa a agua cinza sozinho e gasta bateria por litro limpo.
   // [Ref] a Estacao Espacial recupera ~98 % da agua (STATION_CONFIG.WATER_RECOVERY). O custo de
   // energia e regra de jogo: 30 L por hora (STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR) = 0,6 %/h,
@@ -737,7 +735,7 @@ export const STATION_CONFIG = {
   DUST_DAMAGE: 0.015, DECONTAMINATION_COST: 2, FILTER_COST: 4,
   EXERCISE_COST: 3, TREATMENT_COST: 5,
   COMMS_COST: 3, COMMS_DELAY: 40,
-  FITNESS_DECAY: 0.015, FRESH_FOOD_DURATION: 120,
+  FITNESS_DECAY: 0.015,
   SUIT_RADIATION_DAMAGE_FACTOR: 0.65,
 };
 
@@ -1112,6 +1110,9 @@ export const ACT2_CONFIG = {
 // Ato 3 (issue #409): abrigo na tempestade solar, planta, racao e academia.
 // Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
 export const ACT3_CONFIG = {
+  // Trade-off da luz da estufa a noite (issue #420): segundos do card LIGHTS ON x LIGHTS OFF na
+  // tela. Sem resposta, a luz fica como estava.
+  NIGHT_LIGHTS_CARD_SECONDS: 20,
 };
 
 // Ato 4 (issue #410): traje, 3 amostras de cada tipo, analise e envio.

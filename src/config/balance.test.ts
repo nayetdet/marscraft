@@ -279,7 +279,6 @@ describe('base water times 10 (act 1 spec)', () => {
 
   it('what one person uses at a time keeps its real size', () => {
     expect(WATER_SYSTEM_CONFIG.DRINK_AMOUNT_FROM_DISPENSER).toBe(2);
-    expect(UTILITY_CONFIG.MEAL_WATER_L).toBe(1);
   });
 });
 

@@ -31,7 +31,6 @@ export class StationSystem {
     this.analyzed = [];
     // A ultima amostra do mapa analisada (SampleType), para o GameEngine mostrar o fato dela
     this.lastAnalyzedType = null;
-    this.freshFood = C.FRESH_FOOD_DURATION;
     // Um cultivo por campo da estufa (GREENHOUSE_PLOTS). `crop` e o do campo selecionado no monitor.
     this.plots = GREENHOUSE_PLOTS.map(() => ({ crop: null }));
     this.selectedPlot = 0;
@@ -99,7 +98,6 @@ export class StationSystem {
     this.filter = Math.max(0, this.filter - C.FILTER_DECAY * dt);
     // O lavador de CO2 e suporte de vida: com a bateria vazia o RTG ainda o mantem ligado (issue #85)
     this.co2 = Math.max(0, Math.min(100, this.co2 + (this.filter <= 0 ? C.CO2_RISE : -C.CO2_CLEAR) * dt));
-    this.freshFood = Math.max(0, this.freshFood - dt);
     this.boneDensity = Math.max(0, this.boneDensity - C.FITNESS_DECAY * 1.15 * dt);
     this.muscleStrength = Math.max(0, this.muscleStrength - C.FITNESS_DECAY * dt);
     this.fitness = Math.max(0, this.fitness - C.FITNESS_DECAY * dt);
@@ -198,7 +196,6 @@ export class StationSystem {
     this.cropCollection.add(type);
     this.discoveryIndex++;
     plot.crop = null;
-    this.freshFood = C.FRESH_FOOD_DURATION;
 
     return `Harvested ${type}. Pick up your harvest and use it to eat. A real NASA study is now in your field notebook!`;
   }
