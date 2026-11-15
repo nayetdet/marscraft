@@ -218,6 +218,7 @@ export class StationPanel {
     this._stopGymLoop();
     this._stopGreenhouseLoop();
     hideModal(this.element);
+    this.engine.showPendingEarthFacts?.(); // fatos ganhos na colheita aparecem com o painel fechado
     if (!this.engine.input?.isTouchMode) requestRawPointerLock(this.engine.renderer.domElement);
   }
 
@@ -281,12 +282,15 @@ export class StationPanel {
 
   _harvestPlot(plotIndex) {
     const { stations, survival } = this.engine;
+    const type = stations.plots[plotIndex]?.crop?.type;
+    const before = stations.harvestCount;
     const message = stations.harvest(survival, (id, i) => {
       const { dx, dz } = PLOT_PLANT_CELLS[plotIndex][i];
       const position = { x: GREENHOUSE_CENTER.x + dx + 0.5, y: WORLD_CONFIG.GROUND_LEVEL + 2, z: GREENHOUSE_CENTER.z + dz + 0.5 };
       this.engine.world.spawnCropDrop(position, id);
     }, plotIndex);
     this.engine.updateCropVisuals?.();
+    if (stations.harvestCount > before) this.engine.onPlayerHarvest?.(type);
     return message;
   }
 

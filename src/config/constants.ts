@@ -731,6 +731,8 @@ export const MISSION_LOG_CONFIG = {
   MERGE_HOURS: 1,
   SUMMARY_CARD_MS: 9000, // resumo do fim do sol na tela
   STUDY_CARD_MS: 7000, // estudo real da NASA revelado
+  EARTH_FACT_CARD_MS: 9000, // fato "Space science on Earth" ganho na estufa (issue #216)
+  EARTH_FACT_GAP_MS: 600, // pausa entre dois fatos ganhos na mesma colheita
 };
 
 // Dormir no beliche do dormitorio (issue #109): substitui o avanco de tempo gratis da tecla T.

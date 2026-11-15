@@ -64,7 +64,7 @@ import { ScannerHud } from '../ui/ScannerHud.ts';
 import { buildBaseDecor } from '../base/baseDecor.ts';
 import { SuitportStation } from '../base/SuitportStation.ts';
 import { buildGreenhouseFields } from '../base/greenhouseFields.ts';
-import { earthCard, plantsStalled } from '../base/greenhouseCare.ts';
+import { EARTH_FACT_TITLE, EarthFacts, earthFactLines, earthFactLogText, plantsStalled } from '../base/greenhouseCare.ts';
 import { MenuScreens } from '../ui/MenuScreens.ts';
 import { StoryDirector } from '../story/StoryDirector.ts';
 import { objectiveView } from '../story/objectiveView.ts';
@@ -270,6 +270,9 @@ export class GameEngine {
     // escrever com this.missionLog.add({ text, kind, hours }).
     this.missionLog = new MissionLog();
     this.studyReveals = new StudyReveals();
+    this.earthFacts = new EarthFacts();
+    this._earthFactQueue = []; // fatos ganhos que esperam o monitor da estufa fechar
+    this._earthFactShowing = false;
     this.missionLogFeed = new MissionLogFeed({
       log: this.missionLog,
       reveals: this.studyReveals,
@@ -1234,12 +1237,30 @@ export class GameEngine {
       stalled: this.stations.hasGrowingCrops() && plantsStalled(this.greenhouseState()),
       stock: this.stations.harvestBaskets,
     });
-    // Cada colheita mostra um card "Ciencia espacial na Terra" (issue #89)
-    const harvests = this.stations.harvestCount;
-    if (harvests > (this._harvestsSeen ?? 0)) {
-      this._harvestsSeen = harvests;
-      this.storyHud.showCard(earthCard(harvests));
-    }
+  }
+
+  // O jogador colheu `type` no monitor da estufa. A primeira colheita de cada planta ganha um
+  // fato "Ciencia espacial na Terra" no toast de descoberta, uma vez por partida, e ele fica
+  // no diario de bordo [J]. A colheita da tripulacao nao chama isto (issue #216).
+  onPlayerHarvest(type) {
+    const card = this.earthFacts.onPlayerHarvest(type);
+    if (!card) return;
+    this.missionLog.add({ text: earthFactLogText(card), kind: 'study', hours: this._skyHours() });
+    this._earthFactQueue.push(card);
+    this.showPendingEarthFacts();
+  }
+
+  // O toast fica atras do monitor da estufa, entao o fato espera o painel fechar (StationPanel.close
+  // chama aqui). Colher varios campos de uma vez mostra um fato depois do outro.
+  showPendingEarthFacts() {
+    if (this._earthFactShowing || this.stationPanel.isOpen || !this._earthFactQueue.length) return;
+    const card = this._earthFactQueue.shift();
+    this._earthFactShowing = true;
+    this.scannerHud.showDiscovery(`DISCOVERY! ${EARTH_FACT_TITLE}`, card.reason, earthFactLines(card), MISSION_LOG_CONFIG.EARTH_FACT_CARD_MS);
+    setTimeout(() => {
+      this._earthFactShowing = false;
+      this.showPendingEarthFacts();
+    }, MISSION_LOG_CONFIG.EARTH_FACT_CARD_MS + MISSION_LOG_CONFIG.EARTH_FACT_GAP_MS);
   }
 
   // Os 3 cuidados da estufa (luz, agua reciclada, sem poeira) para o monitor e para as plantas
