@@ -1,7 +1,9 @@
 // Baixa as CMEs reais do NASA DONKI e grava em src/data/donkiCme.json as que tinham impacto
 // previsto em Marte, com a chegada prevista pelo modelo WSA-ENLIL da NASA (issue #99).
 // Uso: node scripts/fetch-donki-cme.mjs [startDate] [endDate]  (datas YYYY-MM-DD)
-// Chave: NASA_API_KEY no ambiente, ou DEMO_KEY (limite baixo de requisições).
+// Chave: NASA_API_KEY no arquivo .env da raiz (copie de .env.example; o git ignora o .env),
+// ou no ambiente. Sem chave usa DEMO_KEY, que estoura em ~10 requisicoes por hora.
+import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
@@ -63,7 +65,11 @@ async function main() {
   // Padrão: os 12 meses antes da coleta embutida no jogo
   const startDate = process.argv[2] ?? '2025-11-14';
   const endDate = process.argv[3] ?? '2026-11-13';
-  const apiKey = process.env.NASA_API_KEY ?? 'DEMO_KEY';
+  // Variaveis ja definidas no ambiente tem prioridade sobre o .env
+  const envFile = new URL('../.env', import.meta.url);
+  if (existsSync(envFile)) process.loadEnvFile(envFile);
+  const apiKey = process.env.NASA_API_KEY || 'DEMO_KEY';
+  if (apiKey === 'DEMO_KEY') console.warn('Sem NASA_API_KEY no .env: usando DEMO_KEY (limite de ~10 requisicoes por hora).');
 
   const items = await fetchRange(startDate, endDate, apiKey);
   const unique = [...new Map(items.map((item) => [item.activityID, item])).values()];

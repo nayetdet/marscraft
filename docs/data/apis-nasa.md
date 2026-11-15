@@ -70,10 +70,15 @@ O jogo é um site estático (Vite → GitHub Pages), sem backend. Uma API só po
 **`impactList` é o que o jogo usa (issue #99).** Cada rodada do modelo WSA-ENLIL lista os lugares que a CME deve atingir (`location`: `Mars`, `STEREO A`, sondas…), com a chegada prevista (`arrivalTime`) e se é golpe de raspão (`isGlancingBlow`). A maioria das CMEs **não** tem `Mars` na lista: na janela de 01 a 13/11/2026 foram 2 de 33. O script `scripts/fetch-donki-cme.mjs` grava só essas, com `marsArrivalTime` e `isGlancingBlow`, e o tempo de aviso no jogo é `marsArrivalTime − startTime` (1 dia real = 1 hora de jogo). Exemplo real da amostra: CME de 01/11 19:00Z (357 km/s), chegada prevista em Marte em 07/11 06:00Z, de raspão.
 
 ```bash
-# 12 meses por padrão, em blocos de 30 dias. Com a DEMO_KEY o limite por IP estoura em ~8 blocos
-# e bloqueia por ~1 dia: use uma chave gratuita de https://api.nasa.gov/
-NASA_API_KEY=suachave node scripts/fetch-donki-cme.mjs            # ou: ... 2025-11-14 2026-11-13
+# Uma vez: copie o modelo e cole a chave gratuita de https://api.nasa.gov/ no .env (o git ignora)
+cp .env.example .env
+
+# 12 meses por padrão, em blocos de 30 dias. Sem chave cai na DEMO_KEY, que estoura em ~8 blocos
+# e bloqueia o IP por ~1 dia
+npm run fetch:donki                    # ou: npm run fetch:donki -- 2025-11-14 2026-11-13
 ```
+
+**Nunca commite a chave** nem a coloque numa variável `VITE_*`: o Vite publica essas no bundle do GitHub Pages. O `.env` só é lido pelos scripts de coleta.
 
 `speed` e `isGlancingBlow` viram a força da tempestade por uma regra do jogo (ver `numeros-reais.md`).
 
