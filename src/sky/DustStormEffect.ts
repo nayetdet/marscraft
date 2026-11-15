@@ -116,7 +116,10 @@ const PARTICLE_FRAGMENT = /* glsl */ `
   uniform float uOpacity;
   varying float vAlpha;
   void main() {
-    gl_FragColor = vec4(uColor, vAlpha * uOpacity);
+    // Pontos alongados viram riscos de poeira carregados pelo vento, em vez de bolinhas.
+    vec2 streak = vec2((gl_PointCoord.x - 0.5) * 0.38, (gl_PointCoord.y - 0.5) * 1.8);
+    float shape = 1.0 - smoothstep(0.32, 0.5, length(streak));
+    gl_FragColor = vec4(uColor, vAlpha * uOpacity * shape);
     #include <colorspace_fragment>
   }
 `;
@@ -258,16 +261,23 @@ export class DustStormEffect {
     // A poeira perto da borda acompanha a camera; a tempestade climatica continua global.
     const edgeParticles = edgeStrength;
     const weatherParticles = weather.indoors ? 0 : W.WEATHER_PARTICLE_OPACITY * haze;
-    const particleOpacity = Math.max(edgeParticles, weatherParticles);
+    const ambientParticles = weather.indoors ? 0 : V.AMBIENT_PARTICLE_OPACITY;
+    const particleOpacity = Math.max(edgeParticles, weatherParticles, ambientParticles);
     this.particles.visible = particleOpacity > 0.01;
-    if (this.particles.visible) this._updateParticles(dt, focus, particleOpacity, weatherParticles > edgeParticles);
+    if (this.particles.visible) this._updateParticles(
+      dt,
+      focus,
+      particleOpacity,
+      Math.max(weatherParticles, ambientParticles) > edgeParticles,
+      weatherParticles > ambientParticles
+    );
   }
 
-  _updateParticles(dt, focus, opacity, weatherWind) {
+  _updateParticles(dt, focus, opacity, weatherWind, stormActive) {
     if (weatherWind) {
       _wind.set(W.WEATHER_WIND.x, -0.05, W.WEATHER_WIND.z)
         .normalize()
-        .multiplyScalar(V.WIND_SPEED * (0.6 + 0.4 * this.haze));
+        .multiplyScalar(stormActive ? V.WIND_SPEED * (0.6 + 0.4 * this.haze) : V.AMBIENT_WIND_SPEED);
     } else {
       const rx = focus.x - DUST_STORM_CENTER.x;
       const rz = focus.z - DUST_STORM_CENTER.z;
