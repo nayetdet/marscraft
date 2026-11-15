@@ -8,18 +8,10 @@ import { getDamageFeedback, getDeathReport } from '../player/deathReport.ts';
 import { getSuitTelemetryView } from '../player/suitTelemetry.ts';
 import { InventorySuitPreview } from './InventorySuitPreview.ts';
 import { DOSE_LIMIT_MSV, dosePercent, doseTone } from '../mission/doseBudget.ts';
+import { getJournalItemIcon, getScopeItemIcon, getShieldRemoteItemIcon } from '../graphics/itemIcons.ts';
+import { getStatIconSvg } from './statIcons.ts';
 
 const ICONS_PER_BAR = 10;
-
-const STAT_ICON_PATHS = {
-  heart: '<path d="M1 1h2v1h2V1h2v1h1v3H7v1H6v1H5v1H3V7H2V6H1V5H0V2h1Z"/>',
-  oxygen: '<path d="M2 0h4v1h1v1h1v4H7v1H6v1H2V7H1V6H0V2h1V1h1Z"/>',
-  water: '<path d="M3 0h2v1h1v1h1v1h1v3H7v1H6v1H2V7H1V6H0V3h1V2h1V1h1Z"/>',
-  energy: '<path d="M4 0h3v1H6v2h2v1H7v1H6v1H5v1H4v1H3V6h1V5H1V4h1V3h1V2h1Z"/>',
-  food: '<path d="M1 0h3v1h1v1h1v2H5v2H4v1H2V5H1V3H0V1h1Z M6 5h2v3H6Z"/>',
-  fire: '<path fill-rule="evenodd" d="M4 0h1v2h1v1h1v2h1v2H6v1H2V7H0V5h1V3h1V1h1v3h1V2h1Z M4 5H3v2h2V6H4Z"/>',
-  radiation: '<rect x="1" y="0" width="2" height="1"/><rect x="5" y="0" width="2" height="1"/><rect x="0" y="1" width="3" height="2"/><rect x="5" y="1" width="3" height="2"/><rect x="3" y="3" width="2" height="2"/><rect x="2" y="5" width="4" height="1"/><rect x="1" y="6" width="6" height="1"/><rect x="2" y="7" width="4" height="1"/>',
-};
 
 export class HudManager {
   constructor(previews, initialSlots, {
@@ -107,6 +99,8 @@ export class HudManager {
 
     // Inventory parallel vertical suit panel + 3D preview
     this.invSuitStatusEl = document.getElementById('inv-suit-status');
+    this.invSuitValues = ['armor', 'o2', 'heat', 'co2', 'dust'].map(name => document.getElementById(`inv-suit-${name}-val`));
+    this.invSuitArmorFill = document.getElementById('inv-suit-armor-fill');
     const invCanvas = document.getElementById('inventory-suit-canvas');
     this.suitPreview = invCanvas ? new InventorySuitPreview(invCanvas, document.getElementById('inventory-suit-panel')) : null;
 
@@ -238,20 +232,12 @@ export class HudManager {
     });
   }
 
-  // Itens de mao (scanner, controle do escudo) nao tem textura de bloco: icone em SVG pixelado
+  // Hand equipment items have dedicated 16x16 pixel-art SVG icons
   _itemPreview(id) {
-    if (id === BLOCK_IDS.SCOPE) return this._scopePreview();
-    if (id === BLOCK_IDS.SHIELD_REMOTE) return this._shieldRemotePreview();
-    if (id === BLOCK_IDS.JOURNAL) return `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges"><path fill="#1e293b" d="M5 3h21v26H5z"/><path fill="#0e2329" d="M7 2h18v24H7z"/><path fill="#38bdf8" d="M9 4h14v20H9z"/><path fill="#152b30" d="M10 5h12v18H10z"/><path fill="#0284c7" d="M7 2h3v24H7z"/><path fill="#ea580c" d="M14 9h4v1h1v1h1v4h-1v1h-1v1h-4v-1h-1v-1h-1v-4h1v-1h1z"/><path fill="#fb923c" d="M14 10h3v1h1v2h-1v1h-3v-1h-1v-2h1z"/><path fill="#fef08a" d="M11 13h10v1H11z"/><path fill="#4ade80" d="M12 19h8v2h-8z"/><path fill="#cbd5e1" d="M8 26h17v2H8z"/></svg>')}`;
+    if (id === BLOCK_IDS.SCOPE) return getScopeItemIcon();
+    if (id === BLOCK_IDS.SHIELD_REMOTE) return getShieldRemoteItemIcon();
+    if (id === BLOCK_IDS.JOURNAL) return getJournalItemIcon();
     return this.previews[id];
-  }
-
-  _shieldRemotePreview() {
-    return `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges"><path fill="#d4a017" d="M20 2h2v8h-2z"/><path fill="#b8c5cc" d="M9 8h14v22H9z"/><path fill="#263746" d="M11 10h10v7H11z"/><path fill="#38bdf8" d="M13 12h6v3h-6z"/><path fill="#ef4444" d="M13 20h6v6h-6z"/></svg>')}`;
-  }
-
-  _scopePreview() {
-    return `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges"><path fill="#263746" d="M7 11h18v10H7z"/><path fill="#b8c5cc" d="M4 9h4v14H4zm20 1h4v12h-4zM12 7h8v3h-8z"/><path fill="#38bdf8" d="M3 12h2v8H3z"/><path fill="#647985" d="M13 21h6v5h-6z"/></svg>')}`;
   }
 
   openInventory(inventorySlots) {
@@ -288,8 +274,11 @@ export class HudManager {
     if (!ctx?.survival) return;
     const view = getSuitTelemetryView(ctx.survival, ctx);
 
-    const statusText = !view.equipped ? 'NO SUIT' : view.integrityPct <= 0 ? 'SUIT BROKEN' : 'EVA SUIT';
+    const statusText = !view.equipped ? 'No suit' : view.integrityPct <= 0 ? 'Suit broken' : 'EVA suit';
     this._setElText(this.invSuitStatusEl, statusText);
+    const values = [view.integrityPct, view.o2Pct, view.thermalPct, view.scrubberPct, view.dustPct];
+    values.forEach((value, index) => this._setElText(this.invSuitValues[index], `${value}%`));
+    if (this.invSuitArmorFill) this.invSuitArmorFill.style.width = `${view.integrityPct}%`;
 
     this.suitPreview?.setState({
       equipped: view.equipped,
@@ -494,7 +483,7 @@ export class HudManager {
       const span = document.createElement('span');
       span.className = `mc-stat-icon ${type} empty`;
       span.setAttribute('aria-hidden', 'true');
-      span.innerHTML = `<svg viewBox="0 0 8 8" shape-rendering="crispEdges">${STAT_ICON_PATHS[type]}</svg>`;
+      span.innerHTML = getStatIconSvg(type);
       container.appendChild(span);
       icons.push({ span, state: 'empty' });
     }

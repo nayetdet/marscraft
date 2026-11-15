@@ -144,8 +144,8 @@
           <span class="res-key" title="Radiation shield: use the Shield Remote in your hotbar">S</span>
         </div>
         <div id="res-weather" class="res-weather" title="Outside air: real NASA InSight weather. Dust: how dusty the solar panels are.">
-          <span>OUTSIDE <b id="res-weather-temp">-60 C</b></span>
-          <span id="res-weather-dust" class="res-dust">PANELS CLEAN</span>
+          <span class="res-row res-weather-row res-temperature"><span id="res-weather-temp-icon" class="res-icon" aria-hidden="true"></span><span class="res-name">OUTSIDE</span><span class="res-meter" title="Temperature across the recorded InSight range"><i id="res-weather-temp-fill" class="res-fill"></i></span><b id="res-weather-temp" class="res-value">-60 C</b></span>
+          <span class="res-row res-weather-row res-panel-dust"><span id="res-weather-dust-icon" class="res-icon" aria-hidden="true"></span><span class="res-name">DUST</span><span class="res-meter" title="Dust on the solar panels"><i id="res-weather-dust-fill" class="res-fill"></i></span><b id="res-weather-dust" class="res-value res-dust">0%</b></span>
         </div>
       </section>
       <div id="mission-alerts" class="mission-alerts"></div>
@@ -460,18 +460,18 @@
         <div class="inv-suit-preview-wrap">
           <canvas id="inventory-suit-canvas" class="inv-suit-canvas" width="160" height="190" aria-label="Astronaut character"></canvas>
         </div>
-        <span id="inv-suit-status" class="inv-suit-status">EVA SUIT</span>
+        <span id="inv-suit-status" class="inv-suit-status">EVA suit</span>
         <div class="inv-suit-telemetry">
           <div class="inv-suit-armor-head">
-            <span>INTEGRITY</span>
-            <strong id="inv-suit-armor-val" class="ok">100% (0% WEAR)</strong>
+            <span class="inv-suit-label"><svg class="inv-suit-icon suit" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h10v6c0 3-2 5-5 7C5 13 3 11 3 8z"/></svg>Suit</span>
+            <strong id="inv-suit-armor-val">100%</strong>
           </div>
           <div class="inv-suit-armor-track"><i id="inv-suit-armor-fill"></i></div>
           <div class="inv-suit-stats">
-            <div class="inv-suit-stat"><span>O2</span><strong id="inv-suit-o2-val" class="ok">100%</strong></div>
-            <div class="inv-suit-stat"><span>HEAT</span><strong id="inv-suit-heat-val" class="ok">100%</strong></div>
-            <div class="inv-suit-stat"><span>CO2</span><strong id="inv-suit-co2-val" class="ok">100%</strong></div>
-            <div class="inv-suit-stat"><span>DUST</span><strong id="inv-suit-dust-val" class="ok">0%</strong></div>
+            <div class="inv-suit-stat"><span class="inv-suit-label"><svg class="inv-suit-icon air" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1h3v2h2v3h2v5h-2v3h-3v1H6v-1H3v-3H1V6h2V3h2V1zm0 3H6v2H5v5h1v1h4v-1h1V6h-1V4z"/></svg>Air</span><strong id="inv-suit-o2-val">100%</strong></div>
+            <div class="inv-suit-stat"><span class="inv-suit-label"><svg class="inv-suit-icon heat" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1h3v2h1v6h2v4h-2v2H6v-2H4V9h2V3h1zm1 3v6H7v2h3v-2H9V4z"/></svg>Heat</span><strong id="inv-suit-heat-val">100%</strong></div>
+            <div class="inv-suit-stat" title="The filter cleans the air you breathe out"><span class="inv-suit-label"><svg class="inv-suit-icon filter" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 2h14v3h-2v2h-2v2H9v5H7V9H5V7H3V5H1zm3 2v1h2v2h4V5h2V4z"/></svg>Filter</span><strong id="inv-suit-co2-val">100%</strong></div>
+            <div class="inv-suit-stat"><span class="inv-suit-label"><svg class="inv-suit-icon dust" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3h3v3H3zm6-1h2v2H9zm2 5h3v3h-3zM2 9h2v2H2zm4-1h3v3H6zm2 5h2v2H8z"/></svg>Dust</span><strong id="inv-suit-dust-val">0%</strong></div>
           </div>
         </div>
       </aside>

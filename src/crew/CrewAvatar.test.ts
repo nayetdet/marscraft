@@ -57,4 +57,40 @@ describe('CrewAvatar articulated movement', () => {
     expect(Math.abs(afterOneFrame - Math.PI)).toBeGreaterThan(0.05);
     avatar.dispose();
   });
+
+  it('produces natural counter-twist, lateral weight shift, and non-sinking vertical bounce while walking', () => {
+    const scene = new THREE.Scene();
+    const route = findRoute('quarters', 'hub');
+    const len = routeLength(route);
+    const member = {
+      id: 2,
+      name: 'Maya',
+      state: 'walking',
+      stationary: false,
+      node: 'quarters',
+      route,
+      routeLength: len,
+      distance: len * 0.3,
+    };
+
+    const avatar = new CrewAvatar(scene, member, 0x22c55e);
+    let minSwayX = Infinity;
+    let maxSwayX = -Infinity;
+    let minBobY = Infinity;
+    let maxBobY = -Infinity;
+
+    for (let i = 0; i < 40; i++) {
+      avatar.update(0.04);
+      minSwayX = Math.min(minSwayX, avatar.bodyGroup.position.x);
+      maxSwayX = Math.max(maxSwayX, avatar.bodyGroup.position.x);
+      minBobY = Math.min(minBobY, avatar.bodyGroup.position.y);
+      maxBobY = Math.max(maxBobY, avatar.bodyGroup.position.y);
+      expect(avatar.bodyGroup.position.y).toBeGreaterThanOrEqual(0);
+    }
+
+    expect(minSwayX).toBeLessThan(-0.01);
+    expect(maxSwayX).toBeGreaterThan(0.01);
+    expect(maxBobY - minBobY).toBeGreaterThan(0.02);
+    avatar.dispose();
+  });
 });

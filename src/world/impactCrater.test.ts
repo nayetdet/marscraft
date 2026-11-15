@@ -23,7 +23,7 @@ function createArrayWorld() {
   };
   return {
     sizeX, sizeY, sizeZ, halfX, halfZ,
-    baseWindows: new Set(),
+    baseBlocks: new Set(),
     getBlock(x, y, z) {
       const idx = index(x, y, z);
       return idx === -1 ? BLOCK_IDS.AIR : data[idx];

@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { createCropTexture } from './cropTextures.ts';
+import { renderBlockIsometricPreview } from './blockPreview.ts';
 import * as THREE from 'three';
 import { BLOCK_IDS, CROP_ITEM_IDS } from '../config/blockTypes.ts';
 import { createSeededRandom, fillNoise, makeCanvasTexture } from './textureGenerator.ts';
@@ -14,12 +15,15 @@ export function createBlockMaterials() {
 
   // Usa MeshLambertMaterial para visual 100% fosco (matte), claro e muito mais otimizado
   const register = (id, drawFn, matOptions = {}) => {
-    const { texture, dataUrl } = makeCanvasTexture(drawFn);
+    const { texture } = makeCanvasTexture(drawFn);
     materials[id] = new THREE.MeshLambertMaterial({
       map: texture,
       ...matOptions,
     });
-    previews[id] = dataUrl;
+    previews[id] = renderBlockIsometricPreview(drawFn, {
+      transparent: Boolean(matOptions.transparent),
+      emissive: Boolean(matOptions.emissive),
+    });
     atlasEntries.push({ id, drawFn, matOptions });
   };
 

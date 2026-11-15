@@ -14,7 +14,7 @@ const LED_COLORS = {
 };
 
 /**
- * Renders an interactive vertical Minecraft-style astronaut preview alongside the inventory.
+ * Renders an interactive vertical astronaut preview alongside the inventory.
  */
 export class InventorySuitPreview {
   constructor(canvas, container = null) {
@@ -166,10 +166,25 @@ export class InventorySuitPreview {
     const cx = Math.floor(w / 2);
     const cy = Math.floor(h / 2) - 4;
     const { equipped } = this._state;
-    ctx.fillStyle = equipped ? '#f8fafc' : '#1e3a5f';
-    ctx.fillRect(cx - 18, cy - 52, 36, 34); // head
-    ctx.fillStyle = equipped ? '#f59e0b' : '#eab696';
-    ctx.fillRect(cx - 12, cy - 42, 24, 14); // visor or face
+    ctx.fillStyle = equipped ? '#f8fafc' : '#2d1e17';
+    ctx.fillRect(cx - 18, cy - 54, 36, 36); // helmet or hair/head
+    if (equipped) {
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(cx - 12, cy - 42, 24, 14); // reflective gold visor
+    } else {
+      ctx.fillStyle = '#f2c2a2';
+      ctx.fillRect(cx - 14, cy - 44, 28, 24); // face
+      ctx.fillStyle = '#2d1e17';
+      ctx.fillRect(cx - 14, cy - 48, 22, 6); // asymmetric bangs
+      ctx.fillStyle = '#1c2541';
+      ctx.fillRect(cx - 8, cy - 37, 4, 6); // left vertical eye
+      ctx.fillRect(cx + 4, cy - 37, 4, 6); // right vertical eye
+      ctx.fillStyle = '#9c4f3d';
+      ctx.fillRect(cx - 5, cy - 26, 10, 2); // smile
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(cx - 20, cy - 42, 5, 12); // left headset cup
+      ctx.fillRect(cx + 15, cy - 42, 5, 12); // right headset cup
+    }
     ctx.fillStyle = equipped ? '#f8fafc' : '#1e3a5f';
     ctx.fillRect(cx - 22, cy - 16, 44, 46); // torso
     ctx.fillStyle = '#ea580c';

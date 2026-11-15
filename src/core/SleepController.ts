@@ -75,7 +75,7 @@ export class SleepController {
     const { survival, mission, player } = this.engine;
     return sleepBlocker({
       insideBase: survival.isPlayerInsideShip(player.pos),
-      baseBreached: this.engine.world.brokenBaseWindows.size > 0,
+      baseBreached: this.engine.world.brokenBaseBlocks.size > 0,
       baseOxygen: survival.baseOxygen,
       stormPhase: mission.storm.phase,
       batteryCharge: mission.battery.charge,
@@ -156,7 +156,7 @@ export class SleepController {
     return wakeReason({
       events,
       batteryCharge: mission.battery.charge,
-      baseBreached: world.brokenBaseWindows.size > 0,
+      baseBreached: world.brokenBaseBlocks.size > 0,
       crewAlert: Boolean(this._alarm()),
       food: survival.food,
       water: survival.water,

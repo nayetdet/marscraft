@@ -574,10 +574,10 @@ function createMarsRoverModel(mats, x, y, z) {
 function createExteriorSolarAndDish(mats, x, y, z) {
   const solarArrays = [];
 
-  // Campo solar a oeste do modulo de energia: uma fileira de cinco paineis
+  // Campo solar em frente aos alojamentos: uma fileira de cinco paineis
   for (let i = 0; i < SOLAR_FIELD.count; i++) {
     const array = new THREE.Group();
-    array.position.set(x + SOLAR_FIELD.x, y, z + SOLAR_FIELD.zFirst - i * SOLAR_FIELD.spacing);
+    array.position.set(x + SOLAR_FIELD.xFirst + i * SOLAR_FIELD.spacing, y, z + SOLAR_FIELD.z);
     addBox(array, 0.25, 1.4, 0.25, mats.lightGray, 0, 0.7, 0);
     addBox(array, 3.4, 0.1, 2.2, mats.whiteMetal, 0, 1.45, 0, 0.38, 0, 0);
     addBox(array, 3.2, 0.12, 2.0, mats.fieldSolarPanel, 0, 1.47, 0, 0.38, 0, 0);

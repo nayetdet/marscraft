@@ -15,6 +15,20 @@ function createMockWorld(blocks = {}) {
 }
 
 describe('PlayerPhysics', () => {
+  it('blocks movement into a visible crew member and permits moving away or above them', () => {
+    const player = new PlayerPhysics(createMockWorld());
+    player.crewAvatars = [{ position: { x: 0, y: 10, z: -1 }, group: { visible: true } }];
+    player.pos.set(0, 11.7, 0);
+    player.yaw = 0;
+    player.update(0.05, { KeyW: true });
+    expect(player.pos.z).toBe(0);
+    player.pos.z = -0.5;
+    player.update(0.05, { KeyS: true });
+    expect(player.pos.z).toBeGreaterThan(-0.5);
+    player.pos.set(0, 14, 0);
+    player.update(0.05, { KeyW: true });
+    expect(player.pos.z).toBeLessThan(0);
+  });
   it('reports a landing after a jump but not after an ordinary fall', () => {
     const floorWorld = {
       getBlock(_x, y) {

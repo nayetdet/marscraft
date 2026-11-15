@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vites
 import * as THREE from 'three';
 import { VoxelWorld } from './VoxelWorld.ts';
 import { BLOCK_IDS, CROP_ITEM_IDS } from '../config/blockTypes.ts';
+import { HABITAT_LAYOUT } from './habitatLayout.ts';
 
 // O construtor desenha as texturas de rachadura num canvas; no Node basta um canvas que nao faz nada
 beforeAll(() => {
@@ -76,8 +77,22 @@ describe('VoxelWorld meshing', () => {
     world = createWorld();
   });
 
-  it('tracks broken base windows until every opening is sealed', () => {
-    const indices = [...world.baseWindows].slice(0, 2);
+  it('does not treat a broken habitat floor as a breach', () => {
+    const floor = [0, HABITAT_LAYOUT.FLOOR_Y, 0];
+    expect(world.getBlock(...floor)).not.toBe(BLOCK_IDS.AIR);
+    world.breakBlock(...floor);
+    expect(world.brokenBaseBlocks.size).toBe(0);
+  });
+
+  it('treats a broken habitat ceiling as a breach', () => {
+    const ceiling = [4, HABITAT_LAYOUT.CEIL_Y, 3];
+    expect(world.getBlock(...ceiling)).not.toBe(BLOCK_IDS.AIR);
+    world.breakBlock(...ceiling);
+    expect(world.brokenBaseBlocks.size).toBe(1);
+  });
+
+  it('tracks broken base walls and windows until every opening is sealed', () => {
+    const indices = [BLOCK_IDS.NASA_HULL, BLOCK_IDS.HAB_GLASS].map(id => [...world.baseBlocks].find(idx => world.data[idx] === id));
     expect(indices).toHaveLength(2);
     const coords = (idx) => {
       const y = Math.floor(idx / (world.sizeX * world.sizeZ));
@@ -87,14 +102,14 @@ describe('VoxelWorld meshing', () => {
     const [first, second] = indices.map(coords);
     world.breakBlock(...first);
     world.breakBlock(...second);
-    expect(world.brokenBaseWindows.size).toBe(2);
+    expect(world.brokenBaseBlocks.size).toBe(2);
     world.setBlock(...first, BLOCK_IDS.HAB_GLASS);
-    expect(world.brokenBaseWindows.size).toBe(1);
+    expect(world.brokenBaseBlocks.size).toBe(1);
     world.setBlock(...second, BLOCK_IDS.BASALT);
-    expect(world.brokenBaseWindows.size).toBe(0);
+    expect(world.brokenBaseBlocks.size).toBe(0);
     world.setBlock(40, SKY_Y, 40, BLOCK_IDS.HAB_GLASS);
     world.setBlock(40, SKY_Y, 40, BLOCK_IDS.AIR);
-    expect(world.brokenBaseWindows.size).toBe(0);
+    expect(world.brokenBaseBlocks.size).toBe(0);
   });
 
   it('nao gera faces voltadas para baixo no fundo do mundo', () => {
