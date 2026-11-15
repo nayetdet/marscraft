@@ -1,5 +1,6 @@
 import { SCAN_CATEGORIES, SCAN_CATALOG, getCategoryLabel, getScanEntry, listCatalogSources } from '../data/scanCatalog.js';
 import { getJournalIcon } from '../graphics/journalIcons.js';
+import { missionLogHtml, realVsGameHtml, studiesHtml } from './missionJournalView.js';
 
 const BAR_SEGMENTS = 20; // a barra enche em degraus, como as barras pixeladas do jogo
 const CARD_DURATION_MS = 6000;
@@ -10,6 +11,14 @@ const JOURNAL_ICONS = {
   star: '<svg class="gh-mini-icon power" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M3 0h2v2h3v2H6v2h1v2H5V7H3v1H1V6h1V4H0V2h3Z"/></svg>',
   scope: '<svg class="gh-mini-icon water" viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="currentColor" d="M1 2h6v4H1Z M0 3h1v2H0Z M7 1h1v6H7Z M3 6h2v2H3Z"/></svg>',
 };
+
+// Abas do diario (issue #106): descobertas do scanner, diario de bordo, estudos reais e real x jogo
+const JOURNAL_MODES = [
+  { id: 'discoveries', label: 'FINDS' },
+  { id: 'log', label: 'LOG' },
+  { id: 'studies', label: 'NASA STUDIES' },
+  { id: 'real', label: 'REAL VS GAME' },
+];
 
 const TAB_LABELS = {
   sky: 'PLANETS',
@@ -197,6 +206,17 @@ export class ScannerHud {
     this.activeCategory = 'sky';
     this.selectedEntryId = null;
     this._lastJournal = null;
+    this.journalMode = 'discoveries';
+    this.missionLog = null; // MissionLog e StudyReveals (attachMissionLog)
+    this.studyReveals = null;
+
+    this.journalOverlayEl?.addEventListener('click', (event) => {
+      const modeBtn = event.target.closest('[data-journal-mode]');
+      if (modeBtn && this._lastJournal) {
+        this.journalMode = modeBtn.dataset.journalMode;
+        this.renderJournal(this._lastJournal);
+      }
+    });
 
     if (this.journalBodyEl) {
       this.journalBodyEl.addEventListener('click', (event) => {
@@ -292,13 +312,18 @@ export class ScannerHud {
     }, duration);
   }
 
-  showDiscovery(title, subtitle, lines = []) {
+  attachMissionLog({ log, reveals }) {
+    this.missionLog = log;
+    this.studyReveals = reveals;
+  }
+
+  showDiscovery(title, subtitle, lines = [], duration = DISCOVERY_DURATION_MS) {
     this.discoveryEl.innerHTML = `
       <div class="scan-discovery-title">${escapeHtml(title)}</div>
       <div class="scan-discovery-name">${escapeHtml(subtitle)}</div>
       ${lines.map((l) => `<div class="scan-discovery-line">${escapeHtml(l)}</div>`).join('')}
     `;
-    this._slideIn(this.discoveryEl, DISCOVERY_DURATION_MS);
+    this._slideIn(this.discoveryEl, duration);
   }
 
   openJournal(journal) {
@@ -327,6 +352,12 @@ export class ScannerHud {
       infoEl.className = 'gym-learn';
       infoEl.innerHTML = `<summary aria-label="NASA info" title="NASA info">i</summary><p>Real NASA data (saved in game).<br/>${sourcesHtml}</p>`;
       topBarEl.appendChild(infoEl);
+    }
+    this._renderModes(topBarEl);
+    this.journalBodyEl.classList.toggle('is-scroll', this.journalMode !== 'discoveries');
+    if (this.journalMode !== 'discoveries') {
+      this._renderExtraMode();
+      return;
     }
 
     const tabsHtml = SCAN_CATEGORIES.map((cat) => {
@@ -372,5 +403,34 @@ export class ScannerHud {
         <div class="journal-tip-line"><strong>${escapeHtml(activeMeta?.title ?? '')}:</strong> ${escapeHtml(tipText)}</div>
       </div>
     `;
+  }
+
+  // Abas do topo do diario (issue #106). Os contadores de descobertas so aparecem em FINDS.
+  _renderModes(topBarEl) {
+    if (!topBarEl) return;
+    let modesEl = topBarEl.querySelector('.journal-modes');
+    if (!modesEl) {
+      modesEl = document.createElement('div');
+      modesEl.className = 'journal-modes';
+      modesEl.setAttribute('role', 'tablist');
+      modesEl.setAttribute('aria-label', 'Journal pages');
+      topBarEl.prepend(modesEl);
+    }
+    const studies = this.studyReveals ? ` ${this.studyReveals.count}/${this.studyReveals.total}` : '';
+    modesEl.innerHTML = JOURNAL_MODES.map((mode) => {
+      const active = mode.id === this.journalMode;
+      const count = mode.id === 'studies' ? `<small>${studies}</small>` : '';
+      return `<button type="button" role="tab" class="gym-tab journal-mode ${active ? 'active' : ''}" data-journal-mode="${mode.id}" aria-selected="${active}">${mode.label}${count}</button>`;
+    }).join('');
+    topBarEl.classList.toggle('is-discoveries', this.journalMode === 'discoveries');
+  }
+
+  _renderExtraMode() {
+    let html = '';
+    if (this.journalMode === 'log') html = this.missionLog ? missionLogHtml(this.missionLog) : '';
+    else if (this.journalMode === 'studies') html = this.studyReveals ? studiesHtml(this.studyReveals) : '';
+    else if (this.journalMode === 'real') html = realVsGameHtml();
+    this.journalBodyEl.innerHTML = `<div class="journal-page journal-page-${escapeHtml(this.journalMode)}">${html}</div>`;
+    this.journalBodyEl.scrollTop = 0;
   }
 }

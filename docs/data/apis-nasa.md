@@ -134,6 +134,8 @@ curl "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&times
 
 > ⚠️ Pedidos grandes demoram e pesam: a série da Orion HERA-HSU1 em 25 dias tem cerca de 35 mil linhas (3 MB). Agregue (média por hora/dia) num script e embuta só o resumo.
 
+**No jogo (issue #106):** `node scripts/fetch-radlab-summary.mjs` refaz as 4 consultas da amostra (mesmas janelas) e grava `src/data/radlabSummary.json` com n, janela, mediana, média, p10, p90, máximo e data de coleta. Falha de rede ou série vazia interrompe o script. `RADIATION_CONFIG.MARS_SURFACE_DOSE_UGY_PER_HOUR` lê a mediana do Curiosity desse JSON (`src/data/radlabSummary.js`). O diário [J] (aba NASA STUDIES) e a enfermaria mostram um gráfico de 4 barras **sem unidade**, só a comparação com a Estação Espacial ("Mars: about 1.5 times the Space Station"), porque a unidade ainda não foi confirmada na documentação do RadLab (o portal de docs responde 500 em 14/11/2026).
+
 ## 3. OSDR: estudos de biologia espacial e saúde
 
 - Repositório: <https://osdr.nasa.gov/bio/repo/>
@@ -144,6 +146,7 @@ curl "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&times
 - Página de um estudo: `https://osdr.nasa.gov/bio/repo/data/studies/OSD-342`
 - Termos úteis: `bone loss`, `muscle atrophy`, `radiation`, `sleep`, `immune`, `plant growth` (para a estufa), `microgravity`.
 - **Uso no jogo:** "Fato real da NASA" curto e atribuído, ligado a uma mecânica. Ex.: ficar muitos sols sem exercício/gravidade → "Cientistas da NASA viram ossos enfraquecendo em camundongos na Estação Espacial (estudo OSD-342)".
+- **No jogo (issue #106):** `node scripts/fetch-osdr-topics.mjs` busca os 3 primeiros estudos de `bone loss`, `muscle atrophy`, `radiation`, `sleep` e `immune` e grava `src/data/osdrTopics.json` (URL da busca, data de coleta, accession, título, organismo, programa de voo e missão). Sem estudos inventados: falha de rede interrompe o script. A frase para criança de cada estudo fica em `src/data/osdrStudies.js`. Revelação (`src/story/studyReveals.js`): treino na esteira → osso, na bicicleta → músculo, tratamento na enfermaria → radiação (depois imunidade), tempestade sobrevivida → radiação; `reveal('sleep')` fica para o beliche (#109). A aba NASA STUDIES do diário mostra o link e o aviso de honestidade ("Done on the Space Station / in a lab on Earth with mice. It did not measure Mars."). Os resultados de `sleep` não são sobre sono em si (repouso na cama, cérebro de camundongo, missão RR-7 que observou ritmo de sono e vigília); a frase de cada um diz o que o estudo fez.
 
 ## 4. InSight Mars Weather: clima real na superfície de Marte
 

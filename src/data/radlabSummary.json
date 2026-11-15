@@ -1,0 +1,69 @@
+{
+  "source": "NASA OSDR RadLab",
+  "portal": "https://visualization.osdr.nasa.gov/radlab/",
+  "retrieved": "2026-11-15T01:49:16.591Z",
+  "field": "absorbed_dose_rate",
+  "unitNote": "The API response has no unit (probably uGy/h, see docs/data/apis-nasa.md). The game only shows comparisons.",
+  "series": [
+    {
+      "id": "iss",
+      "label": "Space Station",
+      "place": "Low Earth orbit",
+      "instrument": "ISS DOSTEL1",
+      "query": "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=ISS&instrument=DOSTEL1&timestamp>=2023-01-01&timestamp<2023-01-02&absorbed_dose_rate&format=json",
+      "n": 895,
+      "firstTimestamp": "2023-01-01T00:01:18",
+      "lastTimestamp": "2023-01-01T23:59:08",
+      "median": 4.742,
+      "mean": 28.303,
+      "p10": 1.895,
+      "p90": 47.955,
+      "max": 510.373
+    },
+    {
+      "id": "mars",
+      "label": "Mars surface",
+      "place": "Gale Crater, Mars",
+      "instrument": "Curiosity MSL-RAD",
+      "query": "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&timestamp>=2022-11-16&timestamp<2022-12-11&absorbed_dose_rate&format=json",
+      "n": 2036,
+      "firstTimestamp": "2022-11-16T00:03:22",
+      "lastTimestamp": "2022-12-10T23:50:02",
+      "median": 6.929,
+      "mean": 6.958,
+      "p10": 6.388,
+      "p90": 7.549,
+      "max": 9.863
+    },
+    {
+      "id": "moon",
+      "label": "Moon orbit",
+      "place": "Orbit around the Moon",
+      "instrument": "LRO CRaTER",
+      "query": "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=LRO&timestamp>=2022-11-16&timestamp<2022-11-18&absorbed_dose_rate&format=json",
+      "n": 48,
+      "firstTimestamp": "2022-11-16T00:59:59",
+      "lastTimestamp": "2022-11-17T23:59:59",
+      "median": 9.206,
+      "mean": 9.241,
+      "p10": 8.713,
+      "p90": 9.579,
+      "max": 12.677
+    },
+    {
+      "id": "orion",
+      "label": "Earth-Moon trip",
+      "place": "Artemis I, Earth to Moon and back",
+      "instrument": "Orion HERA-HSU1",
+      "query": "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Orion&instrument=HERA-HSU1&timestamp>=2022-11-16&timestamp<2022-12-11&absorbed_dose_rate&format=json",
+      "n": 35589,
+      "firstTimestamp": "2022-11-16T06:51:00",
+      "lastTimestamp": "2022-12-10T23:59:00",
+      "median": 16.686,
+      "mean": 19.576,
+      "p10": 14.174,
+      "p90": 20.296,
+      "max": 8012.58
+    }
+  ]
+}

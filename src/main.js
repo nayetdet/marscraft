@@ -2,6 +2,7 @@ import './ui/styles/base.css';
 import './ui/styles/hud.css';
 import './ui/styles/modal.css';
 import './ui/styles/story.css';
+import './ui/styles/journal.css';
 import { GameEngine } from './core/GameEngine.js';
 import { loadSpaceWeather } from './data/spaceWeather.js';
 

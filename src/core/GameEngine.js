@@ -1,7 +1,7 @@
 import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS, GREENHOUSE_BASKETS } from '../world/greenhouseLayout.js';
 import { createCropPlantModel } from '../graphics/cropModels.js';
 import * as THREE from 'three';
-import { CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.js';
 import { separateCrew } from '../crew/separateCrew.js';
 import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
@@ -44,6 +44,10 @@ import { oxygenModeWarning } from '../mission/oxygenPlant.js';
 import { AudioManager } from '../audio/AudioManager.js';
 import { getCategoryLabel } from '../data/scanCatalog.js';
 import { ScanJournal } from '../scanner/scanJournal.js';
+import { MissionLog } from '../story/missionLog.js';
+import { MissionLogFeed } from '../story/missionLogFeed.js';
+import { StudyReveals } from '../story/studyReveals.js';
+import { solSummaryLines } from '../ui/missionJournalView.js';
 import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js';
 import { resolveScanTarget, collectScanBlocks } from '../scanner/scanTargeting.js';
 import { ScanHighlight } from '../scanner/scanHighlight.js';
@@ -239,6 +243,17 @@ export class GameEngine {
     // Modulo norte (issue #56, parte B): energia/aquecimento, cozinha, banheiro e oficina
     this.utility = new UtilityModule({ mission: this.mission, survival: this.survival, stations: this.stations, base: this.crewStock });
     this._utilityHours = null;
+    // Diario de bordo por sol e estudos reais do OSDR (issue #106). Outros sistemas podem
+    // escrever com this.missionLog.add({ text, kind, hours }).
+    this.missionLog = new MissionLog();
+    this.studyReveals = new StudyReveals();
+    this.missionLogFeed = new MissionLogFeed({
+      log: this.missionLog,
+      reveals: this.studyReveals,
+      sources: { utility: this.utility, mission: this.mission, survival: this.survival, stations: this.stations, comms: this.comms },
+    });
+    this.scannerHud.attachMissionLog({ log: this.missionLog, reveals: this.studyReveals });
+    this.stationPanel.studyReveals = this.studyReveals;
     this.crewAvatars = [];
     this._buildCrew(CREW_CONFIG.NAMES.length);
     this.menuScreens = new MenuScreens({
@@ -471,6 +486,7 @@ export class GameEngine {
 
   // Fim da limpeza do traje no airlock: um fato real na primeira vez, aviso quando falta energia
   _onAirlockEvent(type) {
+    this.missionLogFeed?.onAirlockEvent(type, this._skyHours());
     if (type === 'door-open') {
       this.audio.playDoorOpen();
     } else if (type === 'door-close') {
@@ -911,8 +927,10 @@ export class GameEngine {
     for (const event of this.mission.drainEvents()) {
       const message = stormEventMessage(event, this.spaceWeather) || doseEventMessage(event.type);
       if (message) this.hud.showToast(message, event.type === 'storm-warning' || event.type.startsWith('dose-') ? 8000 : 4500);
+      this.missionLogFeed.onMissionEvent(event, this._skyHours());
     }
     this._updateWeather();
+    this._updateMissionLog();
 
     this.missionHud.update(this.mission, { survival: this.survival, stations: this.stations, world: this.world });
     this._panelRefreshTimer = (this._panelRefreshTimer ?? 0) + dt;
@@ -1009,6 +1027,20 @@ export class GameEngine {
       message += ' Real case: gusts of wind cleaned the panels of NASA rovers Spirit and Opportunity.';
     }
     this.hud.showToast(message, 6000);
+  }
+
+  // Diario de bordo (issue #106): le as mudancas do frame e mostra os cards novos.
+  // So aloca quando algo muda (uma decisao, um evento, o fim do sol).
+  _updateMissionLog() {
+    this.missionLogFeed.observe(this._skyHours());
+    for (const card of this.missionLogFeed.drainCards()) {
+      if (card.type === 'summary') {
+        const n = card.entry.numbers;
+        this.scannerHud.showDiscovery(card.entry.text.toUpperCase(), n.topDecision ? `Biggest choice: ${n.topDecision}` : 'Full report in your journal [J]', solSummaryLines(n), MISSION_LOG_CONFIG.SUMMARY_CARD_MS);
+      } else if (card.type === 'study') {
+        this.scannerHud.showDiscovery('NEW REAL NASA STUDY', `${card.study.id}: ${card.study.explanation}`, ['Read it in your journal [J], NASA STUDIES'], MISSION_LOG_CONFIG.STUDY_CARD_MS);
+      }
+    }
   }
 
   // O que esta plantado na estufa: o canteiro do jardim (campo 0) e os campos da redoma.

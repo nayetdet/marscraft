@@ -1,0 +1,232 @@
+/* Abas novas do diario [J] (issue #106): MISSION LOG, NASA STUDIES, REAL VS GAME e o grafico do RadLab */
+
+.journal-top-bar {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.journal-top-bar:not(.is-discoveries) .gh-res-pill {
+  display: none;
+}
+
+.journal-modes {
+  display: flex;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.journal-mode {
+  flex: 1 1 auto;
+  min-height: 34px;
+  padding: 4px 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.journal-mode small {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+.journal-body.is-scroll {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.journal-page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #e6f4f1;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.journal-page a {
+  color: #7dd3fc;
+}
+
+.journal-page h4 {
+  margin: 0 0 4px;
+  color: #fde047;
+  font-size: 13px;
+}
+
+.journal-page ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Diario de bordo */
+.mlog-empty,
+.study-intro {
+  margin: 0;
+  padding: 8px 10px;
+  background: #0b1c21;
+  border: 2px solid #35565b;
+  color: #dcfce7;
+}
+
+.mlog-entry {
+  padding: 5px 8px;
+  background: #0e2227;
+  border-left: 4px solid #35565b;
+}
+
+.mlog-entry.is-decision { border-left-color: #fde047; }
+.mlog-entry.is-consequence { border-left-color: #f87171; margin-left: 14px; }
+.mlog-entry.is-study { border-left-color: #38bdf8; }
+
+.mlog-time {
+  display: inline-block;
+  min-width: 92px;
+  color: #94a3b8;
+}
+
+.mlog-led {
+  padding: 0 4px;
+  background: #7f1d1d;
+  color: #fecaca;
+  font-size: 10px;
+}
+
+.mlog-because {
+  margin-top: 2px;
+  color: #fca5a5;
+  font-size: 11px;
+}
+
+.mlog-because small { color: #94a3b8; }
+
+.mlog-entry.is-summary {
+  border: 2px solid #4ade80;
+  background: #0b2a1f;
+}
+
+.mlog-summary-head {
+  color: #4ade80;
+  font-weight: bold;
+}
+
+.mlog-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.mlog-stat {
+  padding: 2px 6px;
+  background: #13323c;
+  border: 1px solid #38bdf8;
+  color: #fde047;
+}
+
+.mlog-stat b { color: #e6f4f1; margin-right: 4px; }
+.mlog-top { color: #bbf7d0; }
+
+/* Estudos reais */
+.study-card {
+  padding: 6px 8px;
+  background: #0e2227;
+  border: 2px solid #38bdf8;
+}
+
+.study-card p { margin: 3px 0; color: #e6f4f1; }
+.study-card small { color: #94a3b8; }
+.study-head { display: flex; justify-content: space-between; gap: 8px; color: #fde047; }
+
+.study-card.is-locked {
+  border-color: #475569;
+  color: #94a3b8;
+  filter: grayscale(1);
+}
+
+.study-card.is-locked b { margin-right: 6px; }
+
+/* Grafico de 4 barras do RadLab (diario e enfermaria) */
+.radlab-chart {
+  padding: 8px 10px;
+  background: #0b1c21;
+  border: 2px solid #fb923c;
+  color: #e6f4f1;
+  font-size: 12px;
+}
+
+.radlab-title {
+  margin-bottom: 6px;
+  color: #fdba74;
+  font-weight: bold;
+}
+
+.radlab-row {
+  display: grid;
+  grid-template-columns: 136px 1fr 40px;
+  align-items: center;
+  gap: 6px;
+  margin: 3px 0;
+}
+
+.radlab-track {
+  height: 12px;
+  background: #1c2427;
+  border: 1px solid #475569;
+}
+
+.radlab-fill {
+  display: block;
+  height: 100%;
+  background: #38bdf8;
+}
+
+.radlab-row.is-mars .radlab-fill { background: #f97316; }
+.radlab-row.is-mars .radlab-label { color: #fdba74; font-weight: bold; }
+.radlab-times { text-align: right; color: #fde047; }
+.radlab-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.radlab-note {
+  margin: 6px 0 0;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.station-screen .radlab-chart { margin-top: 10px; }
+.station-screen .radlab-note { color: #94a3b8; }
+
+/* Real x jogo */
+.rvg-row {
+  padding: 6px 8px;
+  background: #0e2227;
+  border: 2px solid #35565b;
+}
+
+.rvg-topic { color: #fde047; font-weight: bold; }
+
+.rvg-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 2px 0;
+}
+
+.rvg-cols b { color: #4ade80; margin-right: 4px; }
+.rvg-cols span:last-child b { color: #fdba74; }
+.rvg-why { color: #cbd5e1; font-size: 11px; }
+.rvg-why small { color: #94a3b8; }
+
+@media (max-width: 620px), (max-height: 500px) {
+  .journal-mode { min-height: 30px; font-size: 10.5px; padding: 2px 4px; }
+  .journal-top-bar .gh-res-pill { padding: 3px 6px; }
+  .journal-top-bar .gh-res-pill strong { font-size: 12px; }
+  .journal-page { font-size: 11px; }
+  .mlog-time { min-width: 84px; }
+  .radlab-row { grid-template-columns: 124px 1fr 36px; }
+}
+
+/* Telas da estufa e da academia escondem o texto da estacao: o grafico some junto */
+#station-content.hidden + .station-radlab { display: none; }
