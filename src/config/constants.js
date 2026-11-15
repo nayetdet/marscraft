@@ -457,4 +457,3 @@ export const SLEEP_CONFIG = Object.freeze({
     source: 'Barger et al., The Lancet Neurology 2014 & NASA Human Research Program',
   },
 });
-
