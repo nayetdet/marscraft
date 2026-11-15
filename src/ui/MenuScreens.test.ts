@@ -21,6 +21,7 @@ function makeDocument() {
   const ids = [
     'menu-main', 'demo-feedback', 'sources-terrain-coords', 'sources-terrain-date', 'sources-donki-date',
     'sources-screen', 'sources-btn', 'sources-back-btn',
+    'credits-screen', 'credits-btn', 'credits-back-btn',
     'options-screen', 'options-btn', 'options-back-btn',
     'language-select',
     'demo-screen', 'demo-btn', 'demo-back-btn',
@@ -85,5 +86,24 @@ describe('MenuScreens language control', () => {
     select.value = 'fr';
     select.fire('change');
     expect(onLanguageChange).toHaveBeenCalledOnce();
+  });
+});
+
+describe('MenuScreens credits screen', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('opens the team credits from the menu and returns with Back', () => {
+    const { document, elements } = makeDocument();
+    vi.stubGlobal('document', document);
+    new MenuScreens({ donkiDate: '15/11/2026', onDemo: vi.fn() });
+
+    elements.get('credits-btn').fire('click');
+    expect(elements.get('menu-main').classList.add).toHaveBeenCalledWith('hidden');
+    expect(elements.get('credits-screen').classList.remove).toHaveBeenCalledWith('hidden');
+    expect(elements.get('menu-main').closest().parentElement.closest().classList.add).toHaveBeenCalledWith('menu-info-open');
+
+    elements.get('credits-back-btn').fire('click');
+    expect(elements.get('credits-screen').classList.add).toHaveBeenCalledWith('hidden');
+    expect(elements.get('menu-main').classList.remove).toHaveBeenCalledWith('hidden');
   });
 });
