@@ -22,6 +22,8 @@
 }
 
 .mc-menu-card #quit-btn { display: block; }
+body:not(.pause-menu-open) .mc-menu-card #demo-btn { display: none; }
+body:not(.pause-menu-open) .mc-menu-card #sources-btn { grid-column: 1 / -1; }
 body.pause-menu-open .crew-picker { display: none; }
 
 .mc-overlay.hidden,
@@ -985,8 +987,8 @@ body.pause-menu-open .crew-picker { display: none; }
   }
 }
 
-/* Menu: fontes dos dados da NASA e controles de demo */
-.menu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* Menu: fontes e ferramentas de demo ficam em linhas separadas. */
+.menu-row { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .mc-menu-card .menu-row .mc-btn { font-size: 14px; padding: 10px 8px; }
 
 .controls-screen.info-screen {
