@@ -1,11 +1,1521 @@
 {
   "source": "NASA DONKI (Space Weather Database Of Notifications, Knowledge, Information)",
-  "query": "https://api.nasa.gov/DONKI/CME?startDate=2026-11-01&endDate=2026-11-13",
-  "note": "Only CMEs with a predicted impact at Mars (WSA-ENLIL model). marsArrivalTime is the predicted arrival. This file was assembled from the DONKI response saved in docs/data/samples/donki-cme-2026-11-sample.json: the window had 2 CMEs headed to Mars, and the saved sample has the arrival time of one of them (the other, 2026-11-09T18:15:00-CME-001, is left out until the data is fetched again). Run scripts/fetch-donki-cme.mjs with NASA_API_KEY to rebuild it from a longer window.",
-  "fetched": "2026-11-14",
-  "totalCmes": 33,
-  "count": 1,
+  "query": "https://api.nasa.gov/DONKI/CME?startDate=2025-11-14&endDate=2026-11-13",
+  "note": "Only CMEs with a predicted impact at Mars (WSA-ENLIL model). marsArrivalTime is the predicted arrival.",
+  "fetched": "2026-11-15",
+  "totalCmes": 1651,
+  "count": 153,
   "cmes": [
+    {
+      "id": "2025-11-21T19:24:00-CME-001",
+      "startTime": "2025-11-21T19:24Z",
+      "speedKmS": 1077,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2025-11-24T07:51Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/42938/-1"
+    },
+    {
+      "id": "2025-11-28T14:00:00-CME-001",
+      "startTime": "2025-11-28T14:00Z",
+      "speedKmS": 525,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2025-12-02T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/43077/-1"
+    },
+    {
+      "id": "2025-11-28T16:36:00-CME-001",
+      "startTime": "2025-11-28T16:36Z",
+      "speedKmS": 1049,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2025-12-02T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/43081/-1"
+    },
+    {
+      "id": "2025-12-01T02:48:00-CME-001",
+      "startTime": "2025-12-01T02:48Z",
+      "speedKmS": 1960,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2025-12-03T06:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/43155/-1"
+    },
+    {
+      "id": "2025-12-26T14:23:00-CME-001",
+      "startTime": "2025-12-26T14:23Z",
+      "speedKmS": 742,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2025-12-30T02:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/43594/-1"
+    },
+    {
+      "id": "2026-01-02T17:24:00-CME-001",
+      "startTime": "2026-01-02T17:24Z",
+      "speedKmS": 1341,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-01-04T07:48Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/43732/-1"
+    },
+    {
+      "id": "2026-01-08T10:23:00-CME-001",
+      "startTime": "2026-01-08T10:23Z",
+      "speedKmS": 1284,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-01-10T19:14Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/43821/-1"
+    },
+    {
+      "id": "2026-01-11T22:45:00-CME-001",
+      "startTime": "2026-01-11T22:45Z",
+      "speedKmS": 1608,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-01-14T10:18Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/43908/-1"
+    },
+    {
+      "id": "2026-01-15T02:12:00-CME-001",
+      "startTime": "2026-01-15T02:12Z",
+      "speedKmS": 589,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-01-19T12:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/43965/-1"
+    },
+    {
+      "id": "2026-01-23T15:12:00-CME-001",
+      "startTime": "2026-01-23T15:12Z",
+      "speedKmS": 687,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-01-28T06:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/44162/-1"
+    },
+    {
+      "id": "2026-01-24T10:53:00-CME-001",
+      "startTime": "2026-01-24T10:53Z",
+      "speedKmS": 664,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-01-29T03:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/44185/-1"
+    },
+    {
+      "id": "2026-02-05T23:24:00-CME-001",
+      "startTime": "2026-02-05T23:24Z",
+      "speedKmS": 691,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-02-10T04:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/44517/-1"
+    },
+    {
+      "id": "2026-02-07T21:36:00-CME-001",
+      "startTime": "2026-02-07T21:36Z",
+      "speedKmS": 942,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-02-11T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/44541/-1"
+    },
+    {
+      "id": "2026-02-11T03:48:00-CME-001",
+      "startTime": "2026-02-11T03:48Z",
+      "speedKmS": 468,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-02-15T22:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/44593/-1"
+    },
+    {
+      "id": "2026-02-18T04:48:00-CME-001",
+      "startTime": "2026-02-18T04:48Z",
+      "speedKmS": 725,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-02-22T10:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/44727/-1"
+    },
+    {
+      "id": "2026-03-03T11:01:00-CME-001",
+      "startTime": "2026-03-03T11:01Z",
+      "speedKmS": 1301,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-03-08T00:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/44913/-1"
+    },
+    {
+      "id": "2026-03-13T06:48:00-CME-001",
+      "startTime": "2026-03-13T06:48Z",
+      "speedKmS": 432,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-03-18T00:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/45052/-1"
+    },
+    {
+      "id": "2026-03-20T12:23:00-CME-001",
+      "startTime": "2026-03-20T12:23Z",
+      "speedKmS": 802,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-03-25T14:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/45193/-1"
+    },
+    {
+      "id": "2026-03-20T12:38:00-CME-001",
+      "startTime": "2026-03-20T12:38Z",
+      "speedKmS": 1095,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-03-25T14:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/45191/-1"
+    },
+    {
+      "id": "2026-04-08T03:53:00-CME-001",
+      "startTime": "2026-04-08T03:53Z",
+      "speedKmS": 431,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-04-12T20:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/45562/-1"
+    },
+    {
+      "id": "2026-04-08T07:24:00-CME-001",
+      "startTime": "2026-04-08T07:24Z",
+      "speedKmS": 407,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-04-12T20:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/45567/-1"
+    },
+    {
+      "id": "2026-04-12T17:23:00-CME-001",
+      "startTime": "2026-04-12T17:23Z",
+      "speedKmS": 650,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-04-16T16:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/45630/-1"
+    },
+    {
+      "id": "2026-04-13T18:24:00-CME-001",
+      "startTime": "2026-04-13T18:24Z",
+      "speedKmS": 630,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-04-17T18:02Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/45652/-1"
+    },
+    {
+      "id": "2026-04-15T11:53:00-CME-001",
+      "startTime": "2026-04-15T11:53Z",
+      "speedKmS": 880,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-04-19T02:24Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/45676/-1"
+    },
+    {
+      "id": "2026-04-16T00:00:00-CME-001",
+      "startTime": "2026-04-16T00:00Z",
+      "speedKmS": 458,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-04-21T01:05Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/45696/-1"
+    },
+    {
+      "id": "2026-05-02T11:38:00-CME-001",
+      "startTime": "2026-05-02T11:38Z",
+      "speedKmS": 409,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-07T12:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/45958/-1"
+    },
+    {
+      "id": "2026-05-13T22:24:00-CME-001",
+      "startTime": "2026-05-13T22:24Z",
+      "speedKmS": 519,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-18T22:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46141/-1"
+    },
+    {
+      "id": "2026-05-16T08:09:00-CME-001",
+      "startTime": "2026-05-16T08:09Z",
+      "speedKmS": 548,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-20T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46197/-1"
+    },
+    {
+      "id": "2026-05-16T13:23:00-CME-001",
+      "startTime": "2026-05-16T13:23Z",
+      "speedKmS": 458,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-20T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46202/-1"
+    },
+    {
+      "id": "2026-05-18T06:38:00-CME-001",
+      "startTime": "2026-05-18T06:38Z",
+      "speedKmS": 390,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-23T13:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46249/-1"
+    },
+    {
+      "id": "2026-05-18T16:12:00-CME-001",
+      "startTime": "2026-05-18T16:12Z",
+      "speedKmS": 375,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-24T00:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46253/-1"
+    },
+    {
+      "id": "2026-05-23T20:30:00-CME-001",
+      "startTime": "2026-05-23T20:30Z",
+      "speedKmS": 580,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-27T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46339/-1"
+    },
+    {
+      "id": "2026-05-24T09:12:00-CME-001",
+      "startTime": "2026-05-24T09:12Z",
+      "speedKmS": 643,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-28T00:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46344/-1"
+    },
+    {
+      "id": "2026-05-25T22:12:00-CME-001",
+      "startTime": "2026-05-25T22:12Z",
+      "speedKmS": 1174,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-28T10:09Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46360/-1"
+    },
+    {
+      "id": "2026-05-25T23:24:00-CME-001",
+      "startTime": "2026-05-25T23:24Z",
+      "speedKmS": 1096,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-28T13:05Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46398/-1"
+    },
+    {
+      "id": "2026-05-26T00:48:00-CME-001",
+      "startTime": "2026-05-26T00:48Z",
+      "speedKmS": 606,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-28T13:05Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46400/-1"
+    },
+    {
+      "id": "2026-05-26T02:12:00-CME-001",
+      "startTime": "2026-05-26T02:12Z",
+      "speedKmS": 820,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-29T08:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46402/-1"
+    },
+    {
+      "id": "2026-05-26T05:36:00-CME-001",
+      "startTime": "2026-05-26T05:36Z",
+      "speedKmS": 379,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-05-30T14:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46404/-1"
+    },
+    {
+      "id": "2026-05-28T23:00:00-CME-001",
+      "startTime": "2026-05-28T23:00Z",
+      "speedKmS": 351,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-03T05:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46458/-1"
+    },
+    {
+      "id": "2026-05-31T12:36:00-CME-001",
+      "startTime": "2026-05-31T12:36Z",
+      "speedKmS": 435,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-05T12:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46490/-1"
+    },
+    {
+      "id": "2026-05-31T16:53:00-CME-001",
+      "startTime": "2026-05-31T16:53Z",
+      "speedKmS": 458,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-05T12:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46498/-1"
+    },
+    {
+      "id": "2026-06-01T19:00:00-CME-001",
+      "startTime": "2026-06-01T19:00Z",
+      "speedKmS": 519,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-05T12:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46540/-1"
+    },
+    {
+      "id": "2026-06-01T19:09:00-CME-001",
+      "startTime": "2026-06-01T19:09Z",
+      "speedKmS": 1031,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-05T12:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46538/-1"
+    },
+    {
+      "id": "2026-06-03T04:36:00-CME-001",
+      "startTime": "2026-06-03T04:36Z",
+      "speedKmS": 851,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-07T12:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46616/-1"
+    },
+    {
+      "id": "2026-06-04T10:00:00-CME-001",
+      "startTime": "2026-06-04T10:00Z",
+      "speedKmS": 444,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-09T04:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46640/-1"
+    },
+    {
+      "id": "2026-06-05T09:09:00-CME-001",
+      "startTime": "2026-06-05T09:09Z",
+      "speedKmS": 1361,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-08T15:43Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46648/-1"
+    },
+    {
+      "id": "2026-06-06T20:12:00-CME-001",
+      "startTime": "2026-06-06T20:12Z",
+      "speedKmS": 780,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-10T16:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46709/-1"
+    },
+    {
+      "id": "2026-06-10T18:08:00-CME-001",
+      "startTime": "2026-06-10T18:08Z",
+      "speedKmS": 619,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-14T21:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46766/-1"
+    },
+    {
+      "id": "2026-06-10T18:12:00-CME-001",
+      "startTime": "2026-06-10T18:12Z",
+      "speedKmS": 512,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-14T21:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46768/-1"
+    },
+    {
+      "id": "2026-06-13T13:26:00-CME-001",
+      "startTime": "2026-06-13T13:26Z",
+      "speedKmS": 649,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-17T20:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46834/-1"
+    },
+    {
+      "id": "2026-06-17T12:30:00-CME-001",
+      "startTime": "2026-06-17T12:30Z",
+      "speedKmS": 309,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-21T04:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46872/-1"
+    },
+    {
+      "id": "2026-06-17T15:09:00-CME-001",
+      "startTime": "2026-06-17T15:09Z",
+      "speedKmS": 568,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-21T04:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46875/-1"
+    },
+    {
+      "id": "2026-06-17T17:48:00-CME-001",
+      "startTime": "2026-06-17T17:48Z",
+      "speedKmS": 500,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-21T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46882/-1"
+    },
+    {
+      "id": "2026-06-17T18:48:00-CME-001",
+      "startTime": "2026-06-17T18:48Z",
+      "speedKmS": 675,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-21T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46884/-1"
+    },
+    {
+      "id": "2026-06-17T20:24:00-CME-001",
+      "startTime": "2026-06-17T20:24Z",
+      "speedKmS": 509,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-21T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46887/-1"
+    },
+    {
+      "id": "2026-06-18T00:00:00-CME-001",
+      "startTime": "2026-06-18T00:00Z",
+      "speedKmS": 517,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-21T20:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46893/-1"
+    },
+    {
+      "id": "2026-06-18T01:28:00-CME-001",
+      "startTime": "2026-06-18T01:28Z",
+      "speedKmS": 432,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-21T20:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46912/-1"
+    },
+    {
+      "id": "2026-06-18T02:36:00-CME-001",
+      "startTime": "2026-06-18T02:36Z",
+      "speedKmS": 688,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-21T20:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46914/-1"
+    },
+    {
+      "id": "2026-06-18T13:23:00-CME-001",
+      "startTime": "2026-06-18T13:23Z",
+      "speedKmS": 592,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-22T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46909/-1"
+    },
+    {
+      "id": "2026-06-20T01:00:00-CME-001",
+      "startTime": "2026-06-20T01:00Z",
+      "speedKmS": 806,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-23T14:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46940/-1"
+    },
+    {
+      "id": "2026-06-21T07:38:00-CME-001",
+      "startTime": "2026-06-21T07:38Z",
+      "speedKmS": 668,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-24T22:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/46957/-1"
+    },
+    {
+      "id": "2026-06-25T14:38:00-CME-001",
+      "startTime": "2026-06-25T14:38Z",
+      "speedKmS": 400,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-06-30T10:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47034/-1"
+    },
+    {
+      "id": "2026-06-25T23:48:00-CME-001",
+      "startTime": "2026-06-25T23:48Z",
+      "speedKmS": 440,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-01T00:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47049/-1"
+    },
+    {
+      "id": "2026-06-26T02:00:00-CME-001",
+      "startTime": "2026-06-26T02:00Z",
+      "speedKmS": 364,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-01T00:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47058/-1"
+    },
+    {
+      "id": "2026-06-26T08:48:00-CME-001",
+      "startTime": "2026-06-26T08:48Z",
+      "speedKmS": 345,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-01T00:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47072/-1"
+    },
+    {
+      "id": "2026-06-26T14:12:00-CME-001",
+      "startTime": "2026-06-26T14:12Z",
+      "speedKmS": 670,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-01T00:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47082/-1"
+    },
+    {
+      "id": "2026-06-26T15:09:00-CME-001",
+      "startTime": "2026-06-26T15:09Z",
+      "speedKmS": 514,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-02T06:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47084/-1"
+    },
+    {
+      "id": "2026-06-27T18:53:00-CME-001",
+      "startTime": "2026-06-27T18:53Z",
+      "speedKmS": 589,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-01T21:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47117/-1"
+    },
+    {
+      "id": "2026-06-28T23:00:00-CME-001",
+      "startTime": "2026-06-28T23:00Z",
+      "speedKmS": 421,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-03T14:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47154/-1"
+    },
+    {
+      "id": "2026-07-03T18:36:00-CME-001",
+      "startTime": "2026-07-03T18:36Z",
+      "speedKmS": 780,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-07T04:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47302/-1"
+    },
+    {
+      "id": "2026-07-05T07:36:00-CME-001",
+      "startTime": "2026-07-05T07:36Z",
+      "speedKmS": 337,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-10T18:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47371/-1"
+    },
+    {
+      "id": "2026-07-06T07:12:00-CME-001",
+      "startTime": "2026-07-06T07:12Z",
+      "speedKmS": 334,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-11T12:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47399/-1"
+    },
+    {
+      "id": "2026-07-06T10:36:00-CME-001",
+      "startTime": "2026-07-06T10:36Z",
+      "speedKmS": 282,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-11T12:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47406/-1"
+    },
+    {
+      "id": "2026-07-06T17:24:00-CME-001",
+      "startTime": "2026-07-06T17:24Z",
+      "speedKmS": 829,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-11T12:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47410/-1"
+    },
+    {
+      "id": "2026-07-06T17:36:00-CME-001",
+      "startTime": "2026-07-06T17:36Z",
+      "speedKmS": 372,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-11T12:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47414/-1"
+    },
+    {
+      "id": "2026-07-06T19:12:00-CME-001",
+      "startTime": "2026-07-06T19:12Z",
+      "speedKmS": 338,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-11T12:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47416/-1"
+    },
+    {
+      "id": "2026-07-07T08:12:00-CME-001",
+      "startTime": "2026-07-07T08:12Z",
+      "speedKmS": 346,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-12T16:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47429/-1"
+    },
+    {
+      "id": "2026-07-07T23:24:00-CME-001",
+      "startTime": "2026-07-07T23:24Z",
+      "speedKmS": 439,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-13T00:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47460/-1"
+    },
+    {
+      "id": "2026-07-08T06:45:00-CME-001",
+      "startTime": "2026-07-08T06:45Z",
+      "speedKmS": 748,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-12T08:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47446/-1"
+    },
+    {
+      "id": "2026-07-08T08:00:00-CME-001",
+      "startTime": "2026-07-08T08:00Z",
+      "speedKmS": 417,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-12T08:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47448/-1"
+    },
+    {
+      "id": "2026-07-08T10:09:00-CME-001",
+      "startTime": "2026-07-08T10:09Z",
+      "speedKmS": 531,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-12T08:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47451/-1"
+    },
+    {
+      "id": "2026-07-09T04:53:00-CME-001",
+      "startTime": "2026-07-09T04:53Z",
+      "speedKmS": 673,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-13T03:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47475/-1"
+    },
+    {
+      "id": "2026-07-11T16:09:00-CME-001",
+      "startTime": "2026-07-11T16:09Z",
+      "speedKmS": 591,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-18T00:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47523/-1"
+    },
+    {
+      "id": "2026-07-12T01:14:00-CME-001",
+      "startTime": "2026-07-12T01:14Z",
+      "speedKmS": 552,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-18T02:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47534/-1"
+    },
+    {
+      "id": "2026-07-12T02:12:00-CME-001",
+      "startTime": "2026-07-12T02:12Z",
+      "speedKmS": 934,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-18T02:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47538/-1"
+    },
+    {
+      "id": "2026-07-13T02:53:00-CME-001",
+      "startTime": "2026-07-13T02:53Z",
+      "speedKmS": 579,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-19T16:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47558/-1"
+    },
+    {
+      "id": "2026-07-14T05:36:00-CME-001",
+      "startTime": "2026-07-14T05:36Z",
+      "speedKmS": 535,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-20T06:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47577/-1"
+    },
+    {
+      "id": "2026-07-15T03:24:00-CME-001",
+      "startTime": "2026-07-15T03:24Z",
+      "speedKmS": 528,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-20T02:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47594/-1"
+    },
+    {
+      "id": "2026-07-16T10:36:00-CME-001",
+      "startTime": "2026-07-16T10:36Z",
+      "speedKmS": 490,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-22T00:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47614/-1"
+    },
+    {
+      "id": "2026-07-17T18:00:00-CME-001",
+      "startTime": "2026-07-17T18:00Z",
+      "speedKmS": 833,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-22T13:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47631/-1"
+    },
+    {
+      "id": "2026-07-17T18:12:00-CME-001",
+      "startTime": "2026-07-17T18:12Z",
+      "speedKmS": 464,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-22T13:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47633/-1"
+    },
+    {
+      "id": "2026-07-18T19:36:00-CME-001",
+      "startTime": "2026-07-18T19:36Z",
+      "speedKmS": 336,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-23T10:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47643/-1"
+    },
+    {
+      "id": "2026-07-18T20:12:00-CME-001",
+      "startTime": "2026-07-18T20:12Z",
+      "speedKmS": 479,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-23T10:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47645/-1"
+    },
+    {
+      "id": "2026-07-19T08:48:00-CME-001",
+      "startTime": "2026-07-19T08:48Z",
+      "speedKmS": 326,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-26T14:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47651/-1"
+    },
+    {
+      "id": "2026-07-19T15:48:00-CME-001",
+      "startTime": "2026-07-19T15:48Z",
+      "speedKmS": 592,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-25T06:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47653/-1"
+    },
+    {
+      "id": "2026-07-19T21:24:00-CME-001",
+      "startTime": "2026-07-19T21:24Z",
+      "speedKmS": 321,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-25T06:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47660/-1"
+    },
+    {
+      "id": "2026-07-20T02:24:00-CME-001",
+      "startTime": "2026-07-20T02:24Z",
+      "speedKmS": 587,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-25T06:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47665/-1"
+    },
+    {
+      "id": "2026-07-20T05:48:00-CME-001",
+      "startTime": "2026-07-20T05:48Z",
+      "speedKmS": 585,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-25T06:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47669/-1"
+    },
+    {
+      "id": "2026-07-20T10:23:00-CME-001",
+      "startTime": "2026-07-20T10:23Z",
+      "speedKmS": 545,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-25T06:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47671/-1"
+    },
+    {
+      "id": "2026-07-20T13:26:00-CME-001",
+      "startTime": "2026-07-20T13:26Z",
+      "speedKmS": 499,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-26T02:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47679/-1"
+    },
+    {
+      "id": "2026-07-21T23:00:00-CME-001",
+      "startTime": "2026-07-21T23:00Z",
+      "speedKmS": 333,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-28T04:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47731/-1"
+    },
+    {
+      "id": "2026-07-27T07:38:00-CME-001",
+      "startTime": "2026-07-27T07:38Z",
+      "speedKmS": 489,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-07-31T22:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47803/-1"
+    },
+    {
+      "id": "2026-07-30T16:53:00-CME-001",
+      "startTime": "2026-07-30T16:53Z",
+      "speedKmS": 930,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-04T02:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47871/-1"
+    },
+    {
+      "id": "2026-08-06T17:38:00-CME-001",
+      "startTime": "2026-08-06T17:38Z",
+      "speedKmS": 779,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-11T00:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/47987/-1"
+    },
+    {
+      "id": "2026-08-08T08:15:00-CME-001",
+      "startTime": "2026-08-08T08:15Z",
+      "speedKmS": 734,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-12T16:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48007/-1"
+    },
+    {
+      "id": "2026-08-10T13:25:00-CME-001",
+      "startTime": "2026-08-10T13:25Z",
+      "speedKmS": 417,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-16T00:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48052/-1"
+    },
+    {
+      "id": "2026-08-12T08:23:00-CME-001",
+      "startTime": "2026-08-12T08:23Z",
+      "speedKmS": 337,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-18T18:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48067/-1"
+    },
+    {
+      "id": "2026-08-14T07:38:00-CME-001",
+      "startTime": "2026-08-14T07:38Z",
+      "speedKmS": 636,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-19T20:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48077/-1"
+    },
+    {
+      "id": "2026-08-14T18:23:00-CME-001",
+      "startTime": "2026-08-14T18:23Z",
+      "speedKmS": 607,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-19T07:30Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48096/-1"
+    },
+    {
+      "id": "2026-08-16T19:48:00-CME-001",
+      "startTime": "2026-08-16T19:48Z",
+      "speedKmS": 362,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-23T04:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48119/-1"
+    },
+    {
+      "id": "2026-08-17T07:15:00-CME-001",
+      "startTime": "2026-08-17T07:15Z",
+      "speedKmS": 431,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-22T16:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48123/-1"
+    },
+    {
+      "id": "2026-08-17T18:45:00-CME-001",
+      "startTime": "2026-08-17T18:45Z",
+      "speedKmS": 605,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-22T19:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48131/-1"
+    },
+    {
+      "id": "2026-08-18T14:45:00-CME-001",
+      "startTime": "2026-08-18T14:45Z",
+      "speedKmS": 341,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-24T02:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48138/-1"
+    },
+    {
+      "id": "2026-08-19T01:36:00-CME-001",
+      "startTime": "2026-08-19T01:36Z",
+      "speedKmS": 502,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-24T04:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48143/-1"
+    },
+    {
+      "id": "2026-08-19T06:30:00-CME-001",
+      "startTime": "2026-08-19T06:30Z",
+      "speedKmS": 505,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-24T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48147/-1"
+    },
+    {
+      "id": "2026-08-19T08:45:00-CME-001",
+      "startTime": "2026-08-19T08:45Z",
+      "speedKmS": 455,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-24T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48149/-1"
+    },
+    {
+      "id": "2026-08-19T11:30:00-CME-001",
+      "startTime": "2026-08-19T11:30Z",
+      "speedKmS": 517,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-24T08:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48151/-1"
+    },
+    {
+      "id": "2026-08-20T04:36:00-CME-001",
+      "startTime": "2026-08-20T04:36Z",
+      "speedKmS": 459,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-24T12:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48167/-1"
+    },
+    {
+      "id": "2026-08-20T18:48:00-CME-001",
+      "startTime": "2026-08-20T18:48Z",
+      "speedKmS": 1040,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-24T12:14Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48173/-1"
+    },
+    {
+      "id": "2026-08-21T09:36:00-CME-001",
+      "startTime": "2026-08-21T09:36Z",
+      "speedKmS": 1329,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-24T00:09Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48186/-1"
+    },
+    {
+      "id": "2026-08-22T06:30:00-CME-001",
+      "startTime": "2026-08-22T06:30Z",
+      "speedKmS": 727,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-26T01:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48203/-1"
+    },
+    {
+      "id": "2026-08-23T00:12:00-CME-001",
+      "startTime": "2026-08-23T00:12Z",
+      "speedKmS": 959,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-08-26T10:03Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48210/-1"
+    },
+    {
+      "id": "2026-08-29T08:12:00-CME-001",
+      "startTime": "2026-08-29T08:12Z",
+      "speedKmS": 275,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-09-04T00:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48378/-1"
+    },
+    {
+      "id": "2026-09-02T00:08:00-CME-001",
+      "startTime": "2026-09-02T00:08Z",
+      "speedKmS": 326,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-09-07T00:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48464/-1"
+    },
+    {
+      "id": "2026-09-05T15:36:00-CME-001",
+      "startTime": "2026-09-05T15:36Z",
+      "speedKmS": 1111,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-09-08T21:35Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48561/-1"
+    },
+    {
+      "id": "2026-09-13T19:48:00-CME-001",
+      "startTime": "2026-09-13T19:48Z",
+      "speedKmS": 1305,
+      "type": "O",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-09-19T04:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48690/-1"
+    },
+    {
+      "id": "2026-09-13T21:12:00-CME-001",
+      "startTime": "2026-09-13T21:12Z",
+      "speedKmS": 645,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-09-20T00:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48698/-1"
+    },
+    {
+      "id": "2026-09-14T11:08:00-CME-001",
+      "startTime": "2026-09-14T11:08Z",
+      "speedKmS": 744,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-09-20T10:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48702/-1"
+    },
+    {
+      "id": "2026-09-24T14:45:00-CME-001",
+      "startTime": "2026-09-24T14:45Z",
+      "speedKmS": 493,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-09-29T18:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48797/-1"
+    },
+    {
+      "id": "2026-09-26T19:36:00-CME-001",
+      "startTime": "2026-09-26T19:36Z",
+      "speedKmS": 427,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-01T12:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48834/-1"
+    },
+    {
+      "id": "2026-09-28T14:36:00-CME-001",
+      "startTime": "2026-09-28T14:36Z",
+      "speedKmS": 447,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-03T14:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48872/-1"
+    },
+    {
+      "id": "2026-09-30T03:12:00-CME-001",
+      "startTime": "2026-09-30T03:12Z",
+      "speedKmS": 488,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-05T06:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48901/-1"
+    },
+    {
+      "id": "2026-10-02T00:53:00-CME-001",
+      "startTime": "2026-10-02T00:53Z",
+      "speedKmS": 255,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-08T03:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48924/-1"
+    },
+    {
+      "id": "2026-10-02T08:24:00-CME-001",
+      "startTime": "2026-10-02T08:24Z",
+      "speedKmS": 270,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-08T03:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48931/-1"
+    },
+    {
+      "id": "2026-10-04T07:24:00-CME-001",
+      "startTime": "2026-10-04T07:24Z",
+      "speedKmS": 336,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-09T16:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48958/-1"
+    },
+    {
+      "id": "2026-10-04T07:36:00-CME-001",
+      "startTime": "2026-10-04T07:36Z",
+      "speedKmS": 313,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-09T16:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48960/-1"
+    },
+    {
+      "id": "2026-10-05T01:26:00-CME-001",
+      "startTime": "2026-10-05T01:26Z",
+      "speedKmS": 340,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-10T12:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48982/-1"
+    },
+    {
+      "id": "2026-10-06T00:00:00-CME-001",
+      "startTime": "2026-10-06T00:00Z",
+      "speedKmS": 325,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-11T23:30Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48996/-1"
+    },
+    {
+      "id": "2026-10-06T06:23:00-CME-001",
+      "startTime": "2026-10-06T06:23Z",
+      "speedKmS": 570,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-11T06:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/48988/-1"
+    },
+    {
+      "id": "2026-10-08T16:24:00-CME-001",
+      "startTime": "2026-10-08T16:24Z",
+      "speedKmS": 579,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-13T12:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49026/-1"
+    },
+    {
+      "id": "2026-10-08T16:53:00-CME-001",
+      "startTime": "2026-10-08T16:53Z",
+      "speedKmS": 723,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-13T18:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49019/-1"
+    },
+    {
+      "id": "2026-10-10T08:36:00-CME-001",
+      "startTime": "2026-10-10T08:36Z",
+      "speedKmS": 368,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-16T07:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49062/-1"
+    },
+    {
+      "id": "2026-10-10T16:15:00-CME-001",
+      "startTime": "2026-10-10T16:15Z",
+      "speedKmS": 844,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-14T19:05Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49064/-1"
+    },
+    {
+      "id": "2026-10-23T04:18:00-CME-001",
+      "startTime": "2026-10-23T04:18Z",
+      "speedKmS": 597,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-27T12:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49212/-1"
+    },
+    {
+      "id": "2026-10-25T19:24:00-CME-001",
+      "startTime": "2026-10-25T19:24Z",
+      "speedKmS": 275,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-11-01T01:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49246/-1"
+    },
+    {
+      "id": "2026-10-26T01:26:00-CME-001",
+      "startTime": "2026-10-26T01:26Z",
+      "speedKmS": 285,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-11-01T02:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49270/-1"
+    },
+    {
+      "id": "2026-10-26T02:12:00-CME-001",
+      "startTime": "2026-10-26T02:12Z",
+      "speedKmS": 327,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-11-01T02:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49272/-1"
+    },
+    {
+      "id": "2026-10-26T09:00:00-CME-001",
+      "startTime": "2026-10-26T09:00Z",
+      "speedKmS": 873,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-30T18:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49254/-1"
+    },
+    {
+      "id": "2026-10-26T09:48:00-CME-001",
+      "startTime": "2026-10-26T09:48Z",
+      "speedKmS": 681,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-30T18:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49249/-1"
+    },
+    {
+      "id": "2026-10-26T18:48:00-CME-001",
+      "startTime": "2026-10-26T18:48Z",
+      "speedKmS": 616,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-10-31T11:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49276/-1"
+    },
+    {
+      "id": "2026-10-29T10:36:00-CME-001",
+      "startTime": "2026-10-29T10:36Z",
+      "speedKmS": 287,
+      "type": "S",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-11-04T08:00Z",
+      "isGlancingBlow": false,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49324/-1"
+    },
     {
       "id": "2026-11-01T19:00:00-CME-001",
       "startTime": "2026-11-01T19:00Z",
@@ -15,6 +1525,16 @@
       "marsArrivalTime": "2026-11-07T06:00Z",
       "isGlancingBlow": true,
       "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49358/-1"
+    },
+    {
+      "id": "2026-11-09T18:15:00-CME-001",
+      "startTime": "2026-11-09T18:15Z",
+      "speedKmS": 726,
+      "type": "C",
+      "headedToMars": true,
+      "marsArrivalTime": "2026-11-13T12:00Z",
+      "isGlancingBlow": true,
+      "link": "https://ccmc.gsfc.nasa.gov/DONKI/view/CME/49468/-1"
     }
   ]
 }
