@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
-import { HABITAT_LAYOUT, SOLAR_FIELD } from './habitatLayout.js';
+import { EAST_WING, HABITAT_LAYOUT, SOLAR_FIELD } from './habitatLayout.js';
 import { signTexture } from '../base/baseCanvas.js';
 import { SIGNS } from '../base/basePosters.js';
 
@@ -163,8 +163,8 @@ export function buildNasaCustomModels(scene) {
 
   // 4. Beliches da Tripulação (Parede Noroeste)
   // Tres beliches no dormitorio (EAST_WING), com a cabeceira na parede sul
-  for (const bunkX of [21, 24, 27]) {
-    const crewQuarters = createCrewQuartersModel(mats, bunkX, floorTopY, -2.2);
+  for (const bunk of EAST_WING.BUNKS) {
+    const crewQuarters = createCrewQuartersModel(mats, bunk.x, floorTopY, bunk.z);
     group.add(crewQuarters);
     solidObjects.push(crewQuarters);
   }

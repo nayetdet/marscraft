@@ -140,6 +140,13 @@ export class SurvivalSystem {
     return this.oxygen > SURVIVAL_CONFIG.HEAL_MIN_OXYGEN;
   }
 
+  // Fome e sede gastas fora do relogio real do quadro (horas de jogo dormindo, issue #109)
+  spendNeeds(food, water) {
+    if (this.isDead) return;
+    this.food = Math.max(0, this.food - Math.max(0, food));
+    this.water = Math.max(0, this.water - Math.max(0, water));
+  }
+
   takeDamage(amount, cause = 'BIOLOGICAL_COLLAPSE', detail = cause) {
     if (this.isDead || amount <= 0) return;
     this.health = Math.max(0, this.health - amount);

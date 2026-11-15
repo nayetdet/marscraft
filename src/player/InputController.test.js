@@ -48,3 +48,12 @@ describe('scope equipment', () => {
     expect(input.isScannerOpen).toBe(false);
   });
 });
+
+describe('time skip (issue #109)', () => {
+  it('the T key no longer advances time in normal play: sleeping in a bunk does', async () => {
+    const { readFileSync } = await import('node:fs');
+    const source = readFileSync(new URL('./InputController.js', import.meta.url), 'utf8');
+    expect(source).not.toMatch(/advanceTime\(/);
+    expect(source).not.toMatch(/'KeyT'/);
+  });
+});

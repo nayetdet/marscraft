@@ -585,3 +585,37 @@ export const MISSION_LOG_CONFIG = {
   SUMMARY_CARD_MS: 9000, // resumo do fim do sol na tela
   STUDY_CARD_MS: 7000, // estudo real da NASA revelado
 };
+
+// Dormir no beliche do dormitorio (issue #109): substitui o avanco de tempo gratis da tecla T.
+// Escala de jogo, exceto o que esta marcado [Ref]. Fontes em docs/data/numeros-reais.md.
+export const SLEEP_CONFIG = {
+  NAP_HOURS: 2,
+  // "Sleep until sunrise" so de noite: o Sol fica abaixo do horizonte das 18h as 6h
+  // (MarsSkySystem); o nascer do sol e MISSION_CONFIG.SUNRISE_HOUR.
+  NIGHT_FROM_HOUR: 18,
+  // Enquanto dorme o relogio corre 3 horas de jogo por segundo real (uma noite passa em ~3 s)
+  CLOCK_HOURS_PER_SECOND: 3,
+  // A cada passo (6 min de jogo) a base anda e o jogo checa se algo acorda o jogador
+  STEP_HOURS: 0.1,
+  // Fome e sede do jogador por hora de jogo dormindo (barras de 20 pontos). Escala de jogo:
+  // acordado a barra de comida dura ~1,8 h de jogo, entao a mesma taxa matava qualquer um que
+  // dormisse. Dormindo o corpo gasta menos (taxa de sono = 1,0x o metabolismo basal, contra
+  // ~1,75x na media de um dia ativo, FAO/WHO/UNU 2004); aqui uma noite de 9 h gasta ~metade
+  // da comida e ~1/3 da agua, entao comer e beber antes de deitar e parte da escolha.
+  FOOD_PER_HOUR: 1.2,
+  WATER_PER_HOUR: 0.8,
+  // Com comida ou agua neste nivel o jogador acorda (e nao consegue pegar no sono)
+  WAKE_NEED_LEVEL: 4,
+  // Ar minimo da base (%) para poder dormir
+  MIN_BASE_OXYGEN: 50,
+  // CO2 do habitat (%) que dispara o alarme da tripulacao (igual ao aviso do HUD)
+  CO2_ALARM: 40,
+  // Mais de 1 sol (24 h de jogo) acordado: o trabalho fica mais lento (getWorkSpeed)
+  TIRED_AFTER_HOURS: 24,
+  // Cada hora dormida paga 3 horas acordado (8 h de sono "zeram" um dia inteiro). Escala de jogo.
+  REST_PER_HOUR_SLEPT: 3,
+  // [Ref] Barger et al., Lancet Neurology 2014: 64 astronautas do onibus espacial e 21 da
+  // Estacao Espacial dormiram ~6 h por noite, com 8,5 h reservadas na agenda.
+  ASTRONAUT_SLEEP_HOURS: 6,
+  ASTRONAUT_SCHEDULED_SLEEP_HOURS: 8.5,
+};
