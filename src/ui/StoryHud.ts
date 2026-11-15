@@ -57,7 +57,7 @@ function setWidth(node, fraction) {
 // Card de radio (issue #135): mostra o rosto de quem fala, o texto aparece letra por letra e as
 // escolhas com tecla ([1] HIDE / [2] SHIELD) sao feitas na hora, sem soltar o teclado nem parar.
 export class StoryHud {
-  constructor({ cardSeconds = STORY_CONFIG.CARD_SECONDS, stormsNeeded = STORY_CONFIG.STORMS_FOR_WINDOW } = {}) {
+  constructor({ cardSeconds = STORY_CONFIG.CARD_SECONDS, stormsNeeded = MAV_CONFIG.STORMS_TO_SURVIVE } = {}) {
     const $ = (id) => document.getElementById(id);
     this.cardSeconds = cardSeconds;
 

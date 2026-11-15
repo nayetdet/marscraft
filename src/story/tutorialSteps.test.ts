@@ -35,7 +35,6 @@ const ACTIONS = [
   ['plant', { plantCount: 1 }],
   ['cert-greenhouse', { harvestCount: 1 }],
   ['cert-gym', { workoutCount: 1 }],
-  ['wash', { washCount: 1 }],
   ['cert-shelter', { shelterWaterL: 10 }],
   ['rover-drive', { roverDrives: 1 }],
   ['rover-ice', { roverIceKg: 10 }],
@@ -213,9 +212,9 @@ describe('tutorial step texts', () => {
     });
   });
 
-  it('has unique ids and keeps the 3 core steps for a skipped tutorial', () => {
+  it('has unique ids and keeps the 5 core steps as the default tutorial', () => {
     expect(new Set(TUTORIAL_STEP_IDS).size).toBe(TUTORIAL_STEPS.length);
-    expect(CORE_STEPS.map((step) => step.id)).toEqual(['enter-base', 'report', 'collect-ice']);
+    expect(CORE_STEPS.map((step) => step.id)).toEqual(['enter-base', 'report', 'collect-ice', 'load-rocket', 'scan']);
   });
 });
 
@@ -261,7 +260,6 @@ describe('tutorial resource detours: the data', () => {
     expect(needs.plant).toBe(PLANT_NEEDS);
     expect(needs['cert-greenhouse']).toBe(PLANT_NEEDS);
     expect(needs['cert-gym']).toEqual([{ resource: 'power', amount: STATION_CONFIG.EXERCISE_COST }]);
-    expect(needs.wash).toEqual([{ resource: 'water', amount: UTILITY_CONFIG.WASH_WATER_L }]);
     expect(needs['cert-shelter']).toEqual([{ resource: 'water', amount: RADIATION_CONFIG.SHELTER_FILL_MIN_L }]);
     expect(needs['rover-ice']).toEqual([{ resource: 'roverPower', amount: ROVER_CONFIG.LOW_BATTERY }]);
     // Plantar: a semente mais barata no menor campo

@@ -19,7 +19,7 @@ import { PLANT_NEEDS, detourById } from './tutorialDetours.ts';
 //   objective frase curta para o terminal da base
 //   done      (s, b) => o passo acabou? `s` e o retrato do jogo e `b` uma copia dele tirada
 //             quando o passo comecou: o que vale e o que a crianca fez DEPOIS do pedido
-//   core      true = continua existindo com o tutorial pulado (menu Demo Tools)
+//   core      true = faz parte do tutorial padrao (CORE_STEPS); os outros so no passeio completo
 //   certificate  id do selo que o passo entrega (CERTIFICATES em storyChapters.ts)
 //   needs     o que a base precisa ter para o passo funcionar: [{ resource, amount }], com as
 //             quantidades das constantes do jogo. Enquanto faltar, o StoryDirector mostra o
@@ -180,22 +180,6 @@ export const TUTORIAL_STEPS = [
     done: more('workoutCount'),
   },
   {
-    id: 'wash',
-    zone: 'water',
-    icon: 'drop',
-    label: 'WASH UP',
-    hint: 'Bathroom: press F, then WASH UP',
-    place: 'bathroom',
-    objective: 'Wash up in the bathroom',
-    lines: [
-      { icon: 'drop', text: 'Go to the BATHROOM: press F' },
-      { icon: 'check', text: 'Choose WASH UP' },
-      { icon: 'up', text: 'Used water is cleaned to drink again' },
-    ],
-    needs: [{ resource: 'water', amount: UTILITY_CONFIG.WASH_WATER_L }],
-    done: more('washCount'),
-  },
-  {
     id: 'cert-shelter',
     zone: 'shelter',
     certificate: 'cert-shelter',
@@ -249,11 +233,11 @@ export const TUTORIAL_STEPS = [
     core: true,
     icon: 'ice',
     label: 'GET 1 ICE',
-    hint: 'Leave the rover (F). Walk to the crater, hold click on ice',
+    hint: 'Go outside to the ice crater. Hold click on ice',
     place: 'ice',
     objective: 'Get 1 block of ice from the ice crater',
     lines: [
-      { icon: 'door', text: 'Press F to leave the rover, go outside' },
+      { icon: 'door', text: 'Go outside through the AIRLOCK' },
       { icon: 'ice', text: 'At the ICE CRATER: hold click on ice' },
       { icon: 'air', text: 'Outside uses your suit air' },
     ],
@@ -266,6 +250,7 @@ export const TUTORIAL_STEPS = [
   {
     id: 'load-rocket',
     zone: 'rocket',
+    core: true,
     icon: 'rocket',
     label: 'LOAD THE ROCKET',
     hint: 'Rocket: press F, then LOAD 1 ICE',
@@ -281,6 +266,7 @@ export const TUTORIAL_STEPS = [
   {
     id: 'scan',
     zone: 'science',
+    core: true,
     icon: 'scope',
     label: 'SCAN 1 THING',
     hint: 'Pick scope: left-click scans; right-click opens/closes',
@@ -297,7 +283,9 @@ export const TUTORIAL_STEPS = [
 
 export const TUTORIAL_STEP_IDS = TUTORIAL_STEPS.map((step) => step.id);
 
-// Passos que sobram com o tutorial pulado: entrar na base, avisar a Terra e buscar gelo
+// Tutorial padrao do jogo, so com o que a missao usa: entrar na base, avisar a Terra, buscar
+// gelo, carregar o foguete e escanear. Os outros passos sao o passeio completo pela base
+// (`training: true` no StoryDirector).
 export const CORE_STEPS = TUTORIAL_STEPS.filter((step) => step.core);
 
 // Tarefa de um objetivo do tutorial: o passo ou, durante um desvio (issue #237), a tarefa de

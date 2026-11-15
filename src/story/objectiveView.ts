@@ -114,17 +114,17 @@ export function objectiveView(story, s) {
   const goals = story.act === 1
     ? null
     : {
-        storms: Math.min(s.stormsSurvived, story.stormsForWindow),
-        stormsNeeded: story.stormsForWindow,
+        storms: Math.min(s.stormsSurvived, story.stormsNeeded),
+        stormsNeeded: story.stormsNeeded,
         dataSent: Boolean(s.dataSent),
         // "6/10": pontos de ciencia ja enviados para a Terra, da meta que o foguete pede
         sciencePoints: Math.min(s.sciencePointsSent ?? 0, SCIENCE_CONFIG.POINTS_TO_LAUNCH),
         scienceGoal: SCIENCE_CONFIG.POINTS_TO_LAUNCH,
       };
 
-  // A janela de lancamento fechando (ato 3)
+  // A janela de lancamento fechando (ato 2)
   let timer = null;
-  if (story.act === 3 && story.windowHoursLeft !== null && story.objectiveId !== 'done') {
+  if (story.act >= 2 && story.windowHoursLeft !== null && story.objectiveId !== 'done') {
     const fill = story.windowHours > 0 ? story.windowHoursLeft / story.windowHours : 0;
     timer = { icon: 'clock', label: formatHours(story.windowHoursLeft), fill, tone: fill <= 0.25 ? 'danger' : 'warn' };
   }

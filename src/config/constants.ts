@@ -536,7 +536,9 @@ export const MAV_CONFIG = {
   PAD_POSITION: { x: 24, z: 20 },
   PAD_RADIUS: 4,
   INTERACT_RADIUS: 6,
-  ICE_BLOCKS_FOR_FULL_TANK: 10,
+  // Blocos de gelo para encher o tanque. Eram 10; com a missao inteira dentro da janela de
+  // lancamento, 6 viagens cabem sem virar repeticao. Regra de jogo.
+  ICE_BLOCKS_FOR_FULL_TANK: 6,
   // Horas de jogo para a fabrica transformar 1 bloco de gelo em combustivel: 0,15 h = 7,5 s
   // reais (era 0,6 h = 30 s; teste com jogadores de 15/11/2026). Escala de jogo.
   ISRU_HOURS_PER_ICE_BLOCK: 0.15,
@@ -688,10 +690,10 @@ export const STATION_CONFIG = {
 
 // Historia em 3 atos (docs/superpowers/specs/2026-11-14-story-arc-design.md)
 export const STORY_CONFIG = {
-  // Horas de jogo que a janela de lancamento fica aberta depois da ultima tempestade (~6,7 min reais)
-  WINDOW_HOURS: 8,
-  // Tempestades sobrevividas que abrem a janela (o mesmo numero que o MAV exige)
-  STORMS_FOR_WINDOW: MAV_CONFIG.STORMS_TO_SURVIVE,
+  // Horas de jogo que a janela de lancamento fica aberta. Ela abre no fim do tutorial e a missao
+  // inteira cabe nela (gelo, ciencia e a tempestade solar no meio): 1 sol = 24 h de jogo = 20 min
+  // reais. Antes eram 8 h, contadas so depois da tempestade. Regra de jogo.
+  WINDOW_HOURS: 24,
   // Segundos reais que um card de radio fica na tela
   CARD_SECONDS: 12,
   // O card MESSAGE SENT fecha sozinho mais cedo: so o tempo de o pacote ir de Marte ate a Terra (issue #135)

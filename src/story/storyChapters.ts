@@ -18,8 +18,8 @@ import { SPEAKERS } from './radioSpeakers.ts';
 
 // Os baloes do tutorial (ato 1) ficam em src/story/tutorialSteps.ts, um por passo.
 export const CARDS = {
-  // A rotina que se repete ate o tanque encher. Tempestades e dados entram depois, cada um na
-  // sua hora (card da primeira tempestade, tarefa SEND DATA), para ensinar uma coisa por vez.
+  // A missao inteira num card: a rotina que se repete ate o tanque encher, a ciencia e o prazo.
+  // A janela de lancamento ja esta aberta. A tempestade tem o card dela, na hora em que chega.
   act2: {
     title: 'FILL THE ROCKET',
     speaker: SPEAKERS.engineer,
@@ -27,7 +27,8 @@ export const CARDS = {
       { icon: 'ice', text: 'Get ice at the crater' },
       { icon: 'rocket', text: 'Load it into the rocket' },
       { icon: 'home', text: 'Go back to base for air' },
-      { icon: 'bolt', text: 'Air and fuel share one battery' },
+      { icon: 'radio', text: 'Send your science to Earth' },
+      { icon: 'clock', text: 'Launch before the window closes' },
     ],
   },
   // Fim do tutorial guiado: dai em diante o jogo e a rotina de encher o foguete
@@ -48,14 +49,6 @@ export const CARDS = {
     choices: [
       { id: 'hide', key: '1', icon: 'home', name: 'HIDE', good: 'Shelter with water wall', bad: 'No work outside' },
       { id: 'shield', key: '2', icon: 'shield', name: 'SHIELD', good: 'Keep working', bad: 'Eats battery' },
-    ],
-  },
-  window: {
-    title: 'LAUNCH WINDOW OPEN',
-    lines: [
-      { icon: 'rocket', text: 'Fill the tank' },
-      { icon: 'radio', text: 'Send your data' },
-      { icon: 'clock', text: 'Launch before time runs out' },
     ],
   },
 };

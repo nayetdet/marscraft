@@ -1757,7 +1757,7 @@ export class GameEngine {
     // Beber, comer e lavar contam a tentativa: quem esta sem sede nao fica preso no passo.
     this.tutorialCounts = { drink: 0, meal: 0, wash: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0 };
     this.story = new StoryDirector({
-      training: true, // tutorial guiado completo; o menu Demo Tools pode pular
+      training: false, // tutorial padrao: so os 5 passos que a missao usa (CORE_STEPS)
       replyDelayHours: this.comms.roundTripGameSeconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND,
       comms: {
         millionKm: Math.round(this.comms.distanceKm / 1e6),

@@ -16,6 +16,7 @@ function snap(overrides = {}) {
     hours: 15,
     insideHabitat: false,
     iceCount: 0,
+    iceNeeded: 6,
     stormPhase: 'calm',
     stormsSurvived: 0,
     propellantPct: 0,
@@ -39,12 +40,18 @@ function started() {
 
 const cards = (director) => director.drainEvents().filter((e) => e.type === 'card').map((e) => e.card);
 
-// Leva o diretor ate o comeco do ato 2 (com a resposta da Terra ja entregue)
+// Hora em que o ato 2 comeca nos testes: a janela de lancamento fecha em MISSION_START + WINDOW
+const MISSION_START = 16;
+
+// Leva o diretor pelos 5 passos do tutorial ate o comeco do ato 2 (com a resposta da Terra ja
+// entregue): entrar, avisar a Terra, pegar gelo, carregar o foguete e escanear
 function reachAct2(director) {
   director.update(snap({ insideHabitat: true }));
   director.update(snap({ insideHabitat: true, earthCalls: 1 }));
   director.update(snap({ hours: 15 + REPLY }));
-  director.update(snap({ hours: 16, iceCount: 1 }));
+  director.update(snap({ hours: MISSION_START, iceCount: 1 }));
+  director.update(snap({ hours: MISSION_START, iceNeeded: 5 }));
+  director.update(snap({ hours: MISSION_START, iceNeeded: 5, scanCount: 1 }));
   director.drainEvents();
 }
 
@@ -66,11 +73,11 @@ describe('StoryDirector', () => {
     const events = director.drainEvents();
     expect(events).toHaveLength(1);
     expect(events[0].type).toBe('card');
-    expect(events[0].card.title).toBe('STEP 1/3: ENTER THE BASE');
+    expect(events[0].card.title).toBe('STEP 1/5: ENTER THE BASE');
     expect(events[0].card.step).toBe(true);
   });
 
-  it('walks the 3 core steps without making the player wait for Earth', () => {
+  it('walks the first steps without making the player wait for Earth', () => {
     const director = started();
 
     director.update(snap());
@@ -86,7 +93,7 @@ describe('StoryDirector', () => {
     const shown = cards(director);
     const sent = shown.find((card) => card.title === 'MESSAGE SENT');
     // O balao do passo seguinte vem logo depois do aviso do radio
-    expect(shown.at(-1).title).toBe('STEP 3/3: GET 1 ICE');
+    expect(shown.at(-1).title).toBe('STEP 3/5: GET 1 ICE');
     expect(sent.link).toEqual({ minutes: 11, millionKm: 198 });
     expect(sent.source).toMatch(/14\/11\/2026/);
 
@@ -118,7 +125,7 @@ describe('StoryDirector', () => {
     director.update(snap({ insideHabitat: true }));
     director.update(snap({ insideHabitat: true, earthCalls: 1 }));
     director.update(snap({ hours: 15.1, iceCount: 1 }));
-    expect(director.act).toBe(2);
+    expect(director.objectiveId).toBe('load-rocket');
     director.drainEvents();
 
     director.update(snap({ hours: 15 + REPLY, iceCount: 1 }));
@@ -139,29 +146,45 @@ describe('StoryDirector', () => {
     // Gastou uma e pegou outra: a contagem voltou a 3, mas houve coleta
     director.update(snap({ iceCount: 2, hours: 16.1 }));
     director.update(snap({ iceCount: 3, hours: 16.2 }));
-    expect(director.act).toBe(2);
+    expect(director.objectiveId).toBe('load-rocket');
   });
 
-  it('opens act 2 as soon as the ice is collected and starts the storms once', () => {
+  it('opens act 2 with the launch window after the last step and starts the storms once', () => {
     const director = started();
     director.update(snap({ insideHabitat: true }));
     director.update(snap({ insideHabitat: true, earthCalls: 1 }));
     director.update(snap({ hours: 15 + REPLY }));
+    director.update(snap({ hours: 16, iceCount: 1 }));
+    director.update(snap({ hours: 16, iceNeeded: 5 }));
+    expect(director.act).toBe(1);
+    expect(director.objectiveId).toBe('scan');
+    expect(director.windowHoursLeft).toBeNull();
     director.drainEvents();
 
-    // Ainda la fora, com o gelo na mao: nao precisa voltar para a base
-    director.update(snap({ hours: 16, iceCount: 1 }));
+    director.update(snap({ hours: 16, iceNeeded: 5, scanCount: 1 }));
     expect(director.act).toBe(2);
     expect(director.objectiveId).toBe('act2');
+    // A janela ja abre aqui: nao ha espera pela tempestade
+    expect(director.windowHoursLeft).toBeCloseTo(WINDOW);
     const events = director.drainEvents();
     expect(events.filter((e) => e.type === 'start-storms')).toHaveLength(1);
     expect(events.some((e) => e.type === 'card' && /FILL THE ROCKET/.test(e.card.title))).toBe(true);
 
-    director.update(snap({ hours: 16.3, iceCount: 1 }));
+    director.update(snap({ hours: 16.3, iceNeeded: 5 }));
     expect(director.drainEvents().filter((e) => e.type === 'start-storms')).toHaveLength(0);
   });
 
-  it('guides only the first solar storm, with both choices and their costs', () => {
+  it('opens the window from the last snapshot when the tutorial is skipped', () => {
+    const director = started();
+    director.update(snap({ hours: 15.5, insideHabitat: true }));
+    expect(director.skipTraining()).toBe(true);
+    expect(director.act).toBe(2);
+    expect(director.windowHoursLeft).toBeCloseTo(WINDOW);
+    director.update(snap({ hours: 15.5 + WINDOW }));
+    expect(director.objectiveId).toBe('failed');
+  });
+
+  it('guides only the first solar storm, in the middle of the window, with both choices and their costs', () => {
     const director = started();
     reachAct2(director);
 
@@ -178,14 +201,17 @@ describe('StoryDirector', () => {
     director.update(snap({ hours: 18, stormPhase: 'active' }));
     expect(director.objectiveId).toBe('storm-guide');
     expect(director.drainEvents()).toHaveLength(0);
+    // A janela continua correndo durante a tempestade
+    expect(director.windowHoursLeft).toBeCloseTo(WINDOW - 2);
 
-    // A tempestade do tutorial paga a exigencia: a janela de lancamento abre
-    director.update(snap({ hours: 21, stormPhase: 'calm', stormsSurvived: 1 }));
-    expect(director.act).toBe(3);
+    // A tempestade passou: de volta ao foguete
+    director.update(snap({ hours: 19, stormPhase: 'calm', stormsSurvived: 1 }));
+    expect(director.act).toBe(2);
+    expect(director.objectiveId).toBe('fuel');
     director.drainEvents();
 
     // Uma tempestade real depois disso nao tem card guiado
-    director.update(snap({ hours: 23, stormPhase: 'warning', stormsSurvived: 1 }));
+    director.update(snap({ hours: 20, stormPhase: 'warning', stormsSurvived: 1 }));
     expect(director.drainEvents()).toHaveLength(0);
   });
 
@@ -194,21 +220,21 @@ describe('StoryDirector', () => {
     reachAct2(director);
 
     // Com o gelo na mao (ou sem ter entregue nada), ninguem manda voltar
-    let s = snap({ hours: 16.5, iceCount: 1, iceNeeded: 10 });
+    let s = snap({ hours: 16.5, iceCount: 1, iceNeeded: 5 });
     director.update(s);
     expect(s.needsBase).toBe(false);
 
     // Entregou no foguete: o tanque pede um bloco a menos
-    s = snap({ hours: 16.6, iceCount: 0, iceNeeded: 9 });
+    s = snap({ hours: 16.6, iceCount: 0, iceNeeded: 4 });
     director.update(s);
     expect(director.needsBase).toBe(true);
     expect(s.needsBase).toBe(true);
 
     // Continua valendo ate entrar na base
-    s = snap({ hours: 16.7, iceNeeded: 9 });
+    s = snap({ hours: 16.7, iceNeeded: 4 });
     director.update(s);
     expect(s.needsBase).toBe(true);
-    s = snap({ hours: 16.8, insideHabitat: true, iceNeeded: 9 });
+    s = snap({ hours: 16.8, insideHabitat: true, iceNeeded: 4 });
     director.update(s);
     expect(s.needsBase).toBe(false);
   });
@@ -216,30 +242,31 @@ describe('StoryDirector', () => {
   it('drops the trip back to base when the player picks up more ice first', () => {
     const director = started();
     reachAct2(director);
-    director.update(snap({ hours: 16.5, iceCount: 1, iceNeeded: 10 }));
-    director.update(snap({ hours: 16.6, iceCount: 0, iceNeeded: 9 }));
+    director.update(snap({ hours: 16.5, iceCount: 1, iceNeeded: 5 }));
+    director.update(snap({ hours: 16.6, iceCount: 0, iceNeeded: 4 }));
     expect(director.needsBase).toBe(true);
 
-    director.update(snap({ hours: 16.7, iceCount: 2, iceNeeded: 9 }));
+    director.update(snap({ hours: 16.7, iceCount: 2, iceNeeded: 4 }));
     expect(director.needsBase).toBe(false);
   });
 
-  it('opens the launch window in act 3 and orders the last jobs', () => {
+  it('orders the last jobs inside the window: fuel, science, the storm, then ignite', () => {
     const director = started();
     reachAct2(director);
-    expect(director.windowHoursLeft).toBeNull();
 
-    director.update(snap({ hours: 40, stormsSurvived: 3, propellantPct: 60 }));
-    expect(director.act).toBe(3);
-    expect(director.windowHoursLeft).toBeCloseTo(WINDOW);
+    director.update(snap({ hours: 18, propellantPct: 60 }));
+    expect(director.act).toBe(2);
     expect(director.objectiveId).toBe('fuel');
-    expect(director.drainEvents().some((e) => e.type === 'card' && /LAUNCH WINDOW OPEN/.test(e.card.title))).toBe(true);
-
-    director.update(snap({ hours: 42, stormsSurvived: 3, propellantPct: 100 }));
-    expect(director.objectiveId).toBe('send-data');
     expect(director.windowHoursLeft).toBeCloseTo(WINDOW - 2);
 
-    director.update(snap({ hours: 43, stormsSurvived: 3, propellantPct: 100, dataSent: true }));
+    director.update(snap({ hours: 19, propellantPct: 100 }));
+    expect(director.objectiveId).toBe('send-data');
+
+    // Tudo pronto, mas a tempestade ainda nao passou: o foguete espera por ela
+    director.update(snap({ hours: 20, propellantPct: 100, iceNeeded: 0, dataSent: true }));
+    expect(director.objectiveId).toBe('fuel');
+
+    director.update(snap({ hours: 21, propellantPct: 100, iceNeeded: 0, dataSent: true, stormsSurvived: 1 }));
     expect(director.objectiveId).toBe('ignite');
   });
 
@@ -255,7 +282,7 @@ describe('StoryDirector', () => {
     const frame = (hours) => {
       const status = mission.scienceStatus(found);
       const state = { pendingPoints: status.pendingPoints, sentPoints: status.sentPoints, rawSamples };
-      const s = snap({ hours, stormsSurvived: 3, propellantPct: 100, iceNeeded: 0, dataSent: mission.dataSent,
+      const s = snap({ hours: hours - 23, stormsSurvived: 3, propellantPct: 100, iceNeeded: 0, dataSent: mission.dataSent,
         scienceStep: scienceStep(state), sciencePointsLeft: pointsStillNeeded(state), sciencePointsSent: status.sentPoints });
       director.update(s);
       return { s, view: objectiveView(director, s), target: objectiveTarget(director.objectiveId, s) };
@@ -293,8 +320,8 @@ describe('StoryDirector', () => {
   it('ends the story when the MAV launches, keeping the time left', () => {
     const director = started();
     reachAct2(director);
-    director.update(snap({ hours: 40, stormsSurvived: 3, propellantPct: 100, dataSent: true }));
-    director.update(snap({ hours: 43, stormsSurvived: 3, propellantPct: 100, dataSent: true, launched: true }));
+    director.update(snap({ hours: MISSION_START + 1, stormsSurvived: 3, propellantPct: 100, dataSent: true }));
+    director.update(snap({ hours: MISSION_START + 3, stormsSurvived: 3, propellantPct: 100, dataSent: true, launched: true }));
     expect(director.objectiveId).toBe('done');
     expect(director.windowHoursLeft).toBeCloseTo(WINDOW - 3);
 
@@ -307,10 +334,10 @@ describe('StoryDirector', () => {
   it('closes the window once when time runs out without a launch', () => {
     const director = started();
     reachAct2(director);
-    director.update(snap({ hours: 40, stormsSurvived: 3 }));
+    director.update(snap({ hours: MISSION_START + 1, stormsSurvived: 3 }));
     director.drainEvents();
 
-    director.update(snap({ hours: 40 + WINDOW, stormsSurvived: 3 }));
+    director.update(snap({ hours: MISSION_START + WINDOW, stormsSurvived: 3 }));
     expect(director.objectiveId).toBe('failed');
     expect(director.windowHoursLeft).toBe(0);
     expect(director.drainEvents().filter((e) => e.type === 'window-closed')).toHaveLength(1);
@@ -465,7 +492,9 @@ describe('StoryDirector: tutorial resource detours', () => {
     expect(director.skipTraining()).toBe(true);
     expect(director.detour).toBeNull();
     expect(director.objectiveId).toBe('act2');
+    // Ja na missao: o objetivo e o foguete, sem desvio
     director.update(state({ baseWaterL: 0 }));
-    expect(director.objectiveId).toBe('act2');
+    expect(director.objectiveId).toBe('fuel');
+    expect(director.detour).toBeNull();
   });
 });
