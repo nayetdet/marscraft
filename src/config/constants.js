@@ -67,8 +67,8 @@ export const GRAPHICS_CONFIG = {
   // Com sombra de verdade o Sol pode ser mais forte e a luz ambiente mais fraca (mais contraste)
   SUN_SCALE_DAY: 2.3,
   SUN_SCALE_NIGHT: 0.6,
-  AMBIENT_SCALE: 0.38,
-  HEMISPHERE_SCALE: 0.55,
+  AMBIENT_SCALE: 0.5,
+  HEMISPHERE_SCALE: 0.7,
   // Lampadas da base (luz primaria dos interiores): sem o Sol atravessando o teto, elas e que
   // iluminam os comodos. Fazem sombra propria (moveis, tripulacao) e a luz sai pelas janelas.
   // DECAY menor que o fisico (2) espalha a luz ate os cantos do comodo.
@@ -93,7 +93,7 @@ export const GRAPHICS_CONFIG = {
   // Exposicao da "camera": abre dentro da base e a noite, fecha no Sol (por segundo, suavizado)
   EXPOSURE_OUTSIDE: 0.95,
   EXPOSURE_INSIDE: 1.3,
-  EXPOSURE_NIGHT_BOOST: 1.3,
+  EXPOSURE_NIGHT_BOOST: 1.45,
   EXPOSURE_SPEED: 1.6,
   // Acabamento da imagem ja pronta: cor um pouco mais viva, mais contraste e cantos escurecidos
   GRADE_SATURATION: 1.14,

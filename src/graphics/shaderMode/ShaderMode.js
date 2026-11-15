@@ -51,9 +51,9 @@ const FINISH_SHADER = {
 // sol de Marte, frio a noite) e o chao devolve a luz do Sol por baixo (laranja).
 const SKY_FILL_DAY = new THREE.Color(0xffe2c0);
 const SKY_FILL_TWILIGHT = new THREE.Color(0x9db8e8);
-const SKY_FILL_NIGHT = new THREE.Color(0x56607e);
-const GROUND_BOUNCE_DAY = new THREE.Color(0xe08a52);
-const GROUND_BOUNCE_NIGHT = new THREE.Color(0x3a2a24);
+const SKY_FILL_NIGHT = new THREE.Color(0x9aa6c8);
+const GROUND_BOUNCE_DAY = new THREE.Color(0xe8b08a);
+const GROUND_BOUNCE_NIGHT = new THREE.Color(0x7a6258);
 // Dentro da base o rebote vem do piso claro, nao do chao laranja de Marte
 const FLOOR_BOUNCE_INDOOR = new THREE.Color(0xaeb4bf);
 
