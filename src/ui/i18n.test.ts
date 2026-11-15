@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
+import { ITEM_DEFINITIONS } from '../config/blockTypes.ts';
 import { eventCard, meteorToast, quakeToast, dustDevilPanelsToast } from '../mission/eventText.ts';
 import { bulletinText, radiationStatusText, stormEventMessage, stormSourceText, stormStatusText } from '../mission/missionText.ts';
 import { doseHistoryText, doseVictoryRows } from '../mission/doseBudget.ts';
@@ -9,6 +10,18 @@ import { missionReport } from '../mission/missionReport.ts';
 import { dustStatus, weatherReportCard } from '../mission/weatherText.ts';
 import { SCAN_CATALOG, SCAN_CATEGORIES } from '../data/scanCatalog.ts';
 import { scienceCounterText } from '../story/objectiveView.ts';
+import { scienceMissingText, uploadResultText } from '../mission/sciencePackage.ts';
+import { crewEventMessage } from '../crew/crewText.ts';
+import { OXYGEN_MODE_INFO } from '../mission/oxygenPlant.ts';
+import { oxygenPlantText } from '../mission/oxygenText.ts';
+import { REAL_VS_GAME } from '../data/realVsGame.ts';
+import { ACT2_STEPS } from '../story/acts/act2Steps.ts';
+import { ACT2_TEXT } from '../story/acts/act2Text.ts';
+import { ACT3_STEPS } from '../story/acts/act3Steps.ts';
+import { ACT4_STEPS } from '../story/acts/act4Steps.ts';
+import { ASTRONAUT_SLEEP_FACT } from '../player/sleep.ts';
+import { getSuitTelemetryView } from '../player/suitTelemetry.ts';
+import { HANDOVER_CHOICES, handoverCard, handoverSummary } from '../story/acts/act5Handover.ts';
 import {
   LANGUAGE_LABELS,
   LANGUAGE_STORAGE_KEY,
@@ -273,14 +286,189 @@ describe('game language catalog', () => {
       'Rover loaded 6 ice into the rocket. No walk outside needed!',
       'EVA suit below minimum launch levels (40% O2 / 25% Heat). Wait for recharge.',
       'The battery will be empty before sunrise (2 h to go). Turn something off, or start the fission reactor.',
+      'Planted lettuce. It drinks 0.9 L from the base tank while it grows, and needs light and a clean greenhouse.',
+      'Harvested soy. Pick up your harvest and use it to eat. A real NASA study is now in your field notebook!',
+      'The potato basket is empty.',
+      'Collected 2 lettuce. The rest is in the basket.',
+      'water recycler analyzed: +4 science points. Send it to Earth from this terminal.',
+      'Got a Space Ration! (4 left in the pantry)',
+      'Cooking your lettuce: ready in 8 seconds.',
+      'Amira: Your ration is cooking! 5 s to go.',
+      'Amira: Your ration is ready! Make room in your bag.',
+      'Amira: Thanks for the lettuce! Your ration is ready in 8 s.',
+      'Amira: No food! Grow some in the greenhouse.',
+      'Amira: Here is a ration! 4 left.',
+      'Amira: Your Mars carrot ration is ready!',
+      'Got a Space Ration made from your Mars carrot! Eat it from your hotbar.',
+      'Amira is cooking your ration (5 s)',
+      '[F] Give lettuce to Amira: 1 ration (5% battery)',
+      '[F] Get space ration from Amira (4 in pantry)',
+      '[F] Talk to Amira (pantry empty)',
+      '[F] Talk to Amira',
+      'Amira: I\'m too weak to work. We need air (the battery pays for it) and water and food!',
+      'Amira: Thanks, Commander! I\'m back to work.',
+      'Amira is too weak and must rest in the medical bay. Bring air, water and food back so Amira can get better.',
+      'Amira: Going to rest. I still need air, water and food.',
+      'Amira: On my way to the water recycler!',
+      'Commander, the oxygen generator has a problem.',
+      'OXYGEN MACHINE: AIR FROM WATER (OGA electrolysis)',
+      'OTHER CHOICE: AIR FROM MARS AIR (MOXIE)',
+      '  Cost: 2% power per O2 point. No water.',
+      '  Cost: 1% power per O2 point, and about 0.95 L of water per person each sol.',
+      'SABATIER REACTOR: not built. It would give back half of that water (20 regolith, 5% power).',
+      'WATER USED TO MAKE AIR SO FAR: 1.25 L',
+      'Build Sabatier reactor (20 regolith, 5% power)',
+      'The oxygen machine is already on moxie.',
+      'Collect 20 regolith blocks outside to print the Sabatier reactor.',
+      '[F] Clean solar panel 2 (dust 30%, uses suit air)',
+      'You ate a Mars carrot (+Food)',
+      'You ate a Mars carrot (+Food). No oxygen! Food cannot heal you, go back to the base',
+      'Drank clean water from habitat purifier (+Hydration full). Base reserve: 40L. The used water goes to the recycler.',
+      'Base water reservoir is dry! Collect ice with the Rover.',
+      'Picked up 2 items',
+      'Scope Scanner',
+      'Sample: Dark Dune Sand (analyze in the lab)',
+      'Space Ration (Use to eat)',
+      'Mars lettuce (Use to eat)',
+      'WAIT OUT THE STORM (no solar storm right now)',
+      'WAIT OUT THE STORM (the wall needs 12 more L)',
+      'WAIT OUT THE STORM (step inside the shelter first)',
+      'WAIT OUT THE STORM (time runs fast)',
+      'With a FULL wall (20 L) you can wait out a solar storm in here with the clock running fast: the base still uses power and you still get hungry and thirsty.',
+      'The battery ran out, so you stopped waiting! You waited 35 min of game time behind the water wall. Battery 80% -> 12%.',
+      'Sealed in a tube: +8 points in your final report, none now. The rocket needs +2 ice.',
+      'Now pedal left.',
+      'Good! Now pedal right.',
+      'Battery at sunrise: about 75%',
+      'Making fuel (6 ice)',
+      'Need 15% power to train.',
+      '15 liters in wall, 20% radiation blocked',
     ];
     for (const text of messages) {
       expect(translate(text, 'pt-BR'), text).not.toBe(text);
       expect(translate(text, 'es'), text).not.toBe(text);
     }
     expect(translate(messages[0], 'pt-BR')).toBe('Ciência enviada: 12 / 30 pontos');
-    expect(translate(messages[1], 'es')).toBe('Enviar 2 artículos = 8 puntos a la Tierra (5% de energía)');
-    expect(translate(messages[8], 'pt-BR')).toContain('2 L');
+    expect(translate(messages[1], 'es')).toBe('Enviar 2 objetos = 8 puntos a la Tierra (5% de energía)');
+    expect(translate(messages[5], 'pt-BR')).toBe('Solo marciano (rególito) analisado: +1 ponto científico. O solo comum só conta uma vez; os locais brilhantes de amostra lá fora valem mais.');
+    expect(translate(messages[8], 'pt-BR')).toBe('Você colocou 2 L de água na parede. Menos água para beber, mais proteção.');
+    expect(translate(messages[9], 'es')).toBe('Sacaste 2 L de agua de la pared y la devolviste al tanque. Más agua para beber, menos protección.');
+    expect(translate(messages[12], 'pt-BR')).toBe('Comandante, o reciclador de água está sem energia! A bateria acabou.');
+    expect(translate(messages[13], 'pt-BR')).toBe('Comandante, está congelando! A estufa parou. Ligue o aquecedor na sala de energia.');
+    expect(translate(messages[13], 'es')).toBe('Comandante, ¡hace mucho frío! El invernadero se detuvo. Enciende la calefacción en la sala de energía.');
+    expect(translate(messages[17], 'pt-BR')).toBe('O traje espacial (EVA) está abaixo do nível mínimo para decolar (40% de O₂ / 25% de proteção térmica). Espere a recarga.');
+    expect(translate(messages[43], 'pt-BR')).toBe('Comandante, o gerador de oxigênio está com problemas.');
+    expect(translate(messages[45], 'es')).toBe('LA OTRA OPCIÓN: AIRE OBTENIDO DE LA ATMÓSFERA MARCIANA (MOXIE)');
+    expect(translate(messages[32], 'pt-BR')).toBe('Você recebeu uma ração espacial feita com cenoura marciana! Coma pela barra de itens.');
+    expect(translate(messages[60], 'es')).toBe('Muestra: arena oscura de las dunas (analizar en el laboratorio)');
+    expect(translate(messages[71], 'pt-BR')).toBe('Muito bem! Agora pedale para a direita.');
+    expect(translate(messages[68], 'es')).toContain('pared de agua');
+  });
+
+  it('localizes every inventory item label in Portuguese and Spanish', () => {
+    const untranslated = ITEM_DEFINITIONS.map((item) => item.name)
+      .filter((name) => translate(name, 'pt-BR') === name || translate(name, 'es') === name);
+    expect(untranslated).toEqual([]);
+  });
+
+  it('localizes every prose value in the real-versus-game journal table', () => {
+    const languageNeutralValues = new Set([
+      '12 m/s² (1 block = 1 m)',
+      '24 h 39 min',
+    ]);
+    const englishCopy = REAL_VS_GAME.flatMap((row) => [row.topic.toUpperCase(), row.game, row.real, row.why]);
+    const untranslated = englishCopy.filter((text) => !languageNeutralValues.has(text)
+      && (translate(text, 'pt-BR') === text || translate(text, 'es') === text));
+    expect(untranslated).toEqual([]);
+  });
+
+  it('localizes every guided step and objective in acts 2 to 4, including interpolated names and counts', () => {
+    const steps = [...ACT2_STEPS, ...ACT3_STEPS, ...ACT4_STEPS];
+    const copy = steps.flatMap((step) => [
+      step.label,
+      step.hint,
+      step.objective,
+      ...(step.lines ?? []).map((line) => line.text),
+    ]).filter((text): text is string => typeof text === 'string');
+    copy.push(
+      ACT2_TEXT.promptScope,
+      ACT2_TEXT.promptGlass,
+      ACT2_TEXT.promptRepair,
+      ACT2_TEXT.scopeGiven,
+      ACT2_TEXT.glassComing,
+      ACT2_TEXT.glassGiven,
+      ACT2_TEXT.windowFixed,
+      ACT2_TEXT.leakStarted,
+      ACT2_TEXT.scopeAdded,
+      ACT2_TEXT.windowOk(2),
+      ACT2_TEXT.windowCracked,
+    );
+    const untranslated = copy.filter((text) => translate(text, 'pt-BR') === text || translate(text, 'es') === text);
+    expect(untranslated).toEqual([]);
+  });
+
+  it('localizes act 5 handover cards, suit telemetry, repair messages, and the sleep fact', () => {
+    const card = handoverCard({ waterL: 60, maxWaterL: 500, panelDust: 0.6, fieldsPlanted: 1, fieldsTotal: 4 });
+    const handover = [card.title, card.source, ...card.choices.flatMap((choice) => [choice.name, choice.good, choice.bad]),
+      ...card.lines.map((line) => line.text),
+      handoverSummary({ launched: true, baseHandover: { waterL: 60, maxWaterL: 500, panelDust: 0.6, fieldsPlanted: 1, fieldsTotal: 4 } })!.text];
+    const telemetry = getSuitTelemetryView({ suitEquipped: true, suitOxygen: 20, suitThermal: 10, suitScrubber: 20, suitDust: 30, suitIntegrity: 80 }, {
+      batteryPercent: 50, outsideTempC: -80, airlockPressurized: true, airlockDoorOpen: false,
+    });
+    const copy = [
+      ...handover,
+      telemetry.thermalDockText,
+      telemetry.scrubberDockText,
+      telemetry.dustStatus,
+      telemetry.readyReason,
+      telemetry.equipPromptLabel,
+      ASTRONAUT_SLEEP_FACT,
+      'EVA suit integrity is already at 100%.',
+      'EVA suit seals & armor repaired to 100% (-10% power).',
+      'Low power: applied emergency patch (35% integrity). Restore power for full repair.',
+      'Need 10% base power for full suit repair.',
+      '10 h less launch window',
+    ];
+    // Keep the choice ids stable in English; they are internal identifiers, not player-facing copy.
+    expect(card.choices.map((choice) => choice.id)).toEqual([HANDOVER_CHOICES.FLY_NOW, HANDOVER_CHOICES.TIDY]);
+    for (const text of copy) {
+      expect(translate(text, 'pt-BR'), text).not.toBe(text);
+      expect(translate(text, 'es'), text).not.toBe(text);
+    }
+    expect(translate(card.title, 'pt-BR')).toBe('DEIXANDO A BASE');
+    expect(translate(handover.at(-1)!, 'es')).toContain('faltan: agua, paneles limpios, cultivos sembrados');
+    expect(translate(telemetry.thermalDockText, 'pt-BR')).toContain('POUCO CALOR');
+    expect(translate(telemetry.readyReason, 'es')).toContain('CALENTANDO');
+  });
+
+  it('localizes full gameplay messages returned by systems, not only hand-picked templates', () => {
+    const oxygenText = oxygenPlantText({
+      mode: 'electrolysis',
+      info: OXYGEN_MODE_INFO.electrolysis,
+      sabatier: false,
+      waterUsedL: 1.25,
+      waterLossFraction: 1,
+    });
+    const scienceMissing = scienceMissingText();
+    const scienceSent = uploadResultText({
+      status: 'sent', items: 2, points: 8, cost: 5, leftAfter: 0,
+      sentPoints: 12, dataSent: false,
+    });
+    const crewAlert = crewEventMessage({
+      type: 'weak', member: { name: 'Nia' }, lacking: ['air', 'water', 'food'],
+    });
+    for (const text of [oxygenText, scienceMissing, scienceSent, crewAlert]) {
+      expect(translate(text, 'pt-BR'), text).not.toBe(text);
+      expect(translate(text, 'es'), text).not.toBe(text);
+    }
+    expect(translate(scienceMissing, 'pt-BR')).toContain('O foguete precisa');
+    expect(translate(scienceSent, 'es')).toContain('objetos enviados');
+    expect(translate(scienceMissing, 'pt-BR')).not.toMatch(/points|science|scope/i);
+    expect(translate(scienceMissing, 'es')).not.toMatch(/points|science|scope/i);
+    expect(translate(scienceSent, 'pt-BR')).not.toMatch(/points|Science sent/i);
+    expect(translate(scienceSent, 'es')).not.toMatch(/points|Science sent/i);
+    expect(translate(crewAlert, 'pt-BR')).toBe('Nia: estou sem forças para trabalhar. Precisamos de ar (a bateria fornece energia), água e comida!');
+    expect(translate(oxygenText, 'es')).toContain('MÁQUINA DE OXÍGENO: AIRE A PARTIR DEL AGUA (Electrólisis OGA)');
   });
 
   it('saves and restores the language preference, using English for invalid values', () => {

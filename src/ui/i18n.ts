@@ -1,6 +1,6 @@
 import { GYM_ES, GYM_PT_BR } from '../story/acts/act3Gym.ts';
 import {
-  CUTSCENE_ES, CUTSCENE_PT_BR, STORY_ES, STORY_MORE_ES, STORY_MORE_PT_BR, STORY_PT_BR,
+  ACT_STEPS_ES, ACT_STEPS_PT_BR, CUTSCENE_ES, CUTSCENE_PT_BR, STORY_ES, STORY_MORE_ES, STORY_MORE_PT_BR, STORY_PT_BR,
 } from './i18nStory.ts';
 import { FIRST_ICE_ES, FIRST_ICE_PT_BR } from './i18nFirstIce.ts';
 import { STORM_SCANS_ES, STORM_SCANS_PT_BR } from './i18nStormScans.ts';
@@ -36,6 +36,7 @@ const PT_BR: Record<string, string> = {
   ...HUD_COPY_PT_BR,
   ...CORE_COPY_PT_BR,
   ...STORY_PT_BR,
+  ...ACT_STEPS_PT_BR,
   ...GYM_PT_BR,
   ...STORY_MORE_PT_BR,
   ...CUTSCENE_PT_BR,
@@ -205,6 +206,7 @@ const ES: Record<string, string> = {
   ...HUD_COPY_ES,
   ...CORE_COPY_ES,
   ...STORY_ES,
+  ...ACT_STEPS_ES,
   ...GYM_ES,
   ...STORY_MORE_ES,
   ...CUTSCENE_ES,
@@ -368,10 +370,170 @@ const TRANSLATIONS: Record<Language, Readonly<Record<string, string>>> = {
   en: {}, 'pt-BR': PT_BR, es: ES,
 };
 
+function stationSubject(station: string, language: Language, sentenceStart = false): string {
+  const name = translate(station, language);
+  const subject = language === 'pt-BR'
+    ? `${station === 'greenhouse' ? 'a' : 'o'} ${name}`
+    : `el ${name}`;
+  return sentenceStart ? subject[0].toUpperCase() + subject.slice(1) : subject;
+}
+
+function foodName(food: string, language: Language): string {
+  const fromMars = food.startsWith('Mars ');
+  const crop = food.replace(/^Mars /, '').toLowerCase();
+  const name = crop === 'carrot' ? (language === 'pt-BR' ? 'cenoura' : 'zanahoria') : translate(crop, language);
+  return fromMars ? `${name} marciana` : name;
+}
+
+function translateUppercaseLabel(label: string, language: Language): string {
+  const sentenceCase = ({
+    'AIR FROM WATER': 'Air from water',
+    'AIR FROM MARS AIR': 'Air from Mars air',
+  } as Record<string, string>)[label] ?? label.toLowerCase().replace(/^./, (first) => first.toUpperCase());
+  return translate(sentenceCase, language).toUpperCase();
+}
+
 const DYNAMIC_PATTERNS: Array<{
   match: RegExp;
   format: (parts: RegExpMatchArray, language: Language) => string;
 }> = [
+  {
+    match: /^(LEAVING THE BASE|FLY NOW|Keep all your window time|The base stays as it is|TIDY THE BASE|Clean panels for the next crew|water|clean panels|planted fields|EVA suit integrity is already at 100%\.|CHARGED 100%|SYSTEMS READY|NO POWER \(\d+%\)|CLEAN|CLOSE OUTER DOOR & PRESSURIZE|\[F\] DOCK EVA SUIT|\[F\] EQUIP SUIT & START EVA|\[F\] EQUIP SUIT \(EMERGENCY EVA\)|\[R\] EMERGENCY PATCH)$/,
+    format: ([, source], language) => {
+      const copy: Record<string, [string, string]> = {
+        'LEAVING THE BASE': ['DEIXANDO A BASE', 'DEJANDO LA BASE'],
+        'FLY NOW': ['DECOLAR AGORA', 'DESPEGAR AHORA'],
+        'Keep all your window time': ['Manter todo o tempo da janela', 'Conservar todo el tiempo de la ventana'],
+        'The base stays as it is': ['A base fica como está', 'La base se queda como está'],
+        'TIDY THE BASE': ['ARRUMAR A BASE', 'ORDENAR LA BASE'],
+        'Clean panels for the next crew': ['Limpar os painéis para a próxima equipe', 'Limpiar los paneles para la próxima tripulación'],
+        water: ['água', 'agua'],
+        'clean panels': ['painéis limpos', 'paneles limpios'],
+        'planted fields': ['campos plantados', 'cultivos sembrados'],
+        'EVA suit integrity is already at 100%.': ['A integridade do traje espacial já está em 100%.', 'La integridad del traje espacial ya está al 100%.'],
+        'CHARGED 100%': ['CARREGADO 100%', 'CARGADO 100%'],
+        'SYSTEMS READY': ['SISTEMAS PRONTOS', 'SISTEMAS LISTOS'],
+        'CLEAN': ['LIMPO', 'LIMPIO'],
+        'CLOSE OUTER DOOR & PRESSURIZE': ['FECHE A PORTA EXTERNA E PRESSURIZE', 'CIERRA LA PUERTA EXTERIOR Y PRESURIZA'],
+        '[F] DOCK EVA SUIT': ['[F] GUARDAR O TRAJE EVA', '[F] GUARDAR EL TRAJE EVA'],
+        '[F] EQUIP SUIT & START EVA': ['[F] VESTIR O TRAJE E INICIAR A EVA', '[F] PONERSE EL TRAJE E INICIAR LA EVA'],
+        '[F] EQUIP SUIT (EMERGENCY EVA)': ['[F] VESTIR O TRAJE (EVA DE EMERGÊNCIA)', '[F] PONERSE EL TRAJE (EVA DE EMERGENCIA)'],
+        '[R] EMERGENCY PATCH': ['[R] REMENDO DE EMERGÊNCIA', '[R] PARCHE DE EMERGENCIA'],
+      };
+      return copy[source][language === 'pt-BR' ? 0 : 1];
+    },
+  },
+  {
+    match: /^NO POWER \((\d+)%\)$/,
+    format: ([, pct], language) => language === 'pt-BR' ? `SEM ENERGIA (${pct}%)` : `SIN ENERGÍA (${pct}%)`,
+  },
+  {
+    match: /^RECHARGING\.\.\. (\d+)% -> 100%$/,
+    format: ([, pct], language) => language === 'pt-BR' ? `RECARREGANDO... ${pct}% -> 100%` : `RECARGANDO... ${pct}% -> 100%`,
+  },
+  {
+    match: /^AUTO-CLEANING (\d+)% -> 100%$/,
+    format: ([, pct], language) => language === 'pt-BR' ? `LIMPEZA AUTOMÁTICA ${pct}% -> 100%` : `LIMPIEZA AUTOMÁTICA ${pct}% -> 100%`,
+  },
+  {
+    match: /^(\d+)% READY$/,
+    format: ([, pct], language) => language === 'pt-BR' ? `${pct}% PRONTO` : `${pct}% LISTO`,
+  },
+  {
+    match: /^(\d+)% \((-?\d+)°C (NIGHT READY|STANDBY)\)$/,
+    format: ([, pct, temp, mode], language) => language === 'pt-BR'
+      ? `${pct}% (${temp}°C ${mode === 'STANDBY' ? 'EM ESPERA' : 'PRONTO PARA A NOITE'})`
+      : `${pct}% (${temp}°C ${mode === 'STANDBY' ? 'EN ESPERA' : 'LISTO PARA LA NOCHE'})`,
+  },
+  {
+    match: /^(\d+)% \(LOW THERMAL\)$/,
+    format: ([, pct], language) => language === 'pt-BR' ? `${pct}% (POUCO CALOR)` : `${pct}% (POCO CALOR)`,
+  },
+  {
+    match: /^DUSTY \((\d+)%\)$/,
+    format: ([, pct], language) => language === 'pt-BR' ? `EMPOEIRADO (${pct}%)` : `CON POLVO (${pct}%)`,
+  },
+  {
+    match: /^(CHARGING O2|CHARGING THERMAL|CLEANING CO2) \((\d+)% \/ (\d+)%\)$/,
+    format: ([, kind, current, target], language) => {
+      const labels: Record<string, [string, string]> = {
+        'CHARGING O2': ['CARREGANDO O₂', 'CARGANDO O₂'],
+        'CHARGING THERMAL': ['AQUECENDO', 'CALENTANDO'],
+        'CLEANING CO2': ['LIMPANDO CO₂', 'LIMPIANDO CO₂'],
+      };
+      const label = labels[kind][language === 'pt-BR' ? 0 : 1];
+      return `${label} (${current}% / ${target}%)`;
+    },
+  },
+  {
+    match: /^Water tank: (\d+) of (\d+) L$/,
+    format: ([, current, total], language) => language === 'pt-BR'
+      ? `Tanque de água: ${current} de ${total} L`
+      : `Depósito de agua: ${current} de ${total} L`,
+  },
+  {
+    match: /^Dust on solar panels: (\d+)%$/,
+    format: ([, pct], language) => language === 'pt-BR'
+      ? `Poeira nos painéis solares: ${pct}%`
+      : `Polvo en los paneles solares: ${pct}%`,
+  },
+  {
+    match: /^Fields planted: (\d+) of (\d+)$/,
+    format: ([, planted, total], language) => language === 'pt-BR'
+      ? `Campos plantados: ${planted} de ${total}`
+      : `Campos sembrados: ${planted} de ${total}`,
+  },
+  {
+    match: /^(\d+) h less launch window$/,
+    format: ([, hours], language) => language === 'pt-BR'
+      ? `${hours} h a menos na janela de lançamento`
+      : `${hours} h menos de ventana de lanzamiento`,
+  },
+  {
+    match: /^Base ready for the next crew: (water, panels and fields|\d+ of \d+ \(missing: .+\))$/,
+    format: ([, status], language) => {
+      if (status === 'water, panels and fields') {
+        return language === 'pt-BR'
+          ? 'Base pronta para a próxima equipe: água, painéis e campos'
+          : 'Base lista para la próxima tripulación: agua, paneles y cultivos';
+      }
+      const match = status.match(/^(\d+) of (\d+) \(missing: (.+)\)$/)!;
+      const names = match[3].split(', ').map((name) => translate(name, language)).join(', ');
+      return language === 'pt-BR'
+        ? `Base pronta para a próxima equipe: ${match[1]} de ${match[2]} (faltam: ${names})`
+        : `Base lista para la próxima tripulación: ${match[1]} de ${match[2]} (faltan: ${names})`;
+    },
+  },
+  {
+    match: /^Real: crews hand the Space Station to the next crew\. People have lived there non-stop since 2000 \(NASA\)$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'Fato real: equipes passam a Estação Espacial para a próxima tripulação. Pessoas vivem lá sem parar desde 2000 (NASA).'
+      : 'Dato real: las tripulaciones entregan la Estación Espacial a la siguiente. Hay personas viviendo allí sin interrupción desde 2000 (NASA).',
+  },
+  {
+    match: /^EVA suit seals & armor repaired to 100% \(-([\d.]+)% power\)\.$/,
+    format: ([, cost], language) => language === 'pt-BR'
+      ? `Vedação e blindagem do traje espacial reparadas até 100% (-${cost}% de energia).`
+      : `Sellos y blindaje del traje espacial reparados al 100% (-${cost}% de energía).`,
+  },
+  {
+    match: /^Low power: applied emergency patch \((\d+)% integrity\)\. Restore power for full repair\.$/,
+    format: ([, integrity], language) => language === 'pt-BR'
+      ? `Pouca energia: remendo de emergência aplicado (${integrity}% de integridade). Recupere a energia para reparar por completo.`
+      : `Poca energía: se aplicó un parche de emergencia (${integrity}% de integridad). Recupera la energía para repararlo por completo.`,
+  },
+  {
+    match: /^Need (\d+)% base power for full suit repair\.$/,
+    format: ([, cost], language) => language === 'pt-BR'
+      ? `É necessária uma carga de ${cost}% na base para reparar o traje por completo.`
+      : `Se necesita un ${cost}% de energía en la base para reparar el traje por completo.`,
+  },
+  {
+    match: /^Real fact: astronauts on the Space Shuttle and the Space Station slept only about ([\d.]+) hours a night, even with ([\d.]+) hours planned for sleep\. Tired people make more mistakes\. \(Study of 85 astronauts, Barger et al\., 2014\)$/,
+    format: ([, slept, planned], language) => language === 'pt-BR'
+      ? `Fato real: astronautas do ônibus espacial e da Estação Espacial dormiam apenas cerca de ${slept} horas por noite, mesmo com ${planned} horas reservadas para dormir. Pessoas cansadas cometem mais erros. (Estudo com 85 astronautas, Barger et al., 2014)`
+      : `Dato real: los astronautas del transbordador espacial y de la Estación Espacial dormían solo unas ${slept} horas por noche, aunque tenían ${planned} horas reservadas para dormir. Las personas cansadas cometen más errores. (Estudio de 85 astronautas, Barger et al., 2014)`,
+  },
   {
     match: /^(.+): NASA study$/,
     format: ([, id], language) => language === 'pt-BR' ? `${id}: estudo da NASA` : `${id}: estudio de la NASA`,
@@ -1051,14 +1213,22 @@ const DYNAMIC_PATTERNS: Array<{
   },
   // Dynamic messages from systems that interpolate game values.
   {
-    match: /^Science sent: (\d+) \/ (\d+) points$/,
-    format: ([, sent, goal], language) => language === 'pt-BR' ? `Ciência enviada: ${sent} / ${goal} pontos` : `Ciencia enviada: ${sent} / ${goal} puntos`,
+    match: /^Science sent: (\d+) \/ (\d+) points(\.)?$/,
+    format: ([, sent, goal, period], language) => language === 'pt-BR'
+      ? `Ciência enviada: ${sent} / ${goal} pontos${period ? '.' : ''}`
+      : `Ciencia enviada: ${sent} / ${goal} puntos${period ? '.' : ''}`,
+  },
+  {
+    match: /^(\d+) points?$/,
+    format: ([, count], language) => language === 'pt-BR'
+      ? `${count} ${count === '1' ? 'ponto' : 'pontos'}`
+      : `${count} ${count === '1' ? 'punto' : 'puntos'}`,
   },
   {
     match: /^Send (\d+) items? = (\d+) points? to Earth \((\d+)% power\)$/,
     format: ([, items, points, cost], language) => language === 'pt-BR'
       ? `Enviar ${items} ${items === '1' ? 'item' : 'itens'} = ${points} ${points === '1' ? 'ponto' : 'pontos'} para a Terra (${cost}% de energia)`
-      : `Enviar ${items} ${items === '1' ? 'artículo' : 'artículos'} = ${points} ${points === '1' ? 'punto' : 'puntos'} a la Tierra (${cost}% de energía)`,
+      : `Enviar ${items} ${items === '1' ? 'objeto' : 'objetos'} = ${points} ${points === '1' ? 'punto' : 'puntos'} a la Tierra (${cost}% de energía)`,
   },
   {
     match: /^Not enough power: this upload needs (\d+)% of the battery\. Wait for the Sun\.$/,
@@ -1074,7 +1244,7 @@ const DYNAMIC_PATTERNS: Array<{
   },
   {
     match: /^Regolith analyzed: \+(\d+) science point\. Plain regolith only counts once: the glowing sample spots outside are worth more\.$/,
-    format: ([, points], language) => language === 'pt-BR' ? `Rególito analisado: +${points} ponto científico. Rególito comum só conta uma vez; os pontos brilhantes de amostra lá fora valem mais.` : `Regolito analizado: +${points} punto científico. El regolito común solo cuenta una vez; los puntos brillantes de muestra valen más.`,
+    format: ([, points], language) => language === 'pt-BR' ? `Solo marciano (rególito) analisado: +${points} ponto científico. O solo comum só conta uma vez; os locais brilhantes de amostra lá fora valem mais.` : `Suelo marciano (regolito) analizado: +${points} punto científico. El suelo común solo cuenta una vez; los lugares brillantes con muestras valen más.`,
   },
   {
     match: /^Tool upgraded \(-([\d.]+) science points, not sent to Earth\): collecting blocks is faster\.$/,
@@ -1086,11 +1256,11 @@ const DYNAMIC_PATTERNS: Array<{
   },
   {
     match: /^Moved (\d+(?:\.\d+)?) L into the wall\. Less water to drink, more protection\.$/,
-    format: ([, liters], language) => language === 'pt-BR' ? `${liters} L foram para a parede. Menos água para beber, mais proteção.` : `Se pasaron ${liters} L a la pared. Menos agua para beber, más protección.`,
+    format: ([, liters], language) => language === 'pt-BR' ? `Você colocou ${liters} L de água na parede. Menos água para beber, mais proteção.` : `Pusiste ${liters} L de agua en la pared. Menos agua para beber, más protección.`,
   },
   {
     match: /^Moved (\d+(?:\.\d+)?) L back to the tank\. More water to drink, less protection\.$/,
-    format: ([, liters], language) => language === 'pt-BR' ? `${liters} L voltaram para o tanque. Mais água para beber, menos proteção.` : `Se devolvieron ${liters} L al tanque. Más agua para beber, menos protección.`,
+    format: ([, liters], language) => language === 'pt-BR' ? `Você tirou ${liters} L de água da parede e devolveu ao tanque. Mais água para beber, menos proteção.` : `Sacaste ${liters} L de agua de la pared y la devolviste al tanque. Más agua para beber, menos protección.`,
   },
   {
     match: /^Need (\d+(?:\.\d+)?)% base power for full suit repair\.$/,
@@ -1103,20 +1273,20 @@ const DYNAMIC_PATTERNS: Array<{
   {
     match: /^Commander, the (.+) has no power! The battery is empty\.$/,
     format: ([, station], language) => language === 'pt-BR'
-      ? `Comandante, o(a) ${translate(station, language)} está sem energia! A bateria acabou.`
-      : `Comandante, ¡${translate(station, language)} se quedó sin energía! La batería está vacía.`,
+      ? `Comandante, ${stationSubject(station, language)} está sem energia! A bateria acabou.`
+      : `Comandante, ${stationSubject(station, language)} se quedó sin energía. La batería está agotada.`,
   },
   {
     match: /^Commander, the (.+) is breaking down\. It needs care\.$/,
     format: ([, station], language) => language === 'pt-BR'
-      ? `Comandante, o(a) ${translate(station, language)} está quebrando. Precisa de manutenção.`
-      : `Comandante, ${translate(station, language)} se está averiando. Necesita mantenimiento.`,
+      ? `Comandante, ${stationSubject(station, language)} está com problemas e precisa de manutenção.`
+      : `Comandante, ${stationSubject(station, language)} tiene problemas y necesita mantenimiento.`,
   },
   {
     match: /^Commander, it is freezing! The (.+) stopped\. Turn the heater on in the power room\.$/,
     format: ([, station], language) => language === 'pt-BR'
-      ? `Comandante, está congelando! ${translate(station, language)} parou. Ligue o aquecedor na sala de energia.`
-      : `Comandante, ¡hace mucho frío! ${translate(station, language)} se detuvo. Enciende el calentador en la sala de energía.`,
+      ? `Comandante, está congelando! ${stationSubject(station, language, true)} parou. Ligue o aquecedor na sala de energia.`
+      : `Comandante, ¡hace mucho frío! ${stationSubject(station, language, true)} se detuvo. Enciende la calefacción en la sala de energía.`,
   },
   {
     match: /^Fission reactor ON: \+(\d+(?:\.\d+)?)%\/h day and night\. Your radiation dose climbs faster while it runs\.$/,
@@ -1127,8 +1297,8 @@ const DYNAMIC_PATTERNS: Array<{
   {
     match: /^The rocket takes ice in loads of (\d+(?:\.\d+)?) kg\. Drill more first\.$/,
     format: ([, amount], language) => language === 'pt-BR'
-      ? `O foguete recebe gelo em cargas de ${amount} kg. Perfure mais gelo primeiro.`
-      : `El cohete recibe hielo en cargas de ${amount} kg. Perfora más hielo primero.`,
+      ? `O foguete só pode receber gelo em cargas de ${amount} kg. Perfure mais gelo primeiro.`
+      : `El cohete solo puede cargarse con lotes de ${amount} kg de hielo. Perfora más hielo primero.`,
   },
   {
     match: /^Rover loaded (\d+(?:\.\d+)?) ice into the rocket\. No walk outside needed!$/,
@@ -1139,14 +1309,1035 @@ const DYNAMIC_PATTERNS: Array<{
   {
     match: /^EVA suit below minimum launch levels \((\d+)% O2 \/ (\d+)% Heat\)\. Wait for recharge\.$/,
     format: ([, oxygen, heat], language) => language === 'pt-BR'
-      ? `O traje EVA está abaixo do mínimo para decolar (${oxygen}% de O₂ / ${heat}% de calor). Espere a recarga.`
-      : `El traje EVA está por debajo del mínimo para despegar (${oxygen}% de O₂ / ${heat}% de calor). Espera a que se recargue.`,
+      ? `O traje espacial (EVA) está abaixo do nível mínimo para decolar (${oxygen}% de O₂ / ${heat}% de proteção térmica). Espere a recarga.`
+      : `El traje espacial (EVA) está por debajo del nivel mínimo para despegar (${oxygen}% de O₂ / ${heat}% de protección térmica). Espera a que se recargue.`,
   },
   {
     match: /^The battery will be empty before sunrise \((.+) to go\)\. Turn something off, or start the fission reactor\.$/,
     format: ([, time], language) => language === 'pt-BR'
-      ? `A bateria vai acabar antes do nascer do Sol (faltam ${time}). Desligue algo ou ligue o reator de fissão.`
-      : `La batería se agotará antes del amanecer (faltan ${time}). Apaga algo o enciende el reactor de fisión.`,
+      ? `A bateria vai acabar antes do nascer do Sol (faltam ${time}). Desligue algum aparelho ou ligue o reator de fissão.`
+      : `La batería se agotará antes del amanecer (faltan ${time}). Apaga algún aparato o enciende el reactor de fisión.`,
+  },
+  {
+    match: /^Planted (lettuce|soy|potato)\. It drinks (\d+(?:\.\d+)?) L from the base tank while it grows, and needs light and a clean greenhouse\.$/,
+    format: ([, crop, liters], language) => language === 'pt-BR'
+      ? `Você plantou ${translate(crop, language)}. A planta consome ${liters} L do tanque da base enquanto cresce e precisa de luz e de uma estufa limpa.`
+      : `Plantaste ${translate(crop, language)}. La planta consume ${liters} L del tanque de la base mientras crece y necesita luz y un invernadero limpio.`,
+  },
+  {
+    match: /^Harvested (lettuce|soy|potato)\. Pick up your harvest and use it to eat\. A real NASA study is now in your field notebook!$/,
+    format: ([, crop], language) => language === 'pt-BR'
+      ? `Você colheu ${translate(crop, language)}. Pegue a colheita para comer. Um estudo real da NASA está no seu diário de campo!`
+      : `Cosechaste ${translate(crop, language)}. Recoge la cosecha para comer. ¡Ahora tienes un estudio real de la NASA en tu cuaderno de campo!`,
+  },
+  {
+    match: /^The (lettuce|soy|potato) basket is empty\.$/,
+    format: ([, crop], language) => language === 'pt-BR'
+      ? `O cesto de ${translate(crop, language)} está vazio.`
+      : `La cesta de ${translate(crop, language)} está vacía.`,
+  },
+  {
+    match: /^Collected (\d+) (lettuce|soy|potato)\.( The rest is in the basket\.)?$/,
+    format: ([, count, crop, rest], language) => language === 'pt-BR'
+      ? `${count} unidades de ${translate(crop, language)} coletadas.${rest ? ' O restante está no cesto.' : ''}`
+      : `Se recogieron ${count} unidades de ${translate(crop, language)}.${rest ? ' El resto está en la cesta.' : ''}`,
+  },
+  {
+    match: /^(.+) analyzed: \+(\d+) science points\. Send it to Earth from this terminal\.$/,
+    format: ([, sample, points], language) => language === 'pt-BR'
+      ? `${translate(sample, language)} analisada: +${points} pontos científicos. Envie os dados à Terra por este terminal.`
+      : `${translate(sample, language)} analizada: +${points} puntos científicos. Envía los datos a la Tierra desde esta terminal.`,
+  },
+  {
+    match: /^Got a Space Ration! \((\d+) left in the pantry\)$/,
+    format: ([, count], language) => language === 'pt-BR'
+      ? `Você pegou uma ração espacial! Restam ${count} na despensa.`
+      : `¡Tomaste una ración espacial! Quedan ${count} en la despensa.`,
+  },
+  {
+    match: /^Cooking your (lettuce|soy|potato|Mars carrot): ready in (\d+(?:\.\d+)?) seconds\.$/,
+    format: ([, crop, seconds], language) => language === 'pt-BR'
+      ? `Sua refeição de ${foodName(crop, language)} ficará pronta em ${seconds} segundos.`
+      : `Tu comida de ${foodName(crop, language)} estará lista en ${seconds} segundos.`,
+  },
+  {
+    match: /^(.+): Your ration is cooking! (\d+) s to go\.$/,
+    format: ([, name, seconds], language) => language === 'pt-BR'
+      ? `${name}: sua refeição está sendo preparada! Faltam ${seconds} s.`
+      : `${name}: ¡están preparando tu comida! Faltan ${seconds} s.`,
+  },
+  {
+    match: /^(.+): Your ration is ready! Make room in your bag\.$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `${name}: sua refeição está pronta! Abra espaço na mochila.`
+      : `${name}: ¡tu comida está lista! Haz espacio en tu mochila.`,
+  },
+  {
+    match: /^(.+): Thanks for the (lettuce|soy|potato|Mars carrot)! Your ration is ready in (\d+(?:\.\d+)?) s\.$/,
+    format: ([, name, crop, seconds], language) => language === 'pt-BR'
+      ? `${name}: obrigado pela ${foodName(crop, language)}! Sua refeição ficará pronta em ${seconds} s.`
+      : `${name}: ¡gracias por la ${foodName(crop, language)}! Tu comida estará lista en ${seconds} s.`,
+  },
+  {
+    match: /^(.+): No food! Grow some in the greenhouse\.$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `${name}: não temos comida! Plante alimentos na estufa.`
+      : `${name}: ¡no hay comida! Cultiva alimentos en el invernadero.`,
+  },
+  {
+    match: /^(.+): Here is a ration! (\d+) left\.$/,
+    format: ([, name, count], language) => language === 'pt-BR'
+      ? `${name}: aqui está sua refeição! Restam ${count}.`
+      : `${name}: ¡aquí tienes tu comida! Quedan ${count}.`,
+  },
+  {
+    match: /^(.+): Your (lettuce|soy|potato|Mars carrot) ration is ready!$/,
+    format: ([, name, crop], language) => language === 'pt-BR'
+      ? `${name}: sua refeição de ${foodName(crop, language)} está pronta!`
+      : `${name}: ¡tu comida de ${foodName(crop, language)} está lista!`,
+  },
+  {
+    match: /^Got a Space Ration made from your (lettuce|soy|potato|Mars carrot)! Eat it from your hotbar\.$/,
+    format: ([, crop], language) => language === 'pt-BR'
+      ? `Você recebeu uma ração espacial feita com ${foodName(crop, language)}! Coma pela barra de itens.`
+      : `¡Recibiste una ración espacial hecha con ${foodName(crop, language)}! Cómela desde la barra de objetos.`,
+  },
+  {
+    match: /^(.+) is cooking your ration \((\d+) s\)$/,
+    format: ([, name, seconds], language) => language === 'pt-BR'
+      ? `${name} está preparando sua refeição (${seconds} s)`
+      : `${name} está preparando tu comida (${seconds} s)`,
+  },
+  {
+    match: /^\[F\] Give (lettuce|soy|potato|Mars carrot) to (.+): 1 ration \((\d+(?:\.\d+)?)% battery\)$/,
+    format: ([, crop, name, cost], language) => language === 'pt-BR'
+      ? `[F] Entregar ${foodName(crop, language)} para ${name}: 1 refeição (${cost}% da bateria)`
+      : `[F] Dar ${foodName(crop, language)} a ${name}: 1 comida (${cost}% de batería)`,
+  },
+  {
+    match: /^\[F\] Get space ration from (.+) \((\d+) in pantry\)$/,
+    format: ([, name, count], language) => language === 'pt-BR'
+      ? `[F] Pegar ração espacial com ${name} (${count} na despensa)`
+      : `[F] Recoger una ración espacial con ${name} (${count} en la despensa)`,
+  },
+  {
+    match: /^\[F\] Talk to (.+) \(pantry empty\)$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `[F] Falar com ${name} (despensa vazia)`
+      : `[F] Hablar con ${name} (despensa vacía)`,
+  },
+  {
+    match: /^\[F\] Talk to (.+)$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `[F] Falar com ${name}`
+      : `[F] Hablar con ${name}`,
+  },
+  {
+    match: /^(.+): I'm too weak to work\. We need (.+)!$/,
+    format: ([, name, needs], language) => {
+      const localizedNeeds = needs.split(' and ').map((need) => translate(need, language));
+      const joiner = language === 'pt-BR' ? ' e ' : ' y ';
+      const list = localizedNeeds.length > 2
+        ? `${localizedNeeds.slice(0, -1).join(', ')}${joiner}${localizedNeeds.at(-1)}`
+        : localizedNeeds.join(joiner);
+      return language === 'pt-BR'
+        ? `${name}: estou sem forças para trabalhar. Precisamos de ${list}!`
+        : `${name}: no tengo fuerzas para trabajar. ¡Necesitamos ${list}!`;
+    },
+  },
+  {
+    match: /^(.+): Thanks, Commander! I'm back to work\.$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `${name}: valeu, comandante! Voltei ao trabalho.`
+      : `${name}: ¡gracias, comandante! Ya volví al trabajo.`,
+  },
+  {
+    match: /^(.+) is too weak and must rest in the medical bay\. Bring air, water and food back so (.+) can get better\.$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `${name} está sem forças e precisa descansar na enfermaria. Reponha o ar, a água e a comida para ${name} se recuperar.`
+      : `${name} no tiene fuerzas y necesita descansar en la enfermería. Repón el aire, el agua y la comida para que ${name} se recupere.`,
+  },
+  {
+    match: /^(.+): Going to rest\. I still need air, water and food\.$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `${name}: vou descansar. Ainda preciso de ar, água e comida.`
+      : `${name}: voy a descansar. Todavía necesito aire, agua y comida.`,
+  },
+  {
+    match: /^(.+): On my way to the (.+)!$/,
+    format: ([, name, station], language) => language === 'pt-BR'
+      ? `${name}: estou indo para ${translate(station, language)}!`
+      : `${name}: ¡voy hacia ${translate(station, language)}!`,
+  },
+  {
+    match: /^Commander, the (.+) has a problem\.$/,
+    format: ([, station], language) => language === 'pt-BR'
+      ? `Comandante, ${stationSubject(station, language)} está com problemas.`
+      : `Comandante, ${stationSubject(station, language)} tiene problemas.`,
+  },
+  {
+    match: /^RADIATION DOSE: (.+) of (.+) \(NASA career limit\)$/,
+    format: ([, dose, limit], language) => language === 'pt-BR'
+      ? `DOSE DE RADIAÇÃO: ${dose} de ${limit} (limite da NASA ao longo da carreira)`
+      : `DOSIS DE RADIACIÓN: ${dose} de ${limit} (límite de la NASA durante la carrera)`,
+  },
+  {
+    match: /^Flight doctor: your radiation dose is almost at the NASA limit \((\d+) mSv\)\.$/,
+    format: ([, limit], language) => language === 'pt-BR'
+      ? `Médica da missão: sua dose de radiação está perto do limite da NASA (${limit} mSv).`
+      : `Médica de vuelo: tu dosis de radiación está cerca del límite de la NASA (${limit} mSv).`,
+  },
+  {
+    match: /^Flight doctor: your dose passed the NASA limit of (\d+) mSv\. You cannot go outside anymore\.$/,
+    format: ([, limit], language) => language === 'pt-BR'
+      ? `Médica da missão: sua dose passou do limite da NASA de ${limit} mSv. Você não pode mais sair da base.`
+      : `Médica de vuelo: tu dosis superó el límite de la NASA de ${limit} mSv. Ya no puedes salir de la base.`,
+  },
+  {
+    match: /^OXYGEN MACHINE: (.+) \((.+)\)$/,
+    format: ([, label, machine], language) => language === 'pt-BR'
+      ? `MÁQUINA DE OXIGÊNIO: ${translateUppercaseLabel(label, language)} (${translate(machine, language)})`
+      : `MÁQUINA DE OXÍGENO: ${translateUppercaseLabel(label, language)} (${translate(machine, language)})`,
+  },
+  {
+    match: /^OTHER CHOICE: (.+) \((.+)\)$/,
+    format: ([, label, machine], language) => language === 'pt-BR'
+      ? `OUTRA OPÇÃO: ${translateUppercaseLabel(label, language)} (${translate(machine, language)})`
+      : `LA OTRA OPCIÓN: ${translateUppercaseLabel(label, language)} (${translate(machine, language)})`,
+  },
+  {
+    match: /^Cost: ([\d.]+)% power per O2 point\. No water\.$/,
+    format: ([, power], language) => language === 'pt-BR'
+      ? `  Custo: ${power}% de energia por ponto de O₂. Não usa água.`
+      : `  Costo: ${power}% de energía por punto de O₂. No usa agua.`,
+  },
+  {
+    match: /^Cost: ([\d.]+)% power per O2 point, and about ([\d.]+) L of water per person each sol\.$/,
+    format: ([, power, water], language) => language === 'pt-BR'
+      ? `  Custo: ${power}% de energia por ponto de O₂ e cerca de ${water} L de água por pessoa a cada sol.`
+      : `  Costo: ${power}% de energía por punto de O₂ y unos ${water} L de agua por persona cada sol.`,
+  },
+  {
+    match: /^SABATIER REACTOR: not built\. It would give back half of that water \(([\d.]+) regolith, ([\d.]+)% power\)\.$/,
+    format: ([, regolith, power], language) => language === 'pt-BR'
+      ? `REATOR SABATIER: ainda não construído. Ele recuperaria metade dessa água (${regolith} blocos de rególito, ${power}% de energia).`
+      : `REACTOR SABATIER: aún no está construido. Recuperaría la mitad de esa agua (${regolith} bloques de regolito, ${power}% de energía).`,
+  },
+  {
+    match: /^WATER USED TO MAKE AIR SO FAR: ([\d.]+) L$/,
+    format: ([, water], language) => language === 'pt-BR'
+      ? `ÁGUA USADA PARA PRODUZIR AR ATÉ AGORA: ${water} L`
+      : `AGUA USADA PARA PRODUCIR AIRE HASTA AHORA: ${water} L`,
+  },
+  {
+    match: /^Build Sabatier reactor \(([\d.]+) regolith, ([\d.]+)% power\)$/,
+    format: ([, regolith, power], language) => language === 'pt-BR'
+      ? `Construir reator Sabatier (${regolith} blocos de rególito, ${power}% de energia)`
+      : `Construir reactor Sabatier (${regolith} bloques de regolito, ${power}% de energía)`,
+  },
+  {
+    match: /^The oxygen machine is already on (.+)\.$/,
+    format: ([, mode], language) => language === 'pt-BR'
+      ? `A máquina de oxigênio já está ligada em ${translate(mode, language)}.`
+      : `La máquina de oxígeno ya está en ${translate(mode, language)}.`,
+  },
+  {
+    match: /^Collect (\d+) regolith blocks outside to print the Sabatier reactor\.$/,
+    format: ([, count], language) => language === 'pt-BR'
+      ? `Colete ${count} blocos de rególito lá fora para fabricar o reator Sabatier.`
+      : `Recoge ${count} bloques de regolito afuera para fabricar el reactor Sabatier.`,
+  },
+  {
+    match: /^\[F\] Clean solar panel (\d+) \(dust (\d+)%, uses suit air\)$/,
+    format: ([, panel, dust], language) => language === 'pt-BR'
+      ? `[F] Limpar painel solar ${panel} (poeira: ${dust}%, consome ar do traje)`
+      : `[F] Limpiar panel solar ${panel} (polvo: ${dust}%, consume aire del traje)`,
+  },
+  {
+    match: /^Suit integrity: (\d+)%$/,
+    format: ([, integrity], language) => language === 'pt-BR'
+      ? `Integridade do traje: ${integrity}%`
+      : `Integridad del traje: ${integrity}%`,
+  },
+  {
+    match: /^(\d+)% suit integrity$/,
+    format: ([, integrity], language) => language === 'pt-BR'
+      ? `${integrity}% de integridade do traje`
+      : `${integrity}% de integridad del traje`,
+  },
+  {
+    match: /^Suit upgrade \(uses (\d+) unsent science points\)$/,
+    format: ([, points], language) => language === 'pt-BR'
+      ? `Melhorar traje (custa ${points} pontos científicos ainda não enviados)`
+      : `Mejorar traje (cuesta ${points} puntos científicos aún no enviados)`,
+  },
+  {
+    match: /^Tool upgrade \(uses (\d+) unsent science points\)$/,
+    format: ([, points], language) => language === 'pt-BR'
+      ? `Melhorar ferramenta (custa ${points} pontos científicos ainda não enviados)`
+      : `Mejorar herramienta (cuesta ${points} puntos científicos aún no enviados)`,
+  },
+  {
+    match: /^Fill wall \(\+(\d+) L\)$/,
+    format: ([, liters], language) => language === 'pt-BR' ? `Encher parede (+${liters} L)` : `Llenar la pared (+${liters} L)`,
+  },
+  {
+    match: /^Drain wall \(-(\d+) L\)$/,
+    format: ([, liters], language) => language === 'pt-BR' ? `Esvaziar parede (−${liters} L)` : `Vaciar la pared (−${liters} L)`,
+  },
+  {
+    match: /^Mars (lettuce|soy|potato) \(Use to eat\)$/,
+    format: ([, crop], language) => language === 'pt-BR'
+      ? `${foodName(`Mars ${crop}`, language)} (use para comer)`
+      : `${foodName(`Mars ${crop}`, language)} (usa para comer)`,
+  },
+  {
+    match: /^Sample: Dark Dune Sand \(analyze in the lab\)$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Amostra: areia escura das dunas (analisar no laboratório)' : 'Muestra: arena oscura de las dunas (analizar en el laboratorio)',
+  },
+  {
+    match: /^Sample: Layered Mudstone \(analyze in the lab\)$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Amostra: rocha sedimentar em camadas (analisar no laboratório)' : 'Muestra: roca sedimentaria en capas (analizar en el laboratorio)',
+  },
+  {
+    match: /^Sample: Yellow Sulfur Crystals \(analyze in the lab\)$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Amostra: cristais amarelos de enxofre (analisar no laboratório)' : 'Muestra: cristales amarillos de azufre (analizar en el laboratorio)',
+  },
+  {
+    match: /^Sample: Iron Meteorite \(analyze in the lab\)$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Amostra: meteorito de ferro (analisar no laboratório)' : 'Muestra: meteorito de hierro (analizar en el laboratorio)',
+  },
+  {
+    match: /^Sample: Buried Ice Core \(analyze in the lab\)$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Amostra: núcleo de gelo enterrado (analisar no laboratório)' : 'Muestra: núcleo de hielo enterrado (analizar en el laboratorio)',
+  },
+  {
+    match: /^Space Ration \(Use to eat\)$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Ração espacial (use para comer)' : 'Ración espacial (úsala para comer)',
+  },
+  {
+    match: /^Discovery Journal \(Use to open\)$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Diário de descobertas (use para abrir)' : 'Diario de descubrimientos (úsalo para abrir)',
+  },
+  {
+    match: /^Shield Remote \(Use to turn the radiation shield on\/off\)$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Controle do escudo (use para ligar ou desligar a proteção contra radiação)' : 'Control del escudo (úsalo para activar o desactivar la protección contra la radiación)',
+  },
+  {
+    match: /^Mars Carrot \(Right-click to eat\)$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Cenoura marciana (clique com o botão direito para comer)' : 'Zanahoria marciana (haz clic derecho para comer)',
+  },
+  {
+    match: /^Martian Regolith$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Solo marciano (rególito)' : 'Suelo marciano (regolito)',
+  },
+  {
+    match: /^Crater Rock$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Rocha da cratera' : 'Roca del cráter',
+  },
+  {
+    match: /^Martian Water Ice$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Gelo de água marciano' : 'Hielo de agua marciano',
+  },
+  {
+    match: /^Habitat Hull Block$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Bloco estrutural do habitat' : 'Bloque estructural del hábitat',
+  },
+  {
+    match: /^Gold Thermal Block$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Bloco de isolamento térmico dourado' : 'Bloque dorado de aislamiento térmico',
+  },
+  {
+    match: /^Pressurized Glass$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Vidro pressurizado' : 'Vidrio presurizado',
+  },
+  {
+    match: /^Solar Lamp$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Luminária solar' : 'Lámpara solar',
+  },
+  {
+    match: /^Fresh Meteor Ice$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Gelo fresco de meteorito' : 'Hielo fresco de meteorito',
+  },
+  {
+    match: /^Solar Panel Block$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Bloco de painel solar' : 'Bloque de panel solar',
+  },
+  {
+    match: /^Metal Floor Plate$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Placa metálica de piso' : 'Placa metálica para el suelo',
+  },
+  {
+    match: /^Console Block$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Bloco de console' : 'Bloque de consola',
+  },
+  {
+    match: /^Orange Beacon$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Sinalizador laranja' : 'Baliza naranja',
+  },
+  {
+    match: /^Dark Basalt$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Basalto escuro' : 'Basalto oscuro',
+  },
+  {
+    match: /^Scope Scanner$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Luneta de escaneamento' : 'Luneta de exploración',
+  },
+  {
+    match: /^Orange Sandstone$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Arenito alaranjado' : 'Arenisca anaranjada',
+  },
+  {
+    match: /^Sample: (.+) \(analyze in the lab\)$/,
+    format: ([, sample], language) => language === 'pt-BR'
+      ? `Amostra: ${translate(sample, language)} (analisar no laboratório)`
+      : `Muestra: ${translate(sample, language)} (analizar en el laboratorio)`,
+  },
+  {
+    match: /^You ate a (Mars (?:carrot|lettuce|soy|potato)|lettuce|soy|potato) \(\+Food\)\. No oxygen! Food cannot heal you, go back to the base\.?$/,
+    format: ([, food], language) => language === 'pt-BR'
+      ? `Você comeu ${foodName(food, language)} (+comida), mas está sem oxigênio! Comida não recupera sua saúde. Volte para a base.`
+      : `Comiste ${foodName(food, language)} (+comida), pero te falta oxígeno. La comida no recupera tu salud. Vuelve a la base.`,
+  },
+  {
+    match: /^You ate a (Mars (?:carrot|lettuce|soy|potato)|lettuce|soy|potato) \(\+Food\)$/,
+    format: ([, food], language) => language === 'pt-BR'
+      ? `Você comeu ${foodName(food, language)} (+comida).`
+      : `Comiste ${foodName(food, language)} (+comida).`,
+  },
+  {
+    match: /^Drank clean water from habitat purifier \(\+Hydration full\)\. Base reserve: (\d+)L\. The used water goes to the recycler\.$/,
+    format: ([, reserve], language) => language === 'pt-BR'
+      ? `Você bebeu água limpa do purificador (+hidratação completa). Reserva da base: ${reserve} L. A água usada vai para o reciclador.`
+      : `Bebiste agua limpia del purificador (+hidratación completa). Reserva de la base: ${reserve} L. El agua usada va al reciclador.`,
+  },
+  {
+    match: /^Base water reservoir is dry! Collect ice with the Rover\.$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'O tanque de água da base está vazio! Colete gelo com o rover.'
+      : '¡El depósito de agua de la base está vacío! Recoge hielo con el rover.',
+  },
+  {
+    match: /^Collected a sample outside: (.+)\.$/,
+    format: ([, sample], language) => language === 'pt-BR'
+      ? `Amostra coletada lá fora: ${translate(sample, language)}.`
+      : `Muestra recogida afuera: ${translate(sample, language)}.`,
+  },
+  {
+    match: /^Sample collected: (.+)\. Analyze it at the science & radio terminal for \+(\d+)\. (\d+) sample spots left on the map\.$/,
+    format: ([, sample, points, remaining], language) => language === 'pt-BR'
+      ? `Amostra coletada: ${translate(sample, language)}. Analise-a no terminal de ciência e rádio para ganhar +${points}. Restam ${remaining} locais de amostra no mapa.`
+      : `Muestra recogida: ${translate(sample, language)}. Analízala en la terminal de ciencia y radio para ganar +${points}. Quedan ${remaining} lugares de muestra en el mapa.`,
+  },
+  {
+    match: /^Sealed a sample in a tube for Earth: (.+)\.$/,
+    format: ([, sample], language) => language === 'pt-BR'
+      ? `Você guardou uma amostra em um tubo para enviar à Terra: ${translate(sample, language)}.`
+      : `Guardaste una muestra en un tubo para enviarla a la Tierra: ${translate(sample, language)}.`,
+  },
+  {
+    match: /^(.+) is back in your bag\. You can analyze it now\.$/,
+    format: ([, sample], language) => language === 'pt-BR'
+      ? `${translate(sample, language)} voltou para sua mochila. Agora você pode analisá-la.`
+      : `${translate(sample, language)} volvió a tu mochila. Ya puedes analizarla.`,
+  },
+  {
+    match: /^Picked up (\d+) items?$/,
+    format: ([, count], language) => language === 'pt-BR'
+      ? `${count} ${count === '1' ? 'item coletado' : 'itens coletados'}`
+      : `${count} ${count === '1' ? 'objeto recogido' : 'objetos recogidos'}`,
+  },
+  {
+    match: /^Brushed (\d+)% of the dust off panel (\d+) \(used suit air\)\. Dust left on it: (\d+)%\.(.*)$/,
+    format: ([, cleaned, panel, remaining, extra], language) => language === 'pt-BR'
+      ? `Você removeu ${cleaned}% da poeira do painel ${panel} (usou o ar do traje). Restam ${remaining}% de poeira.${extra ? ` ${translate(extra.trim(), language)}` : ''}`
+      : `Quitaste el ${cleaned}% del polvo del panel ${panel} (usaste aire del traje). Queda un ${remaining}% de polvo.${extra ? ` ${translate(extra.trim(), language)}` : ''}`,
+  },
+  {
+    match: /^\+(.+) of science: (.+?)( \(rare find!\))?\. Send it home from the science & radio terminal\.$/,
+    format: ([, points, title, rare], language) => language === 'pt-BR'
+      ? `+${translate(points, language)} de ciência: ${translate(title, language)}${rare ? ' (descoberta rara)' : ''}. Envie pelo terminal de ciência e rádio.`
+      : `+${translate(points, language)} de ciencia: ${translate(title, language)}${rare ? ' (hallazgo poco común)' : ''}. Envíalo desde la terminal de ciencia y radio.`,
+  },
+  {
+    match: /^(.+) complete! Scope upgraded: ([\d.]+)s scan, (\d+) block range$/,
+    format: ([, category, seconds, blocks], language) => language === 'pt-BR'
+      ? `${translate(category, language)} concluída! Luneta melhorada: escaneamento de ${seconds} s, alcance de ${blocks} blocos.`
+      : `¡Categoría ${translate(category, language)} completada! Luneta mejorada: escaneo de ${seconds} s y alcance de ${blocks} bloques.`,
+  },
+  {
+    match: /^Every target scanned: you are a Junior Astronaut!$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'Você escaneou todos os alvos: já é astronauta júnior!'
+      : '¡Escaneaste todos los objetivos: ya eres astronauta júnior!',
+  },
+  {
+    match: /^Sample analyzed, (.+): (.+)\. Real find: (.+)\. \((.+)\)$/,
+    format: ([, sample, fact, place, source], language) => language === 'pt-BR'
+      ? `Amostra analisada, ${translate(sample, language)}: ${translate(fact, language)}. Descoberta real: ${translate(place, language)}. (${translate(source, language)})`
+      : `Muestra analizada, ${translate(sample, language)}: ${translate(fact, language)}. Hallazgo real: ${translate(place, language)}. (${translate(source, language)})`,
+  },
+  {
+    match: /^WAIT OUT THE STORM \(no solar storm right now\)$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'ESPERAR A TEMPESTADE PASSAR (não há tempestade solar agora)'
+      : 'ESPERAR A QUE PASE LA TORMENTA (ahora no hay tormenta solar)',
+  },
+  {
+    match: /^WAIT OUT THE STORM \(the wall needs (\d+) more L\)$/,
+    format: ([, liters], language) => language === 'pt-BR'
+      ? `ESPERAR A TEMPESTADE PASSAR (faltam ${liters} L na parede)`
+      : `ESPERAR A QUE PASE LA TORMENTA (faltan ${liters} L en la pared)`,
+  },
+  {
+    match: /^WAIT OUT THE STORM \(step inside the shelter first\)$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'ESPERAR A TEMPESTADE PASSAR (entre no abrigo primeiro)'
+      : 'ESPERAR A QUE PASE LA TORMENTA (entra primero en el refugio)',
+  },
+  {
+    match: /^WAIT OUT THE STORM \(time runs fast\)$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'ESPERAR A TEMPESTADE PASSAR (o tempo passa rápido)'
+      : 'ESPERAR A QUE PASE LA TORMENTA (el tiempo pasa rápido)',
+  },
+  {
+    match: /^With a FULL wall \((\d+) L\) you can wait out a solar storm in here with the clock running fast: the base still uses power and you still get hungry and thirsty\.$/,
+    format: ([, liters], language) => language === 'pt-BR'
+      ? `Com a parede CHEIA (${liters} L), você pode esperar a tempestade passar aqui enquanto o tempo corre rápido: a base continua gastando energia e você continua sentindo fome e sede.`
+      : `Con la pared LLENA (${liters} L), puedes esperar aquí a que pase la tormenta mientras el tiempo avanza rápido: la base sigue usando energía y tú sigues teniendo hambre y sed.`,
+  },
+  {
+    match: /^(The solar storm is over\.|The battery ran out, so you stopped waiting!|The base is losing air, so you stopped waiting!|An alarm is on in the base, so you stopped waiting\.|You got too hungry to keep waiting\.|You got too thirsty to keep waiting\.) You waited (.+) of game time behind the water wall\. Battery (\d+)% -> (\d+)%\.$/,
+    format: ([, head, time, before, after], language) => language === 'pt-BR'
+      ? `${translate(head, language)} Você esperou ${time} atrás da parede de água. Bateria: ${before}% → ${after}%.`
+      : `${translate(head, language)} Esperaste ${time} detrás de la pared de agua. Batería: ${before}% → ${after}%.`,
+  },
+  {
+    match: /^Sealed in a tube: \+(\d+) points in your final report, none now\. The rocket needs \+(\d+) ice\.$/,
+    format: ([, points, ice], language) => language === 'pt-BR'
+      ? `Guardada em um tubo: +${points} pontos no relatório final, nenhum agora. O foguete precisa de mais ${ice} blocos de gelo.`
+      : `Guardada en un tubo: +${points} puntos en el informe final, ninguno ahora. El cohete necesita ${ice} bloques de hielo más.`,
+  },
+  {
+    match: /^Now pedal (left|right)\.$/,
+    format: ([, side], language) => language === 'pt-BR'
+      ? `Agora pedale para ${side === 'left' ? 'a esquerda' : 'a direita'}.`
+      : `Ahora pedalea hacia ${side === 'left' ? 'la izquierda' : 'la derecha'}.`,
+  },
+  {
+    match: /^Good! Now pedal (left|right)\.$/,
+    format: ([, side], language) => language === 'pt-BR'
+      ? `Muito bem! Agora pedale para ${side === 'left' ? 'a esquerda' : 'a direita'}.`
+      : `¡Muy bien! Ahora pedalea hacia ${side === 'left' ? 'la izquierda' : 'la derecha'}.`,
+  },
+  {
+    match: /^Battery at sunrise: about (\d+)%$/,
+    format: ([, percent], language) => language === 'pt-BR'
+      ? `Bateria ao nascer do Sol: cerca de ${percent}%`
+      : `Batería al amanecer: cerca del ${percent}%`,
+  },
+  {
+    match: /^Making fuel \((\d+) ice\)$/,
+    format: ([, ice], language) => language === 'pt-BR'
+      ? `Produzindo combustível (${ice} blocos de gelo)`
+      : `Produciendo combustible (${ice} bloques de hielo)`,
+  },
+  {
+    match: /^Need (\d+(?:\.\d+)?)% power to train\.$/,
+    format: ([, cost], language) => language === 'pt-BR'
+      ? `São necessários ${cost}% de energia para treinar.`
+      : `Necesitas el ${cost}% de energía para entrenar.`,
+  },
+  {
+    match: /^(.+) liters in wall, (\d+)% radiation blocked$/,
+    format: ([, liters, blocked], language) => language === 'pt-BR'
+      ? `${liters} litros na parede, ${blocked}% da radiação bloqueada`
+      : `${liters} litros en la pared, ${blocked}% de radiación bloqueada`,
+  },
+  {
+    match: /^Nothing new to send\. Scan things with the scope or analyze samples first\.$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'Nada novo para enviar. Escaneie objetos com a luneta ou analise amostras primeiro.'
+      : 'No hay nada nuevo para enviar. Primero escanea objetos con la mira o analiza muestras.',
+  },
+  {
+    match: /^Earth also needs the (\d+) clues \((\d+) samples each\)\. Still missing: (.+)\.$/,
+    format: ([, clues, perClue, missing], language) => language === 'pt-BR'
+      ? `A Terra também precisa das ${clues} pistas (${perClue} amostras de cada tipo). Ainda faltam: ${translate(missing, language)}.`
+      : `La Tierra también necesita las ${clues} pistas (${perClue} muestras de cada tipo). Aún faltan: ${translate(missing, language)}.`,
+  },
+  {
+    match: /^Enough points are home, but Earth still needs these clues: (.+)\. Each clue is (\d+) samples of one kind: find the glowing samples, analyze them and send them\.$/,
+    format: ([, clues, count], language) => language === 'pt-BR'
+      ? `A Terra já recebeu pontos suficientes, mas ainda precisa destas pistas: ${translate(clues, language)}. Cada pista exige ${count} amostras do mesmo tipo: encontre as amostras brilhantes, analise-as e envie os dados.`
+      : `La Tierra ya recibió suficientes puntos, pero aún necesita estas pistas: ${translate(clues, language)}. Cada pista requiere ${count} muestras del mismo tipo: encuentra las muestras brillantes, analízalas y envía los datos.`,
+  },
+  {
+    match: /^Enough science is home\. Extra uploads still count for your report\.$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'A Terra já recebeu ciência suficiente. Os envios extras ainda contam no seu relatório.'
+      : 'La Tierra ya recibió suficiente ciencia. Los envíos extra también cuentan en tu informe.',
+  },
+  {
+    match: /^The rocket needs (\d+) points? of science sent to Earth\.$/,
+    format: ([, points], language) => language === 'pt-BR'
+      ? `O foguete precisa que ${points} pontos científicos sejam enviados à Terra.`
+      : `Hay que enviar ${points} puntos científicos a la Tierra para el cohete.`,
+  },
+  {
+    match: /^The rocket needs (\d+) points of science sent to Earth\.$/,
+    format: ([, points], language) => language === 'pt-BR'
+      ? `O foguete precisa que ${points} pontos científicos sejam enviados à Terra.`
+      : `Hay que enviar ${points} puntos científicos a la Tierra para el cohete.`,
+  },
+  {
+    match: /^(.+) You have enough: send it\.(.*)$/,
+    format: ([, goal, clues], language) => language === 'pt-BR'
+      ? `${translate(goal, language)} Você já tem o suficiente: envie os dados.${translate(clues, language)}`
+      : `${translate(goal, language)} Ya tienes suficientes: envía los datos.${translate(clues, language)}`,
+  },
+  {
+    match: /^(.+) Still missing: (.+)\. Scan new things with the scope or analyze samples from the map\.(.*)$/,
+    format: ([, goal, missing, clues], language) => language === 'pt-BR'
+      ? `${translate(goal, language)} Ainda faltam ${translate(missing, language)}. Escaneie novos objetos com a luneta ou analise amostras do mapa.${translate(clues, language)}`
+      : `${translate(goal, language)} Aún faltan ${translate(missing, language)}. Escanea objetos nuevos con la mira o analiza muestras del mapa.${translate(clues, language)}`,
+  },
+  {
+    match: /^Sent (\d+) items? \(\+(\d+) points\) to a Mars orbiter, which passes it on to Earth \(-([\d.]+)% power\)\.(.*)$/,
+    format: ([, items, points, cost, rest], language) => language === 'pt-BR'
+      ? `${items} ${items === '1' ? 'item enviado' : 'itens enviados'} (+${points} pontos) ao orbitador de Marte, que encaminha os dados à Terra (−${cost}% de energia).${translate(rest, language)}`
+      : `${items} ${items === '1' ? 'objeto enviado' : 'objetos enviados'} (+${points} puntos) a un orbitador de Marte, que los reenvía a la Tierra (−${cost}% de energía).${translate(rest, language)}`,
+  },
+  {
+    match: /^(.+) more items? wait for the next orbiter pass\.$/,
+    format: ([, count], language) => language === 'pt-BR'
+      ? ` ${count} ${count === '1' ? 'item espera' : 'itens esperam'} a próxima passagem do orbitador.`
+      : ` ${count} ${count === '1' ? 'objeto espera' : 'objetos esperan'} el próximo paso del orbitador.`,
+  },
+  {
+    match: /^Earth has enough of your science!$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'A Terra já recebeu ciência suficiente!'
+      : '¡La Tierra ya recibió suficiente ciencia!',
+  },
+  {
+    match: /^(.+) sealed in a tube: \+(\d+) points in your final report, none now\. The rocket needs \+(\d+) ice\.$/,
+    format: ([, sample, points, ice], language) => language === 'pt-BR'
+      ? `${translate(sample, language)} guardada em um tubo: +${points} pontos no relatório final, nenhum agora. O foguete precisa de mais ${ice} blocos de gelo.`
+      : `${translate(sample, language)} guardada en un tubo: +${points} puntos en el informe final, ninguno ahora. El cohete necesita ${ice} bloques de hielo más.`,
+  },
+  {
+    match: /^(.+): I can't, the (.+) has no power\.$/,
+    format: ([, name, station], language) => language === 'pt-BR'
+      ? `${name}: não consigo; ${stationSubject(station, language)} está sem energia.`
+      : `${name}: no puedo; ${stationSubject(station, language)} se quedó sin energía.`,
+  },
+  {
+    match: /^Science you let pass: (.+) \(storm-only scans\)$/,
+    format: ([, scans], language) => language === 'pt-BR'
+      ? `Descobertas perdidas: ${scans.split(', ').map((scan) => translate(scan, language)).join(', ')} (escaneamentos disponíveis só durante a tempestade)`
+      : `Descubrimientos perdidos: ${scans.split(', ').map((scan) => translate(scan, language)).join(', ')} (escaneos disponibles solo durante la tormenta)`,
+  },
+  {
+    match: /^Follow the arrow to (.+), the engineer: press F$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `Siga a seta até ${name}, da equipe de engenharia: pressione F`
+      : `Sigue la flecha hasta ${name}, parte del equipo de ingeniería: pulsa F`,
+  },
+  {
+    match: /^Get the scope from (.+), the flight engineer$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `Pegue a luneta com ${name}, da equipe de engenharia de voo`
+      : `Recoge la mira con ${name}, parte del equipo de ingeniería de vuelo`,
+  },
+  {
+    match: /^(.+), the engineer, has a scope for you$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `${name}, da equipe de engenharia, tem uma luneta para você`
+      : `${name}, parte del equipo de ingeniería, tiene una mira para ti`,
+  },
+  {
+    match: /^\[F\] Get the scope from (.+)$/,
+    format: ([, name], language) => language === 'pt-BR' ? `[F] Pegar a luneta com ${name}` : `[F] Recoger la mira con ${name}`,
+  },
+  {
+    match: /^\[F\] Get the new window glass from (.+)$/,
+    format: ([, name], language) => language === 'pt-BR' ? `[F] Pegar o vidro novo da janela com ${name}` : `[F] Recoger el vidrio nuevo de la ventana con ${name}`,
+  },
+  {
+    match: /^(.+): Here is your scope\. Scan the windows to find the leak!$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `${name}: aqui está sua luneta. Escaneie as janelas para encontrar o vazamento!`
+      : `${name}: aquí tienes la mira. ¡Escanea las ventanas para encontrar la fuga!`,
+  },
+  {
+    match: /^(.+): I am getting new glass\. Come and take it!$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `${name}: vou buscar um vidro novo. Venha pegar!`
+      : `${name}: voy a buscar un vidrio nuevo. ¡Ven a recogerlo!`,
+  },
+  {
+    match: /^(.+): Here is the glass\. Put it on the cracked window!$/,
+    format: ([, name], language) => language === 'pt-BR'
+      ? `${name}: aqui está o vidro. Coloque-o na janela rachada!`
+      : `${name}: aquí está el vidrio. ¡Ponlo en la ventana rota!`,
+  },
+  {
+    match: /^Window OK\. The leak sounds (\d+) blocks away$/,
+    format: ([, blocks], language) => language === 'pt-BR'
+      ? `Janela intacta. O vazamento parece estar a ${blocks} blocos`
+      : `La ventana está bien. La fuga parece estar a ${blocks} bloques`,
+  },
+  {
+    match: /^Battery at sunrise: about (\d+)%$/,
+    format: ([, percent], language) => language === 'pt-BR'
+      ? `Bateria ao nascer do Sol: cerca de ${percent}%`
+      : `Batería al amanecer: cerca del ${percent}%`,
+  },
+  {
+    match: /^(.+) fields outside, (\d+) glowing rocks in each$/,
+    format: ([, fields, rocks], language) => language === 'pt-BR'
+      ? `${fields} áreas lá fora, com ${rocks} rochas brilhantes em cada uma`
+      : `${fields} campos afuera, con ${rocks} rocas brillantes en cada uno`,
+  },
+  {
+    match: /^Collect (\d+) samples of each of the (\d+) kinds outside$/,
+    format: ([, samples, kinds], language) => language === 'pt-BR'
+      ? `Colete ${samples} amostras de cada um dos ${kinds} tipos lá fora`
+      : `Recoge ${samples} muestras de cada uno de los ${kinds} tipos afuera`,
+  },
+  {
+    match: /^Analyze your (\d+) samples at the science & radio terminal$/,
+    format: ([, samples], language) => language === 'pt-BR'
+      ? `Analise suas ${samples} amostras no terminal de ciência e rádio`
+      : `Analiza tus ${samples} muestras en la terminal de ciencia y radio`,
+  },
+  {
+    match: /^Each sample uses (\d+(?:\.\d+)?)% of the battery$/,
+    format: ([, percent], language) => language === 'pt-BR'
+      ? `Cada amostra consome ${percent}% da bateria`
+      : `Cada muestra consume el ${percent}% de la batería`,
+  },
+  {
+    match: /^Send (\d+) science points and the (\d+) clues to Earth$/,
+    format: ([, points, clues], language) => language === 'pt-BR'
+      ? `Envie ${points} pontos científicos e as ${clues} pistas para a Terra`
+      : `Envía ${points} puntos científicos y las ${clues} pistas a la Tierra`,
+  },
+  {
+    match: /^Earth needs (\d+) points and (\d+) clues$/,
+    format: ([, points, clues], language) => language === 'pt-BR'
+      ? `A Terra precisa de ${points} pontos e ${clues} pistas`
+      : `La Tierra necesita ${points} puntos y ${clues} pistas`,
+  },
+  {
+    match: /^One orbiter pass carries only (\d+) items$/,
+    format: ([, items], language) => language === 'pt-BR'
+      ? `Cada passagem do orbitador leva só ${items} itens`
+      : `Cada paso del orbitador lleva solo ${items} objetos`,
+  },
+  {
+    match: /^Water tank: (\d+) of (\d+) L$/,
+    format: ([, amount, total], language) => language === 'pt-BR'
+      ? `Tanque de água: ${amount} de ${total} L`
+      : `Depósito de agua: ${amount} de ${total} L`,
+  },
+  {
+    match: /^Dust on solar panels: (\d+)%$/,
+    format: ([, percent], language) => language === 'pt-BR'
+      ? `Poeira nos painéis solares: ${percent}%`
+      : `Polvo en los paneles solares: ${percent}%`,
+  },
+  {
+    match: /^Fields planted: (\d+) of (\d+)$/,
+    format: ([, planted, total], language) => language === 'pt-BR'
+      ? `Canteiros plantados: ${planted} de ${total}`
+      : `Parcelas plantadas: ${planted} de ${total}`,
+  },
+  {
+    match: /^Base ready for the next crew: (\d+) of (\d+) \(missing: (.+)\)$/,
+    format: ([, ready, total, missing], language) => language === 'pt-BR'
+      ? `Base pronta para a próxima equipe: ${ready} de ${total} itens prontos (faltam: ${missing.split(/, | and /).map((item) => translate(item, language)).join(', ')})`
+      : `Base lista para la próxima tripulación: ${ready} de ${total} elementos listos (faltan: ${missing.split(/, | and /).map((item) => translate(item, language)).join(', ')})`,
+  },
+  {
+    match: /^clean panels$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'painéis limpos' : 'paneles limpios',
+  },
+  {
+    match: /^planted fields$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'canteiros plantados' : 'parcelas plantadas',
+  },
+  {
+    match: /^Liftoff in the (first|second|third) launch window: right on time$/,
+    format: ([, ordinal], language) => language === 'pt-BR'
+      ? `Decolagem na ${({ first: 'primeira', second: 'segunda', third: 'terceira' } as Record<string, string>)[ordinal]} janela: no horário certo`
+      : `Despegue en la ${({ first: 'primera', second: 'segunda', third: 'tercera' } as Record<string, string>)[ordinal]} ventana: justo a tiempo`,
+  },
+  {
+    match: /^Liftoff in the (first|second|third) launch window: the crew waited about (\d+) months$/,
+    format: ([, ordinal, months], language) => language === 'pt-BR'
+      ? `Decolagem na ${({ first: 'primeira', second: 'segunda', third: 'terceira' } as Record<string, string>)[ordinal]} janela: a equipe esperou cerca de ${months} meses`
+      : `Despegue en la ${({ first: 'primera', second: 'segunda', third: 'tercera' } as Record<string, string>)[ordinal]} ventana: la tripulación esperó unos ${months} meses`,
+  },
+  {
+    match: /^Liftoff in launch window (\d+): the crew waited about (\d+) months$/,
+    format: ([, window, months], language) => language === 'pt-BR'
+      ? `Decolagem na janela ${window}: a equipe esperou cerca de ${months} meses`
+      : `Despegue en la ventana ${window}: la tripulación esperó unos ${months} meses`,
+  },
+  {
+    match: /^Liftoff in launch window (\d+): right on time$/,
+    format: ([, window], language) => language === 'pt-BR'
+      ? `Decolagem na janela ${window}: no horário certo`
+      : `Despegue en la ventana ${window}: justo a tiempo`,
+  },
+  {
+    match: /^24 h clock, played in (\d+) minutes$/,
+    format: ([, minutes], language) => language === 'pt-BR'
+      ? `Relógio de 24 h: um dia do jogo dura ${minutes} minutos`
+      : `Reloj de 24 h: un día del juego dura ${minutes} minutos`,
+  },
+  {
+    match: /^1 game hour = (\d+) real seconds, so a mission fits in one play session\.$/,
+    format: ([, seconds], language) => language === 'pt-BR'
+      ? `1 hora do jogo = ${seconds} segundos reais. Assim, a missão cabe em uma partida.`
+      : `1 hora del juego = ${seconds} segundos reales. Así, la misión cabe en una partida.`,
+  },
+  {
+    match: /^About ([\d.]+) s to pump air and clean the suit$/,
+    format: ([, seconds], language) => language === 'pt-BR'
+      ? `Cerca de ${seconds} s para retirar o ar e limpar o traje`
+      : `Unos ${seconds} s para sacar el aire y limpiar el traje`,
+  },
+  {
+    match: /^0 to (\d+)%, about ([\d.]+) kWh; the solar field makes up to ([\d.]+) kW$/,
+    format: ([, capacity, energy, power], language) => language === 'pt-BR'
+      ? `De 0 a ${capacity}%, cerca de ${energy} kWh; o campo solar produz até ${power} kW`
+      : `De 0 al ${capacity}%, unos ${energy} kWh; el campo solar produce hasta ${power} kW`,
+  },
+  {
+    match: /^One Kilopower reactor: 1 to ([\d.]+) kW\. Sunlight on Mars: 43% of Earth$/,
+    format: ([, power], language) => language === 'pt-BR'
+      ? `Um reator Kilopower: de 1 a ${power} kW. A luz solar em Marte: 43% da que chega à Terra.`
+      : `Un reactor Kilopower: de 1 a ${power} kW. La luz solar en Marte: el 43% de la que llega a la Tierra.`,
+  },
+  {
+    match: /^Power is shown in % so it is easy to compare\. Our ruler: the game reactor counts as one real ([\d.]+) kW Kilopower\. How much each machine uses is a game rule\.$/,
+    format: ([, power], language) => language === 'pt-BR'
+      ? `A energia aparece em % para facilitar a comparação. A referência é um reator Kilopower real de ${power} kW. O consumo de cada máquina é uma regra do jogo.`
+      : `La energía aparece en % para que sea fácil comparar. La referencia es un reactor Kilopower real de ${power} kW. El consumo de cada máquina es una regla del juego.`,
+  },
+  {
+    match: /^About ([\d.]+) kW, day and night$/,
+    format: ([, power], language) => language === 'pt-BR' ? `Cerca de ${power} kW, de dia e de noite` : `Unos ${power} kW, día y noche`,
+  },
+  {
+    match: /^Curiosity's generator \(MMRTG\): about (\d+) W$/,
+    format: ([, power], language) => language === 'pt-BR'
+      ? `Gerador do Curiosity (MMRTG): cerca de ${power} W`
+      : `Generador de Curiosity (MMRTG): unos ${power} W`,
+  },
+  {
+    match: /^A base needs far more power than a rover\. The game one is like (\d+) rover generators together\.$/,
+    format: ([, count], language) => language === 'pt-BR'
+      ? `Uma base precisa de muito mais energia que um rover. O gerador do jogo equivale a ${count} geradores de rover juntos.`
+      : `Una base necesita mucha más energía que un rover. El generador del juego equivale a ${count} generadores de rover juntos.`,
+  },
+  {
+    match: /^([\d.]+) L of water \(drinking, cooking and washing\) and ([\d.]+) kg of food per person each sol$/,
+    format: ([, water, food], language) => language === 'pt-BR'
+      ? `${water} L de água por pessoa a cada sol (para beber, cozinhar e lavar) e ${food} kg de comida`
+      : `${water} L de agua por persona cada sol (para beber, cocinar y lavarse) y ${food} kg de comida`,
+  },
+  {
+    match: /^A full bar lasts (\d+) game hours \((\d+) minutes of play\)$/,
+    format: ([, hours, minutes], language) => language === 'pt-BR'
+      ? `Uma barra cheia dura ${hours} horas do jogo (${minutes} minutos de partida)`
+      : `Una barra llena dura ${hours} horas del juego (${minutes} minutos de partida)`,
+  },
+  {
+    match: /^Astronauts eat about (\d+) meals a day$/,
+    format: ([, meals], language) => language === 'pt-BR'
+      ? `Astronautas fazem cerca de ${meals} refeições por dia`
+      : `Los astronautas comen unas ${meals} veces al día`,
+  },
+  {
+    match: /^(\d+) minutes of play, about ([\d.]+) game hours$/,
+    format: ([, minutes, hours], language) => language === 'pt-BR'
+      ? `${minutes} minutos de partida, cerca de ${hours} horas do jogo`
+      : `${minutes} minutos de partida, unas ${hours} horas del juego`,
+  },
+  {
+    match: /^A real spacewalk lasts (\d+) to (\d+) hours$/,
+    format: ([, min, max], language) => language === 'pt-BR'
+      ? `Uma caminhada espacial real dura de ${min} a ${max} horas`
+      : `Una caminata espacial real dura de ${min} a ${max} horas`,
+  },
+  {
+    match: /^(\d+) blocks of ice fill the tank$/,
+    format: ([, count], language) => language === 'pt-BR'
+      ? `${count} blocos de gelo enchem o tanque`
+      : `${count} bloques de hielo llenan el tanque`,
+  },
+  {
+    match: /^About ([\d.]+) tons: 7 of fuel and 25 of oxygen to lift 4 astronauts$/,
+    format: ([, tons], language) => language === 'pt-BR'
+      ? `Cerca de ${tons} toneladas: 7 de combustível e 25 de oxigênio para levar 4 astronautas`
+      : `Unas ${tons} toneladas: 7 de combustible y 25 de oxígeno para llevar a 4 astronautas`,
+  },
+  {
+    match: /^([\d.]+) game hours$/,
+    format: ([, hours], language) => language === 'pt-BR' ? `${hours} horas do jogo` : `${hours} horas del juego`,
+  },
+  {
+    match: /^([\d.]+) L of water = 10 g\/cm²$/,
+    format: ([, liters], language) => language === 'pt-BR'
+      ? `${liters} L de água = 10 g/cm²`
+      : `${liters} L de agua = 10 g/cm²`,
+  },
+  {
+    match: /^(\d+) to (\d+) seconds to grow$/,
+    format: ([, min, max], language) => language === 'pt-BR'
+      ? `De ${min} a ${max} segundos para crescer`
+      : `De ${min} a ${max} segundos para crecer`,
+  },
+  {
+    match: /^(\d+) to (\d+) days: lettuce ([\d.]+), soy ([\d.]+), potato ([\d.]+)$/,
+    format: ([, min, max, lettuce, soy, potato], language) => language === 'pt-BR'
+      ? `De ${min} a ${max} dias: alface ${lettuce}, soja ${soy}, batata ${potato}`
+      : `De ${min} a ${max} días: lechuga ${lettuce}, soja ${soy}, patata ${potato}`,
+  },
+  {
+    match: /^The greenhouse runs much faster than the game clock so you can see a harvest: ([\d.]+) real days pass each second\. Which plant is slower is real\.$/,
+    format: ([, days], language) => language === 'pt-BR'
+      ? `A estufa funciona bem mais rápido que o relógio do jogo para você ver a colheita: a cada segundo passam ${days} dias reais. A planta que cresce mais devagar é baseada em dados reais.`
+      : `El invernadero funciona mucho más rápido que el reloj del juego para que veas la cosecha: cada segundo pasan ${days} días reales. Qué planta crece más lento sí se basa en datos reales.`,
+  },
+  {
+    match: /^(\d+(?:\.\d+)?) s of waiting for each minute of light travel$/,
+    format: ([, seconds], language) => language === 'pt-BR'
+      ? `${seconds} s de espera para cada minuto que a luz leva para viajar`
+      : `${seconds} s de espera por cada minuto que tarda la luz en viajar`,
+  },
+  {
+    match: /^(\d+) game hours, once per mission$/,
+    format: ([, hours], language) => language === 'pt-BR'
+      ? `${hours} horas do jogo, uma vez por missão`
+      : `${hours} horas del juego, una vez por misión`,
+  },
+  {
+    match: /^Same as the real one$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'Igual ao valor real' : 'Igual que el valor real',
+  },
+  {
+    match: /^Curiosity rover median on the Mars surface$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'Mediana medida pelo rover Curiosity na superfície de Marte'
+      : 'Mediana medida por el rover Curiosity en la superficie de Marte',
+  },
+  {
+    match: /^This number is not changed: it comes straight from NASA RadLab data\.$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'Este valor não foi alterado: vem diretamente dos dados do NASA RadLab.'
+      : 'Este valor no se cambió: viene directamente de los datos de NASA RadLab.',
+  },
+  {
+    match: /^([\d.]+) mSv each hour it runs$/,
+    format: ([, dose], language) => language === 'pt-BR'
+      ? `${dose} mSv a cada hora de funcionamento`
+      : `${dose} mSv por cada hora de funcionamiento`,
+  },
+  {
+    match: /^Works day and night\. Costs radiation: \+([\d.]+) mSv each hour it runs$/,
+    format: ([, dose], language) => language === 'pt-BR'
+      ? `Funciona de dia e de noite. Aumenta a dose de radiação: +${dose} mSv por hora.`
+      : `Funciona día y noche. Aumenta la dosis de radiación: +${dose} mSv por hora.`,
+  },
+  {
+    match: /^The distance is real for today's date; only the wait is shorter\.$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'A distância é real para a data de hoje; só a espera é mais curta.'
+      : 'La distancia es real para la fecha de hoy; solo la espera es más corta.',
+  },
+  {
+    match: /^The game acts one out so you can practice deciding without Earth\.$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? 'O jogo simula uma conjunção para você praticar decisões sem falar com a Terra.'
+      : 'El juego simula una conjunción para que practiques cómo decidir sin hablar con la Tierra.',
+  },
+  {
+    match: /^Battery at sunrise: about (\d+)%$/,
+    format: ([, percent], language) => language === 'pt-BR'
+      ? `Bateria ao nascer do Sol: cerca de ${percent}%`
+      : `Batería al amanecer: cerca del ${percent}%`,
+  },
+  {
+    match: /^GRAVITY$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'GRAVIDADE' : 'GRAVEDAD',
+  },
+  {
+    match: /^ONE DAY \(SOL\)$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'UM DIA (SOL)' : 'UN DÍA (SOL)',
+  },
+  {
+    match: /^AIRLOCK$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'CÂMARA DE DESCOMPRESSÃO' : 'CÁMARA DE DESCOMPRESIÓN',
+  },
+  {
+    match: /^BATTERY$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'BATERIA' : 'BATERÍA',
+  },
+  {
+    match: /^NUCLEAR GENERATOR \(RTG\)$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'GERADOR NUCLEAR (RTG)' : 'GENERADOR NUCLEAR (RTG)',
+  },
+  {
+    match: /^CREW FOOD AND WATER$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'COMIDA E ÁGUA DA EQUIPE' : 'COMIDA Y AGUA DE LA TRIPULACIÓN',
+  },
+  {
+    match: /^YOUR HUNGER AND THIRST$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'SUA FOME E SEDE' : 'TU HAMBRE Y SED',
+  },
+  {
+    match: /^SUIT AIR$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'AR DO TRAJE' : 'AIRE DEL TRAJE',
+  },
+  {
+    match: /^ROCKET FUEL$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'COMBUSTÍVEL DO FOGUETE' : 'COMBUSTIBLE DEL COHETE',
+  },
+  {
+    match: /^SOLAR STORM$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'TEMPESTADE SOLAR' : 'TORMENTA SOLAR',
+  },
+  {
+    match: /^STORM SHELTER WALL$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'PAREDE DO ABRIGO CONTRA TEMPESTADES' : 'PARED DEL REFUGIO CONTRA TORMENTAS',
+  },
+  {
+    match: /^PLANTS$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'PLANTAS' : 'PLANTAS',
+  },
+  {
+    match: /^RADIO TO EARTH$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'RÁDIO PARA A TERRA' : 'RADIO A LA TIERRA',
+  },
+  {
+    match: /^SOLAR CONJUNCTION$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'CONJUNÇÃO SOLAR' : 'CONJUNCIÓN SOLAR',
+  },
+  {
+    match: /^NORMAL RADIATION$/,
+    format: (_parts, language) => language === 'pt-BR' ? 'RADIAÇÃO NORMAL' : 'RADIACIÓN NORMAL',
+  },
+  {
+    match: /^1 real day of the storm trip = 1 game hour of warning\. The storms come from real NASA DONKI data\.$/,
+    format: (_parts, language) => language === 'pt-BR'
+      ? '1 dia real de percurso da tempestade = 1 hora de aviso no jogo. As tempestades vêm de dados reais do NASA DONKI.'
+      : '1 día real de recorrido de la tormenta = 1 hora de aviso en el juego. Las tormentas provienen de datos reales de NASA DONKI.',
   },
 ];
 
@@ -1193,10 +2384,10 @@ export function checkGameplayTranslationCoverage(): Record<Exclude<Language, 'en
   Object.assign(ptBr, SCANNER_COPY_PT_BR);
   Object.assign(ptBr, HUD_COPY_PT_BR);
   Object.assign(ptBr, CORE_COPY_PT_BR);
-  Object.assign(ptBr, STORY_PT_BR, GYM_PT_BR, STORY_MORE_PT_BR, CUTSCENE_PT_BR, FIRST_ICE_PT_BR, STORM_SCANS_PT_BR);
+  Object.assign(ptBr, STORY_PT_BR, ACT_STEPS_PT_BR, GYM_PT_BR, STORY_MORE_PT_BR, CUTSCENE_PT_BR, FIRST_ICE_PT_BR, STORM_SCANS_PT_BR);
   const es = {
     ...GAMEPLAY_ES, ...GAMEPLAY_EXT_ES, ...STATION_COPY_ES, ...SCIENCE_COPY_ES, ...RESEARCH_COPY_ES,
-    ...SCANNER_COPY_ES, ...HUD_COPY_ES, ...CORE_COPY_ES, ...STORY_ES, ...GYM_ES, ...STORY_MORE_ES,
+    ...SCANNER_COPY_ES, ...HUD_COPY_ES, ...CORE_COPY_ES, ...STORY_ES, ...ACT_STEPS_ES, ...GYM_ES, ...STORY_MORE_ES,
     ...CUTSCENE_ES, ...FIRST_ICE_ES, ...STORM_SCANS_ES,
   };
   const allEnglishCopy = { ...ptBr, ...es };
