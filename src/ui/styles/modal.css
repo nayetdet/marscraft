@@ -21,8 +21,7 @@
   width: 100%;
 }
 
-.mc-menu-card #quit-btn { display: none; }
-body.pause-menu-open .mc-menu-card #quit-btn { display: block; }
+.mc-menu-card #quit-btn { display: block; }
 body.pause-menu-open .mc-menu-card #reset-world-btn { display: none; }
 body.pause-menu-open .mc-menu-card #demo-btn { display: block; }
 body:not(.pause-menu-open) .mc-menu-card #demo-btn { display: none; }
