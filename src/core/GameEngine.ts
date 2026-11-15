@@ -824,7 +824,7 @@ export class GameEngine {
       skyBodies: this._skyBodies,
       maxDist: this.scanJournal.scanRange(),
     });
-    const isScanning = this.input.isScanButtonHeld;
+    const isScanning = this.isZoomed || this.input.isScanButtonHeld;
     const state = this.scanner.update(dt, target?.id ?? null, isScanning);
     this._updateScanHighlight(isScanning ? target : null, state, dt);
     this.scannerHud.update(state);

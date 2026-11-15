@@ -344,6 +344,14 @@ export class InputController {
     return false;
   }
 
+  _handleScopeWheel(event) {
+    if (!this.isZoomed) return false;
+    event.preventDefault();
+    const dir = Math.sign(event.deltaY);
+    if (dir !== 0) this._setScope(true, dir < 0);
+    return true;
+  }
+
   _canBreak(hit) {
     if (!hit.hit) return false;
     if (hit.type === 'crop') return Boolean(hit.plant);
@@ -693,12 +701,8 @@ export class InputController {
     window.addEventListener('wheel', (e) => {
       if (this.survival.isDead || this.isInputBlocked()) return;
       const dir = Math.sign(e.deltaY);
-      // The scope uses the wheel for zoom, even if pointer lock was temporarily lost.
-      if (this.isScannerOpen) {
-        e.preventDefault();
-        if (dir !== 0) this._setScope(true, dir < 0);
-        return;
-      }
+      // Only an active zoom claims the wheel; an unzoomed scanner must not block hotbar selection.
+      if (this._handleScopeWheel(e)) return;
       if (!this.isLocked) return;
       this.hud.selectSlot(this.hud.selectedSlot + dir, this.survival.slots);
       this._syncHandWithSlot();
