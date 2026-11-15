@@ -31,13 +31,13 @@ function createFootprintTexture(): THREE.CanvasTexture {
   context.imageSmoothingEnabled = false;
 
   // A clear rectangular boot-sole stamp with crisp corners and a simple voxel tread.
-  context.fillStyle = '#43271e';
+  context.fillStyle = '#a56845';
   context.fillRect(2, 1, 14, 26);
-  context.fillStyle = '#80563b';
+  context.fillStyle = '#b97c55';
   context.fillRect(3, 2, 12, 24);
 
   // Repeating square tread blocks keep the print readable at game distance.
-  context.fillStyle = '#533829';
+  context.fillStyle = '#965f3e';
   for (const y of [5, 10, 15, 20]) {
     context.fillRect(4, y, 10, 1);
     context.fillRect(7, y + 1, 1, 3);
@@ -47,7 +47,7 @@ function createFootprintTexture(): THREE.CanvasTexture {
   context.fillRect(4, 24, 10, 1);
 
   // Small warm pixels catch the light without breaking the straight outline.
-  context.fillStyle = '#ad8056';
+  context.fillStyle = '#c58b65';
   context.fillRect(4, 4, 2, 1);
   context.fillRect(12, 9, 2, 1);
   context.fillRect(4, 14, 2, 1);
@@ -194,7 +194,7 @@ export class PlayerFootprints {
         this.colors[colorOffset] = 1;
         this.colors[colorOffset + 1] = 1;
         this.colors[colorOffset + 2] = 1;
-        this.colors[colorOffset + 3] = 0.44 * (1 - footprint.age / lifetime);
+        this.colors[colorOffset + 3] = TERRAIN_CONFIG.FOOTPRINT_OPACITY * (1 - footprint.age / lifetime);
       }
     }
 
