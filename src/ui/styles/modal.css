@@ -22,10 +22,6 @@
 }
 
 .mc-menu-card #quit-btn { display: block; }
-body.pause-menu-open .mc-menu-card #reset-world-btn { display: none; }
-body.pause-menu-open .mc-menu-card #demo-btn { display: block; }
-body:not(.pause-menu-open) .mc-menu-card #demo-btn { display: none; }
-body:not(.pause-menu-open) .mc-menu-card #sources-btn { grid-column: 1 / -1; }
 body.pause-menu-open .crew-picker { display: none; }
 
 .mc-overlay.hidden,
@@ -234,10 +230,6 @@ body.pause-menu-open .crew-picker { display: none; }
 
 #menu-main > #start-btn,
 #menu-main > .menu-row { grid-column: 1 / -1; }
-
-body.pause-menu-open #menu-main > #start-btn,
-body.pause-menu-open #menu-main > #controls-btn { grid-column: 1 / -1; }
-body.pause-menu-open #menu-main > #quit-btn { grid-column: 2; grid-row: 3; }
 
 .controls-screen {
   width: 100%;
@@ -1063,7 +1055,7 @@ body.pause-menu-open #menu-main > #quit-btn { grid-column: 2; grid-row: 3; }
 .demo-feedback { min-height: 34px; margin-top: 10px; color: #ffffa0; }
 .controls-screen.info-screen > .mc-btn { margin-top: 10px; }
 
-/* Celular em paisagem: preserve os grupos lado a lado e compacte o titulo. */
+/* Celular em paisagem: preserve a mesma grade e compacte o titulo. */
 @media (max-height: 460px) {
   .mc-menu { gap: 6px; }
   .mc-title { font-size: clamp(44px, 9vw, 60px); letter-spacing: -2px; }
