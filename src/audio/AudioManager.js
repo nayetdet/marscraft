@@ -1,7 +1,7 @@
 const AUDIO_BASE_URL = `${import.meta.env.BASE_URL}audio/`;
 const LOOP_VOLUME = 0.45;
 const ROCKET_VOLUME = 0.7;
-const DOOR_VOLUME = 0.25;
+const DOOR_VOLUME = 0.12;
 const ROCKET_FADE_OUT_SECONDS = 1;
 // Manivela do airlock sem energia: o som da porta tocado devagar fica grave e pesado
 const CRANK_PLAYBACK_RATE = 0.45;

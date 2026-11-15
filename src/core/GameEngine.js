@@ -1,4 +1,4 @@
-import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS } from '../world/greenhouseLayout.js';
+import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS, GREENHOUSE_BASKETS } from '../world/greenhouseLayout.js';
 import { createCropPlantModel } from '../graphics/cropModels.js';
 import * as THREE from 'three';
 import { CAMERA_CONFIG, CROP_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG } from '../config/constants.js';
@@ -123,7 +123,7 @@ export class GameEngine {
     this.customColliders = colliders;
 
     // Zonas, placas, posteres e telas vivas da base (as caixas de colisao entram em `colliders`)
-    this.baseDecor = buildBaseDecor(this.scene, colliders, { donkiDate: formatDateDMY(donkiCme.fetched) });
+    this.baseDecor = buildBaseDecor(this.scene, colliders);
     for (const point of this.baseDecor.infoPoints) point.type = 'info';
     this._displayTimer = 1;
 
@@ -282,6 +282,7 @@ export class GameEngine {
     const greenhouseLit = this.utility.greenhouseLightsOn && !this.utility.cold;
     this.expedition.greenhousePowered = greenhouseLit && this.expedition.spend(this.utility.greenhouseLightsCost(dt));
     this.stations.update(dt, insideCore, this.survival, !inside);
+    this.stations.updateCrewHarvest(dt, this.crew.members.some(member => member.task === 'greenhouse' && member.stationary && member.canWork));
     this._updateShelterWater();
     this.updateCropVisuals();
     this.airlock.update(dt, this.player.pos);
@@ -368,6 +369,7 @@ export class GameEngine {
       { type: 'hygiene', x: -19.85, y: 11.6, z: -32.5, label: 'Press F: bathroom & water recycler' },
       { type: 'workshop', x: 11.5, y: 11.5, z: -38.1, label: 'Press F: 3D printer workshop' },
       { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
+      ...GREENHOUSE_BASKETS.map(basket => ({ ...basket, cropType: basket.type, type: 'basket', minDot: 0.95, label: `Press F or tap: collect ${basket.type}` })),
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
       { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
@@ -397,6 +399,7 @@ export class GameEngine {
     if (!target) return;
     let message;
     if (target.type === 'info') { this.hud.showToast(target.text(this._baseState()), 8000); return; }
+    if (target.type === 'basket') { this.hud.showToast(this.stations.collectBasket(target.cropType, this.survival)); return; }
     if (target.type === 'door') message = this.airlock.request(target.door, this.player.pos);
     else if (target.type === 'treadmill' || target.type === 'bike') {
       this.mountGym(target.type);
@@ -856,7 +859,7 @@ export class GameEngine {
       this.stationCrop.scale.y = 0.2 + 0.8 * crop.progress / CROP_CONFIG[crop.type].seconds;
       for (const [type, model] of Object.entries(this.stationCropModels)) model.visible = type === crop.type;
     }
-    this.greenhouseFields.update(this.stations.plots);
+    this.greenhouseFields.update(this.stations.plots, this.stations.harvestBaskets);
   }
 
   // Estado do jogo que as telas e os pontos de informacao da base mostram

@@ -138,7 +138,7 @@ export const ROVER_CONFIG = {
 };
 
 // Missao: energia, tempestades solares e o MAV (issue #30).
-// Taxas "por hora de jogo": com GAME_HOURS_PER_SECOND = 0.01, 1 hora de jogo = 100 s reais.
+// Taxas "por hora de jogo": com GAME_HOURS_PER_SECOND = 0.02, 1 hora de jogo = 50 s reais.
 // Fontes dos numeros reais em docs/data/numeros-reais.md.
 export const MISSION_CONFIG = {
   AIRLOCK_COST: 1, AIRLOCK_CYCLE: 0.8, DOOR_SPEED: 10,
@@ -150,8 +150,8 @@ export const MISSION_CONFIG = {
   AIRLOCK_MANUAL_EXTRA_SECONDS: 3,
 
   // Hora de jogo por segundo real (igual a MarsSkySystem.autoAdvanceSpeed): 1 hora de jogo
-  // = 100 s reais e 1 sol de 24 h = 40 min reais. Toda taxa "por hora" do jogo usa este relogio.
-  GAME_HOURS_PER_SECOND: 0.01,
+  // = 50 s reais e 1 sol de 24 h = 20 min reais. Toda taxa "por hora" do jogo usa este relogio.
+  GAME_HOURS_PER_SECOND: 0.02,
   // Passo maximo de simulacao, para avancos de tempo grandes (tecla T) nao pularem eventos
   MAX_STEP_HOURS: 0.05,
   // Hora do nascer do sol no relogio do jogo (MarsSkySystem: sol no horizonte as 6h e 18h)
@@ -273,6 +273,7 @@ export const CREW_CONFIG = {
     { title: 'Communications Officer', specialties: ['oxygen'] },
   ],
   SPECIALIST_EFFORT: 1.5,
+  GREENHOUSE_HARVEST_INTERVAL: 20, // segundos de jogo ativo entre colheitas do tripulante
   SUIT_COLORS: [0xf97316, 0x22c55e, 0x3b82f6, 0xeab308, 0xec4899, 0x06b6d4, 0xa855f7, 0xf43f5e],
   OXYGEN_ENERGY_PER_HOUR: 0.75, // % de bateria por tripulante
   WATER_L_PER_HOUR: 0.3,
