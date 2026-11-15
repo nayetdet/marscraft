@@ -54,6 +54,12 @@ describe('loadSpaceWeather: live NASA DONKI with embedded fallback (issue #100)'
     expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
+  it('keeps a successful response with no Mars-bound CME as live calm', async () => {
+    const result = await load({ fetchImpl: mockFetch({ cme: json([cmeToElsewhere]) }) });
+    expect(result.live).toBe(true);
+    expect(result.cmes).toEqual([]);
+  });
+
   it('asks the API with the key and windows the API accepts (60 days at most)', async () => {
     const fetchImpl = mockFetch();
     await load({ fetchImpl });
@@ -130,6 +136,15 @@ describe('loadSpaceWeather: live NASA DONKI with embedded fallback (issue #100)'
     const second = await load({ fetchImpl: again, storage, now: () => later });
     expect(again).toHaveBeenCalledTimes(3);
     expect(second.fetchedAt).toBe(new Date(later).toISOString());
+  });
+
+  it('forceRefresh bypasses a still-valid browser cache', async () => {
+    const storage = memoryStorage();
+    await load({ fetchImpl: mockFetch(), storage });
+    const refresh = mockFetch({ cme: json([cmeToMars]) });
+    const result = await load({ fetchImpl: refresh, storage, forceRefresh: true });
+    expect(refresh).toHaveBeenCalledTimes(3);
+    expect(result.cmes).toHaveLength(1);
   });
 
   it('falls back to the embedded data when the cache is old and the API fails', async () => {
