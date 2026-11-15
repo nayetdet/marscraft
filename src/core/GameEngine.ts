@@ -49,7 +49,7 @@ import { ShaderMode } from '../graphics/shaderMode/ShaderMode.ts';
 import { RoverController } from '../rover/RoverController.ts';
 import { GymEquipmentController } from '../player/GymEquipmentController.ts';
 import { ExpeditionState } from './ExpeditionState.ts';
-import { isGameSimulationRunning } from './gameSimulation.ts';
+import { isGameSimulationRunning, shouldUpdateCrewAvatar } from './gameSimulation.ts';
 import { Airlock } from '../world/Airlock.ts';
 import { StationSystem } from './StationSystem.ts';
 import { StationPanel } from '../ui/StationPanel.ts';
@@ -2333,7 +2333,7 @@ export class GameEngine {
     this.mission.oxygenCostMultiplier = 1;
     // Numa animacao quem posiciona a tripulacao e a propria animacao (o embarque no foguete)
     for (const avatar of this.crewAvatars) {
-      if (!avatar.cutsceneControlled && (active || this.cutscenes.isActive)) avatar.update(dt);
+      if (shouldUpdateCrewAvatar({ active, cutsceneActive: this.cutscenes.isActive, cutsceneControlled: avatar.cutsceneControlled })) avatar.update(dt);
     }
     if (active && this.isThirdPerson && !this.roverController.isActive && !this.gymController.isActive) {
       const canMove = active

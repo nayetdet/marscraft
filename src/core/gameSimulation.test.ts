@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isGameSimulationRunning, type GameSimulationState } from './gameSimulation.ts';
+import { isGameSimulationRunning, shouldUpdateCrewAvatar, type GameSimulationState } from './gameSimulation.ts';
 
 const activeState: GameSimulationState = {
   inputLocked: true,
@@ -39,5 +39,19 @@ describe('isGameSimulationRunning', () => {
 
   it('pauses when no gameplay screen has focus', () => {
     expect(isGameSimulationRunning({ ...activeState, inputLocked: false })).toBe(false);
+  });
+});
+
+describe('shouldUpdateCrewAvatar', () => {
+  it('freezes crew animation when gameplay is paused', () => {
+    expect(shouldUpdateCrewAvatar({ active: false, cutsceneActive: false, cutsceneControlled: false })).toBe(false);
+  });
+
+  it('keeps active crew animation running outside a pause', () => {
+    expect(shouldUpdateCrewAvatar({ active: true, cutsceneActive: false, cutsceneControlled: false })).toBe(true);
+  });
+
+  it('leaves cutscene-controlled avatars to the cutscene', () => {
+    expect(shouldUpdateCrewAvatar({ active: true, cutsceneActive: true, cutsceneControlled: true })).toBe(false);
   });
 });
