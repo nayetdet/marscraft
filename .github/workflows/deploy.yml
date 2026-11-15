@@ -37,7 +37,7 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       - name: Build Vercel output
-        run: npx vercel@latest build --prod --token="${VERCEL_TOKEN}" --build-env NASA_API_KEY="${NASA_API_KEY}"
+        run: npx vercel@latest build --prod --token="${VERCEL_TOKEN}"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
