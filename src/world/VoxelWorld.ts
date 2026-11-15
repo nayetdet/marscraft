@@ -8,7 +8,7 @@ import { buildNasaSpaceshipAndBase } from './nasaSpaceshipBuilder.ts';
 import { raycastVoxel } from './voxelRaycaster.ts';
 import { makeCanvasTexture } from '../graphics/textureGenerator.ts';
 import { OCCLUSION_BRIGHTNESS, naturalTint, vertexOcclusion } from './voxelShading.ts';
-import { createSurfaceRocks, removeSurfaceRocksSupportedBy } from './surfaceRocks.ts';
+import { createSurfaceOutcrops, createSurfaceRocks, removeSurfaceRocksSupportedBy } from './surfaceRocks.ts';
 import { HABITAT_LAYOUT } from './habitatLayout.ts';
 
 const CHUNK_SIZE = 16;
@@ -131,9 +131,10 @@ export class VoxelWorld {
       if (this.data[idx] === BLOCK_IDS.AIR) this.baseBlocks.delete(idx);
     }
     this.rebuildMeshes();
-    // Pedras decorativas sobre o terreno natural (sem colisao)
+    // Pedras decorativas e lajes baixas sobre o terreno natural (sem colisao)
     this.surfaceRocks = createSurfaceRocks(this);
-    this.scene.add(this.surfaceRocks);
+    this.surfaceOutcrops = createSurfaceOutcrops(this);
+    this.scene.add(this.surfaceRocks, this.surfaceOutcrops);
   }
 
   _index(x, y, z) {
@@ -183,6 +184,7 @@ export class VoxelWorld {
     // Reconstroi so o chunk do bloco (e o vizinho, se estiver na borda)
     this.setBlock(x, y, z, BLOCK_IDS.AIR, true);
     removeSurfaceRocksSupportedBy(this.surfaceRocks, x, y, z, (rock) => this._spawnSurfaceRockBreakParticles(rock));
+    removeSurfaceRocksSupportedBy(this.surfaceOutcrops, x, y, z);
     this._spawnBreakParticles(x, y, z, blockId);
     this._spawnDrop(x, y, z, blockId);
     return blockId;
