@@ -24,6 +24,8 @@ export class AudioManager {
     this.regolithPlace = this._createAudio(`${AUDIO_BASE_URL}colocando_areia.WAV`);
     this.regolithBreak = this._createAudio(`${AUDIO_BASE_URL}quebrando_areia.WAV?v=3`);
     this.shipBlockBreak = this._createAudio(`${AUDIO_BASE_URL}quebrando_pedra.WAV`, true);
+    this.regolithBreakImpact = this._createAudio(`${AUDIO_BASE_URL}quebrando_areia.WAV`);
+    this.shipBlockBreakImpact = this._createAudio(`${AUDIO_BASE_URL}quebrando_pedra.WAV`);
     this.doorOpen = this._createAudio(`${AUDIO_BASE_URL}porta_abrir.wav`);
     this.doorClose = this._createAudio(`${AUDIO_BASE_URL}porta_fechar.wav`);
     this.decompression = this._createAudio(`${AUDIO_BASE_URL}descompressao.wav`);
@@ -51,6 +53,8 @@ export class AudioManager {
     this._wasInDanger = false;
     this._wasLandingFromJump = false;
     this._lastPosition = null;
+    this._lastHealth = null;
+    this._damageSoundCooldown = 0;
   }
 
   _createAudio(src, loop = false) {
@@ -120,6 +124,10 @@ export class AudioManager {
   stopShipBlockBreak() {
     this.shipBlockBreak.pause();
     this.shipBlockBreak.currentTime = 0;
+  }
+
+  playBlockBreakImpact(isRegolith) {
+    this._playOneShot(isRegolith ? this.regolithBreakImpact : this.shipBlockBreakImpact);
   }
 
   // Abertura manual do airlock (sem energia): som mecanico pesado
@@ -207,6 +215,13 @@ export class AudioManager {
 
   update({ dt = 0, player, survival, isGameRunning, isRoverActive, roverSpeed = 0, sprinting }) {
     this._updateRocketFade(dt);
+
+    this._damageSoundCooldown = Math.max(0, this._damageSoundCooldown - dt);
+    if (this._lastHealth !== null && survival.health < this._lastHealth && this._damageSoundCooldown <= 0) {
+      this.playUiError();
+      this._damageSoundCooldown = 0.65;
+    }
+    this._lastHealth = survival.health;
 
     const landedFromJump = Boolean(player.justLandedFromJump);
     if (landedFromJump && !this._wasLandingFromJump) {

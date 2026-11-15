@@ -38,6 +38,7 @@ export class InputController {
     onStopRegolithBreak = () => {},
     onStartShipBlockBreak = () => {},
     onStopShipBlockBreak = () => {},
+    onBlockBroken = () => {},
   }) {
     this.onToggleShield = onToggleShield;
     this.onSendData = onSendData;
@@ -73,6 +74,7 @@ export class InputController {
     this.onStopRegolithBreak = onStopRegolithBreak;
     this.onStartShipBlockBreak = onStartShipBlockBreak;
     this.onStopShipBlockBreak = onStopShipBlockBreak;
+    this.onBlockBroken = onBlockBroken;
 
     this.keys = {};
     this.isLocked = false;
@@ -420,6 +422,7 @@ export class InputController {
         if (this.harvestCrop(target.plant)) this.world.spawnCropDrop(position, target.plant.userData.cropItemId);
       } else {
         this.world.breakBlock(target.x, target.y, target.z);
+        this.onBlockBroken?.(target.block);
       }
       this._cancelBreaking();
     }
