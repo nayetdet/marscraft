@@ -10,9 +10,9 @@
   width: 300px;
   padding: 8px 10px;
   color: #ffffff;
-  background: rgba(16, 4, 16, 0.86);
-  border: 2px solid #1a031a;
-  box-shadow: inset 0 0 0 2px #b8860b, 3px 3px 0 rgba(0, 0, 0, 0.45);
+  background: var(--hud-panel);
+  border: 2px solid #11171b;
+  box-shadow: inset 0 0 0 2px var(--hud-border), 3px 3px 0 rgba(0, 0, 0, 0.45);
   pointer-events: none;
 }
 
@@ -29,7 +29,7 @@
   gap: 8px;
   min-height: 16px;
   margin-bottom: 5px;
-  color: #ffcf3a;
+  color: var(--hud-accent);
   font-size: 11px;
   letter-spacing: 1px;
   text-shadow: 1px 1px 0 #000;
@@ -38,11 +38,29 @@
 /* O foguete em degraus: vazio, gelo entregue (azul) e combustivel pronto (verde) */
 .story-rocket { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; }
 .story-rocket b { min-width: 34px; text-align: right; text-shadow: 1px 1px 0 #000; }
-.story-rocket.done { color: #5dff8f; }
+.story-rocket.done { color: var(--hud-good); }
 .story-segs { flex: 1; display: flex; gap: 2px; }
-.story-segs i { flex: 1; height: 12px; background: #2a1a2a; box-shadow: inset 0 0 0 1px #5a4a5a; }
-.story-segs i.ice { background: #7fe3ff; box-shadow: none; }
-.story-segs i.fuel { background: #5dff8f; box-shadow: none; }
+.story-segs i { flex: 1; height: 12px; background: #303940; box-shadow: inset 0 0 0 1px #59636a; }
+.story-segs i.ice { background: var(--hud-blue); box-shadow: none; }
+.story-segs i.fuel { background: var(--hud-good); box-shadow: none; }
+
+/* Pixel-cut corners keep the icon tiles consistent with the voxel UI. */
+.story-task-icon, .story-step, .story-line-icon {
+  clip-path: polygon(
+    6px 0, calc(100% - 6px) 0,
+    calc(100% - 6px) 2px, calc(100% - 3px) 2px,
+    calc(100% - 3px) 4px, calc(100% - 1px) 4px,
+    calc(100% - 1px) 6px, 100% 6px,
+    100% calc(100% - 6px), calc(100% - 1px) calc(100% - 6px),
+    calc(100% - 1px) calc(100% - 4px), calc(100% - 3px) calc(100% - 4px),
+    calc(100% - 3px) calc(100% - 2px), calc(100% - 6px) calc(100% - 2px),
+    calc(100% - 6px) 100%, 6px 100%,
+    6px calc(100% - 2px), 3px calc(100% - 2px),
+    3px calc(100% - 4px), 1px calc(100% - 4px),
+    1px calc(100% - 6px), 0 calc(100% - 6px),
+    0 6px, 1px 6px, 1px 4px, 3px 4px, 3px 2px, 6px 2px
+  );
+}
 
 /* O que fazer agora: icone grande e 2 ou 3 palavras */
 .story-task { display: flex; align-items: center; gap: 9px; }
@@ -53,14 +71,9 @@
   width: 36px;
   height: 36px;
   padding: 5px;
-  color: #1a031a;
-  background: #ffcf3a;
+  color: #11171b;
+  background: var(--hud-accent);
   box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
-  animation: story-task-pulse 1.2s steps(2, end) infinite;
-}
-
-@keyframes story-task-pulse {
-  50% { background: #fff0a8; }
 }
 
 .story-task strong {
@@ -70,7 +83,7 @@
   text-shadow: 2px 2px 0 #000;
 }
 
-.story-task-key { margin-left: auto; font-size: 14px; color: #ffcf3a; }
+.story-task-key { margin-left: auto; font-size: 14px; color: var(--hud-accent); }
 .story-task-key:empty { display: none; }
 
 /* Ato 1: os 3 passos do tutorial ligados por uma linha */
@@ -82,15 +95,15 @@
   width: 24px;
   height: 24px;
   padding: 4px;
-  color: #8a7f8a;
-  background: #2a1a2a;
-  box-shadow: inset 0 0 0 1px #5a4a5a;
+  color: #9ba5a6;
+  background: #303940;
+  box-shadow: inset 0 0 0 1px #59636a;
 }
 
-.story-step.now { color: #1a031a; background: #ffcf3a; box-shadow: none; }
-.story-step.done { color: #06280f; background: #5dff8f; box-shadow: none; }
-.story-steps > i { flex: 1; height: 3px; background: #5a4a5a; }
-.story-step.done + i { background: #5dff8f; }
+.story-step.now { color: #11171b; background: var(--hud-accent); box-shadow: none; }
+.story-step.done { color: #17231c; background: var(--hud-good); box-shadow: none; }
+.story-steps > i { flex: 1; height: 3px; background: #59636a; }
+.story-step.done + i { background: var(--hud-good); }
 
 /* Volta de trabalho: uma linha por baixo liga o ultimo passo ao primeiro (a rotina se repete) */
 .story-steps.is-loop { position: relative; padding-bottom: 10px; }
@@ -121,15 +134,15 @@
 .story-goals { display: flex; align-items: center; gap: 9px; }
 .story-goal { display: flex; align-items: center; gap: 4px; color: #ffffff; font-size: 12px; }
 .story-goal-icon { flex: none; width: 16px; height: 16px; }
-.story-goal.done { color: #5dff8f; }
+.story-goal.done { color: var(--hud-good); }
 
-.story-bar { flex: 1; height: 8px; background: #2a1a2a; box-shadow: inset 0 0 0 1px #5a4a5a; }
-.story-bar i { display: block; width: 0; height: 100%; background: #ffcf3a; }
-.story-goal.done .story-bar i { background: #5dff8f; }
+.story-bar { flex: 1; height: 8px; background: #303940; box-shadow: inset 0 0 0 1px #59636a; }
+.story-bar i { display: block; width: 0; height: 100%; background: var(--hud-accent); }
+.story-goal.done .story-bar i { background: var(--hud-good); }
 
 .story-pips { display: flex; gap: 3px; }
-.story-pips i { width: 9px; height: 9px; background: #2a1a2a; box-shadow: inset 0 0 0 1px #5a4a5a; }
-.story-pips i.on { background: #5dff8f; box-shadow: none; }
+.story-pips i { width: 9px; height: 9px; background: #303940; box-shadow: inset 0 0 0 1px #59636a; }
+.story-pips i.on { background: var(--hud-good); box-shadow: none; }
 
 .story-tick {
   box-sizing: border-box;
@@ -137,18 +150,18 @@
   height: 14px;
   padding: 2px;
   color: transparent;
-  background: #2a1a2a;
-  box-shadow: inset 0 0 0 1px #5a4a5a;
+  background: #303940;
+  box-shadow: inset 0 0 0 1px #59636a;
 }
 
-.story-goal.done .story-tick { color: #06280f; background: #5dff8f; box-shadow: none; }
+.story-goal.done .story-tick { color: #17231c; background: var(--hud-good); box-shadow: none; }
 
 /* Relogio da janela de lancamento fechando (amarelo, depois vermelho) */
 .story-timer { display: flex; align-items: center; gap: 6px; margin-top: 7px; font-size: 12px; }
 .story-timer b { min-width: 52px; text-align: right; white-space: nowrap; text-shadow: 1px 1px 0 #000; }
-.story-timer.warn { color: #ffcf3a; }
-.story-timer.danger { color: #ff6b5a; }
-.story-timer.danger .story-bar i { background: #ff6b5a; }
+.story-timer.warn { color: var(--hud-accent); }
+.story-timer.danger { color: var(--hud-danger); }
+.story-timer.danger .story-bar i { background: var(--hud-danger); }
 
 /* No modo rover as leituras do rover usam o mesmo canto: elas descem para baixo do painel */
 .hud:has(.story-objective:not(.hidden)) #rover-info { margin-top: 152px; }
@@ -180,7 +193,7 @@
   display: block;
   width: 26px;
   height: 34px;
-  background: #ffcf3a;
+  background: var(--hud-accent);
   clip-path: polygon(34% 0, 66% 0, 66% 48%, 100% 48%, 50% 100%, 0 48%, 34% 48%);
   transform-origin: 13px 17px;
 }
@@ -201,11 +214,11 @@
   white-space: nowrap;
   color: #ffffff;
   background: rgba(0, 0, 0, 0.6);
-  border: 1px solid #ffcf3a;
+  border: 1px solid var(--hud-accent);
   transform: translateX(-50%);
 }
 
-.waypoint-tag b { color: #ffcf3a; }
+.waypoint-tag b { color: var(--hud-accent); }
 .waypoint-tag i { font-style: normal; }
 
 /* Lugar fora da tela: a seta fica centrada no ponto da borda e o nome vai para baixo dela */
@@ -224,12 +237,12 @@
   gap: 8px;
   width: min(440px, calc(100vw - 32px));
   padding: 6px 10px;
-  color: #7fe3ff;
+  color: var(--hud-blue);
   font-family: 'Monocraft', monospace;
   font-size: 12px;
-  background: #0e161e;
-  border: 3px solid #1b2a36;
-  box-shadow: inset 2px 2px rgba(120, 190, 220, 0.25), 4px 4px rgba(0, 0, 0, 0.6);
+  background: #181d23;
+  border: 3px solid #11171b;
+  box-shadow: inset 0 0 0 2px var(--hud-border), 4px 4px rgba(0, 0, 0, 0.6);
   transform: translateX(-50%);
   pointer-events: none;
 }
@@ -247,9 +260,9 @@
 }
 
 /* O ponto anda ate a Terra (verde) e volta com a resposta (amarelo) */
-.story-signal-track i { position: absolute; top: 0; left: 0; width: 10px; height: 10px; background: #5dff8f; }
-.story-signal.returning .story-signal-track i { background: #ffcf3a; }
-.story-signal.returning { color: #ffcf3a; }
+.story-signal-track i { position: absolute; top: 0; left: 0; width: 10px; height: 10px; background: var(--hud-good); }
+.story-signal.returning .story-signal-track i { background: var(--hud-accent); }
+.story-signal.returning { color: var(--hud-accent); }
 .story-signal b { white-space: nowrap; letter-spacing: 0.5px; }
 
 /* Card de radio: mensagens do Controle da Missao. Nao pausa o jogo. */
@@ -265,13 +278,16 @@
   font-family: 'Monocraft', monospace;
   font-size: 14px;
   line-height: 1.35;
-  background: #0e161e;
-  border: 3px solid #1b2a36;
-  box-shadow: inset 2px 2px rgba(120, 190, 220, 0.25), 4px 4px rgba(0, 0, 0, 0.6);
+  background: #181d23;
+  border: 3px solid #11171b;
+  box-shadow: inset 0 0 0 2px var(--hud-border), 4px 4px rgba(0, 0, 0, 0.6);
   transform: translateX(-50%);
 }
 
 .story-card.hidden { display: none; }
+
+/* Keep the objective marker from crossing an open radio message. */
+body:has(.story-card:not(.hidden)) .waypoint { visibility: hidden; }
 .story-card.is-entering { animation: story-card-in 0.28s steps(4, end); }
 
 @keyframes story-card-in {
@@ -284,7 +300,7 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
-  color: #7fe3ff;
+  color: var(--hud-accent);
   font-size: 13px;
   letter-spacing: 1px;
 }
@@ -293,7 +309,7 @@
 .story-card-signal {
   width: 9px;
   height: 9px;
-  background: #5dff8f;
+  background: var(--hud-accent);
   animation: story-signal 1s steps(2, end) infinite;
 }
 
@@ -313,9 +329,9 @@
   width: 26px;
   height: 26px;
   padding: 4px;
-  color: #7fe3ff;
-  background: #16232e;
-  box-shadow: inset 0 0 0 1px #2c4354;
+  color: var(--hud-muted);
+  background: #303940;
+  box-shadow: inset 0 0 0 1px var(--hud-border);
 }
 
 /* Sinal de radio: Marte, o ponto viajando e a Terra */
@@ -340,7 +356,7 @@
   left: 0;
   width: 10px;
   height: 10px;
-  background: #5dff8f;
+  background: var(--hud-good);
   animation: story-link-go 2.4s linear infinite;
 }
 
@@ -348,7 +364,7 @@
   to { left: calc(100% - 10px); }
 }
 
-.story-link-track b { color: #ffcf3a; font-size: 16px; }
+.story-link-track b { color: var(--hud-accent); font-size: 16px; }
 .story-link-track small { margin: 0; color: #b8c4cc; font-size: 11px; }
 
 /* Duas saidas lado a lado, cada uma com o que da e o que custa */
@@ -367,9 +383,9 @@
   box-shadow: inset 0 0 0 2px #2c4354;
 }
 
-.story-choice-icon { width: 32px; height: 32px; color: #7fe3ff; }
+.story-choice-icon { width: 32px; height: 32px; color: var(--hud-blue); }
 .story-choice strong { font-size: 15px; letter-spacing: 1px; }
-.story-choice .good { color: #5dff8f; }
+.story-choice .good { color: var(--hud-good); }
 .story-choice .bad { color: #ff8a7a; }
 .story-choice-or { align-self: center; color: #b8c4cc; font-size: 12px; }
 
@@ -514,7 +530,7 @@ body.cutscene-active .story-signal { visibility: hidden; }
 /* Titulo na esquerda, para nao cobrir o foguete (contagem regressiva) */
 .cutscene-title.is-side { align-items: flex-start; padding-left: 9vw; text-align: left; }
 .cutscene-title.is-side strong { font-size: clamp(40px, 9vw, 96px); }
-.cutscene-title strong { font-size: clamp(48px, 13vw, 132px); line-height: 1; color: #ffcf3a; }
+.cutscene-title strong { font-size: clamp(48px, 13vw, 132px); line-height: 1; color: var(--hud-accent); }
 .cutscene-title span { font-size: clamp(14px, 2.4vw, 24px); }
 .cutscene-title span:empty { display: none; }
 .cutscene-title.is-popping strong { animation: cutscene-pop 0.3s steps(5, end); }
@@ -533,8 +549,8 @@ body.cutscene-active .story-signal { visibility: hidden; }
   text-shadow: 3px 3px #000;
   /* O "pulso" de entrada cresce a partir do canto, para a etiqueta nao sair da tela */
   transform-origin: left bottom;
-  background: rgba(16, 4, 16, 0.86);
-  box-shadow: inset 0 0 0 3px #b8860b, 4px 4px 0 rgba(0, 0, 0, 0.45);
+  background: var(--hud-panel);
+  box-shadow: inset 0 0 0 3px var(--hud-border), 4px 4px 0 rgba(0, 0, 0, 0.45);
 }
 
 @keyframes cutscene-pop {
@@ -573,15 +589,15 @@ body.portrait-required .cutscene-layer { display: none; }
   color: #fff;
   background: rgba(16, 4, 16, 0.92);
   border: 2px solid #000;
-  box-shadow: inset 0 0 0 2px #ffcf3a, 4px 4px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 0 0 2px var(--hud-accent), 4px 4px 0 rgba(0, 0, 0, 0.5);
   pointer-events: none;
 }
 .cert-badge.hidden { display: none; }
 .cert-badge.is-entering { animation: cert-pop 0.45s steps(6) both; }
-.cert-badge-icon { flex: 0 0 52px; width: 52px; height: 52px; color: #ffcf3a; filter: drop-shadow(2px 2px 0 #000); }
+.cert-badge-icon { flex: 0 0 52px; width: 52px; height: 52px; color: var(--hud-accent); filter: drop-shadow(2px 2px 0 #000); }
 .cert-badge-icon svg { display: block; width: 100%; height: 100%; }
 .cert-badge-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.cert-badge-body small { font-size: 11px; letter-spacing: 1px; color: #ffcf3a; }
+.cert-badge-body small { font-size: 11px; letter-spacing: 1px; color: var(--hud-accent); }
 .cert-badge-body strong { font-size: 20px; text-shadow: 2px 2px 0 #000; }
 .cert-badge-body span { font-size: 13px; color: #8cff8c; }
 .cert-badge-body i { font-style: normal; font-size: 11px; color: #cfcfcf; }
@@ -596,4 +612,22 @@ body.portrait-required .cutscene-layer { display: none; }
   .cert-badge-body strong { font-size: 15px; }
   .cert-badge-body span { font-size: 11px; }
   .cert-badge-body em { display: none; }
+}
+
+/* Stepped corners on the HUD panels, like a pixel-art rounded rectangle. */
+.story-objective, .story-card, .base-panel {
+  clip-path: polygon(
+    8px 0, calc(100% - 8px) 0,
+    calc(100% - 8px) 2px, calc(100% - 4px) 2px,
+    calc(100% - 4px) 4px, calc(100% - 2px) 4px,
+    calc(100% - 2px) 8px, 100% 8px,
+    100% calc(100% - 8px), calc(100% - 2px) calc(100% - 8px),
+    calc(100% - 2px) calc(100% - 4px), calc(100% - 4px) calc(100% - 4px),
+    calc(100% - 4px) calc(100% - 2px), calc(100% - 8px) calc(100% - 2px),
+    calc(100% - 8px) 100%, 8px 100%,
+    8px calc(100% - 2px), 4px calc(100% - 2px),
+    4px calc(100% - 4px), 2px calc(100% - 4px),
+    2px calc(100% - 8px), 0 calc(100% - 8px),
+    0 8px, 2px 8px, 2px 4px, 4px 4px, 4px 2px, 8px 2px
+  );
 }
