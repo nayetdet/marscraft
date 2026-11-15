@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SURVIVAL_CONFIG, TERRAIN_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import {
   DUST_STORM_WALL_RADIUS,
+  DUST_STORM_MIDDLE_WALL_RADIUS,
   clampToPlayArea,
   distanceFromBaseCenter,
   dustStormIntensity,
@@ -29,8 +30,11 @@ describe('dust storm zone', () => {
     expect(dustStormIntensity(cx + START - WARNING / 2, cz)).toBe(0);
   });
 
-  it('starts the visuals before the wall so walking through it is never a hard edge', () => {
-    expect(dustStormVisualStrength(cx + DUST_STORM_WALL_RADIUS, cz)).toBeGreaterThan(0);
+  it('gets denser between three fronts and stays dense beyond the third', () => {
+    expect(dustStormVisualStrength(cx + START, cz)).toBe(0);
+    expect(dustStormVisualStrength(cx + DUST_STORM_MIDDLE_WALL_RADIUS, cz)).toBeCloseTo(0.5);
+    expect(dustStormVisualStrength(cx + DUST_STORM_WALL_RADIUS, cz)).toBeCloseTo(1);
+    expect(dustStormVisualStrength(cx + DUST_STORM_WALL_RADIUS + 10, cz)).toBe(1);
     expect(dustStormVisualStrength(cx + START - WARNING, cz)).toBe(0);
   });
 
@@ -40,7 +44,7 @@ describe('dust storm zone', () => {
       WORLD_CONFIG.SIZE_Z / 2 - Math.abs(cz)
     );
     expect(DUST_STORM_WALL_RADIUS).toBeCloseTo(nearestMapEdge);
-    expect(DUST_STORM_WALL_RADIUS).toBeGreaterThan(FATAL);
+    expect(DUST_STORM_WALL_RADIUS).toBeCloseTo(FATAL);
   });
 
   it('stops the player at an invisible wall instead of killing them (issue #103)', () => {

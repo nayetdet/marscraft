@@ -15,6 +15,12 @@ export const TERRAIN_CONFIG = {
   BASE_BLEND_RADIUS: 36,
 };
 
+const DUST_STORM_FRONT_OFFSET = 24;
+const DUST_STORM_MAP_EDGE_RADIUS = Math.min(
+  WORLD_CONFIG.SIZE_X / 2 - Math.abs(TERRAIN_CONFIG.BASE_CENTER.x),
+  WORLD_CONFIG.SIZE_Z / 2 - Math.abs(TERRAIN_CONFIG.BASE_CENTER.z)
+);
+
 export const PHYSICS_CONFIG = {
   MARS_GRAVITY: 12.0,
   JUMP_SPEED: 6.4,
@@ -74,8 +80,8 @@ export const SURVIVAL_CONFIG = {
   // Borda da area jogavel (parede de poeira), medida a partir de TERRAIN_CONFIG.BASE_CENTER.
   // Issue #103: a borda nao machuca mais. O vento de Marte nao derruba ninguem (o ar e fino
   // demais); quem limita a distancia e o ar do traje. No raio FATAL fica uma parede invisivel.
-  DUST_STORM_START_RADIUS: 70,
-  DUST_STORM_FATAL_RADIUS: 100,
+  DUST_STORM_START_RADIUS: DUST_STORM_MAP_EDGE_RADIUS - DUST_STORM_FRONT_OFFSET,
+  DUST_STORM_FATAL_RADIUS: DUST_STORM_MAP_EDGE_RADIUS,
   // Intensidade (0..1) a partir da qual o HUD manda voltar ja; antes disso e so aviso
   DUST_STORM_TURN_BACK_START: 0.55,
   // Blocos antes do inicio da tempestade em que o HUD ja avisa que a borda esta perto
@@ -84,13 +90,16 @@ export const SURVIVAL_CONFIG = {
 
 // Visual da tempestade da borda (src/sky/DustStormEffect.js). O dano fica no SURVIVAL_CONFIG.
 export const DUST_STORM_VISUAL_CONFIG = {
+  INNER_WALL_OPACITY: 0.38,
+  MIDDLE_WALL_OPACITY: 0.68,
+  OUTER_WALL_OPACITY: 1,
   WALL_BOTTOM_Y: -4,
   WALL_HEIGHT: 44,
   // A parede some perto da camera (entre estas distancias, em blocos) para nao virar um plano duro
   WALL_FADE_NEAR: 1.5,
   WALL_FADE_FAR: 8,
-  // Neblina, cúpula e partículas aparecem nos últimos blocos antes da borda do mapa.
-  VISUAL_LEAD: 12,
+  // A névoa cresce nas duas faixas entre a frente interna e a borda externa.
+  VISUAL_LEAD: DUST_STORM_FRONT_OFFSET,
   DOME_RADIUS: 26,
   DOME_MAX_OPACITY: 0.93,
   FOG_BASE_DENSITY: 0.0015,

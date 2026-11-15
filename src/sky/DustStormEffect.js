@@ -1,14 +1,15 @@
 import * as THREE from 'three';
-import { DUST_STORM_VISUAL_CONFIG as V, DUST_WEATHER_CONFIG as W } from '../config/constants.js';
+import { DUST_STORM_VISUAL_CONFIG as V, DUST_WEATHER_CONFIG as W, SURVIVAL_CONFIG } from '../config/constants.js';
 import {
   DUST_STORM_CENTER,
+  DUST_STORM_MIDDLE_WALL_RADIUS,
   DUST_STORM_WALL_RADIUS,
   dustStormProximity,
   dustStormVisualStrength,
 } from '../world/dustStormZone.js';
 
 // Tempestade de poeira que cerca a area jogavel. Tudo na GPU, sem overlay em tela cheia no HTML:
-//   1. Parede de poeira no inicio da tempestade, visivel de longe: mostra onde fica a borda.
+//   1. Tres frentes de poeira: avisam da borda e marcam o aumento da nevoa em duas etapas.
 //   2. Cupula de poeira em volta da camera: tinge o ceu, que a neblina nao alcanca.
 //   3. Particulas de poeira carregadas pelo vento, que sopra de volta para a base.
 // A neblina da cena engrossa junto. Cada parte so e desenhada quando aparece.
@@ -141,12 +142,24 @@ export class DustStormEffect {
   }
 
   _buildWall() {
-    const geometry = new THREE.CylinderGeometry(
-      DUST_STORM_WALL_RADIUS, DUST_STORM_WALL_RADIUS, V.WALL_HEIGHT, 128, 1, true
-    );
-    this.wallUniforms = {
+    const inner = this._createWall(SURVIVAL_CONFIG.DUST_STORM_START_RADIUS, V.INNER_WALL_OPACITY);
+    this.innerWall = inner.mesh;
+    this.innerWallUniforms = inner.uniforms;
+
+    const middle = this._createWall(DUST_STORM_MIDDLE_WALL_RADIUS, V.MIDDLE_WALL_OPACITY);
+    this.middleWall = middle.mesh;
+    this.middleWallUniforms = middle.uniforms;
+
+    const outer = this._createWall(DUST_STORM_WALL_RADIUS, V.OUTER_WALL_OPACITY);
+    this.wall = outer.mesh;
+    this.wallUniforms = outer.uniforms;
+  }
+
+  _createWall(radius, opacity) {
+    const geometry = new THREE.CylinderGeometry(radius, radius, V.WALL_HEIGHT, 128, 1, true);
+    const uniforms = {
       uTime: { value: 0 },
-      uOpacity: { value: 1 },
+      uOpacity: { value: opacity },
       uBottom: { value: V.WALL_BOTTOM_Y },
       uHeight: { value: V.WALL_HEIGHT },
       uFadeNear: { value: V.WALL_FADE_NEAR },
@@ -154,19 +167,21 @@ export class DustStormEffect {
       uCenter: { value: new THREE.Vector2(DUST_STORM_CENTER.x, DUST_STORM_CENTER.z) },
       uColor: { value: new THREE.Color() },
     };
-    this.wall = new THREE.Mesh(geometry, new THREE.ShaderMaterial({
+    const material = new THREE.ShaderMaterial({
       vertexShader: WALL_VERTEX,
       fragmentShader: WALL_FRAGMENT,
-      uniforms: this.wallUniforms,
+      uniforms,
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
-    }));
-    this.wall.position.set(DUST_STORM_CENTER.x, V.WALL_BOTTOM_Y + V.WALL_HEIGHT / 2, DUST_STORM_CENTER.z);
-    this.wall.frustumCulled = false;
+    });
+    const wall = new THREE.Mesh(geometry, material);
+    wall.position.set(DUST_STORM_CENTER.x, V.WALL_BOTTOM_Y + V.WALL_HEIGHT / 2, DUST_STORM_CENTER.z);
+    wall.frustumCulled = false;
     // Logo depois dos opacos: e a coisa mais distante, atras de todo o resto transparente
-    this.wall.renderOrder = -1;
-    this.scene.add(this.wall);
+    wall.renderOrder = -1;
+    this.scene.add(wall);
+    return { mesh: wall, uniforms };
   }
 
   _buildDome() {
@@ -228,7 +243,6 @@ export class DustStormEffect {
   update(dt, focus, camera, weather = NO_WEATHER) {
     this.time += dt;
     const strength = dustStormVisualStrength(focus.x, focus.z);
-    const proximity = dustStormProximity(focus.x, focus.z);
     const haze = weather.haze;
     this.strength = strength;
     this.haze = haze;
@@ -244,17 +258,25 @@ export class DustStormEffect {
       V.FOG_BASE_DENSITY + (W.WEATHER_FOG_DENSITY - V.FOG_BASE_DENSITY) * haze
     );
     // A cor vira poeira logo: passar da parede nunca deixa a vista mais limpa que a propria parede
-    fog.color.lerp(_dust, Math.max(THREE.MathUtils.smoothstep(strength, 0, 0.25), haze * 0.85));
+    fog.color.lerp(_dust, Math.max(strength, haze * 0.85));
 
     // A parede marca a borda do mapa; o shader esmaece apenas o trecho muito perto da camera.
     this.wall.visible = true;
     this.wallUniforms.uTime.value = this.time;
-    this.wallUniforms.uOpacity.value = 1;
+    this.wallUniforms.uOpacity.value = V.OUTER_WALL_OPACITY;
     this.wallUniforms.uColor.value.copy(_dust);
+    this.middleWall.visible = true;
+    this.middleWallUniforms.uTime.value = this.time;
+    this.middleWallUniforms.uOpacity.value = V.MIDDLE_WALL_OPACITY;
+    this.middleWallUniforms.uColor.value.copy(_dust);
+    this.innerWall.visible = true;
+    this.innerWallUniforms.uTime.value = this.time;
+    this.innerWallUniforms.uOpacity.value = V.INNER_WALL_OPACITY;
+    this.innerWallUniforms.uColor.value.copy(_dust);
 
     // Cupula: mesma cor da neblina, para o chao e o ceu sumirem juntos na poeira
     const domeOpacity = Math.max(
-      V.DOME_MAX_OPACITY * THREE.MathUtils.smoothstep(strength, 0, 0.25),
+      V.DOME_MAX_OPACITY * strength,
       W.WEATHER_DOME_OPACITY * haze
     );
     this.dome.visible = domeOpacity > 0.01;
@@ -266,7 +288,7 @@ export class DustStormEffect {
 
     // Particulas: algumas rajadas ja perto da borda, nuvem cheia dentro da tempestade
     // Dentro da base a poeira do clima fica la fora (so a da borda segue a camera)
-    const edgeParticles = Math.min(1, THREE.MathUtils.smoothstep(strength, 0, 0.35) + proximity * 0.25);
+    const edgeParticles = strength;
     const weatherParticles = weather.indoors ? 0 : W.WEATHER_PARTICLE_OPACITY * haze;
     const particleOpacity = Math.max(edgeParticles, weatherParticles);
     this.particles.visible = particleOpacity > 0.01;
