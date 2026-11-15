@@ -69,7 +69,9 @@ export function missionStatus(mission, source, base = {}) {
   const contaminated = Boolean(base.contaminated);
   const brokenWindows = base.brokenWindows > 0;
   const airPct = Math.round(Math.min(100 - co2, base.baseOxygen ?? 100));
-  const airTone = co2 >= CO2_DAMAGE || airPct <= 20 || contaminated || brokenWindows ? 'danger' : co2 >= CO2_WARN || airPct <= 50 ? 'warn' : 'ok';
+  // Janela rachada do ato 2 (#408): 'hidden' ate a crianca achar com a luneta, depois 'found'
+  const storyLeak = brokenWindows ? null : base.storyLeak ?? null;
+  const airTone = co2 >= CO2_DAMAGE || airPct <= 20 || contaminated || brokenWindows || storyLeak ? 'danger' : co2 >= CO2_WARN || airPct <= 50 ? 'warn' : 'ok';
 
   const { phase, storm, hoursUntil, hoursLeft } = mission.storm;
   const alerts = [];
@@ -85,6 +87,12 @@ export function missionStatus(mission, source, base = {}) {
   }
   if (brokenWindows) {
     alerts.push({ id: 'breach', icon: 'air', tone: 'danger', title: 'BASE BREACH!', text: 'Oxygen is leaking! Follow the marker and seal the opening with a block.', target: 'brokenWindow' });
+  }
+  // Sem `target`: o alerta nao mostra onde e. Achada a rachadura, quem aponta e a seta do passo.
+  if (storyLeak === 'hidden') {
+    alerts.push({ id: 'breach', icon: 'air', tone: 'danger', title: 'AIR LEAK!', text: 'The base is losing air, but where? Scan the windows with your scope to find the crack.' });
+  } else if (storyLeak === 'found') {
+    alerts.push({ id: 'breach', icon: 'air', tone: 'danger', title: 'CRACKED WINDOW!', text: 'You found the leak. Get new glass from the engineer and replace the window.' });
   }
   if (phase === 'active') {
     alerts.push({

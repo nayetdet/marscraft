@@ -191,9 +191,10 @@ export class GameEngine {
     this._scienceStatusKey = '';
 
     // Modelos 3D detalhados estilo Mod de Minecraft + Caixas de Colisão AABB
-    const { group: customModels, colliders, plants, rover, roverWheels, rocket, solarPanelMaterial } = buildNasaCustomModels(this.scene);
+    const { group: customModels, colliders, plants, rover, roverWheels, rocket, solarPanelMaterial, solarPanelMaterials } = buildNasaCustomModels(this.scene);
     // Paineis do campo solar: ficam avermelhados com a poeira (issue #103)
     this.solarPanelMaterial = solarPanelMaterial;
+    this.solarPanelMaterials = solarPanelMaterials; // um por painel: cada um mostra a sua poeira (#408)
     this.mavRocket = rocket;
     this.customModels = customModels;
     this.plants = plants;
@@ -941,7 +942,9 @@ export class GameEngine {
       maxDist: this.scanJournal.scanRange(),
     });
     const isScanning = this.input.isScanButtonHeld;
-    const state = this.scanner.update(dt, target?.id ?? null, isScanning);
+    // Ato 2 (#408): procurando o vazamento, um vidro na mira responde se esta inteiro ou rachado
+    const windowScan = this.act2.scanWindow(dt, target, isScanning);
+    const state = this.scanner.update(dt, windowScan ? null : target?.id ?? null, isScanning);
     if (
       isScanning &&
       state.done &&
@@ -951,8 +954,8 @@ export class GameEngine {
     ) {
       this.iceSensor.clear();
     }
-    this._updateScanHighlight(isScanning ? target : null, state, dt);
-    this.scannerHud.update(state);
+    this._updateScanHighlight(isScanning && !windowScan ? target : null, state, dt);
+    this.scannerHud.update(windowScan ?? state);
     if (state.completed) this._onScanCompleted(state.completed);
   }
 
@@ -1396,7 +1399,7 @@ export class GameEngine {
     this._updateWeather(dt);
     this._updateMissionLog();
 
-    this.missionHud.update(this.mission, { survival: this.survival, stations: this.stations, world: this.world });
+    this.missionHud.update(this.mission, { survival: this.survival, stations: this.stations, world: this.world, storyLeak: this.act2.leakAlert });
     this._panelRefreshTimer = (this._panelRefreshTimer ?? 0) + dt;
     if (this.missionHud.isMavPanelOpen && this._panelRefreshTimer > 0.25) {
       this._panelRefreshTimer = 0;
@@ -1416,7 +1419,7 @@ export class GameEngine {
     this._panelColorDusty = new THREE.Color(0xb98a6a);
     // A poeira cobre o vidro azul escuro: brilho proprio cor de ferrugem, para aparecer
     this._panelDustGlow = new THREE.Color(0x9a5530);
-    this._panelDustShown = -1;
+    this._panelDustShown = new Array(SOLAR_FIELD.count).fill(-1);
     this._solarLookDir = new THREE.Vector3();
     this.panelCleanDustPuffs = new ParticlePuffs(this.scene, { count: 48, color: 0xc47e54 });
     this._panelCleanAnim = {
@@ -1425,6 +1428,7 @@ export class GameEngine {
       duration: DUST_WEATHER_CONFIG.CLEAN_ANIM_DURATION,
       dustBefore: 0,
       dustAfter: 0,
+      panelIndex: 0,
       panelX: SOLAR_FIELD_CENTER.x,
       panelY: WORLD_CONFIG.GROUND_LEVEL + 2.47,
       panelZ: SOLAR_FIELD.z,
@@ -1450,13 +1454,16 @@ export class GameEngine {
     fx.indoors = this.survival.isPlayerInsideShip(this.camera.position);
     this.sky.dustHaze = dust.haze;
 
-    // Paineis avermelhados com a poeira: so troca a cor quando muda 1 %
-    const visualDust = this._updatePanelCleanAnim(dt);
-    const shown = Math.round(visualDust * 100);
-    if (shown !== this._panelDustShown && this.solarPanelMaterial) {
-      this._panelDustShown = shown;
-      this.solarPanelMaterial.color.copy(this._panelColorClean).lerp(this._panelColorDusty, visualDust);
-      this.solarPanelMaterial.emissive.copy(this._panelDustGlow).multiplyScalar(visualDust);
+    // Paineis avermelhados com a poeira, cada um com a sua: so troca a cor quando muda 1 %
+    const cleaningDust = this._updatePanelCleanAnim(dt);
+    const materials = this.solarPanelMaterials;
+    for (let i = 0; materials && i < materials.length; i++) {
+      const visualDust = this._panelCleanAnim.active && this._panelCleanAnim.panelIndex === i ? cleaningDust : dust.panels[i] ?? 0;
+      const shown = Math.round(visualDust * 100);
+      if (shown === this._panelDustShown[i]) continue;
+      this._panelDustShown[i] = shown;
+      materials[i].color.copy(this._panelColorClean).lerp(this._panelColorDusty, visualDust);
+      materials[i].emissive.copy(this._panelDustGlow).multiplyScalar(visualDust);
     }
 
     const hours = this._skyHours();
@@ -1473,22 +1480,29 @@ export class GameEngine {
     return WORLD_CONFIG.GROUND_LEVEL + 1;
   }
 
-  _nearestSolarPanelPos() {
+  // Painel mais perto da mira (0 = o primeiro da fileira): e o que a crianca limpa
+  _nearestSolarPanelIndex() {
     const look = this.player.getLookDirection(this._solarLookDir);
     const aimX = this.player.pos.x + look.x * 2.0;
     const aimZ = this.player.pos.z + look.z * 2.0;
-    let bestX = SOLAR_FIELD.xFirst;
+    let best = 0;
     let bestDist = Infinity;
     for (let i = 0; i < SOLAR_FIELD.count; i++) {
       const px = SOLAR_FIELD.xFirst + i * SOLAR_FIELD.spacing;
       const dist = Math.hypot(aimX - px, aimZ - SOLAR_FIELD.z);
       if (dist < bestDist) {
         bestDist = dist;
-        bestX = px;
+        best = i;
       }
     }
+    return best;
+  }
+
+  _nearestSolarPanelPos() {
+    const index = this._nearestSolarPanelIndex();
     return {
-      x: bestX,
+      index,
+      x: SOLAR_FIELD.xFirst + index * SOLAR_FIELD.spacing,
       y: WORLD_CONFIG.GROUND_LEVEL + 1 + 1.47,
       z: SOLAR_FIELD.z,
     };
@@ -1496,7 +1510,8 @@ export class GameEngine {
 
   _updatePanelCleanAnim(dt) {
     const anim = this._panelCleanAnim;
-    let visualDust = this.mission.dustWeather.panelDust;
+    const panels = this.mission.dustWeather.panels;
+    let visualDust = panels[anim.panelIndex] ?? 0;
     if (anim.active) {
       anim.elapsed += dt;
       const p = Math.min(1, anim.elapsed / anim.duration);
@@ -1523,7 +1538,7 @@ export class GameEngine {
       }
       if (p >= 1) {
         anim.active = false;
-        visualDust = this.mission.dustWeather.panelDust;
+        visualDust = panels[anim.panelIndex] ?? 0;
       }
     }
     this.panelCleanDustPuffs.update(dt);
@@ -1552,39 +1567,41 @@ export class GameEngine {
     return Math.hypot(dx, dz) <= DUST_WEATHER_CONFIG.CLEAN_RADIUS;
   }
 
-  // Limpar os paineis a mao: restaura a geracao, mas gasta ar do traje (issue #103)
+  // Limpar os paineis a mao, um por vez (o mais perto da mira): restaura a geracao, mas gasta ar
+  // do traje (issue #103, ato 2 #408)
   _cleanSolarPanels() {
     if (this._panelCleanAnim?.active) return;
     const dust = this.mission.dustWeather;
     const cost = DUST_WEATHER_CONFIG.CLEAN_O2_COST;
-    if (dust.panelDust < 0.01) {
-      this.hud.showToast('The solar panels are already clean.');
+    const panelPos = this._nearestSolarPanelPos();
+    const dustBefore = dust.panels[panelPos.index];
+    if (dustBefore < 0.01) {
+      this.hud.showToast(dust.panelDust < 0.01 ? 'The solar panels are already clean.' : 'This panel is clean. Brush the dusty ones!');
       return;
     }
     if (!this.survival.hasBreathableOxygen(cost + 1)) {
       this.hud.showToast('Your suit air is too low to keep working. Go back inside!', 4500);
       return;
     }
-    const dustBefore = dust.panelDust;
     this.survival.spendBreathableOxygen(cost);
-    const removed = dust.cleanPanels();
-    const dustAfter = dust.panelDust;
-    const panelPos = this._nearestSolarPanelPos();
+    const removed = dust.cleanPanel(panelPos.index);
+    const dustAfter = dust.panels[panelPos.index];
     const anim = this._panelCleanAnim;
     anim.active = true;
     anim.elapsed = 0;
     anim.duration = DUST_WEATHER_CONFIG.CLEAN_ANIM_DURATION;
     anim.dustBefore = dustBefore;
     anim.dustAfter = dustAfter;
+    anim.panelIndex = panelPos.index;
     anim.panelX = panelPos.x;
     anim.panelY = panelPos.y;
     anim.panelZ = panelPos.z;
     anim.emitDebt = 0;
     this.playerHand.triggerCleanSolar();
     this.audio.playSolarClean();
-    const left = Math.round(dust.panelDust * 100);
+    const left = Math.round(dustAfter * 100);
     const storm = dust.phase === 'storm' ? ' The storm keeps adding more dust!' : '';
-    let message = `Brushed ${Math.round(removed * 100)}% of the dust off the panels (used suit air). Panel dust: ${left}%.${storm}`;
+    let message = `Brushed ${Math.round(removed * 100)}% of the dust off panel ${panelPos.index + 1} (used suit air). Dust left on it: ${left}%.${storm}`;
     if (!this._panelCleanFactShown) {
       this._panelCleanFactShown = true;
       message += ' Real case: gusts of wind cleaned the panels of NASA rovers Spirit and Opportunity.';
@@ -1771,6 +1788,7 @@ export class GameEngine {
     this.tutorialCounts = { drink: 0, meal: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0, suitUps: 0 };
     // Atos 2 a 5 da historia: cada um liga os seus passos ao jogo (src/story/acts/)
     this.actControllers = createActControllers(this);
+    this.act2 = this.actControllers[0]; // Act2Controller: luneta, vazamento e janela rachada (#408)
     this._lastStepId = null;
     this.story = new StoryDirector({
       training: false, // tutorial padrao: so os 5 passos que a missao usa (CORE_STEPS)
@@ -2501,6 +2519,13 @@ export class GameEngine {
     }
 
     const member = this._nearestCrewMember();
+    // Ato 2 (#408): o engenheiro entrega a luneta e o vidro; [F] na janela rachada troca o vidro
+    const act2Prompt = this.act2.interactionPrompt(member);
+    if (act2Prompt) {
+      this.currentInteraction = 'act2';
+      this.hud.setInteractionPrompt(true, act2Prompt);
+      return;
+    }
     // Poster ou equipamento explicativo na mira: ler vem antes das acoes por proximidade
     const aimed = this._getInteraction();
     if (aimed?.type === 'info') {
@@ -2516,8 +2541,9 @@ export class GameEngine {
         this.hud.setInteractionPrompt(true, 'Cleaning solar panels...');
         return;
       }
-      const dust = Math.round(this.mission.dustWeather.panelDust * 100);
-      this.hud.setInteractionPrompt(true, `[F] Clean the solar panels (dust ${dust}%, uses suit air)`);
+      const panel = this._nearestSolarPanelIndex();
+      const dust = Math.round(this.mission.dustWeather.panels[panel] * 100);
+      this.hud.setInteractionPrompt(true, `[F] Clean solar panel ${panel + 1} (dust ${dust}%, uses suit air)`);
       return;
     }
 
@@ -2563,6 +2589,10 @@ export class GameEngine {
 
   handlePlayerInteract() {
     if (this.missionHud.isVictoryShown) return;
+    if (this.currentInteraction === 'act2') {
+      this.act2.interact();
+      return;
+    }
     if (this.currentInteraction === 'crew' && this.talkTarget) {
       if (this.talkTarget.task === 'kitchen') {
         this._giveRationFromCook(this.talkTarget);
@@ -2704,6 +2734,8 @@ export class GameEngine {
         z: SOLAR_FIELD_CENTER.z + Math.cos(params.angle) * side,
       };
       this._devilCrossesPanels = params.crossesPanels;
+      // Painel por onde o redemoinho cruza a fileira (sorteado pelo angulo, da semente)
+      this._devilPanelIndex = ((params.angle / (Math.PI * 2)) % 1) * (SOLAR_FIELD.count - 1);
       info = { target, world: this.world };
     }
     this.eventEffects.start(event, info);
@@ -2740,8 +2772,10 @@ export class GameEngine {
   // que chega com a issue #103: se a missao tiver `cleanPanels(fracao)`, ela e chamada aqui.
   _dustDevilAtTarget() {
     if (!this._devilCrossesPanels) return;
-    const cleaned = this.mission.dustWeather?.cleanPanels(EVENTS_CONFIG.DUST_DEVIL_PANEL_CLEAN);
-    this.hud.showToast(dustDevilPanelsToast(typeof cleaned === 'number' ? Math.round(cleaned * 100) : 0), 6000);
+    // Limpa por inteiro os paineis mais perto de onde ele cruza a fileira (#408)
+    const dust = this.mission.dustWeather;
+    const cleaned = dust.sweepPanels(EVENTS_CONFIG.DUST_DEVIL_PANELS_CLEANED, this._devilPanelIndex);
+    this.hud.showToast(dustDevilPanelsToast(cleaned, dust.panels.length), 6000);
   }
 
   _saveGame() {

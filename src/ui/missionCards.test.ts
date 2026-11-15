@@ -37,6 +37,20 @@ describe('missionStatus', () => {
     expect(damaged.alerts[0]).toMatchObject({ id: 'breach', tone: 'danger' });
     expect(missionStatus(fakeMission(), FETCHED, { brokenWindows: 0 }).alerts).toEqual([]);
   });
+
+  it('the scripted leak of act 2 warns without a marker until the crack is found', () => {
+    const hidden = missionStatus(fakeMission(), FETCHED, { storyLeak: 'hidden', baseOxygen: 80 });
+    expect(hidden.air.tone).toBe('danger');
+    expect(hidden.alerts[0]).toMatchObject({ id: 'breach', tone: 'danger', title: 'AIR LEAK!' });
+    expect(hidden.alerts[0].target).toBeUndefined();
+    const found = missionStatus(fakeMission(), FETCHED, { storyLeak: 'found' });
+    expect(found.alerts[0]).toMatchObject({ id: 'breach', title: 'CRACKED WINDOW!' });
+    expect(found.alerts[0].target).toBeUndefined();
+    // Um buraco aberto pelo jogador continua com o alerta direto e o marcador
+    const hole = missionStatus(fakeMission(), FETCHED, { storyLeak: 'hidden', brokenWindows: 1 });
+    expect(hole.alerts.filter((alert) => alert.id === 'breach')).toHaveLength(1);
+    expect(hole.alerts[0]).toMatchObject({ title: 'BASE BREACH!', target: 'brokenWindow' });
+  });
   it('shows the resources and no alerts when everything is calm', () => {
     const s = missionStatus(fakeMission(), FETCHED);
     expect(s.power).toEqual({ pct: 80, tone: 'ok', trend: 'up' });

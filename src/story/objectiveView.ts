@@ -120,6 +120,8 @@ export function objectiveView(story, s) {
     steps = stepStates(LOOP_STEPS, now);
     loop = true;
   }
+  // Passo com varios alvos (ato 2, SCAN 3 THINGS): um icone por alvo, marcado quando feito
+  if (step?.checklist) steps = step.checklist(s);
   // "STEP 4/5": onde a crianca esta no tutorial
   const number = step ? story.stepProgress : null;
   const progress = number ? { now: number.now, total: number.total } : null;

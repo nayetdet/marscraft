@@ -1,11 +1,14 @@
 // @ts-nocheck
 import { DUST_WEATHER_CONFIG as D } from '../config/constants.ts';
+import { SOLAR_FIELD } from '../world/habitatLayout.ts';
 
 // Tempestade de poeira como clima no tempo (issue #103). Logica pura, sem DOM nem Three.js.
 // Fases: clear (ceu limpo) -> warning (a estacao do tempo ve a frente de poeira) -> storm ->
 // clearing (a poeira baixa) -> clear. A opacidade do ar (tau) e a poeira nos paineis
 // (panelDust, 0 a 1) multiplicam a geracao solar. Ninguem se machuca com o vento: o ar de
 // Marte e fino demais para derrubar alguem. O perigo e a falta de energia.
+// A poeira e guardada por painel (`panels`, um valor por painel do campo solar, ato 2 #408):
+// `panelDust` e a media, que e o que a geracao solar e as telas da base leem.
 
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -31,8 +34,11 @@ export function windCleaning(gustMs) {
 export class DustWeather {
   // `rng`: sorteio (Math.random no jogo; fixo nos testes). `started: false` deixa o ceu limpo
   // ate `start()` (a historia solta o clima no ato 2, longe do tutorial).
-  constructor({ rng = Math.random, startHours = 0, started = false } = {}) {
+  constructor({ rng = Math.random, startHours = 0, started = false, panelCount = SOLAR_FIELD.count } = {}) {
     this.rng = rng;
+    this.panels = new Array(panelCount).fill(0);
+    // Tempestade roteirizada (ato 2): duracao, pico e poeira por hora proprios. null = sorteada.
+    this.script = null;
     this.phase = 'clear';
     this.tau = D.TAU_CLEAR;
     this.peakTau = D.TAU_CLEAR;
@@ -44,6 +50,24 @@ export class DustWeather {
     this.started = false;
     this.events = [];
     if (started) this.start(startHours);
+  }
+
+  // Media da poeira dos paineis (0 a 1)
+  get panelDust() {
+    let sum = 0;
+    for (let i = 0; i < this.panels.length; i++) sum += this.panels[i];
+    return sum / this.panels.length;
+  }
+
+  // Admin e testes: a mesma poeira em todos os paineis
+  set panelDust(value) {
+    this.panels.fill(clamp01(value));
+  }
+
+  // Todos os paineis com menos poeira que `limit`?
+  panelsBelow(limit) {
+    for (let i = 0; i < this.panels.length; i++) if (this.panels[i] >= limit) return false;
+    return true;
   }
 
   start(hours) {
@@ -82,8 +106,9 @@ export class DustWeather {
     this.hours = hours;
     this._advancePhase();
     this.tau = this._tauNow();
-    const rate = this.phase === 'storm' ? D.PANEL_DUST_STORM_PER_HOUR : D.PANEL_DUST_PER_HOUR;
-    this.panelDust = clamp01(this.panelDust + rate * h);
+    // A tempestade e a poeira do dia a dia sujam todos os paineis por igual
+    const rate = this.phase === 'storm' ? this.script?.dustPerHour ?? D.PANEL_DUST_STORM_PER_HOUR : D.PANEL_DUST_PER_HOUR;
+    for (let i = 0; i < this.panels.length; i++) this.panels[i] = clamp01(this.panels[i] + rate * h);
   }
 
   _advancePhase() {
@@ -95,12 +120,13 @@ export class DustWeather {
         this._emit('dust-warning');
       } else if (this.phase === 'warning') {
         if (this.hours < this.phaseEnd) return;
-        this.peakTau = between([D.PEAK_TAU_MIN, D.TAU_RECORD], this.rng);
-        this._enter('storm', this.phaseEnd, this.phaseEnd + between(D.STORM_HOURS, this.rng));
+        this.peakTau = this.script?.peakTau ?? between([D.PEAK_TAU_MIN, D.TAU_RECORD], this.rng);
+        this._enter('storm', this.phaseEnd, this.phaseEnd + (this.script?.stormHours ?? between(D.STORM_HOURS, this.rng)));
         this._emit('dust-start');
       } else if (this.phase === 'storm') {
         if (this.hours < this.phaseEnd) return;
         this._enter('clearing', this.phaseEnd, this.phaseEnd + D.CLEARING_HOURS);
+        this.script = null;
         this._emit('dust-clearing');
       } else {
         if (this.hours < this.phaseEnd) return;
@@ -119,7 +145,7 @@ export class DustWeather {
 
   _tauNow() {
     const elapsed = this.hours - this.phaseStart;
-    if (this.phase === 'storm') return lerp(D.TAU_CLEAR, this.peakTau, clamp01(elapsed / D.RAMP_HOURS));
+    if (this.phase === 'storm') return lerp(D.TAU_CLEAR, this.peakTau, clamp01(elapsed / (this.script?.rampHours ?? D.RAMP_HOURS)));
     if (this.phase === 'clearing') return lerp(this.peakTau, D.TAU_CLEAR, clamp01(elapsed / D.CLEARING_HOURS));
     return D.TAU_CLEAR;
   }
@@ -136,11 +162,14 @@ export class DustWeather {
 
   // Admin e controles de demo: 'warning' (aviso agora, chega em `leadHours`), 'storm' (agora)
   // ou 'end' (a poeira comeca a baixar). Devolve a fase nova.
-  force(target, leadHours = D.DEMO_LEAD_HOURS) {
+  // `script` (so com 'warning'): tempestade roteirizada da historia, com numeros proprios
+  // { stormHours, peakTau, rampHours, dustPerHour }. Vale so para a proxima tempestade.
+  force(target, leadHours = D.DEMO_LEAD_HOURS, script = null) {
     this.started = true;
     const now = this.hours;
     if (target === 'warning') {
       if (this.phase === 'storm') return this.phase;
+      this.script = script;
       this.nextStormAt = now + leadHours;
       this._enter('warning', now, this.nextStormAt);
       this._emit('dust-warning');
@@ -156,6 +185,7 @@ export class DustWeather {
         this.nextStormAt = now + between(D.GAP_BETWEEN_STORMS_HOURS, this.rng);
       } else {
         this.peakTau = this.tau;
+        this.script = null;
         this._enter('clearing', now, now + D.CLEARING_HOURS);
         this._emit('dust-clearing');
       }
@@ -164,17 +194,33 @@ export class DustWeather {
     return this.phase;
   }
 
-  // Limpeza a mao: tira CLEAN_STEP de poeira. Devolve quanto saiu (0 = ja estava limpo).
+  // Tira ate `amount` de poeira de TODOS os paineis. Devolve quanto saiu, na media.
   cleanPanels(amount = D.CLEAN_STEP) {
-    const removed = Math.min(this.panelDust, amount);
-    this.panelDust -= removed;
+    let removed = 0;
+    for (let i = 0; i < this.panels.length; i++) removed += this.cleanPanel(i, amount);
+    return removed / this.panels.length;
+  }
+
+  // Limpeza a mao: tira CLEAN_STEP de poeira de UM painel. Devolve quanto saiu (0 = ja estava limpo).
+  cleanPanel(index, amount = D.CLEAN_STEP) {
+    const dust = this.panels[index];
+    if (dust === undefined) return 0;
+    const removed = Math.min(dust, amount);
+    this.panels[index] = dust - removed;
     return removed;
   }
 
-  // Rajada do sol (m/s, dado real do InSight): vento forte tira um pouco da poeira
+  // Redemoinho: limpa por inteiro os `count` paineis mais perto de `nearIndex` (o painel por onde
+  // ele cruza a fileira; pode ser fracionario). Devolve quantos paineis ele limpou.
+  sweepPanels(count, nearIndex = (this.panels.length - 1) / 2) {
+    const order = this.panels.map((_, i) => i).sort((a, b) => Math.abs(a - nearIndex) - Math.abs(b - nearIndex) || a - b);
+    const swept = order.slice(0, Math.max(0, count));
+    for (const i of swept) this.panels[i] = 0;
+    return swept.length;
+  }
+
+  // Rajada do sol (m/s, dado real do InSight): vento forte tira um pouco da poeira de todos
   applyWindGust(gustMs) {
-    const removed = Math.min(this.panelDust, windCleaning(gustMs));
-    this.panelDust -= removed;
-    return removed;
+    return this.cleanPanels(windCleaning(gustMs));
   }
 }

@@ -100,6 +100,22 @@ Limite honesto: os 7 sols são quase iguais (mesma estação), então o que vari
 
 **Escala de jogo** (`DUST_WEATHER_CONFIG` em `src/config/constants.ts`): geração solar cai em linha reta de 100 % (tau 0,5) até **20 %** no tau recorde (nunca zero de dia); o pico de cada tempestade é sorteado entre tau 7 e 10,8; aviso de 2 h de jogo, tempestade de 6 a 9 h, poeira baixando em 3 h; primeira tempestade 8 a 16 h depois do tutorial, depois uma a cada 24 a 36 h. Poeira nos painéis: +0,6 %/h normal e +5 %/h na tempestade; painel todo coberto ainda gera 30 %. Limpar a mão tira 25 % de poeira e custa **1 ponto de O2 do traje** (de 20) por vez. A borda do mapa não machuca mais: virou parede invisível no raio `DUST_STORM_FATAL_RADIUS` (100 blocos do centro da base).
 
+### Ato 2 da história: poeira no traje e vazamento de ar (issue #408)
+
+| Fato | Valor real | Fonte |
+|---|---|---|
+| Poeira gasta o traje espacial | Nas 6 missões Apollo que pousaram na Lua, a poeira lunar causou **abrasão** nos trajes (luvas, botas e tecido externo), além de entupir mecanismos e estragar vedações. É dado da **Lua**: não há traje usado em Marte para medir | [Ref] [NASA/TM-2005-213610, Gaier, "The Effects of Lunar Dust on EVA Systems During the Apollo Missions"](https://ntrs.nasa.gov/citations/20050160460) |
+| Detector de vazamento por ultrassom na Estação Espacial | Em **setembro de 2020** a tripulação da Expedição 63 usou um **detector de vazamento por ultrassom** para procurar um pequeno vazamento de ar, que foi isolado no módulo Zvezda. O vazamento não era perigo imediato para a tripulação | [Ref] [NASA Space Station blog, 29/09/2020, "Crew Continues Troubleshooting as Tests Isolate Small Leak"](https://blogs.nasa.gov/spacestation/2020/09/29/crew-continues-troubleshooting-as-tests-isolate-small-leak/) |
+
+**Regra de jogo** (`ACT2_CONFIG` em `src/config/constants.ts`), nada disto é dado real:
+
+- Tempestade de poeira roteirizada do ato 2: aviso de 0,5 h de jogo, tempestade de 1,5 h (as sorteadas duram 6 a 9 h), tau de pico 9, poeira nos painéis a +40 %/h (cerca de 60 % no total).
+- Poeira **por painel**: cada um dos 5 painéis tem a sua; a geração solar usa a média. A criança limpa um painel por vez (25 % por escovada, 1 ponto de O2 do traje). O passo termina com a tempestade acabada e todos os painéis abaixo de 10 %.
+- O traje desgasta **2 vezes** mais rápido lá fora durante uma tempestade de poeira (`STORM_SUIT_WEAR_MULTIPLIER`). O fator 2 é do jogo; o card cita o fato da Apollo e diz que a regra da tempestade é do jogo.
+- Janela rachada: o ar da base cai 0,15 %/s e para em 30 % (ninguém morre do vazamento roteirizado). O buraco aberto pelo jogador continua em 5 %/s.
+- A luneta acha a rachadura em 1,2 s por janela e, numa janela inteira, diz a quantos blocos o vazamento "soa". É a versão de jogo do detector por ultrassom, que na Estação é um aparelho próprio, não uma luneta.
+- O engenheiro leva 10 s reais para buscar o vidro novo.
+
 ## Constantes físicas e de missão [Ref]
 
 | Grandeza | Marte | Lua | Fonte |
@@ -249,7 +265,7 @@ Cada evento mostra um card com o fato abaixo, a data e a fonte (`src/mission/eve
 
 Correções em relação ao texto da issue: a foto da geada (PIA00530) é de **1977**, não de 1979, e a fonte **não** diz que era gelo de água. O texto do redemoinho ficou como hipótese, não como fato.
 
-Escala de jogo (não é dado real): a cratera do meteoro tem raio de 4 blocos (a real tem ~150 m); o tremor tira 35 % da saúde de uma estação da tripulação; o eclipse corta até 40 % da luz e da carga solar (Fobos é menor que o Sol visto de Marte, então o eclipse real também é parcial, mas o jogo não usa a fração real); o redemoinho limpa 30 % da poeira dos painéis (quando a poeira nos painéis existir, issue #103). As durações em segundos reais (`EVENTS_CONFIG.DURATION_SECONDS`) são o tempo da animação; só a do eclipse (40 s) segue o evento real.
+Escala de jogo (não é dado real): a cratera do meteoro tem raio de 4 blocos (a real tem ~150 m); o tremor tira 35 % da saúde de uma estação da tripulação; o eclipse corta até 40 % da luz e da carga solar (Fobos é menor que o Sol visto de Marte, então o eclipse real também é parcial, mas o jogo não usa a fração real); o redemoinho limpa por inteiro 2 dos 5 painéis do campo solar, os mais perto do caminho dele (`EVENTS_CONFIG.DUST_DEVIL_PANELS_CLEANED`, ato 2, issue #408). As durações em segundos reais (`EVENTS_CONFIG.DURATION_SECONDS`) são o tempo da animação; só a do eclipse (40 s) segue o evento real.
 
 ## Amostras do mapa (issue #270)
 

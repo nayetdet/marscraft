@@ -65,6 +65,60 @@ describe('dust storm weather (issue #103)', () => {
     expect(storm.panelDust).toBeGreaterThan(calm.panelDust);
   });
 
+  it('keeps the dust of each panel: the average is what the solar field loses (act 2)', () => {
+    const w = new DustWeather({ rng: fixedRng });
+    expect(w.panels).toHaveLength(5);
+    expect(w.panels.every((dust) => dust === D.START_PANEL_DUST)).toBe(true);
+    w.panels = [1, 0, 0, 0, 0];
+    expect(w.panelDust).toBeCloseTo(0.2);
+    expect(w.solarFactor).toBeCloseTo(panelDustFactor(0.2));
+    // Atribuir a media (admin e testes) vale para todos
+    w.panelDust = 0.9;
+    expect(w.panels).toEqual([0.9, 0.9, 0.9, 0.9, 0.9]);
+  });
+
+  it('brushes one panel at a time and leaves the others alone', () => {
+    const w = new DustWeather({ rng: fixedRng });
+    w.panelDust = 0.6;
+    expect(w.cleanPanel(2)).toBeCloseTo(D.CLEAN_STEP);
+    expect(w.panels[2]).toBeCloseTo(0.6 - D.CLEAN_STEP);
+    expect(w.panels[0]).toBe(0.6);
+    expect(w.panelsBelow(0.1)).toBe(false);
+    while (w.cleanPanel(2) > 0);
+    expect(w.panels[2]).toBe(0);
+    expect(w.cleanPanel(2)).toBe(0);
+    expect(w.cleanPanel(99)).toBe(0);
+    for (const i of [0, 1, 3, 4]) while (w.cleanPanel(i) > 0);
+    expect(w.panelsBelow(0.1)).toBe(true);
+  });
+
+  it('the dust devil sweeps 2 of the 5 panels clean: the ones next to where it crosses', () => {
+    const w = new DustWeather({ rng: fixedRng });
+    w.panelDust = 0.8;
+    expect(w.sweepPanels(2, 3.2)).toBe(2);
+    expect(w.panels).toEqual([0.8, 0.8, 0.8, 0, 0]);
+    w.panelDust = 0.8;
+    expect(w.sweepPanels(2)).toBe(2); // sem lugar: o meio da fileira
+    expect(w.panels).toEqual([0.8, 0, 0, 0.8, 0.8]);
+    expect(w.panelDust).toBeCloseTo(0.48);
+  });
+
+  it('runs a scripted storm (act 2): short warning, short storm, dirtier panels, then the usual clearing', () => {
+    const w = new DustWeather({ rng: fixedRng });
+    w.panelDust = 0.1;
+    expect(w.force('warning', 0.5, { stormHours: 1.5, rampHours: 0.3, peakTau: 9, dustPerHour: 0.4 })).toBe('warning');
+    run(w, 0, 0.6);
+    expect(w.phase).toBe('storm');
+    expect(w.hoursLeftInPhase).toBeCloseTo(1.4);
+    run(w, 0.6, 1.9);
+    expect(w.tau).toBeCloseTo(9);
+    expect(w.panels.every((dust) => dust > 0.6)).toBe(true);
+    run(w, 1.9, 2.1);
+    expect(w.phase).toBe('clearing');
+    // A proxima tempestade volta a ser sorteada
+    expect(w.script).toBeNull();
+  });
+
   it('cleaning removes a fixed amount of dust; strong real gusts clean a bit, calm air does not', () => {
     const w = new DustWeather({ rng: fixedRng });
     w.panelDust = 0.6;

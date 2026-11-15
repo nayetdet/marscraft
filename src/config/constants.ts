@@ -1084,8 +1084,9 @@ export const EVENTS_CONFIG = Object.freeze({
   // Escala de jogo: Fobos e menor que o Sol visto de Marte, entao a queda real e parcial.
   ECLIPSE_SUNLIGHT_DROP: 0.4,
 
-  // Redemoinho: limpa esta fracao da poeira dos paineis se passar pelo campo solar (#103)
-  DUST_DEVIL_PANEL_CLEAN: 0.3,
+  // Redemoinho: limpa por inteiro este tanto de paineis (dos 5) se passar pelo campo solar, os
+  // mais perto do caminho dele (#103, #408). Os outros a crianca limpa a mao.
+  DUST_DEVIL_PANELS_CLEANED: 2,
   DUST_DEVIL_SPEED: 2.6, // blocos/s
   DUST_DEVIL_HIT_RADIUS: 3, // perto disso o jogador fica no meio da poeira
   DUST_DEVIL_BLIND_SECONDS: 3,
@@ -1097,6 +1098,39 @@ export const EVENTS_CONFIG = Object.freeze({
 // Ato 2 (issue #408): tempestade de poeira, paineis, vazamento, luneta e diario.
 // Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
 export const ACT2_CONFIG = {
+  // Tempestade de poeira roteirizada: comeca com o passo CLEAN THE PANELS. Aviso curto (0,5 h de
+  // jogo = 25 s reais) e tempestade bem mais curta que as sorteadas (6 a 9 h), para ninguem
+  // esperar 5 minutos; em troca ela suja os paineis mais rapido (cerca de 60 % no total).
+  STORY_DUST_STORM_LEAD_HOURS: 0.5,
+  STORY_DUST_STORM_HOURS: 1.5, // 75 s reais
+  STORY_DUST_STORM_RAMP_HOURS: 0.3,
+  STORY_DUST_STORM_PEAK_TAU: 9,
+  STORY_DUST_STORM_DUST_PER_HOUR: 0.4,
+  // Poeira minima em cada painel quando a tempestade roteirizada chega (para sempre haver o que limpar)
+  STORY_DUST_STORM_START_DUST: 0.3,
+  // O redemoinho passa pelo campo solar nesta fracao da tempestade
+  STORY_DUST_DEVIL_AT: 0.35,
+  // O passo CLEAN THE PANELS termina com todos os paineis abaixo disto
+  PANELS_CLEAN_BELOW: 0.1,
+  // Limpar la fora durante uma tempestade de poeira gasta o traje este tanto mais rapido.
+  // Regra de jogo. O fato real por tras (poeira lunar gastou os trajes da Apollo) esta em
+  // docs/data/numeros-reais.md.
+  STORM_SUIT_WEAR_MULTIPLIER: 2,
+  // Vazamento roteirizado: a janela rachada perde ar bem mais devagar que um buraco aberto
+  // (BASE_OXYGEN_LEAK_RATE = 5 %/s) e o ar nunca cai abaixo do piso: ninguem morre dele.
+  STORY_LEAK_RATE: 0.15, // % do ar da base por segundo
+  STORY_LEAK_FLOOR: 30, // % do ar da base
+  // Janelas do habitat que podem rachar (bloco de vidro no meio da janela; uma e sorteada pela semente)
+  STORY_LEAK_WINDOWS: [
+    { x: -7, y: 11, z: -7 }, // parede oeste
+    { x: 13, y: 11, z: 3 }, // parede leste
+    { x: 9, y: 11, z: 6 }, // parede sul
+  ],
+  WINDOW_SCAN_SECONDS: 1.2, // tempo de escanear uma janela com a luneta
+  WINDOW_PANE_MAX_BLOCKS: 40, // tamanho maximo de uma janela (blocos de vidro vizinhos)
+  // O engenheiro leva este tempo (segundos reais) para buscar o vidro novo
+  STORY_REPAIR_FETCH_SECONDS: 10,
+  REPAIR_REACH: 4.5, // blocos: distancia maxima para trocar a janela rachada
 };
 
 // Ato 3 (issue #409): abrigo na tempestade solar, planta, racao e academia.
