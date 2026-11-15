@@ -495,7 +495,11 @@ export class InputController {
       if (!this.isTouchMode) requestRawPointerLock(this.domElement);
     });
 
-    resetBtn.addEventListener('click', () => window.location.reload());
+    resetBtn.addEventListener('click', () => {
+      if (!window.confirm('Reset the world? This will erase your saved game.')) return;
+      try { window.localStorage.removeItem('marscraft-save-v1'); } catch { /* Ignore unavailable storage. */ }
+      window.location.reload();
+    });
 
     if (respawnBtn) {
       respawnBtn.addEventListener('click', () => {

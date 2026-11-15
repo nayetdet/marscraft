@@ -171,6 +171,12 @@ export class GameEngine {
 
     this.player = new PlayerPhysics(this.world, colliders);
     this.survival = new SurvivalSystem();
+    try {
+      const saved = JSON.parse(window.localStorage.getItem('marscraft-save-v1') || 'null');
+      if (saved?.survival) Object.assign(this.survival, saved.survival);
+      if (saved?.player) this.player.pos.set(saved.player.x, saved.player.y, saved.player.z);
+    } catch { /* Ignore unavailable or malformed saves. */ }
+    this._saveTimer = 0;
     this._wasSuitEquipped = this.survival.suitEquipped;
     // As tempestades solares so comecam no ato 2 da historia (StoryDirector)
     this.mission = new MissionSystem({ cmes: this.spaceWeather.cmes, seps: this.spaceWeather.seps, startHours: this._skyHours(), stormsStarted: false });
@@ -2023,6 +2029,15 @@ export class GameEngine {
       const frameMs = now - this.lastTime;
       const dt = Math.min(frameMs / 1000, 0.05);
       this.lastTime = now;
+      this._saveTimer += dt;
+      if (this._saveTimer >= 5) {
+        this._saveTimer = 0;
+        try {
+          const survival = {};
+          for (const key of ['health','oxygen','suitEquipped','suitThermal','suitOxygen','suitScrubber','suitDust','suitIntegrity','baseOxygen','baseBreached','water','food','baseWater','maxBaseWater','graywater','inventorySlots','isDead']) survival[key] = this.survival[key];
+          window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ world: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival }));
+        } catch { /* Storage may be full or disabled. */ }
+      }
 
       // Primeiro Play: a historia abre com a animacao de chegada
       if (!this._arrivalPlayed && this.input.isLocked && !this.input.isPortraitRequired) this._playArrival();
