@@ -189,6 +189,41 @@ ICONS.check = [
   '........',
 ];
 
+// Medalha do certificado de cadete (issue #88) e coracao da saude
+ICONS.medal = [
+  '.XX..XX.',
+  '..X..X..',
+  '...XX...',
+  '..XXXX..',
+  '.XX..XX.',
+  '.X.XX.X.',
+  '.XX..XX.',
+  '..XXXX..',
+];
+
+ICONS.heart = [
+  '........',
+  '.XX..XX.',
+  'XXXXXXXX',
+  'XXXXXXXX',
+  '.XXXXXX.',
+  '..XXXX..',
+  '...XX...',
+  '........',
+];
+
+// Prato de comida (boletim do cadete, issue #90)
+ICONS.food = [
+  '...XX...',
+  '..X..X..',
+  '...XX...',
+  '........',
+  'XXXXXXXX',
+  '.X....X.',
+  '..XXXX..',
+  '........',
+];
+
 const cache = new Map();
 
 export function pixelIconSvg(name) {

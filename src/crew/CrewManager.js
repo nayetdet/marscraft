@@ -132,8 +132,10 @@ export class CrewManager {
       if (member.state !== 'walking') {
         if (!this.ambient) continue;
         member.ambientPause = (member.ambientPause ?? 0) + dtSeconds;
-        if (member.ambientPause >= 4) {
+        const pauseTarget = member.ambientPauseTarget ?? 4;
+        if (member.ambientPause >= pauseTarget) {
           member.ambientPause = 0;
+          member.ambientPauseTarget = 2.4 + Math.random() * 3.2;
           const choices = member.ambientNodes.filter((destination) => destination !== member.node);
           const destination = choices[Math.floor(Math.random() * choices.length)];
           member.route = findRoute(member.node, destination);
@@ -173,7 +175,8 @@ export class CrewManager {
       const lacking = [];
 
       const energyNeed = CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR * this.oxygenCostMultiplier() * h * (base.demandFactor ?? 1);
-      if (base.battery.drain(energyNeed) + 1e-9 < energyNeed) lacking.push('air');
+      // Ar da tripulacao e suporte de vida: o RTG paga antes da bateria (issue #85)
+      if (base.battery.drainLifeSupport(energyNeed) + 1e-9 < energyNeed) lacking.push('air');
 
       const waterNeed = CREW_CONFIG.WATER_L_PER_HOUR * h * (base.demandFactor ?? 1);
       const water = Math.min(base.water, waterNeed);

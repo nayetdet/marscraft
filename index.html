@@ -42,6 +42,10 @@
 
   <!-- HUD Estilo Minecraft Survival -->
   <div id="hud" class="hud">
+    <div id="system-notice" class="system-notice" role="status" aria-live="polite">
+      <span id="system-notice-label" class="system-notice-label"></span>
+      <span id="system-notice-message" class="system-notice-message"></span>
+    </div>
     <div id="damage-overlay" class="damage-overlay hidden" aria-hidden="true"></div>
     <div id="breach-overlay" class="breach-overlay hidden" aria-hidden="true"></div>
     <div id="dust-storm-warning" class="dust-storm-warning hidden" aria-live="polite">
@@ -115,7 +119,7 @@
       <section class="base-panel" aria-label="Base status">
         <div id="res-power" class="res-row" data-icon="bolt">
           <span class="res-icon"></span>
-          <span class="res-name">POWER</span>
+          <span class="res-name">POWER <small class="res-rate" title="Battery change per game hour"></small></span>
           <span class="res-meter"><i class="res-fill"></i></span>
           <b class="res-value">80%</b>
           <span class="res-trend" title="Sun charging or night"></span>
@@ -248,6 +252,7 @@
 
     <!-- Area Inferior: Mensagem de Item + Barras Survival + Hotbar 9 Slots -->
     <div class="mc-bottom-area">
+      <div id="caption-queue" class="mc-caption-queue" aria-live="polite"></div>
       <div id="toast" class="mc-toast"></div>
       <div id="selected-block-name" class="mc-item-name">Martian Regolith</div>
 
@@ -323,6 +328,7 @@
             <button class="mc-btn secondary" data-demo="battery">Drain the battery to 10%</button>
             <button class="mc-btn secondary" data-demo="night">Jump to night</button>
             <button class="mc-btn secondary" data-demo="noon">Jump to noon</button>
+            <button class="mc-btn secondary" data-demo="skip-training">Skip cadet training</button>
           </div>
           <p id="demo-feedback" class="info-note demo-feedback" role="status"></p>
           <button id="demo-back-btn" class="mc-btn secondary">Back</button>
@@ -492,7 +498,11 @@
     <div class="mc-menu">
       <h1 class="mc-death-title">Liftoff!</h1>
       <p class="mc-death-sub victory-sub">The MAV is on its way to orbit. Mission complete!</p>
+      <!-- Boletim do cadete (issue #90): 4 notas e o perfil -->
+      <section id="victory-report" class="report-card" aria-label="Cadet training report"></section>
+      <details class="victory-details"><summary>Mission numbers</summary>
       <div id="victory-summary" class="mc-panel victory-summary"></div>
+      </details>
       <p id="victory-sources" class="victory-sources"></p>
       <button id="play-again-btn" class="mc-btn primary">Play again</button>
     </div>
@@ -513,11 +523,24 @@
     <button id="story-card-ok" class="mc-btn story-card-ok" type="button">OK <span class="story-key">[Enter]</span></button>
   </aside>
 
+  <!-- Selo de certificado do treino de cadete (issue #88) -->
+  <div id="cert-badge" class="cert-badge hidden" role="status" aria-live="polite">
+    <span id="cert-badge-icon" class="cert-badge-icon" aria-hidden="true"></span>
+    <div class="cert-badge-body">
+      <small>CERTIFICATE UNLOCKED</small>
+      <strong id="cert-badge-name"></strong>
+      <span id="cert-badge-line"></span>
+      <i id="cert-badge-mentor"></i>
+      <em id="cert-badge-source"></em>
+    </div>
+  </div>
+
   <!-- Fim alternativo: a janela de lancamento fechou antes da decolagem -->
   <div id="window-overlay" class="mc-overlay victory-overlay hidden">
     <div class="mc-menu">
       <h1 id="window-title" class="mc-death-title"></h1>
       <p id="window-text" class="mc-death-sub victory-sub"></p>
+      <section id="window-report" class="report-card" aria-label="Cadet training report"></section>
       <p id="window-source" class="victory-sources"></p>
       <button id="window-play-again-btn" class="mc-btn primary">Play again</button>
     </div>

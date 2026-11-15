@@ -1,4 +1,4 @@
-import { RADIATION_CONFIG } from '../config/constants.js';
+import { RADIATION_CONFIG, SURVIVAL_CONFIG } from '../config/constants.js';
 import { formatDateDMY, formatHours } from '../mission/missionText.js';
 
 // Estado da missao -> o que o painel do canto superior direito mostra.
@@ -8,6 +8,7 @@ import { formatDateDMY, formatHours } from '../mission/missionText.js';
 // tambem e perigo (vermelho), porque perigo nao pode ficar escondido atras de outro.
 const MAX_ALERTS = 2;
 const TONE_RANK = { danger: 0, warn: 1, ok: 2 };
+const ALERT_PRIORITY = { breach: 0, oxygen: 0, storm: 1, power: 2, air: 3, radiation: 4, water: 4, bubble: 5, rocket: 6, radio: 7 };
 const RADIATION = {
   ok: { level: 1, word: 'LOW' },
   warn: { level: 2, word: 'HIGH' },
@@ -65,8 +66,18 @@ export function missionStatus(mission, fetchedIso, base = {}) {
 
   const { phase, storm, hoursUntil, hoursLeft } = mission.storm;
   const alerts = [];
+  if (Number.isFinite(base.suitOxygen) && base.suitOxygen <= SURVIVAL_CONFIG.DANGER_THRESHOLD) {
+    const target = base.oxygenNeedsPower ? 'powerroom' : base.insideHabitat ? 'lifeSupport' : 'airlock';
+    alerts.push({
+      id: 'oxygen', icon: 'air', tone: 'danger', title: 'SUIT OXYGEN CRITICAL',
+      text: base.oxygenNeedsPower
+        ? 'The base battery is empty. Press F at Power & Heat control.'
+        : base.insideHabitat ? 'Stay inside the habitat while your suit refills.' : 'Return through the airlock now.',
+      target,
+    });
+  }
   if (brokenWindows) {
-    alerts.push({ id: 'breach', icon: 'air', tone: 'danger', title: 'BASE WINDOW BROKEN!', text: 'Oxygen is leaking! Seal every broken window with a block.' });
+    alerts.push({ id: 'breach', icon: 'air', tone: 'danger', title: 'BASE WINDOW BROKEN!', text: 'Oxygen is leaking! Follow the marker and seal the broken window with a block.', target: 'brokenWindow' });
   }
   if (phase === 'active') {
     alerts.push({
@@ -76,7 +87,8 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       title: `SOLAR STORM! ${formatHours(hoursLeft)} left`,
       text: mission.insideShelter
         ? `In the storm shelter: ${Math.round(mission.shelterWaterL ?? 0)} L of water in the wall.`
-        : shielded ? 'The shield is protecting you. Stay in the bubble.' : 'Hide in the storm shelter or turn on the shield with the Shield Remote.',
+        : shielded ? 'The shield is protecting you. Stay in the bubble.' : 'Enter the storm shelter and press F at the water wall to add shielding.',
+      target: mission.insideShelter || shielded ? null : 'shelter',
       fill: clamp01(hoursLeft / Math.max(0.01, storm.end - storm.arrival)),
       source: stormSourceShort(storm, fetchedIso),
     });
@@ -87,6 +99,7 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       tone: 'warn',
       title: `Solar storm in ${formatHours(hoursUntil)}`,
       text: 'Fast particles from the Sun. Get ready to hide in the storm shelter!',
+      target: 'shelter',
       fill: clamp01(hoursUntil / Math.max(0.01, storm.arrival - storm.warningStart)),
       source: stormSourceShort(storm, fetchedIso),
     });
@@ -95,7 +108,7 @@ export function missionStatus(mission, fetchedIso, base = {}) {
     alerts.push({ id: 'radio', icon: 'sun', tone: 'warn', title: 'Radio silent', text: 'The Sun is between Mars and Earth. Decide on your own!' });
   }
   if (mission.shieldOn && !mission.insideShield) {
-    alerts.push({ id: 'bubble', icon: 'shield', tone: 'warn', title: 'Outside the shield!', text: 'Walk back into the blue bubble.' });
+    alerts.push({ id: 'bubble', icon: 'shield', tone: 'warn', title: 'Outside the shield!', text: 'Return through the airlock and walk into the blue shield bubble.', target: 'airlock' });
   }
   if (powerTone === 'danger') {
     alerts.push({
@@ -103,18 +116,20 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       icon: 'bolt',
       tone: 'danger',
       title: 'Battery almost empty',
-      text: charging ? 'The Sun is charging it again.' : 'Night: no sun. Save power until morning.',
+      text: charging ? 'Press F at Power & Heat control and switch off non-essential loads.' : 'Night: no sun. Press F at Power & Heat control to save power until morning.',
+      target: 'powerroom',
     });
   }
   if (contaminated) {
-    alerts.push({ id: 'air', icon: 'air', tone: 'danger', title: 'Dust in the base!', text: 'Mars dust came in on your suit. Clean it at life support.' });
+    alerts.push({ id: 'air', icon: 'air', tone: 'danger', title: 'Dust in the base!', text: 'Press F at life support to clean your suit and the habitat.', target: 'lifeSupport' });
   } else if (airTone !== 'ok') {
     alerts.push({
       id: 'air',
       icon: 'air',
       tone: airTone,
       title: airTone === 'danger' ? 'Bad air in the base!' : 'Base air is getting bad',
-      text: 'CO2 is the gas we breathe out. Change the filter at life support.',
+      text: 'CO2 is the gas we breathe out. Press F at life support to replace the air filter.',
+      target: 'lifeSupport',
     });
   }
   if (waterTone === 'danger' || greenhouseDry) {
@@ -124,15 +139,16 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       tone: 'danger',
       title: greenhouseDry ? 'No water: the plants stopped growing' : 'Base water almost empty',
       text: (base.graywater ?? 0) >= GRAYWATER_WORTH_RECYCLING
-        ? 'Used water is waiting. Send a crew member to the water recycler to clean it.'
-        : 'Use the rover to bring ice. Ice melts into water.',
+        ? 'Go to the water recycler and press F to ask a crew member to clean the used water.'
+        : 'Drive the rover to the ice crater, use DRILL, then bring the ice to the base.',
+      target: (base.graywater ?? 0) >= GRAYWATER_WORTH_RECYCLING ? 'recycler' : 'ice',
     });
   }
   if (radTone === 'danger' && !shielded && phase !== 'active') {
-    alerts.push({ id: 'radiation', icon: 'radiation', tone: 'danger', title: 'Radiation very high', text: 'Go inside the base.' });
+    alerts.push({ id: 'radiation', icon: 'radiation', tone: 'danger', title: 'Radiation very high', text: 'Go through the airlock to the storm shelter. Press F at the water wall to add shielding.', target: 'shelter' });
   }
   if (progress.ready) {
-    alerts.push({ id: 'rocket', icon: 'rocket', tone: 'ok', title: 'Rocket ready!', text: 'Go to the MAV and press IGNITE.' });
+    alerts.push({ id: 'rocket', icon: 'rocket', tone: 'ok', title: 'Rocket ready!', text: 'Go to the MAV and press IGNITE.', target: 'mav' });
   }
 
   return {
@@ -145,7 +161,7 @@ export function missionStatus(mission, fetchedIso, base = {}) {
     shieldOn: mission.shieldOn,
     // O que machuca agora (vermelho) vem antes dos avisos (amarelo); empate mantem a ordem acima
     alerts: alerts
-      .sort((a, b) => TONE_RANK[a.tone] - TONE_RANK[b.tone])
+      .sort((a, b) => TONE_RANK[a.tone] - TONE_RANK[b.tone] || ALERT_PRIORITY[a.id] - ALERT_PRIORITY[b.id])
       .filter((alert, i) => i === 0 || alert.tone === 'danger')
       .slice(0, MAX_ALERTS),
   };

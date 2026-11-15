@@ -70,8 +70,8 @@ export const SURVIVAL_CONFIG = {
   // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
   HEAL_MIN_OXYGEN: 5,
   // Tempestade de poeira na borda da area jogavel, medida a partir de TERRAIN_CONFIG.BASE_CENTER
-  DUST_STORM_START_RADIUS: 52,
-  DUST_STORM_FATAL_RADIUS: 82,
+  DUST_STORM_START_RADIUS: 70,
+  DUST_STORM_FATAL_RADIUS: 100,
   DUST_STORM_DAMAGE_RATE: 20,
   // Intensidade (0..1) a partir da qual a tempestade machuca; antes disso e so aviso
   DUST_STORM_DAMAGE_START: 0.55,
@@ -170,6 +170,17 @@ export const ENERGY_CONFIG = {
   SHIELD_DRAIN_PER_HOUR: 12.5, // blindagem contra radiacao ligada
   ISRU_DRAIN_PER_HOUR: 25, // fabrica de combustivel ligada
   DATA_UPLOAD_COST: 35, // enviar o pacote de dados cientificos para a Terra
+  // Gerador nuclear (issue #85). [Ref] O MMRTG do Curiosity e do Perseverance gera ~110 W de
+  // eletricidade de dia e de noite, com calor do plutonio (NASA). Na base ele so paga o suporte
+  // de vida minimo (O2 do jogador e da tripulacao, filtro de CO2): fabrica, blindagem, luz da
+  // estufa e aquecedor continuam na bateria. Potencia em escala de jogo (% de bateria por hora).
+  RTG_LIFE_SUPPORT_PER_HOUR: 2,
+  // Quanto do RTG fica guardado para o suporte de vida, em horas de producao (sobra e perdida)
+  RTG_BUFFER_HOURS: 0.25,
+  // Hora do aviso de por do sol (o Sol se poe as 18h): hora de conferir a bateria
+  SUNSET_WARNING_HOUR: 16.5,
+  // Abaixo disso (%) a bateria esta vazia: maquinas em espera, so o RTG mantem o ar
+  STANDBY_BELOW: 1,
 };
 
 export const RADIATION_CONFIG = {
@@ -256,6 +267,7 @@ export const PACING_CONFIG = {
 // Issue #81: ar, agua e comida cortados em 40-50 % (eram 1,5 / 0,5 / 0,3), mantendo a proporcao.
 // O O2 do tripulante e pago em energia, como o O2 do jogador no habitat (reciclagem + MOXIE).
 export const CREW_CONFIG = {
+  COLLISION_DISTANCE: 0.9,
   MAX_CREW: 8,
   DEFAULT_CREW: 2,
   NAMES: ['Ana', 'Leo', 'Maya', 'Sam', 'Noor', 'Kai', 'Iris', 'Ravi'],

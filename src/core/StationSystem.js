@@ -86,7 +86,8 @@ export class StationSystem {
     if (inside && !this.wasInside && this.dirtySuit) this.contaminated = true;
     this.wasInside = inside;
     this.filter = Math.max(0, this.filter - C.FILTER_DECAY * dt);
-    this.co2 = Math.max(0, Math.min(100, this.co2 + (this.filter <= 0 || this.mission.energy <= 0 ? C.CO2_RISE : -C.CO2_CLEAR) * dt));
+    // O lavador de CO2 e suporte de vida: com a bateria vazia o RTG ainda o mantem ligado (issue #85)
+    this.co2 = Math.max(0, Math.min(100, this.co2 + (this.filter <= 0 ? C.CO2_RISE : -C.CO2_CLEAR) * dt));
     this.freshFood = Math.max(0, this.freshFood - dt);
     this.boneDensity = Math.max(0, this.boneDensity - C.FITNESS_DECAY * 1.15 * dt);
     this.muscleStrength = Math.max(0, this.muscleStrength - C.FITNESS_DECAY * dt);
@@ -94,13 +95,9 @@ export class StationSystem {
     if (this.mission.greenhousePowered && !this.contaminated) this.growCrops(dt, survival);
     else this.cropsThirsty = false; // parado por luz ou poeira, nao por sede
     if (inside && (this.contaminated || this.co2 >= 80)) {
-      const powerFailure = !this.contaminated && this.mission.energy <= 0;
+      // Com o RTG (issue #85) o CO2 so sobe com o filtro cheio, nunca por falta de bateria
       if (typeof survival?.takeDamage === 'function') {
-        survival.takeDamage(
-          C.DUST_DAMAGE * dt,
-          powerFailure ? 'POWER_FAILURE' : 'BIOLOGICAL_COLLAPSE',
-          powerFailure ? 'life-support-power' : this.contaminated ? 'contaminated-air' : 'bad-base-air',
-        );
+        survival.takeDamage(C.DUST_DAMAGE * dt, 'BIOLOGICAL_COLLAPSE', this.contaminated ? 'contaminated-air' : 'bad-base-air');
       } else if (survival) {
         survival.health = Math.max(0, survival.health - C.DUST_DAMAGE * dt);
       }
