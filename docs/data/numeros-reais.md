@@ -159,3 +159,11 @@ Simplificação a explicar: a "blindagem ligada" (tecla R) é um escudo ativo qu
 ### Crescimento de plantas na estufa
 
 No experimento VEG-04, plantas para salada foram colhidas depois de 28 dias na Estação Espacial Internacional ([NASA, 10/07/2019](https://www.nasa.gov/image-article/growing-veggies-space/)). No jogo, alface, batata e soja levam 5, 7 e 9 segundos, respectivamente: são tempos acelerados para jogar, não medições de cultivo em Marte. A referência de 28 dias se aplica às plantas para salada do experimento, não à batata ou à soja.
+
+## Energia noturna e RTG (issue #85)
+
+| Uso no jogo | Número | Fonte |
+|---|---|---|
+| Gerador nuclear da base (`ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR`) | **2 % de bateria por hora de jogo**, de dia e de noite, só para o suporte de vida (O2 do jogador e da tripulação, filtro de CO2). O que sobra é perdido: fábrica, blindagem, luz da estufa e aquecedor continuam na bateria, para manter as escolhas de energia | Inspirado no **MMRTG** do Curiosity e do Perseverance: ~**110 W** elétricos no lançamento, gerados pelo calor do plutônio-238, sem depender do Sol ([NASA: MMRTG](https://science.nasa.gov/mission/mars-2020-perseverance/rover-components/#mmrtg)). A potência no jogo é escala de jogo |
+| Bateria vazia (`STANDBY_BELOW`, 1 %) | máquinas em espera; o astronauta não morre dentro da base por falta de energia | regra do jogo |
+| Aviso de pôr do sol (`SUNSET_WARNING_HOUR`) | 16h30 no relógio do jogo (o Sol se põe às 18h) | regra do jogo |

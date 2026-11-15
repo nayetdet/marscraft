@@ -1652,3 +1652,11 @@
   font: bold 10px 'Monocraft', monospace;
   text-shadow: 1px 1px #000;
 }
+
+/* Fluxo liquido da bateria ao lado do nome POWER (issue #85) */
+.res-rate { font-size: 10px; color: #cfcfcf; }
+.res-rate.up { color: #7cfc00; }
+.res-rate.down { color: #ff8a8a; }
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  .res-rate { font-size: 8px; }
+}

@@ -1,7 +1,7 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { GREENHOUSE_CENTER, PLOT_PLANT_CELLS } from '../world/greenhouseLayout.js';
 import { greenhouseMapSvg, plotMapLabel, plotStatus } from './greenhouseMap.js';
-import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
+import { COMMS_CONFIG, CROP_CONFIG, ENERGY_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
 import { formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
@@ -839,13 +839,16 @@ export class StationPanel {
     const used = loads.reduce((sum, [, rate, on]) => sum + (on ? rate : 0), 0);
     return `BATTERY: ${Math.round(mission.battery.percent)}%\n` +
       `SOLAR PANELS NOW: +${mission.chargeRate.toFixed(1)}%/h ${utility.isNight ? '(night: no sun)' : ''}\n` +
+      `NUCLEAR RTG: +${ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR}%/h, day and night, only for life support (air and CO2 filter)\n` +
+      `${mission.standby ? 'BATTERY EMPTY: STANDBY. Factory, lights, heater and shield stopped. The RTG keeps the air on until the Sun is back.\n' : ''}` +
       `USING ABOUT: -${used.toFixed(1)}%/h (plus your own oxygen)\n` +
       `${utility.demandFactor < 1 ? `EASY START: the base uses ${Math.round(utility.demandFactor * 100)}% of its normal power for now. It will need more each sol.\n` : ''}\n` +
       `WHERE THE POWER GOES:\n${lines.join('\n')}\n\n` +
       `HEATER: ${utility.heaterOn ? 'ON' : 'OFF'}${utility.cold ? '   FREEZING! Pipes and plants stopped.' : ''}\n\n` +
       'Mars nights get down to about -98 C (NASA InSight). At night the panels make nothing and the heater needs more power. ' +
       'Turning systems off saves power, but each one stops doing its job.\n' +
-      'Real case: the InSight lander shut down in 2022 when dust covered its solar panels.';
+      'Real case: the InSight lander shut down in 2022 when dust covered its solar panels. ' +
+      'Curiosity and Perseverance use an RTG instead: a nuclear power source that makes about 110 W day and night (NASA).';
   }
 
   _powerButtons() {

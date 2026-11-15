@@ -1,4 +1,5 @@
 import { MAV_CONFIG } from '../config/constants.js';
+import { smoothNetRate } from '../mission/energy.js';
 import { missionStatus } from './missionCards.js';
 import { pixelIconSvg } from './pixelIcons.js';
 
@@ -85,6 +86,7 @@ export class MissionHud {
       trend: root.querySelector('.res-trend'),
       key: root.querySelector('.res-key'),
       delta: root.querySelector('.res-delta'),
+      rate: root.querySelector('.res-rate'),
     };
     setIcon(row.icon, root.dataset.icon);
     return row;
@@ -138,6 +140,7 @@ export class MissionHud {
     setIcon(power.trend, view.power.trend);
     setClass(power.trend, `res-trend ${view.power.trend}`);
     power.trend.title = view.power.trend === 'up' ? 'The Sun is charging the battery' : 'Night: no sun, the battery goes down';
+    this._showNetRate(power, mission);
 
     setClass(water.root, `res-row ${view.water.tone}`);
     setText(water.value, `${view.water.liters} L`);
@@ -175,6 +178,23 @@ export class MissionHud {
       if (data.fill !== undefined) setWidth(alert.timerFill, data.fill * 100);
       setText(alert.source, data.source ?? '');
     });
+  }
+
+  // Fluxo liquido da bateria por hora de jogo (issue #85): "+4/h" carregando, "-3/h" gastando
+  _showNetRate(row, mission) {
+    if (!row.rate) return;
+    const hours = mission.lastHours;
+    const pct = mission.battery.percent;
+    if (this._rateHours !== undefined) {
+      this._netRate = smoothNetRate(this._netRate ?? null, pct - this._ratePct, hours - this._rateHours);
+    }
+    this._rateHours = hours;
+    this._ratePct = pct;
+    if (this._netRate === undefined || this._netRate === null) return;
+    // Bateria cheia ou vazia: o fluxo real e zero, nao importa o que sobra ou falta
+    const rate = Math.round(this._netRate);
+    const text = `${rate > 0 ? '+' : ''}${rate}/h`;
+    setText(row.rate, text, `res-rate ${rate > 0 ? 'up' : rate < 0 ? 'down' : ''}`);
   }
 
   // Saltos de 1 L ou mais (gelo descarregado, agua bebida) aparecem como "+12 L" / "-2 L"

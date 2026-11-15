@@ -69,6 +69,8 @@ export function stormEventMessage(event, fetchedIso) {
       return 'A solar storm passed while the game was paused. It does not count for the MAV.';
     case 'shield-off-no-energy':
       return 'The radiation shield turned off: the battery is empty.';
+    case 'sunset-soon':
+      return `Sunset soon: the solar panels stop at 18:00. Battery at ${Math.round(event.batteryPct ?? 0)}%. Charge it before night, and turn off the fuel factory if it is low.`;
     case 'propellant-full':
       return 'The MAV fuel tank is full!';
     default:
