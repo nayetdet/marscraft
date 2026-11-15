@@ -201,19 +201,48 @@ export class AudioManager {
     return this._synthCtx;
   }
 
-  _playSuitTone(ctx, freq, startOffset, duration, type = 'triangle', peak = 0.06) {
+  _playSuitTone(ctx, freq, startOffset, duration, type = 'triangle', peak = 0.06, endFreq = null) {
     peak *= this.masterVolume;
     const t0 = ctx.currentTime + startOffset;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = type;
     osc.frequency.setValueAtTime(freq, t0);
+    if (endFreq) osc.frequency.exponentialRampToValueAtTime(endFreq, t0 + duration);
     gain.gain.setValueAtTime(0.0001, t0);
     gain.gain.linearRampToValueAtTime(peak, t0 + 0.015);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
     osc.connect(gain).connect(ctx.destination);
     osc.start(t0);
     osc.stop(t0 + duration + 0.02);
+  }
+
+  playGymRep(mode) {
+    if (this.masterVolume <= 0) return;
+    const ctx = this._getSynthContext();
+    if (!ctx) return;
+
+    if (mode === 'bike') {
+      this._playSuitTone(
+        ctx,
+        AUDIO_MIX_CONFIG.GYM_BIKE_START_HZ,
+        0,
+        AUDIO_MIX_CONFIG.GYM_BIKE_DURATION_SECONDS,
+        'triangle',
+        AUDIO_MIX_CONFIG.GYM_BIKE_PEAK_GAIN,
+        AUDIO_MIX_CONFIG.GYM_BIKE_END_HZ
+      );
+    } else if (mode === 'treadmill') {
+      this._playSuitTone(
+        ctx,
+        AUDIO_MIX_CONFIG.GYM_TREADMILL_START_HZ,
+        0,
+        AUDIO_MIX_CONFIG.GYM_TREADMILL_DURATION_SECONDS,
+        'sine',
+        AUDIO_MIX_CONFIG.GYM_TREADMILL_PEAK_GAIN,
+        AUDIO_MIX_CONFIG.GYM_TREADMILL_END_HZ
+      );
+    }
   }
 
   playSuitEquip() {
@@ -256,9 +285,12 @@ export class AudioManager {
     this._playSuitTone(ctx, 587.33, 0.85, 0.14, 'sine', 0.035);
   }
 
-  playRocket() {
+  playRocket({ liftoff = false } = {}) {
     this._rocketFadeElapsed = null;
-    this._setAudioVolume(this.rocket, AUDIO_MIX_CONFIG.ROCKET_LOOP_VOLUME);
+    const volume = liftoff
+      ? AUDIO_MIX_CONFIG.ROCKET_LIFTOFF_VOLUME
+      : AUDIO_MIX_CONFIG.ROCKET_LOOP_VOLUME;
+    this._setAudioVolume(this.rocket, volume);
     this.rocket.currentTime = 0;
     this._play(this.rocket);
   }
@@ -301,7 +333,7 @@ export class AudioManager {
     const ctx = this._getSynthContext();
     if (!ctx) return null;
 
-    // Buffer de 2 segundos com ruido rosa suave para o vento fino de Marte
+    // Buffer longo com ruido rosa suave para o vento fino de Marte, sem repeticao perceptivel
     const length = Math.max(1, Math.floor(ctx.sampleRate * WIND_AMBIENCE_CONFIG.AUDIO_BUFFER_SECONDS));
     const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
     const data = buffer.getChannelData(0);

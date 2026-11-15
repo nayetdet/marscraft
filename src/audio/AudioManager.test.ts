@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AudioManager } from './AudioManager.ts';
+import { AUDIO_MIX_CONFIG } from '../config/constants.ts';
 
 function stubAudio() {
   const audioInstances = [];
@@ -17,6 +18,42 @@ function stubAudio() {
     return audio;
   }));
   return audioInstances;
+}
+
+function stubAudioContext() {
+  const destination = {};
+  const oscillators = [];
+  const gains = [];
+  const context = {
+    state: 'running',
+    currentTime: 4,
+    destination,
+    createOscillator: vi.fn(() => {
+      const oscillator = {
+        frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+        connect: vi.fn((node) => node),
+        start: vi.fn(),
+        stop: vi.fn(),
+      };
+      oscillators.push(oscillator);
+      return oscillator;
+    }),
+    createGain: vi.fn(() => {
+      const gain = {
+        gain: {
+          setValueAtTime: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(() => destination),
+      };
+      gains.push(gain);
+      return gain;
+    }),
+  };
+  function AudioContextStub() { return context; }
+  vi.stubGlobal('window', { AudioContext: AudioContextStub });
+  return { context, oscillators, gains };
 }
 
 describe('AudioManager', () => {
@@ -242,6 +279,39 @@ describe('AudioManager', () => {
     manager.playUiVolumePreview({ final: true });
     expect(click.play).toHaveBeenCalledTimes(2);
     expect(audioInstances).toContain(click);
+  });
+
+  it('gives treadmill and bike repetitions different short synthesized sounds', () => {
+    stubAudio();
+    const { context, oscillators, gains } = stubAudioContext();
+    const manager = new AudioManager();
+
+    manager.playGymRep('treadmill');
+    manager.playGymRep('bike');
+
+    expect(oscillators).toHaveLength(2);
+    expect(oscillators[0].type).toBe('sine');
+    expect(oscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(AUDIO_MIX_CONFIG.GYM_TREADMILL_START_HZ, context.currentTime);
+    expect(oscillators[0].frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(
+      AUDIO_MIX_CONFIG.GYM_TREADMILL_END_HZ,
+      context.currentTime + AUDIO_MIX_CONFIG.GYM_TREADMILL_DURATION_SECONDS
+    );
+    expect(oscillators[1].type).toBe('triangle');
+    expect(oscillators[1].frequency.setValueAtTime).toHaveBeenCalledWith(AUDIO_MIX_CONFIG.GYM_BIKE_START_HZ, context.currentTime);
+    expect(gains[0].gain.linearRampToValueAtTime).toHaveBeenCalledWith(AUDIO_MIX_CONFIG.GYM_TREADMILL_PEAK_GAIN, context.currentTime + 0.015);
+    expect(oscillators[0].start).toHaveBeenCalledWith(context.currentTime);
+    expect(oscillators[0].stop).toHaveBeenCalledWith(context.currentTime + AUDIO_MIX_CONFIG.GYM_TREADMILL_DURATION_SECONDS + 0.02);
+  });
+
+  it('uses a slightly stronger engine mix for the MAV liftoff cue', () => {
+    stubAudio();
+    const manager = new AudioManager();
+    manager.setMasterVolume(0.5);
+
+    manager.playRocket({ liftoff: true });
+
+    expect(manager.rocket.volume).toBeCloseTo(AUDIO_MIX_CONFIG.ROCKET_LIFTOFF_VOLUME * 0.5);
+    expect(manager.rocket.play).toHaveBeenCalledOnce();
   });
 
   it('plays a slow, heavy door sound when the airlock is cranked open by hand (issue #79)', () => {

@@ -181,13 +181,13 @@ export class GymEquipmentController {
     if (this.progress >= 100) {
       const msg = this.stations.exercise(this.mode);
       this.progress = 0;
-      this.onPlaySound?.(440, 0.22, 660);
+      this.onPlaySound?.(this.mode, true);
       this.hud?.showToast(msg);
       this._refreshHudDom();
       return;
     }
 
-    this.onPlaySound?.(this.mode === 'bike' ? 340 : 390, 0.06);
+    this.onPlaySound?.(this.mode, false);
     this._refreshHudDom();
   }
 
