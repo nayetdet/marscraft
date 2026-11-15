@@ -1090,3 +1090,26 @@ export const EVENTS_CONFIG = Object.freeze({
   DUST_DEVIL_HIT_RADIUS: 3, // perto disso o jogador fica no meio da poeira
   DUST_DEVIL_BLIND_SECONDS: 3,
 });
+
+// Historia em 5 atos (issues #407 a #411): os numeros de cada ato ficam no bloco dele, para
+// cada ato mexer so no seu. Specs em docs/superpowers/specs/2026-11-15-act*-story-design.md.
+
+// Ato 2 (issue #408): tempestade de poeira, paineis, vazamento, luneta e diario.
+// Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
+export const ACT2_CONFIG = {
+};
+
+// Ato 3 (issue #409): abrigo na tempestade solar, planta, racao e academia.
+// Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
+export const ACT3_CONFIG = {
+};
+
+// Ato 4 (issue #410): traje, 3 amostras de cada tipo, analise e envio.
+// Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
+export const ACT4_CONFIG = {
+};
+
+// Ato 5 (issue #411): a corrida final, a decolagem e o que vem depois (Continue).
+// Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
+export const ACT5_CONFIG = {
+};

@@ -3,6 +3,9 @@ import { SIGNS, ZONE_COLORS } from '../base/basePosters.ts';
 import { speakerForZone } from './radioSpeakers.ts';
 import { RADIATION_CONFIG, ROVER_CONFIG, STATION_CONFIG, STORY_CONFIG, UTILITY_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.ts';
 import { PLANT_NEEDS, detourById } from './tutorialDetours.ts';
+import { ACT2_STEPS } from './acts/act2Steps.ts';
+import { ACT3_STEPS } from './acts/act3Steps.ts';
+import { ACT4_STEPS } from './acts/act4Steps.ts';
 
 // Tutorial guiado (teste com jogadores de 15/11/2026): um passo por vez, cada um com UMA coisa
 // para fazer, o lugar aonde ir e a tecla. O proximo passo so aparece quando a crianca termina
@@ -113,6 +116,7 @@ export const TUTORIAL_STEPS = [
     ],
     needs: [{ resource: 'power', amount: STATION_CONFIG.COMMS_COST }],
     done: more('earthCalls'),
+    example: { earthCalls: 1 },
   },
   {
     id: 'cert-power',
@@ -211,6 +215,7 @@ export const TUTORIAL_STEPS = [
       { icon: 'air', text: 'The rover works outside, you stay safe' },
     ],
     done: more('roverDrives'),
+    example: { roverDrives: 1 },
   },
   {
     id: 'rover-ice',
@@ -229,6 +234,7 @@ export const TUTORIAL_STEPS = [
     // O rover so perfura com a bateria acima do nivel baixo
     needs: [{ resource: 'roverPower', amount: ROVER_CONFIG.LOW_BATTERY }],
     done: more('roverIceKg'),
+    example: (s) => ({ roverIceKg: count(s, 'roverIceKg') + 100 }),
   },
   // Ato 1 (#407): o meteoro cai quando o rover descarrega o gelo (GameEngine, evento step-done
   // de 'rover-ice'). Para buscar o gelo novo a pe, a crianca veste o traje pela primeira vez.
@@ -247,6 +253,7 @@ export const TUTORIAL_STEPS = [
       { icon: 'air', text: 'No suit, no going outside' },
     ],
     done: (s) => Boolean(s.suitEquipped),
+    example: { suitEquipped: true },
   },
   {
     id: 'collect-ice',
@@ -268,6 +275,7 @@ export const TUTORIAL_STEPS = [
       if (count(s, 'iceCount') < count(b, 'iceCount')) b.iceCount = count(s, 'iceCount');
       return count(s, 'iceCount') > count(b, 'iceCount');
     },
+    example: (s) => ({ iceCount: count(s, 'iceCount') + 1 }),
   },
   {
     id: 'load-rocket',
@@ -284,6 +292,7 @@ export const TUTORIAL_STEPS = [
       { icon: 'bolt', text: 'Ice becomes fuel, fuel uses battery' },
     ],
     done: (s, b) => count(s, 'iceNeeded') < count(b, 'iceNeeded'),
+    example: (s) => ({ iceCount: 0, iceNeeded: count(s, 'iceNeeded') - 1 }),
   },
   {
     id: 'scan',
@@ -308,19 +317,33 @@ export const TUTORIAL_STEP_IDS = TUTORIAL_STEPS.map((step) => step.id);
 // (a agua esta acabando), vestir o traje, pegar o gelo do meteoro e carregar o foguete.
 // Os outros passos sao o passeio completo pela base
 // (`training: true` no StoryDirector).
-export const CORE_STEPS = TUTORIAL_STEPS.filter((step) => step.core);
+export const ACT1_STEPS = TUTORIAL_STEPS.filter((step) => step.core);
+
+// Passos guiados da partida: o ato 1 e, em seguida, os atos 2, 3 e 4 (src/story/acts/). Quando
+// a lista acaba, o StoryDirector abre a corrida final (ato 5). `example` em cada passo e a
+// mudanca no retrato que o conclui (testes: src/story/storyTestKit.ts).
+export const CORE_STEPS = [...ACT1_STEPS, ...ACT2_STEPS, ...ACT3_STEPS, ...ACT4_STEPS];
+
+// Numero do passo dentro do ato dele: { act, now, total }. Os passos sem `act` (o ato 1 e o
+// passeio completo) contam juntos.
+export function stepNumber(steps, index) {
+  const act = steps[index]?.act ?? 1;
+  const sameAct = steps.filter((step) => (step.act ?? 1) === act);
+  return { act, now: sameAct.indexOf(steps[index]) + 1, total: sameAct.length };
+}
 
 // Tarefa de um objetivo do tutorial: o passo ou, durante um desvio (issue #237), a tarefa de
 // buscar o recurso que falta. Os dois tem label, hint, place, icon e zone.
 export function tutorialStepById(id) {
-  return TUTORIAL_STEPS.find((step) => step.id === id) ?? detourById(id);
+  return TUTORIAL_STEPS.find((step) => step.id === id) ?? CORE_STEPS.find((step) => step.id === id) ?? detourById(id);
 }
 
 // Balao do passo: titulo com o numero ("STEP 2/5: CALL EARTH") e as frases do passo.
 // `step: true` avisa o StoryHud que este balao troca o do passo anterior, sem fila.
-export function stepCard(step, index, total) {
+// `act`: do ato 2 em diante o titulo diz o ato ("ACT 2 - STEP 1/6: CLEAN THE PANELS")
+export function stepCard(step, index, total, act = 1) {
   // `stepId`: o GameEngine usa como gatilho do modal de trade-off da tarefa (tradeoffScenes.ts)
-  return { step: true, color: STEP_COLORS[step.zone], title: `STEP ${index + 1}/${total}: ${step.label}`, lines: step.lines, stepId: step.id, speaker: speakerForZone(step.zone) };
+  return { step: true, color: STEP_COLORS[step.zone], title: `${act > 1 ? `ACT ${act} - ` : ''}STEP ${index + 1}/${total}: ${step.label}`, lines: step.lines, stepId: step.id, speaker: speakerForZone(step.zone) };
 }
 
 // Balao do desvio (issue #237): troca o balao do passo enquanto a crianca busca o que falta.

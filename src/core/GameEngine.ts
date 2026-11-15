@@ -85,6 +85,7 @@ import { TradeoffHud } from '../ui/TradeoffHud.ts';
 import { FirstTimeMoments, momentLogText } from '../story/firstTimeMoments.ts';
 import { MenuScreens } from '../ui/MenuScreens.ts';
 import { StoryDirector } from '../story/StoryDirector.ts';
+import { createActControllers } from '../story/acts/index.ts';
 import { objectiveView } from '../story/objectiveView.ts';
 import { WAYPOINT_LABELS, objectiveTarget, routeWaypoint } from '../story/waypoints.ts';
 import { WaypointBeacon } from '../story/WaypointBeacon.ts';
@@ -1768,6 +1769,9 @@ export class GameEngine {
     // O que o jogador ja fez, para os passos do tutorial guiado (src/story/tutorialSteps.ts).
     // Beber, comer e lavar contam a tentativa: quem esta sem sede nao fica preso no passo.
     this.tutorialCounts = { drink: 0, meal: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0, suitUps: 0 };
+    // Atos 2 a 5 da historia: cada um liga os seus passos ao jogo (src/story/acts/)
+    this.actControllers = createActControllers(this);
+    this._lastStepId = null;
     this.story = new StoryDirector({
       training: false, // tutorial padrao: so os 5 passos que a missao usa (CORE_STEPS)
       replyDelayHours: this.comms.roundTripGameSeconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND,
@@ -2224,6 +2228,7 @@ export class GameEngine {
     s.scienceStep = scienceStep(sci);
     s.sciencePointsLeft = pointsStillNeeded(sci);
     s.sciencePointsSent = science.sentPoints;
+    for (const act of this.actControllers) act.fillSnapshot(s);
     this.story.update(s);
 
     for (const event of this.story.drainEvents()) {
@@ -2240,10 +2245,12 @@ export class GameEngine {
         this._playGymTone(440, 0.16, 660);
         // Ato 1 (#407): o rover entregou o gelo e um meteoro cai, deixando gelo novo la fora
         if (event.id === 'rover-ice') this.events.trigger('meteor', s.hours);
+        for (const act of this.actControllers) act.onStepDone(event.id, s);
       }
       else if (event.type === 'start-storms') {
         this.mission.startStorms(s.hours);
         this.onTutorialComplete();
+        for (const act of this.actControllers) act.onMissionStart(s);
         // Depois da tempestade do tutorial, so as reais: o que o DONKI ja mostrou acontecendo agora entra na fila
         this.mission.queueLiveStorms(this._liveSpaceWeather);
         this.events.start(s.hours); // eventos aleatorios so depois do tutorial (issue #107)
@@ -2258,6 +2265,14 @@ export class GameEngine {
     }
     this.storyHud.update(dt);
 
+    // Atos 2 a 5: avisa cada controlador quando um passo guiado comeca e roda o que e do ato
+    const stepId = this.story.inTraining ? this.story.step.id : null;
+    if (stepId !== this._lastStepId) {
+      this._lastStepId = stepId;
+      if (stepId) for (const act of this.actControllers) act.onStepStart(stepId, s);
+    }
+    for (const act of this.actControllers) act.update(dt, s, Boolean(this._wasGameRunning));
+
     const text = this.story.objectiveText;
     if (text !== this._objectiveText) {
       this._objectiveText = text;
@@ -2271,7 +2286,7 @@ export class GameEngine {
     const place = alertPlace ?? (this._finishedStory() ? null : routeWaypoint(objectiveTarget(this.story.objectiveId, s), inside));
     // Cratera do meteoro do ato 1: enquanto ela nao existe, vale a cratera de gelo
     const placeKey = place === 'meteor' && !this.waypoints.meteor ? 'ice' : place;
-    let target = place === 'clue' ? this._clueSiteWaypoint(s.nextClue) : placeKey ? this.waypoints[placeKey] : null;
+    let target = place === 'clue' ? this._clueSiteWaypoint(s.nextClue) : placeKey ? this.waypoints[placeKey] ?? this._actWaypoint(placeKey) : null;
     if (place === 'brokenWindow') {
       const windows = this.world.brokenBaseBlocks;
       if (this._brokenWindowIndex === null || !windows.has(this._brokenWindowIndex)) {
@@ -2295,6 +2310,15 @@ export class GameEngine {
     }
     this.waypointBeacon.update(dt, target, this.camera.position);
     this.waypointHud.update(this.camera, target);
+  }
+
+  // Lugar da seta que so um ato conhece (ActController.waypoint)
+  _actWaypoint(place) {
+    for (const act of this.actControllers) {
+      const waypoint = act.waypoint(place);
+      if (waypoint) return waypoint;
+    }
+    return null;
   }
 
   _finishedStory() {

@@ -121,7 +121,8 @@ export function objectiveView(story, s) {
     loop = true;
   }
   // "STEP 4/5": onde a crianca esta no tutorial
-  const progress = step ? { now: story.stepIndex + 1, total: story.steps.length } : null;
+  const number = step ? story.stepProgress : null;
+  const progress = number ? { now: number.now, total: number.total } : null;
   // Cor da secao da base a que o passo pertence (null fora do tutorial)
   const color = step ? STEP_COLORS[step.zone] : null;
 
