@@ -442,6 +442,11 @@ export class InputController {
     const menuCardHome = menuCard.parentElement;
     const pauseMenuCardHost = document.getElementById('pause-menu-card-host');
     const startBtn = document.getElementById('start-btn');
+    const startLabel = startBtn.querySelector('.menu-button-label');
+    const setStartLabel = (label) => {
+      if (startLabel) startLabel.textContent = label;
+      else startBtn.textContent = label;
+    };
     const resetWorldBtn = document.getElementById('reset-world-btn');
     const quitBtn = document.getElementById('quit-btn');
     const controlsBtn = document.getElementById('controls-btn');
@@ -452,7 +457,7 @@ export class InputController {
 
     const showPauseMenu = () => {
       pauseMenuCardHost.append(menuCard);
-      startBtn.textContent = 'Resume';
+      setStartLabel('Resume');
       overlay.classList.add('hidden');
       pauseOverlay.classList.remove('hidden');
       document.body.classList.add('pause-menu-open');
@@ -494,7 +499,7 @@ export class InputController {
         this._resumeOnEscapeKeyUp = true;
         this.isLocked = true;
         menuCardHome.append(menuCard);
-        startBtn.textContent = 'Play';
+        setStartLabel('Play');
         overlay.classList.add('hidden');
         pauseOverlay.classList.add('hidden');
         document.body.classList.remove('pause-menu-open');
@@ -555,7 +560,7 @@ export class InputController {
       if (document.pointerLockElement === this.domElement) document.exitPointerLock();
       else {
         menuCardHome.append(menuCard);
-        startBtn.textContent = 'Play';
+        setStartLabel('Play');
         overlay.classList.remove('hidden');
         pauseOverlay.classList.add('hidden');
         document.body.classList.remove('pause-menu-open');
@@ -598,7 +603,7 @@ export class InputController {
         showPauseMenu();
       } else {
         menuCardHome.append(menuCard);
-        startBtn.textContent = 'Play';
+        setStartLabel('Play');
         overlay.classList.toggle('hidden', !showStartMenu);
         pauseOverlay.classList.add('hidden');
         document.body.classList.remove('pause-menu-open');
