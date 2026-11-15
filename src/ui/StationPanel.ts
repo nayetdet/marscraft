@@ -218,7 +218,6 @@ export class StationPanel {
     this._stopGymLoop();
     this._stopGreenhouseLoop();
     hideModal(this.element);
-    this.engine.showPendingEarthFacts?.(); // fatos ganhos na colheita aparecem com o painel fechado
     if (!this.engine.input?.isTouchMode) requestRawPointerLock(this.engine.renderer.domElement);
   }
 

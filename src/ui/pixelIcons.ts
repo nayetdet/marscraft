@@ -269,6 +269,51 @@ ICONS.rock = [
   '.XXXXXX.',
 ];
 
+// Cenas das animacoes de "primeira vez" (src/story/firstTimeMoments.ts)
+ICONS.rover = [
+  '......X.',
+  '......X.',
+  '.XXXXXX.',
+  'XXXXXXXX',
+  'XXXXXXXX',
+  '.X.XX.X.',
+  'XXX..XXX',
+  '.X....X.',
+];
+
+ICONS.dumbbell = [
+  '........',
+  'XX....XX',
+  'XX....XX',
+  'XXXXXXXX',
+  'XXXXXXXX',
+  'XX....XX',
+  'XX....XX',
+  '........',
+];
+
+ICONS.battery = [
+  '..XXXX..',
+  '.XXXXXX.',
+  '.X....X.',
+  '.X.XX.X.',
+  '.X.XX.X.',
+  '.X.XX.X.',
+  '.X....X.',
+  '.XXXXXX.',
+];
+
+ICONS.seed = [
+  '....XX..',
+  '...XX...',
+  '...X....',
+  '..XXXX..',
+  '.XXXXXX.',
+  '.XXXXXX.',
+  '..XXXX..',
+  '........',
+];
+
 const cache = new Map();
 
 export function pixelIconSvg(name) {

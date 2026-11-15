@@ -28,9 +28,9 @@ describe('greenhouse care (issue #89)', () => {
       expect(card.source).toBeTruthy();
       for (const line of card.lines) {
         expect(pixelIconSvg(line.icon)).toContain('<rect');
-        expect(['mars', 'earth', 'space']).toContain(line.side);
+        expect(['mars', 'earth', 'space']).toContain(line.tone);
       }
-      expect(earthFactView(card)).toEqual({ title: EARTH_FACT_TITLE, reason: card.reason, lines: card.lines, source: card.source });
+      expect(earthFactView(card)).toMatchObject({ stamp: 'DISCOVERY!', title: EARTH_FACT_TITLE, reason: card.reason, lines: card.lines, source: card.source, scene: { from: 'mars', to: 'earth' } });
       expect(earthFactLogText(card)).toContain(card.lines[0].text);
       expect(earthFactLogText(card)).toContain(card.source);
     }
