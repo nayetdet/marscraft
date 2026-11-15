@@ -65,7 +65,7 @@ import { IceSensorEffect } from '../scanner/iceSensor.ts';
 import { ScannerHud } from '../ui/ScannerHud.ts';
 import { buildBaseDecor } from '../base/baseDecor.ts';
 import { SuitportStation } from '../base/SuitportStation.ts';
-import { buildGreenhouseFields } from '../base/greenhouseFields.ts';
+import { buildGreenhouseFields, createSproutModel, cropGrowthLook } from '../base/greenhouseFields.ts';
 import { EarthFacts, earthFactLogText, earthFactView, plantsStalled } from '../base/greenhouseCare.ts';
 import { FirstTimeHud } from '../ui/FirstTimeHud.ts';
 import { MissionBriefingHud } from '../ui/MissionBriefingHud.ts';
@@ -732,6 +732,7 @@ export class GameEngine {
       const model = createCropPlantModel(type); model.visible = false;
       this.stationCrop.add(model); return [type, model];
     }));
+    this.stationSprout = createSproutModel(); this.stationSprout.visible = false; this.stationCrop.add(this.stationSprout);
     this.stationCrop.position.set(GREENHOUSE_CENTER.x + GARDEN_CROP_BED.dx + 0.5, WORLD_CONFIG.GROUND_LEVEL + 2, GREENHOUSE_CENTER.z + GARDEN_CROP_BED.dz + 0.5); this.stationCrop.visible = false; this.scene.add(this.stationCrop);
     const colors = { treadmill: 0x38bdf8, bike: 0x4ade80, medical: 0xe76b65 };
     for (const [type, x, z] of [['treadmill', -9.2, 9.2], ['bike', -5.8, 9.5], ['medical', -7.6, 12.4]]) {
@@ -1256,8 +1257,10 @@ export class GameEngine {
     const crop = this.stations.plots[0].crop;
     this.stationCrop.visible = Boolean(crop);
     if (crop) {
-      this.stationCrop.scale.y = 0.2 + 0.8 * crop.progress / CROP_CONFIG[crop.type].seconds;
-      for (const [type, model] of Object.entries(this.stationCropModels)) model.visible = type === crop.type;
+      const look = cropGrowthLook(crop.progress, CROP_CONFIG[crop.type].seconds);
+      this.stationCrop.scale.setScalar(look.scale);
+      this.stationSprout.visible = look.stage === 'sprout';
+      for (const [type, model] of Object.entries(this.stationCropModels)) model.visible = look.stage !== 'sprout' && type === crop.type;
     }
     this.greenhouseFields.update(this.stations.plots, {
       stalled: this.stations.hasGrowingCrops() && plantsStalled(this.greenhouseState()),
