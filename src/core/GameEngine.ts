@@ -5,7 +5,7 @@ import { createSpaceRationModel } from '../graphics/rationModel.ts';
 import { createSampleRockModel } from '../graphics/sampleModels.ts';
 import { UTILITY_CONFIG } from '../config/constants.ts';
 import { LIGHTS_OFF_ID, LIGHTS_ON_ID, nightLightsToast } from '../story/acts/act3NightLights.ts';
-import { FIRST_ICE_NO_ICE_TOAST, FIRST_ICE_ROCKET_ID, FIRST_ICE_ROCKET_TOAST, FIRST_ICE_TANK_ID, firstIceCard, firstIceTankToast, firstIceWaterL, shouldAskFirstIce } from '../story/firstIceChoice.ts';
+import { FIRST_ICE_NO_ICE_TOAST, FIRST_ICE_ROCKET_ID, FIRST_ICE_ROCKET_TOAST, FIRST_ICE_TANK_ID, firstIceCard, firstIceTankToast, firstIceWaterL, restoreFirstIce, saveFirstIce, shouldAskFirstIce } from '../story/firstIceChoice.ts';
 import * as THREE from 'three';
 import { BLOCK_INTERACTION_CONFIG, CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STORY_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
 import { separateCrew } from '../crew/separateCrew.ts';
@@ -238,6 +238,11 @@ export class GameEngine {
       const saved = JSON.parse(window.localStorage.getItem('marscraft-save-v1') || 'null');
       this._savedArrivalPlayed = saved?.arrivalPlayed === true;
       this._savedFreePlay = saved?.freePlay === true; // ja decolou nesta partida (ato 5, #411)
+      // Trade-offs que valem para a partida inteira: o primeiro gelo (#413) e a maquina parada (#415)
+      const firstIce = restoreFirstIce(saved?.firstIce);
+      this._firstIceAsked = firstIce.asked;
+      this._firstIceChoice = firstIce.choice;
+      this._savedCrewHelp = saved?.crewHelp ?? null;
       if (saved?.survival) {
         Object.assign(this.survival, saved.survival);
         if (Array.isArray(saved.survival.inventorySlots)) {
@@ -369,6 +374,7 @@ export class GameEngine {
     this.crewStock = createBaseStock({ survival: this.survival, mission: this.mission });
     // Modulo norte (issue #56, parte B): energia/aquecimento, cozinha, banheiro e oficina
     this.utility = new UtilityModule({ mission: this.mission, survival: this.survival, stations: this.stations, base: this.crewStock });
+    this.act2.restoreState(this._savedCrewHelp); // ato 2 (#415): a parada em andamento continua
     this._utilityHours = null;
     // Diario de bordo por sol e estudos reais do OSDR (issue #106). Outros sistemas podem
     // escrever com this.missionLog.add({ text, kind, hours }).
@@ -535,7 +541,7 @@ export class GameEngine {
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
     const tiredWarning = this.sleep.updateWarning();
     // Ato 2 (#415): a maquina de quem saiu para ajudar esta parada
-    document.getElementById('station-warning').textContent = this.act2.stationWarning ?? this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : tiredWarning;
+    document.getElementById('station-warning').textContent = this.act2.stationWarning ?? (this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : tiredWarning);
   }
 
   // Avanca o modulo norte no relogio do ceu e repassa o estado para a tripulacao
@@ -2987,7 +2993,7 @@ export class GameEngine {
     try {
       const survival = {};
       for (const key of ['health','oxygen','suitEquipped','suitThermal','suitOxygen','suitScrubber','suitDust','suitIntegrity','baseOxygen','baseBreached','water','food','baseWater','maxBaseWater','graywater','inventorySlots','isDead']) survival[key] = this.survival[key];
-      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed, freePlay: this.mission.launched }));
+      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed, freePlay: this.mission.launched, firstIce: saveFirstIce(this._firstIceAsked, this._firstIceChoice), crewHelp: this.act2.saveState() }));
       return true;
     } catch { return false; }
   }

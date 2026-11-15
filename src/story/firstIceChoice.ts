@@ -55,6 +55,7 @@ export function firstIceCard() {
 }
 
 // Aviso depois da escolha: o que ela custa. `addedL` = agua que entrou de verdade no tanque.
+// O numero muda quando o tanque esta quase cheio: o catalogo traduz por padrao (i18n.ts).
 export function firstIceTankToast(addedL: number): string {
   return `Ice in the base tank: +${Math.round(addedL)} L of water. The rocket still needs this block.`;
 }
@@ -69,4 +70,15 @@ export function firstIceSummary(stats: { firstIceChoice?: string | null }) {
   if (stats.firstIceChoice === FIRST_ICE_TANK_ID) return { choice: FIRST_ICE_TANK_ID, text: firstIceTankReport() };
   if (stats.firstIceChoice === FIRST_ICE_ROCKET_ID) return { choice: FIRST_ICE_ROCKET_ID, text: firstIceRocketReport() };
   return null;
+}
+
+// Partida salva (GameEngine._saveGame): o card nao reaparece e a escolha continua valendo no
+// boletim depois de recarregar. Save antigo ou estragado: nada perguntado, nada escolhido.
+export function saveFirstIce(asked: unknown, choice: unknown): { asked: boolean; choice: FirstIceChoice | null } {
+  const valid = choice === FIRST_ICE_TANK_ID || choice === FIRST_ICE_ROCKET_ID;
+  return { asked: Boolean(asked) || valid, choice: valid ? (choice as FirstIceChoice) : null };
+}
+
+export function restoreFirstIce(saved: { asked?: unknown; choice?: unknown } | null | undefined) {
+  return saveFirstIce(saved?.asked === true, saved?.choice);
 }
