@@ -117,13 +117,13 @@ Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG
 | Pôster "Why we exercise" | ossos perdem **~1 %** de densidade por mês no espaço sem exercício; tripulações da ISS treinam **~2 h por dia** | [Ref] [NASA, 01/12/2023](https://www.nasa.gov/missions/station/iss-research/counteracting-bone-and-muscle-loss-in-microgravity/) |
 | Pôsteres "Mars vs Earth" e "Going outside" | gravidade 38 %, sol de 24 h 39 min, luz 43 %, pressão 0,7 %, −62 °C (média) e −97,7 °C (mínima) | tabelas acima (Mars Fact Sheet e InSight) |
 
-Os textos dos pôsteres ficam em `src/base/basePosters.js`; a tela "NASA Data" do menu (`index.html`) lista as mesmas fontes.
+A tela "NASA Data" do menu (`index.html`) lista as fontes.
 
 ### Ritmo do consumo (issue #81, escala de jogo)
 
 No playtest tudo zerava junto. A conta mostrava por quê: com a tripulação padrão (2) e tudo ligado, a base gastava parada **10,5 %/h de dia e 13,5 %/h à noite**, ou seja, **288 % de bateria por sol**, e os painéis geram **~164 % por sol** (pico de 21,5 %/h, zero à noite). A noite de 12 h pedia 162 % de uma bateria de 100 %.
 
-| Consumo passivo (por hora de jogo = 100 s reais) | Antes | Agora | Onde |
+| Consumo passivo (por hora de jogo = 50 s reais) | Antes | Agora | Onde |
 |---|---|---|---|
 | O2 da tripulação, por tripulante | 1,5 % | **0,75 %** | `CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR` |
 | Trabalho em cada estação operada | 2 % | **1 %** | `STATION_CONFIG.WORK_ENERGY_PER_HOUR` |
@@ -153,7 +153,7 @@ Simplificação a explicar: a "blindagem ligada" (tecla R) é um escudo ativo qu
 | Parâmetro no código | Valor atual | Real | Comentário |
 |---|---|---|---|
 | `PHYSICS_CONFIG.MARS_GRAVITY` (`src/config/constants.js`) | `12.0` | 3,71 m/s² | Ajustado para "sensação" de jogo. Se mantiver, explique isso no jogo ou nos créditos; o critério *Validity* olha isso. |
-| Duração de 1 sol (`MISSION_CONFIG.GAME_HOURS_PER_SECOND = 0.01` h/s) | ~40 min reais por dia de 24 h | 24 h 39 min | O relógio usa 24 h. Pode virar 24,65 h para ficar fiel. |
+| Duração de 1 sol (`MISSION_CONFIG.GAME_HOURS_PER_SECOND = 0.02` h/s) | ~20 min reais por dia de 24 h | 24 h 39 min | O relógio usa 24 h. Pode virar 24,65 h para ficar fiel. |
 | Taxas de O2/água/comida (`SURVIVAL_CONFIG`) | arbitrárias | — | Ok ser escala de jogo, mas a **razão** entre elas pode seguir o consumo real de um astronauta (O2 ~0,84 kg/dia, água ~2,5–3,5 kg/dia, comida ~1,8 kg/dia; fonte: NASA ECLSS / BVAD). |
 
 ### Crescimento de plantas na estufa

@@ -1,5 +1,5 @@
 import { CROP_ITEM_IDS } from '../config/blockTypes.js';
-import { STATION_CONFIG as C, CROP_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { STATION_CONFIG as C, CROP_CONFIG, WATER_SYSTEM_CONFIG, CREW_CONFIG } from '../config/constants.js';
 import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.js';
 
 const RADIO_SILENT = 'Radio silent: the Sun is between Mars and Earth (solar conjunction). You must decide on your own until it passes.';
@@ -31,6 +31,8 @@ export class StationSystem {
     this.cropsThirsty = false;
     this.harvestCount = 0;
     this.cropCollection = new Set();
+    this.harvestBaskets = Object.fromEntries(Object.keys(CROP_CONFIG).map(type => [type, 0]));
+    this.crewHarvestTimer = 0;
     this.discoveryIndex = -1;
     this.messageTimer = 0;
     this.message = 'No transmission pending.';
@@ -190,6 +192,27 @@ export class StationSystem {
     this.freshFood = C.FRESH_FOOD_DURATION;
 
     return `Harvested ${type}. Pick up your harvest and use it to eat. A real NASA study is now in your field notebook!`;
+  }
+  updateCrewHarvest(dt, workerPresent) {
+    if (!workerPresent) { this.crewHarvestTimer = 0; return; }
+    this.crewHarvestTimer += dt;
+    while (this.crewHarvestTimer >= CREW_CONFIG.GREENHOUSE_HARVEST_INTERVAL) {
+      this.crewHarvestTimer -= CREW_CONFIG.GREENHOUSE_HARVEST_INTERVAL;
+      const index = this.plots.findIndex(({ crop }) => crop && crop.progress >= CROP_CONFIG[crop.type].seconds);
+      if (index < 0) continue;
+      const type = this.plots[index].crop.type;
+      this.harvest(null, () => { this.harvestBaskets[type]++; }, index);
+    }
+  }
+  collectBasket(type, survival) {
+    if (!Object.hasOwn(this.harvestBaskets, type)) return 'Unknown basket.';
+    let collected = 0;
+    while (this.harvestBaskets[type] > 0 && survival.addBlockToInventory(CROP_ITEM_IDS[type])) {
+      this.harvestBaskets[type]--;
+      collected++;
+    }
+    if (!collected) return this.harvestBaskets[type] ? 'Inventory full. Make room to collect the harvest.' : `The ${type} basket is empty.`;
+    return `Collected ${collected} ${type}.${this.harvestBaskets[type] ? ' The rest is in the basket.' : ''}`;
   }
   sendMav({ delaySeconds = C.COMMS_DELAY, blackout = false } = {}) {
     if (this.mavSent) return 'MAV science package already received.';

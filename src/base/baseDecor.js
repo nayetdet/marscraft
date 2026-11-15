@@ -1,36 +1,29 @@
 import * as THREE from 'three';
-import { RADIATION_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { WORLD_CONFIG } from '../config/constants.js';
 import { mergeByMaterial } from '../world/nasaModelsBuilder.js';
 import { HABITAT_LAYOUT } from '../world/habitatLayout.js';
-import { SIGNS, ZONE_COLORS, buildPosters } from './basePosters.js';
+import { SIGNS, ZONE_COLORS } from './basePosters.js';
 import { addBaseFurniture } from './baseFurniture.js';
 import {
-  ScreenCanvas, hazardTexture, labelTexture, posterTexture, signTexture,
+  hazardTexture, labelTexture, signTexture,
 } from './baseCanvas.js';
-import {
-  commandModel, formatRate, greenhouseModel, powerModel, shelterModel,
-} from './baseDisplayText.js';
 
 // Organizacao visual da base: zonas no piso, placas de modulo, enfermaria, armario de trajes,
-// posteres educativos e telas vivas. O abrigo de tempestade, o terminal de radio e o modulo
+// telas vivas. O abrigo de tempestade, o terminal de radio e o modulo
 // norte (energia, cozinha, banheiro, oficina) sao da issue #56 e ficam em nasaModelsBuilder.js;
-// aqui eles so ganham placa, poster e medidor.
+// aqui eles so ganham placa e medidor.
 // Geometria do habitat (habitatLayout.js): ar em x = -6..13, z = -11..6; piso em y = 10, teto em y = 14.
 // Tudo estatico vira uma malha por material (mergeByMaterial); so luzes da bateria, nivel do
 // tanque e telas ficam soltos, porque mudam com o estado do jogo.
 
-const POSTER_ASPECT = 0.8; // largura / altura
-const POSTER_W = 1.4;
-const POSTER_H = POSTER_W / POSTER_ASPECT;
 const SIGN_H = 0.44;
 
 // Para onde a face do plano aponta -> rotacao em Y
 const FACING = { '+z': 0, '-z': Math.PI, '+x': Math.PI / 2, '-x': -Math.PI / 2 };
 
-export function buildBaseDecor(scene, colliders, { donkiDate }) {
+export function buildBaseDecor(scene, colliders) {
   const F = WORLD_CONFIG.GROUND_LEVEL + 2; // topo do piso da base (y = 10)
   const group = new THREE.Group();
-  const posters = buildPosters(donkiDate);
   const infoPoints = [];
 
   const lambert = (color, extra = {}) => new THREE.MeshLambertMaterial({ color, ...extra });
@@ -76,13 +69,6 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
     return mesh;
   };
   const sign = (key, w, x, y, z, facing) => plane(signTexture(SIGNS[key], w / SIGN_H), w, SIGN_H, x, y, z, facing);
-  const poster = (key, x, y, z, facing, scale = 1) => {
-    const w = POSTER_W * scale;
-    const h = POSTER_H * scale;
-    plane(posterTexture(posters[key], POSTER_ASPECT), w, h, x, y, z, facing);
-    const info = posters[key];
-    infoPoints.push({ x, y, z, label: '[F] Read the poster', text: () => `${info.fact} (Source: ${info.source})` });
-  };
 
   // ---------- Zonas no piso: moldura colorida por area ----------
   const zoneBorder = (mat, x1, x2, z1, z2) => {
@@ -124,24 +110,14 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   sign('mainHab', 1.9, -5.0, 13.5, 5.045, '+z');
   sign('gym', 2.4, -8.0, 13.5, 8.03, '+z');
 
-  const posterY = F + 1.22;
 
-  // ---------- Tunel da estufa: galeria de posteres nas duas paredes ----------
-  poster('storm', -8.5, posterY, -1.99, '+z');
-  poster('delay', -11.5, posterY, -1.99, '+z');
-  poster('mars', -10.0, posterY, 2.99, '-z');
 
-  // ---------- Abrigo de tempestade (SHL-1, issue #56): placa na entrada, poster e medidor ----------
+  // ---------- Abrigo de tempestade (SHL-1, issue #56): placa na entrada e medidor ----------
   const L = HABITAT_LAYOUT;
   const shelterZ = (L.SHELTER_Z_MIN + L.SHELTER_Z_MAX) / 2;
   box(0.06, 0.5, 2.1, mats.charcoal, L.SHELTER_X_MIN - 0.2, F + 2.82, shelterZ);
   sign('shelter', 2.0, L.SHELTER_X_MIN - 0.235, F + 2.82, shelterZ, '-x');
-  poster('shelter', 3.65, posterY, L.SHELTER_Z_MIN + 0.012, '+z');
-  const meterX = 4.7;
-  const meterZ = L.SHELTER_Z_MAX - 0.012;
 
-  // ---------- Suporte de vida (LSS-1) ----------
-  poster('air', 12.97, F + 0.77, -0.5, '-x', 0.75);
 
   // ---------- Enfermaria (MED-1), canto sudoeste do habitat ----------
   box(1.35, 1.0, 0.56, mats.white, -2.82, F + 0.5, 5.68);
@@ -168,7 +144,6 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   box(0.3, 0.3, 0.04, mats.charcoal, -1.57, F + 1.1, 5.445);
   box(0.06, 0.5, 0.04, mats.silver, -1.3, F + 0.9, 5.445);
   solid(-2.0, -1.14, 5.4, 6.0, 2.0);
-  poster('eva', 1.99, F + 1.45, 7.5, '-x', 0.64);
 
   // ---------- Estufa (GRN-1): tudo na praca central da redoma ----------
   const gx = HABITAT_LAYOUT.DOME_X + 0.5; // centro da redoma
@@ -182,27 +157,6 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   }
   solid(gx - 0.52, gx + 0.52, gz - 0.52, gz + 0.52, 1.8);
   plane(labelTexture('BASE WATER', 5, '#60a5fa'), 0.9, 0.18, gx + 0.505, F + 0.1, gz, '+x');
-  // Poster num cavalete a nordeste da praca, virado para quem chega pelo tunel
-  box(0.08, POSTER_H + 0.14, POSTER_W + 0.14, mats.charcoal, gx + 3.0, posterY, gz - 3.0);
-  for (const dz of [-0.6, 0.6]) box(0.1, 0.35, 0.1, mats.silver, gx + 3.0, F + 0.17, gz - 3.0 + dz);
-  solid(gx + 2.88, gx + 3.12, gz - 3.8, gz - 2.2, 2.2);
-  poster('plants', gx + 3.05, posterY, gz - 3.0, '+x');
-  // Totem da tela de status a sudoeste (o monitor de comida e o jardim ficam a sudeste)
-  box(0.14, 1.0, 0.14, mats.silver, gx - 3.0, F + 0.5, gz + 3.0);
-  box(0.08, 1.0, 1.42, mats.charcoal, gx - 3.0, F + 1.5, gz + 3.0);
-  solid(gx - 3.1, gx - 2.9, gz + 2.3, gz + 3.7, 2.0);
-
-  // ---------- Dormitorio (DRM-1) ----------
-  poster('sleep', 18.03, posterY, -3.0, '+x');
-
-  // ---------- Academia (GYM-1) ----------
-  poster('exercise', -7.5, posterY, 8.03, '+z');
-
-  // Molduras das telas vivas
-  box(2.5, 1.02, 0.06, mats.charcoal, 6.6, 12.68, -10.965);
-  box(0.06, 1.56, 2.3, mats.charcoal, 12.965, 12.2, -0.5);
-  box(1.3, 0.86, 0.06, mats.charcoal, meterX, F + 1.6, meterZ - 0.02);
-
   // Mobilia extra de cada secao
   addBaseFurniture({ box, solid, mats, zoneMats, F });
 
@@ -211,19 +165,6 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   // ---------- Partes que mudam com o estado do jogo ----------
   const dynamic = new THREE.Group();
   scene.add(dynamic);
-
-  const screens = {
-    command: new ScreenCanvas(768, 288),
-    power: new ScreenCanvas(480, 320),
-    shelter: new ScreenCanvas(384, 250),
-    greenhouse: new ScreenCanvas(416, 288),
-  };
-  plane(screens.command.texture, 2.4, 0.9, 6.6, 12.68, -10.93, '+z', dynamic);
-  plane(screens.power.texture, 2.2, 1.467, 12.93, 12.2, -0.5, '-x', dynamic);
-  plane(screens.shelter.texture, 1.2, 0.78, meterX, F + 1.6, meterZ - 0.055, '-z', dynamic);
-  plane(screens.greenhouse.texture, 1.3, 0.9, gx - 2.955, F + 1.5, gz + 3.0, '+x', dynamic);
-  // Segunda tela do mapa de energia, no modulo de energia (mesma textura, sem custo extra)
-  plane(screens.power.texture, 2.2, 1.467, -10.03, 12.1, -17.5, '-x', dynamic);
 
   const tankGeo = new THREE.BoxGeometry(0.72, 1, 0.72);
   tankGeo.translate(0, 0.5, 0);
@@ -242,17 +183,6 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
   // ---------- Pontos de informacao: olhar e apertar F ----------
   infoPoints.push(
     {
-      x: 12.9, y: 12.2, z: -0.5, label: '[F] Check the power map',
-      text: (s) => `Battery at ${Math.round(s.batteryPct)}%. ${s.chargeRate > 0
-        ? 'The Sun is charging it right now.'
-        : 'It is night, so the solar panels make nothing. Save power!'} Oxygen, the shield and the fuel plant all drink from it.`,
-    },
-    {
-      x: meterX, y: F + 1.6, z: meterZ - 0.06, label: '[F] Check the radiation meter',
-      text: (s) => `You are getting ${formatRate(s.doseRate)}. In this game, above ${RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR} mSv/h it hurts. `
-        + 'More water in the shelter wall stops more radiation, but that water is no longer there to drink or grow food.',
-    },
-    {
       x: gx + 0.45, y: F + 1.0, z: gz, label: '[F] Check the water tank',
       text: (s) => `${Math.round(s.water)} L of water in the base tank. Crew, plants and you all share it. Bring ice with the rover to refill it.`,
     },
@@ -270,11 +200,6 @@ export function buildBaseDecor(scene, colliders, { donkiDate }) {
     level: -1,
     // Chamado duas vezes por segundo pelo GameEngine, nunca a cada frame
     update(s) {
-      screens.command.draw(commandModel(s));
-      screens.power.draw(powerModel(s));
-      screens.shelter.draw(shelterModel(s));
-      screens.greenhouse.draw(greenhouseModel(s));
-
       const level = s.maxWater > 0 ? Math.max(0, Math.min(1, s.water / s.maxWater)) : 0;
       if (level !== this.level) {
         this.level = level;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MissionSystem, mavProgress, oxygenPointsToKg } from './MissionSystem.js';
-import { ENERGY_CONFIG, MAV_CONFIG, STORM_CONFIG } from '../config/constants.js';
+import { ENERGY_CONFIG, MAV_CONFIG, MISSION_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.js';
 
 // CME com impacto direto previsto em Marte 3 dias depois (3 horas de jogo de aviso)
 const cmes = [{
@@ -216,7 +216,7 @@ describe('MissionSystem launch', () => {
 
 describe('oxygenPointsToKg', () => {
   it('one sol of breathing outside equals 0.84 kg of O2', () => {
-    expect(oxygenPointsToKg((20 / 360) * 2400)).toBeCloseTo(0.84);
+    expect(oxygenPointsToKg(SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE * 24 / MISSION_CONFIG.GAME_HOURS_PER_SECOND)).toBeCloseTo(0.84);
   });
 
   it('keeps space weather calm until the story starts the storms', () => {

@@ -17,6 +17,10 @@ export const GREENHOUSE_MONITOR_POS = Object.freeze({
   y: 11.25,
   z: GREENHOUSE_CENTER.z + 2.45,
 });
+// Along the far west edge, opposite the tunnel entrance.
+export const GREENHOUSE_BASKETS = Object.freeze(['potato', 'lettuce', 'soy'].map((type, i) => Object.freeze({
+  type, x: GREENHOUSE_CENTER.x - 11.5, y: HABITAT_LAYOUT.FLOOR_Y + 1.3, z: GREENHOUSE_CENTER.z - 1.1 + i * 1.1,
+})));
 
 export function isGreenhouseBed(dx, dz) {
   return dx >= PLOT.dxMin && dx <= PLOT.dxMax && dz >= PLOT.dzMin && dz <= PLOT.dzMax;
