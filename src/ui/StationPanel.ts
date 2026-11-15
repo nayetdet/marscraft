@@ -838,9 +838,11 @@ export class StationPanel {
       hud.renderHotbar(survival.slots);
       return msg;
     }
-    if (action === 'eatRation') return utility.eatRation();
-    if (action === 'cookMeal') { const msg = utility.cookMeal(); hud.renderHotbar(survival.slots); return msg; }
-    if (action === 'washUp') return utility.washUp();
+    // Comer e lavar contam para o tutorial guiado mesmo sem fome (GameEngine.tutorialCounts)
+    const done = this.engine.tutorialCounts;
+    if (action === 'eatRation') { done.meal++; return utility.eatRation(); }
+    if (action === 'cookMeal') { done.meal++; const msg = utility.cookMeal(); hud.renderHotbar(survival.slots); return msg; }
+    if (action === 'washUp') { done.wash++; return utility.washUp(); }
     if (action === 'serviceFilter') return utility.serviceFilter();
     if (action === 'printPart') { const msg = utility.printPart(this.engine.crew?.stations ?? []); hud.renderHotbar(survival.slots); return msg; }
     if (action === 'fillWall') return this.engine.mission.fillShelterWall(survival);
@@ -856,7 +858,12 @@ export class StationPanel {
       return stations.exercise('bike');
     }
     if (action === 'treat') return stations.treat(survival);
-    if (action === 'send') return stations.send(this.engine.radioOptions(true));
+    if (action === 'send') {
+      const msg = stations.send(this.engine.radioOptions(true));
+      // So conta como chamada se ha mensagem a caminho (radio mudo ou sem energia nao valem)
+      if (stations.messageTimer > 0) done.earthCalls++;
+      return msg;
+    }
     if (action === 'upgrade') return stations.upgrade();
     if (action === 'upgradeTool') return stations.upgradeTool();
     if (action === 'sendScience') return this.engine.sendSciencePackage();
@@ -1171,14 +1178,14 @@ export class StationPanel {
     }
 
     const pages = {
-      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nFILTER: ${Math.round(s.filter)}%   SCIENCE POINTS: ${s.science}\n\n${radiationStatusText(mission)}\n\n${stormStatusText(mission.storm, this.engine.spaceWeather, mission.noStormData)}\n\n${this.engine.spaceWeather.live ? `Storm data: ${donkiLabel(this.engine.spaceWeather)}.` : 'The NASA data is saved inside the game, it is not live.'} Storm length and damage are game rules.`, [['mission', 'Show mission objective'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
+      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nFILTER: ${Math.round(s.filter)}%   SCIENCE POINTS: ${s.science}\n\n${radiationStatusText(mission)}\n\n${stormStatusText(mission.storm, this.engine.spaceWeather, mission.noStormData)}\n\n${this.engine.spaceWeather.live ? `Storm data: ${donkiLabel(this.engine.spaceWeather)}.` : 'The NASA data is saved inside the game, it is not live.'} Storm length and damage are game rules.`, [['mission', 'Show mission objective'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
       power: ['LIFE SUPPORT / ECLSS', `BATTERY: ${Math.round(m.energy)}%   BASE WATER TANK: ${v.baseWater.toFixed(1)} L\nCO2 FILTER: ${Math.round(s.filter)}%\nCO2: ${Math.round(s.co2)}%\n\n${oxygenPlantText(mission.oxygenPlant)}\n\nThe oxygen system and greenhouse need power. A worn filter lets CO2 build up.`, [...oxygenPlantButtons(mission.oxygenPlant), ['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
       greenhouse: ['MARS GARDEN / FIELD NOTEBOOK', this.gardenText(s, m, v), [
         ...Object.entries(CROP_CONFIG).map(([type, r]) => ['plant:' + type, type.toUpperCase() + ' | ' + s.plotCost(type).water + ' L water / ' + s.plotCost(type).energy + '% power / ' + r.seconds + 's / +' + r.nutrition + ' food']),
         ['harvest', 'Harvest & discover NASA research'], ['cleanBase', 'Clean habitat'],
       ]],
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\n${doseHistoryText(mission.doseBreakdown)}\n\n${MEDBAY_BONE_TEXT}`, [['treat', 'Use medical station']]],
-      science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   REGOLITH TO ANALYZE: ${s.samples}\n\n${this._packageText()}\n\n${this._radioText(s)}`, [['sendScience', uploadButtonLabel(this.engine.currentSciencePackage())], ['analyze', `Analyze regolith (${SCIENCE_CONFIG.ANALYZE_POWER_COST}% power)`], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
+      science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   REGOLITH TO ANALYZE: ${s.samples}\n\n${this._packageText()}\n\n${this._radioText(s)}`, [['sendScience', uploadButtonLabel(this.engine.currentSciencePackage())], ['analyze', `Analyze regolith (${SCIENCE_CONFIG.ANALYZE_POWER_COST}% power)`], ['send', 'Call Earth (ask Mission Control)'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
       galley: ['KITCHEN & PANTRY', this._galleyText(v), [['eatRation', 'Eat a ration (pantry)'], ['cookMeal', `Cook fresh meal (1 carrot, ${U.MEAL_WATER_L} L, ${U.MEAL_POWER}% power)`]]],
       hygiene: ['BATHROOM & WATER RECYCLER', this._hygieneText(v), [['washUp', `Wash up (${U.WASH_WATER_L} L of water)`], ['serviceFilter', `Clean water filter (${U.FILTER_SERVICE_POWER}% power)`]]],
       workshop: ['WORKSHOP & 3D PRINTER', this._workshopText(v), [['printPart', `Print spare part (${U.PRINT_REGOLITH} regolith, ${U.PRINT_POWER}% power)`]]],

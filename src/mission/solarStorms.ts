@@ -8,7 +8,8 @@ const clamp01 = (v) => Math.max(0, Math.min(1, v));
 // prevista pelo modelo da NASA para aquela CME (`marsArrivalTime`), nao de uma conta nossa.
 export function leadTimeHours(cme) {
   const realHours = (Date.parse(cme.marsArrivalTime) - Date.parse(cme.startTime)) / REAL_HOUR_MS;
-  return realHours / STORM_CONFIG.REAL_HOURS_PER_GAME_HOUR;
+  if (!(realHours > 0)) return realHours / STORM_CONFIG.WARNING_REAL_HOURS_PER_GAME_HOUR;
+  return Math.max(STORM_CONFIG.MIN_WARNING_HOURS, realHours / STORM_CONFIG.WARNING_REAL_HOURS_PER_GAME_HOUR);
 }
 
 // So viram tempestade as CMEs que a NASA previu que chegariam a Marte

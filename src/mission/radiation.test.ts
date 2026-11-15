@@ -6,7 +6,7 @@ import { BASE_DOSE_MSV_PER_HOUR, CALM_DAY_DOSE_MSV, doseRateMsvPerHour, missionD
 // Dose por hora de jogo, la fora, da tempestade mais fraca e da mais forte do jogo
 const WEAKEST = RADIATION_CONFIG.STORM_DOSE_MIN_UGY / STORM_CONFIG.DURATION_HOURS;
 const STRONGEST = RADIATION_CONFIG.STORM_DOSE_MAX_UGY / STORM_CONFIG.DURATION_HOURS;
-const STORM = 1800; // uma tempestade forte, em uGy por hora de jogo
+const STORM = (WEAKEST + STRONGEST) / 2; // uma tempestade forte, em uGy por hora de jogo
 
 describe('radiation', () => {
   it('base dose comes from Curiosity RAD (6.93 uGy/h x quality factor 3.05)', () => {

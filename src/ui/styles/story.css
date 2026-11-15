@@ -86,7 +86,30 @@
 .story-task-key { margin-left: auto; font-size: 14px; color: var(--hud-accent); }
 .story-task-key:empty { display: none; }
 
-/* Ato 1: os 3 passos do tutorial ligados por uma linha */
+/* Tutorial guiado: onde ir e o que apertar, e o numero do passo */
+.story-task-hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.25;
+  color: #e8eef0;
+  text-shadow: 1px 1px 0 #000;
+}
+.story-step-count {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--hud-accent);
+}
+.story-task-hint:empty, .story-step-count:empty { display: none; }
+
+/* Passo do tutorial: o painel ganha a cor da secao da base (a mesma das placas das salas) */
+.story-objective.is-step { box-shadow: inset 0 0 0 2px var(--step-color), 3px 3px 0 rgba(0, 0, 0, 0.45); }
+.story-objective.is-step .story-task-icon { background: var(--step-color); }
+.story-objective.is-step .story-task strong { color: var(--step-color); }
+.story-objective.is-step .story-step-count { color: var(--step-color); }
+
+/* A volta de trabalho: os passos ligados por uma linha */
 .story-steps { display: flex; align-items: center; margin-top: 8px; }
 
 .story-step {
@@ -305,6 +328,19 @@ body:has(.story-card:not(.hidden)) .waypoint { visibility: hidden; }
   letter-spacing: 1px;
 }
 
+/* Balao de passo do tutorial: faixa do titulo, borda e icones na cor da secao da base */
+.story-card.is-step { box-shadow: inset 0 0 0 2px var(--step-color), 4px 4px rgba(0, 0, 0, 0.6); }
+.story-card.is-step header {
+  margin: -10px -12px 9px;
+  padding: 7px 12px 6px;
+  color: #11171b;
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--step-color);
+}
+.story-card.is-step .story-card-signal { background: #11171b; }
+.story-card.is-step .story-line-icon { color: #11171b; background: var(--step-color); box-shadow: none; }
+
 /* Luz de "sinal de radio" piscando */
 .story-card-signal {
   width: 9px;
@@ -425,6 +461,7 @@ body.touch-device .story-card-ok { min-height: 44px; min-width: 110px; }
     line-height: 1.25;
   }
   .story-card header { margin-bottom: 3px; font-size: 11px; }
+  .story-card.is-step header { margin: -6px -10px 5px; padding: 4px 10px 3px; font-size: 11px; }
   .story-card-ok { margin-top: 6px; }
   .story-signal {
     top: calc(4px + env(safe-area-inset-top, 0px));
@@ -445,6 +482,8 @@ body.touch-device .story-card-ok { min-height: 44px; min-width: 110px; }
   .story-objective header { margin-bottom: 4px; font-size: 10px; }
   .story-task-icon { width: 28px; height: 28px; padding: 4px; }
   .story-task strong { font-size: 14px; }
+  .story-task-hint { margin-top: 4px; font-size: 11px; }
+  .story-step-count { margin-top: 3px; font-size: 10px; }
   .story-steps { margin-top: 6px; }
   .story-rocket { margin-bottom: 5px; }
   .story-segs i { height: 10px; }

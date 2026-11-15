@@ -11,7 +11,6 @@ function snap(overrides = {}) {
     insideHabitat: false,
     iceCount: 0,
     iceNeeded: 10,
-    atConsole: false,
     stormPhase: 'calm',
     stormsSurvived: 0,
     propellantPct: 0,
@@ -58,12 +57,14 @@ describe('objectiveView', () => {
     expect(objectiveView(new StoryDirector(), snap())).toBeNull();
   });
 
-  it('shows the 3 tutorial steps with the current one highlighted', () => {
+  it('shows the current tutorial step with its hint and its number', () => {
     const story = director();
     let view = step(story);
     expect(view.act).toBe(1);
     expect(view.task).toMatchObject({ icon: 'door', label: 'ENTER THE BASE' });
-    expect(view.steps.map((s) => s.state)).toEqual(['now', 'todo', 'todo']);
+    expect(view.task.hint).toMatch(/[Pp]ress F/);
+    expect(view.progress).toEqual({ now: 1, total: 3 });
+    expect(view.steps).toBeNull();
     expect(view.loop).toBe(false);
     // A meta e o foguete vazio aparecem desde o primeiro passo
     expect(view.goal).toBe('GOAL: FLY HOME');
@@ -74,15 +75,15 @@ describe('objectiveView', () => {
 
     view = step(story, { insideHabitat: true });
     expect(view.task.label).toBe('CALL EARTH');
-    expect(view.steps.map((s) => s.state)).toEqual(['done', 'now', 'todo']);
+    expect(view.progress).toEqual({ now: 2, total: 3 });
   });
 
   it('shows the answer from Earth travelling while the next step is already on', () => {
     const story = director();
     step(story, { insideHabitat: true });
-    let view = step(story, { insideHabitat: true, atConsole: true });
+    let view = step(story, { insideHabitat: true, earthCalls: 1 });
     expect(view.task.label).toBe('GET 1 ICE');
-    expect(view.steps.map((s) => s.state)).toEqual(['done', 'done', 'now']);
+    expect(view.progress).toEqual({ now: 3, total: 3 });
     expect(view.timer).toBeNull();
     expect(view.signal).toMatchObject({ seconds: 25, returning: false, label: 'MESSAGE ON ITS WAY' });
     expect(view.signal.position).toBeCloseTo(0);
@@ -104,7 +105,7 @@ describe('objectiveView', () => {
   it('repeats the work loop in act 2: get ice, load the rocket, back to base', () => {
     const story = director();
     step(story, { insideHabitat: true });
-    step(story, { insideHabitat: true, atConsole: true });
+    step(story, { insideHabitat: true, earthCalls: 1 });
     let view = step(story, { hours: 16, iceCount: 1 });
     expect(view.act).toBe(2);
     expect(view.loop).toBe(true);
@@ -115,6 +116,7 @@ describe('objectiveView', () => {
       { icon: 'home', state: 'todo' },
     ]);
     expect(view.goals).toEqual({ storms: 0, stormsNeeded: 3, dataSent: false });
+    expect(view.progress).toBeNull(); // o numero do passo so existe no tutorial
 
     // Entregou o gelo: o degrau acende e o passo seguinte e voltar a base
     view = step(story, { hours: 16.2, iceCount: 0, iceNeeded: 9 });
@@ -136,7 +138,7 @@ describe('objectiveView', () => {
   it('leaves the loop when the tank has all its ice', () => {
     const story = director();
     step(story, { insideHabitat: true });
-    step(story, { insideHabitat: true, atConsole: true });
+    step(story, { insideHabitat: true, earthCalls: 1 });
     step(story, { hours: 16, iceCount: 1 });
 
     let view = step(story, { hours: 18, iceNeeded: 0, propellantPct: 90, stormsSurvived: 1 });
@@ -154,7 +156,7 @@ describe('objectiveView', () => {
   it('asks the player to get safe during the guided storm', () => {
     const story = director();
     step(story, { insideHabitat: true });
-    step(story, { insideHabitat: true, atConsole: true });
+    step(story, { insideHabitat: true, earthCalls: 1 });
     step(story, { hours: 16, iceCount: 1 });
     const view = step(story, { hours: 17, stormPhase: 'warning' });
     expect(view.task).toMatchObject({ icon: 'shield', label: 'GET SAFE', key: null });
@@ -164,7 +166,7 @@ describe('objectiveView', () => {
   it('shows the launch window running out in act 3', () => {
     const story = director();
     step(story, { insideHabitat: true });
-    step(story, { insideHabitat: true, atConsole: true });
+    step(story, { insideHabitat: true, earthCalls: 1 });
     step(story, { hours: 16, iceCount: 1 });
     let view = step(story, { hours: 40, stormsSurvived: 3, iceNeeded: 0, propellantPct: 100, dataSent: true });
     expect(view.act).toBe(3);

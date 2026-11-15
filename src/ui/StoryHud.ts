@@ -69,6 +69,8 @@ export class StoryHud {
     this.taskIconEl = $('story-task-icon');
     this.taskLabelEl = $('story-objective-text');
     this.taskKeyEl = $('story-task-key');
+    this.taskHintEl = $('story-task-hint');
+    this.stepCountEl = $('story-step-count');
     this.stepsEl = $('story-steps');
     this.stepEls = [...this.stepsEl.querySelectorAll('.story-step')];
 
@@ -138,6 +140,16 @@ export class StoryHud {
     setIcon(this.taskIconEl, view.task.icon);
     setText(this.taskLabelEl, view.task.label);
     setText(this.taskKeyEl, view.task.key ? `[${view.task.key}]` : '');
+    // Tutorial guiado: a dica do passo e "STEP 4/15" (vazios fora do tutorial: o CSS esconde)
+    setText(this.taskHintEl, view.task.hint ?? '');
+    setText(this.stepCountEl, view.progress ? `STEP ${view.progress.now}/${view.progress.total}` : '');
+    // Cor da secao da base do passo: pinta o icone, o numero do passo e a borda do painel
+    const color = view.color ?? '';
+    if (this.panelEl._color !== color) {
+      this.panelEl._color = color;
+      this.panelEl.classList.toggle('is-step', Boolean(color));
+      this.panelEl.style.setProperty('--step-color', color || 'var(--hud-accent)');
+    }
 
     setClass(this.stepsEl, !view.steps ? 'story-steps hidden' : view.loop ? 'story-steps is-loop' : 'story-steps');
     if (view.steps) {
@@ -167,7 +179,7 @@ export class StoryHud {
     }
   }
 
-  // Passos do painel: 3 no tutorial e na volta de trabalho, 4 no treino de cadete
+  // Passos do painel (a volta de trabalho tem 3)
   _buildSteps(count) {
     this.stepsEl.replaceChildren();
     this.stepEls = [];
@@ -206,10 +218,14 @@ export class StoryHud {
   }
 
   // card: { title, lines?, choices?, link?, source? } (storyChapters.js). Um card por vez, em fila.
+  // Balao de passo do tutorial (`card.step`) troca o do passo anterior na hora: sem fila, a
+  // crianca nunca le uma instrucao que ja cumpriu.
   showCard(card) {
+    if (card.step) this.queue = this.queue.filter((queued) => !queued.step);
     this.queue.push(card);
-    if (!this.current) {
+    if (!this.current || (card.step && this.current.step)) {
       this._next();
+      if (this.queue.length > 0) this.timer = Math.min(this.timer, MIN_CARD_SECONDS);
       return;
     }
     // Com outro card esperando, o atual so fica o tempo minimo de leitura
@@ -261,6 +277,9 @@ export class StoryHud {
     this.signalEl._cls = undefined;
     this.timer = this.current.seconds ?? this.cardSeconds; // cards com fato real ficam mais tempo
     this.titleEl.textContent = this.current.title;
+    // Balao de passo do tutorial: faixa do titulo e icones na cor da secao da base
+    this.cardEl.classList.toggle('is-step', Boolean(this.current.color));
+    this.cardEl.style.setProperty('--step-color', this.current.color ?? 'var(--hud-accent)');
     this._renderBody(this.current);
     this.sourceEl.textContent = this.current.source ?? '';
     this.cardEl.classList.remove('hidden');
