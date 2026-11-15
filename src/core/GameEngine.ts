@@ -24,6 +24,7 @@ import { createBlockMaterials } from '../graphics/blockMaterials.ts';
 import { MarsSkySystem } from '../sky/MarsSkySystem.ts';
 import { DustStormEffect } from '../sky/DustStormEffect.ts';
 import { VoxelWorld } from '../world/VoxelWorld.ts';
+import { PlayerFootprints } from '../world/PlayerFootprints.ts';
 import { buildNasaCustomModels } from '../world/nasaModelsBuilder.ts';
 import { targetCrop } from '../world/cropInteraction.ts';
 import { PlayerPhysics } from '../player/PlayerPhysics.ts';
@@ -171,6 +172,7 @@ export class GameEngine {
     this.canInteractWithConsole = false;
 
     this.player = new PlayerPhysics(this.world, colliders);
+    this.playerFootprints = new PlayerFootprints(this.scene);
     this.survival = new SurvivalSystem();
     this._savedArrivalPlayed = false;
     try {
@@ -2183,6 +2185,15 @@ export class GameEngine {
         this.roverController.isActive ? this.roverController.pos : this.player.pos,
         this.camera,
         this._weatherFx
+      );
+      this.playerFootprints.update(
+        dt,
+        this.player,
+        this.world,
+        isGameRunning
+          && !this.roverController.isActive
+          && !this.gymController.isActive
+          && !this.survival.isPlayerInsideShip(this.player.pos)
       );
       this._updateEvents(dt, isGameRunning);
       // Trajes da tripulacao: copia a pose de cada peca para o desenho unico (instancing)
