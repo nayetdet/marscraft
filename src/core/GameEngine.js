@@ -5,6 +5,7 @@ import { CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG
 import { separateCrew } from '../crew/separateCrew.js';
 import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
+import { CrewInstances } from '../crew/crewInstances.js';
 import { createBaseStock } from '../crew/baseStock.js';
 import { createStations, problemText } from '../crew/stations.js';
 import { EMBEDDED_SPACE_WEATHER } from '../data/spaceWeather.js';
@@ -315,6 +316,7 @@ export class GameEngine {
     this._lookDir = new THREE.Vector3();
 
     this.debug = new DebugOverlay(this.renderer);
+    this.crewInstances = CrewInstances.for(this.scene);
 
     // Modo Shaders (sombra do Sol, bloom, raios de luz): liga sozinho em GPU de verdade, e o
     // botao do menu troca. Criado antes do compile para os shaders com sombra ja sairem prontos.
@@ -1941,6 +1943,8 @@ export class GameEngine {
         this._weatherFx
       );
       this._updateEvents(dt, isGameRunning);
+      // Trajes da tripulacao: copia a pose de cada peca para o desenho unico (instancing)
+      this.crewInstances.sync();
       this.shaderMode.update(dt, { inside: this.survival.isPlayerInsideShip(this.camera.position) });
       this.shaderMode.render();
       if (isGameRunning && this.shaderMode.sampleFrame(frameMs)) {

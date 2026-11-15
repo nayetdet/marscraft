@@ -57,6 +57,11 @@ export const GRAPHICS_CONFIG = {
   // Altura minima da luz (componente y da direcao): evita sombras infinitas no por do sol.
   // A noite a luz vem espelhada de cima, como um luar fraco.
   SHADOW_MIN_ELEVATION: 0.2,
+  // O mapa de sombra do Sol e refeito a cada N quadros (a area so anda junto com ele)
+  SUN_SHADOW_FRAMES: 2,
+  // Raio minimo (em blocos) para um objeto fazer sombra. Pecas menores (bracos da tripulacao,
+  // itens das cestas, botoes) custavam centenas de desenhos por quadro e quase nao apareciam.
+  SHADOW_CASTER_MIN_RADIUS: 0.4,
   SHADOW_BIAS: -0.0004,
   SHADOW_NORMAL_BIAS: 0.045,
   // Com sombra de verdade o Sol pode ser mais forte e a luz ambiente mais fraca (mais contraste)
@@ -67,14 +72,17 @@ export const GRAPHICS_CONFIG = {
   // Lampadas da base (luz primaria dos interiores): sem o Sol atravessando o teto, elas e que
   // iluminam os comodos. Fazem sombra propria (moveis, tripulacao) e a luz sai pelas janelas.
   // DECAY menor que o fisico (2) espalha a luz ate os cantos do comodo.
-  ROOM_LIGHT_SCALE: 3.4,
+  ROOM_LIGHT_SCALE: 3.8,
   ROOM_LIGHT_DECAY: 1.15,
+  // Alcance maximo de cada lampada com o modo ligado. Cada pixel dentro do alcance paga a conta
+  // da sombra daquela lampada, entao alcance curto (so o comodo) e o que mais alivia a GPU.
+  ROOM_LIGHT_MAX_DISTANCE: 20,
   ROOM_SHADOW_MAP_SIZE: 512,
   ROOM_SHADOW_BIAS: -0.003,
   ROOM_SHADOW_NORMAL_BIAS: 0.03,
-  // A sombra da lampada mais proxima e refeita a cada N quadros; as outras, uma por vez, a cada M
-  ROOM_SHADOW_NEAR_FRAMES: 3,
-  ROOM_SHADOW_FAR_FRAMES: 20,
+  // Longe de todas as lampadas (a mais de RANGE vezes o alcance da mais proxima), nenhuma sombra
+  // de lampada e refeita
+  ROOM_SHADOW_RANGE: 2,
   // Dentro da base a luz ambiente cai (as lampadas e o Sol das janelas passam a mandar)
   INDOOR_AMBIENT_SCALE: 0.5,
   INDOOR_BLEND_SPEED: 1.8,
