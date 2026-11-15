@@ -1,15 +1,8 @@
 import { GRAPHICS_CONFIG } from '../../config/constants.js';
 
 // Preferencia salva: 'on' e 'off' sao escolhas do jogador; 'auto-off' e a protecao de desempenho
-// que desligou sozinha (o jogador pode religar pelo menu). Sem nada salvo, vale o automatico.
+// que desligou sozinha (o jogador pode religar pelo menu). Sem escolha salva, começa desligado.
 export const SHADER_PREF = Object.freeze({ ON: 'on', OFF: 'off', AUTO_OFF: 'auto-off' });
-
-const SOFTWARE_GPU = /swiftshader|llvmpipe|software|basic render/i;
-
-// GPU por software (WebGL na CPU): o jogo ja roda no limite, sem folga para sombra e bloom.
-export function isSoftwareGpu(gpuName) {
-  return SOFTWARE_GPU.test(String(gpuName ?? ''));
-}
 
 export function readShaderPref(storage) {
   try {
@@ -28,13 +21,13 @@ export function writeShaderPref(storage, pref) {
   }
 }
 
-// Decide se o jogo abre com shaders. A escolha salva do jogador sempre ganha; no automatico,
-// so liga em GPU de verdade e fora de telas de toque.
-export function resolveShaderMode({ pref, gpuName, coarsePointer }) {
+// Decide se o jogo abre com shaders. A escolha salva do jogador sempre ganha; sem escolha,
+// mantém desligado e deixa a protecao de desempenho em modo automatico.
+export function resolveShaderMode({ pref }) {
   if (pref === SHADER_PREF.ON) return { enabled: true, auto: false };
   if (pref === SHADER_PREF.OFF) return { enabled: false, auto: false };
   if (pref === SHADER_PREF.AUTO_OFF) return { enabled: false, auto: true };
-  return { enabled: !isSoftwareGpu(gpuName) && !coarsePointer, auto: true };
+  return { enabled: false, auto: true };
 }
 
 // Mede a media de FPS com os shaders ligados e avisa (uma vez) quando ela fica baixa demais.

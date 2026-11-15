@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GRAPHICS_CONFIG } from '../../config/constants.js';
-import { FrameBudgetGuard, SHADER_PREF, isSoftwareGpu, readShaderPref, resolveShaderMode, writeShaderPref } from './shaderSettings.js';
-
-const RTX = 'ANGLE (NVIDIA, NVIDIA GeForce RTX 5060 Direct3D11 vs_5_0 ps_5_0, D3D11)';
-const SWIFTSHADER = 'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)';
+import { FrameBudgetGuard, SHADER_PREF, readShaderPref, resolveShaderMode, writeShaderPref } from './shaderSettings.js';
 
 function fakeStorage(initial = {}) {
   const data = { ...initial };
@@ -14,37 +11,18 @@ function fakeStorage(initial = {}) {
   };
 }
 
-describe('isSoftwareGpu', () => {
-  it('detects WebGL running on the CPU', () => {
-    expect(isSoftwareGpu(SWIFTSHADER)).toBe(true);
-    expect(isSoftwareGpu('llvmpipe (LLVM 15.0.7, 256 bits)')).toBe(true);
-    expect(isSoftwareGpu('Microsoft Basic Render Driver')).toBe(true);
-  });
-
-  it('accepts real GPUs and unknown names', () => {
-    expect(isSoftwareGpu(RTX)).toBe(false);
-    expect(isSoftwareGpu('Apple GPU')).toBe(false);
-    expect(isSoftwareGpu(undefined)).toBe(false);
-  });
-});
-
 describe('resolveShaderMode', () => {
-  it('turns shaders on by default on a real GPU with a mouse', () => {
-    expect(resolveShaderMode({ pref: null, gpuName: RTX, coarsePointer: false })).toEqual({ enabled: true, auto: true });
-  });
-
-  it('keeps shaders off by default on software GPUs and touch screens', () => {
-    expect(resolveShaderMode({ pref: null, gpuName: SWIFTSHADER, coarsePointer: false }).enabled).toBe(false);
-    expect(resolveShaderMode({ pref: null, gpuName: RTX, coarsePointer: true }).enabled).toBe(false);
+  it('keeps shaders off by default until the player chooses otherwise', () => {
+    expect(resolveShaderMode({ pref: null })).toEqual({ enabled: false, auto: true });
   });
 
   it('lets the saved player choice win over the automatic rule', () => {
-    expect(resolveShaderMode({ pref: SHADER_PREF.ON, gpuName: SWIFTSHADER, coarsePointer: true })).toEqual({ enabled: true, auto: false });
-    expect(resolveShaderMode({ pref: SHADER_PREF.OFF, gpuName: RTX, coarsePointer: false })).toEqual({ enabled: false, auto: false });
+    expect(resolveShaderMode({ pref: SHADER_PREF.ON })).toEqual({ enabled: true, auto: false });
+    expect(resolveShaderMode({ pref: SHADER_PREF.OFF })).toEqual({ enabled: false, auto: false });
   });
 
   it('stays off after the performance guard turned it off', () => {
-    expect(resolveShaderMode({ pref: SHADER_PREF.AUTO_OFF, gpuName: RTX, coarsePointer: false })).toEqual({ enabled: false, auto: true });
+    expect(resolveShaderMode({ pref: SHADER_PREF.AUTO_OFF })).toEqual({ enabled: false, auto: true });
   });
 });
 
