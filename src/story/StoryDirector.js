@@ -1,5 +1,5 @@
 import { MISSION_CONFIG, STORY_CONFIG } from '../config/constants.js';
-import { CARDS, OBJECTIVES, commsCard, replyCard } from './storyChapters.js';
+import { CARDS, CERTIFICATE_IDS, OBJECTIVES, certificateBadge, certificateById, commsCard, replyCard } from './storyChapters.js';
 
 // A historia do jogo em 3 atos: chegada (tutorial), preparar a volta e janela de lancamento.
 // O tutorial tem 3 passos, um por ideia: entrar na base (ar), avisar a Terra (radio com atraso)
@@ -10,7 +10,12 @@ import { CARDS, OBJECTIVES, commsCard, replyCard } from './storyChapters.js';
 // (`update(snapshot)`) e aplica os eventos que saem em `drainEvents()`.
 //
 // snapshot = { hours, insideHabitat, iceCount, iceNeeded, atConsole, stormPhase, stormsSurvived,
-//              propellantPct, dataSent, launched }
+//              propellantPct, dataSent, launched,
+//              powerChecks, harvestCount, workoutCount, shelterWaterL }  (os 4 ultimos: treino #88)
+//
+// Treino de cadete (issue #88, `training: true`): entre avisar a Terra e buscar o gelo, 4
+// certificados curtos dentro da base (energia, estufa, academia e abrigo). Cada um solta um
+// evento 'certificate' com o selo. `skipTraining()` pula o que falta (menu Demo Controls).
 // O diretor escreve `needsBase` de volta no retrato, para o painel e a seta lerem a mesma rotina.
 export class StoryDirector {
   // `replyDelayHours`: horas de jogo ate a resposta da Terra chegar (ida e volta do sinal).
@@ -22,7 +27,12 @@ export class StoryDirector {
     gameHoursPerSecond = MISSION_CONFIG.GAME_HOURS_PER_SECOND,
     windowHours = STORY_CONFIG.WINDOW_HOURS,
     stormsForWindow = STORY_CONFIG.STORMS_FOR_WINDOW,
+    training = false,
   } = {}) {
+    this.training = training;
+    // Certificados ja ganhos (ids de CERTIFICATES), na ordem
+    this.certificates = [];
+    this._trainingBaseline = null;
     this.replyDelayHours = replyDelayHours;
     this.comms = comms;
     this.gameHoursPerSecond = gameHoursPerSecond;
@@ -86,10 +96,27 @@ export class StoryDirector {
         if (s.atConsole) {
           this._replyAt = s.hours + this.replyDelayHours;
           this._updateReply(s);
-          this._iceBaseline = s.iceCount;
-          this._setObjective('collect-ice');
-          this._card(commsCard(this.comms));
+          this._card(commsCard(this.comms, { training: this.training }));
+          if (this.training) {
+            // O que o cadete fizer daqui em diante conta para os certificados
+            this._trainingBaseline = {
+              powerChecks: s.powerChecks ?? 0,
+              harvestCount: s.harvestCount ?? 0,
+              workoutCount: s.workoutCount ?? 0,
+              shelterWaterL: s.shelterWaterL ?? 0,
+            };
+            this._card(CARDS.training);
+            this._setObjective(CERTIFICATE_IDS[0]);
+          } else {
+            this._startIce(s);
+          }
         }
+        break;
+      case 'cert-power':
+      case 'cert-greenhouse':
+      case 'cert-gym':
+      case 'cert-shelter':
+        if (this._certificateDone(this.objectiveId, s)) this._award(this.objectiveId, s);
         break;
       case 'collect-ice':
         // Gelo gasto baixa a base de comparacao: o que vale e pegar gelo novo depois do pedido
@@ -105,6 +132,47 @@ export class StoryDirector {
       default:
         break;
     }
+  }
+
+  _startIce(s) {
+    this._iceBaseline = s.iceCount;
+    this._setObjective('collect-ice');
+  }
+
+  // O cadete fez a tarefa do certificado depois de o treino comecar?
+  _certificateDone(id, s) {
+    const b = this._trainingBaseline;
+    switch (id) {
+      case 'cert-power': return (s.powerChecks ?? 0) > b.powerChecks;
+      case 'cert-greenhouse': return (s.harvestCount ?? 0) > b.harvestCount;
+      case 'cert-gym': return (s.workoutCount ?? 0) > b.workoutCount;
+      case 'cert-shelter': return (s.shelterWaterL ?? 0) > b.shelterWaterL + 1e-6;
+      default: return false;
+    }
+  }
+
+  _award(id, s) {
+    this.certificates.push(id);
+    this._events.push({ type: 'certificate', badge: certificateBadge(certificateById(id), s) });
+    const next = CERTIFICATE_IDS[CERTIFICATE_IDS.indexOf(id) + 1];
+    if (next) {
+      this._setObjective(next);
+      return;
+    }
+    this._card(CARDS.trainingDone);
+    this._startIce(s);
+  }
+
+  get inTraining() {
+    return CERTIFICATE_IDS.includes(this.objectiveId);
+  }
+
+  // Menu Demo Controls: pula o treino (para demonstracoes rapidas). No meio dele, vai direto ao gelo.
+  skipTraining(s = { iceCount: 0 }) {
+    const was = this.inTraining;
+    this.training = false;
+    if (was) this._startIce(s);
+    return was;
   }
 
   // Rotina de trabalho (atos 2 e 3). Entregar gelo pede a volta a base; entrar nela, ou pegar

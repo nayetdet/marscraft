@@ -1,7 +1,7 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { GREENHOUSE_CENTER, PLOT_PLANT_CELLS } from '../world/greenhouseLayout.js';
 import { greenhouseMapSvg, plotMapLabel, plotStatus } from './greenhouseMap.js';
-import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
+import { COMMS_CONFIG, CROP_CONFIG, ENERGY_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
 import { formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
@@ -10,6 +10,7 @@ import plantResearch from '../data/osdrPlants.json';
 import { plantDiscovery } from '../data/plantDiscoveries.js';
 import { createCropTexture } from '../graphics/cropTextures.js';
 import { GymWorkout } from './gymWorkout.js';
+import { growthChecks } from '../base/greenhouseCare.js';
 import { MEDBAY_BONE_TEXT } from './stationText.js';
 
 const DATA_SOURCES = {
@@ -159,6 +160,15 @@ export class StationPanel {
   open(type) {
     this.type = type;
     this.isOpen = true;
+    // Conferir a bateria vale o certificado de engenharia do treino de cadete (issue #88)
+    if (type === 'powerroom' || type === 'power') this.engine.powerChecks++;
+    // Estufa: abre no campo que ja pode ser colhido, para a crianca ver o GET! de primeira
+    if (type === 'greenhouse') {
+      const st = this.engine.stations;
+      const isReady = (plot) => plot.crop && plot.crop.progress >= CROP_CONFIG[plot.crop.type].seconds;
+      const ready = st.plots.findIndex(isReady);
+      if (ready >= 0 && !isReady(st.plots[st.selectedPlot])) st.selectPlot(ready);
+    }
     this.feedback.textContent = '';
     this.ghNotice = '';
     if (type === 'treadmill' || type === 'bike') {
@@ -839,13 +849,16 @@ export class StationPanel {
     const used = loads.reduce((sum, [, rate, on]) => sum + (on ? rate : 0), 0);
     return `BATTERY: ${Math.round(mission.battery.percent)}%\n` +
       `SOLAR PANELS NOW: +${mission.chargeRate.toFixed(1)}%/h ${utility.isNight ? '(night: no sun)' : ''}\n` +
+      `NUCLEAR RTG: +${ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR}%/h, day and night, only for life support (air and CO2 filter)\n` +
+      `${mission.standby ? 'BATTERY EMPTY: STANDBY. Factory, lights, heater and shield stopped. The RTG keeps the air on until the Sun is back.\n' : ''}` +
       `USING ABOUT: -${used.toFixed(1)}%/h (plus your own oxygen)\n` +
       `${utility.demandFactor < 1 ? `EASY START: the base uses ${Math.round(utility.demandFactor * 100)}% of its normal power for now. It will need more each sol.\n` : ''}\n` +
       `WHERE THE POWER GOES:\n${lines.join('\n')}\n\n` +
       `HEATER: ${utility.heaterOn ? 'ON' : 'OFF'}${utility.cold ? '   FREEZING! Pipes and plants stopped.' : ''}\n\n` +
       'Mars nights get down to about -98 C (NASA InSight). At night the panels make nothing and the heater needs more power. ' +
       'Turning systems off saves power, but each one stops doing its job.\n' +
-      'Real case: the InSight lander shut down in 2022 when dust covered its solar panels.';
+      'Real case: the InSight lander shut down in 2022 when dust covered its solar panels. ' +
+      'Curiosity and Perseverance use an RTG instead: a nuclear power source that makes about 110 W day and night (NASA).';
   }
 
   _powerButtons() {
@@ -1004,6 +1017,12 @@ export class StationPanel {
         ${alertPill}
         ${s.contaminated ? `<button type="button" class="mc-btn gh-clean-btn" data-action="cleanBase">CLEAN</button>` : ''}
         <details class="gym-learn"><summary aria-label="NASA info" title="NASA info">i</summary><p>Plants drink from the base tank and breathe water back for the recycler. NASA grew salad crops in 28 days on the Space Station.<br/><br/>${study ? `${study.id}: ${study.explanation}` : `Real NASA OSDR data (${formatDateDMY(plantResearch.retrieved.slice(0, 10))}).`}<br/>${ghLinks}</p></details>
+      </div>
+      <div class="gh-checks" aria-label="What the plants need">
+        ${growthChecks(this.engine.greenhouseState()).map((check) => `
+          <div class="gh-check ${check.ok ? 'ok' : 'bad'}">
+            <b>${check.ok ? 'OK' : '!!'}</b><span>${check.label}</span><small>${check.detail}</small>
+          </div>`).join('')}
       </div>
       <div class="gh-body">
         <div class="gh-map-wrap">

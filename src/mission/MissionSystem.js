@@ -63,6 +63,11 @@ export class MissionSystem {
     this.solarEnergyCollected = 0; // % de bateria somados
     this.oxygenProducedPoints = 0;
     this.iceDelivered = 0;
+    // Horas de jogo com a bateria vazia (maquinas em espera, so o RTG mantem o ar). Boletim #90.
+    this.standbyHours = 0;
+    // Tempestades: horas jogadas nelas e, dessas, horas protegido (dose abaixo do dano). Boletim #90.
+    this.stormHours = 0;
+    this.protectedStormHours = 0;
 
     this.storm = stormStateAt(this.schedule, startHours);
     this._phaseKey = this._keyFor(this.storm);
@@ -107,10 +112,20 @@ export class MissionSystem {
   }
 
   _step(h, insideHabitat, active) {
+    const previousTime = ((((this.lastHours - h) % 24) + 24) % 24);
     const timeOfDay = ((this.lastHours % 24) + 24) % 24;
 
     this.chargeRate = solarChargePerHour(timeOfDay);
     this.solarEnergyCollected += this.battery.add(this.chargeRate * h);
+    // O RTG gera de dia e de noite, so para o suporte de vida (issue #85)
+    this.battery.addLifeSupportPower(
+      ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR * h,
+      ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR * ENERGY_CONFIG.RTG_BUFFER_HOURS,
+    );
+    const sunset = ENERGY_CONFIG.SUNSET_WARNING_HOUR;
+    if (previousTime < sunset && timeOfDay >= sunset) {
+      this.events.push({ type: 'sunset-soon', storm: null, hoursUntil: null, batteryPct: this.battery.percent });
+    }
 
     if (this.shieldOn) {
       const need = ENERGY_CONFIG.SHIELD_DRAIN_PER_HOUR * h;
@@ -131,7 +146,12 @@ export class MissionSystem {
     });
     if (!active) return 0;
 
-    if (this.storm.phase === 'active') this._playedDuringStorm = true;
+    if (this.standby) this.standbyHours += h;
+    if (this.storm.phase === 'active') {
+      this._playedDuringStorm = true;
+      this.stormHours += h;
+      if (this.doseRate < RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR) this.protectedStormHours += h;
+    }
     this.totalDoseMsv += this.doseRate * h;
     return radiationDamage(this.doseRate, h);
   }
@@ -221,14 +241,19 @@ export class MissionSystem {
     return events;
   }
 
-  // O2 que a bateria consegue pagar agora
+  // Bateria vazia: fabrica, luzes e estacoes param; o RTG ainda paga o ar (issue #85)
+  get standby() {
+    return this.battery.percent < ENERGY_CONFIG.STANDBY_BELOW;
+  }
+
+  // O2 que a bateria e o RTG conseguem pagar agora
   oxygenRefillBudget() {
-    return this.battery.charge / (ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier);
+    return this.battery.lifeSupportAvailable / (ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier);
   }
 
   chargeOxygen(points) {
     if (points <= 0) return;
-    this.battery.drain(points * ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier);
+    this.battery.drainLifeSupport(points * ENERGY_CONFIG.OXYGEN_COST_PER_POINT * this.oxygenCostMultiplier);
     this.oxygenProducedPoints += points;
   }
 

@@ -1,5 +1,6 @@
 import { STORY_CONFIG } from '../config/constants.js';
 import { formatDateDMY } from '../mission/missionText.js';
+import { shelterDoseFactor } from '../mission/radiation.js';
 
 // Textos da historia (UI em ingles, para criancas de 7 a 12 anos, sem emoji).
 // So dados: quem decide quando cada coisa aparece e o StoryDirector.
@@ -37,6 +38,23 @@ export const CARDS = {
       { icon: 'bolt', text: 'Air and fuel share one battery' },
     ],
   },
+  // Treino de cadete (issue #88): os 4 certificados, um por linha
+  training: {
+    title: 'CADET TRAINING',
+    lines: [
+      { icon: 'bolt', text: 'Engineering: check the battery' },
+      { icon: 'plant', text: 'Botany: harvest 1 plant' },
+      { icon: 'heart', text: 'Health: do 1 workout' },
+      { icon: 'shield', text: 'Shielding: fill the water wall' },
+    ],
+  },
+  trainingDone: {
+    title: 'CADET CERTIFIED',
+    lines: [
+      { icon: 'medal', text: '4 of 4 certificates!' },
+      { icon: 'ice', text: 'Now go outside: get 1 ice' },
+    ],
+  },
   stormGuide: {
     title: 'SOLAR STORM COMING',
     lines: [{ icon: 'storm', text: `Survive ${STORY_CONFIG.STORMS_FOR_WINDOW} storms, then you can launch` }],
@@ -55,15 +73,79 @@ export const CARDS = {
   },
 };
 
+// Treino de cadete (issue #88): 4 certificados curtos dentro da base, cada um dado por um papel
+// da tripulacao, na ordem do caminho (console -> energia -> estufa -> academia -> abrigo).
+// `place` = lugar da seta (src/story/waypoints.js). O StoryDirector decide quando cada um vale.
+export const CERTIFICATES = [
+  {
+    id: 'cert-power',
+    name: 'ENGINEERING',
+    mentor: 'Flight Engineer',
+    icon: 'bolt',
+    place: 'powerroom',
+    task: 'CHECK THE BATTERY',
+    fact: 'Sun by day, battery and RTG by night',
+    source: 'Mars gets 43% of Earth sunlight (NASA Mars Fact Sheet). RTG: about 110 W day and night (NASA MMRTG).',
+  },
+  {
+    id: 'cert-greenhouse',
+    name: 'SPACE BOTANY',
+    mentor: 'Botanist',
+    icon: 'plant',
+    place: 'greenhouse',
+    task: 'HARVEST 1 PLANT',
+    fact: 'Plants grow food with no soil',
+    source: 'CSA: Food production on the Moon and in remote areas. NASA Veggie grew lettuce on the Space Station.',
+  },
+  {
+    id: 'cert-gym',
+    name: 'HEALTH IN 0.38g',
+    mentor: 'Medical Officer',
+    icon: 'heart',
+    place: 'gym',
+    task: 'DO 1 WORKOUT',
+    fact: 'Low gravity makes bones weak: train',
+    source: 'Mars gravity: 38% of Earth (NASA). Bones lose about 1% a month in space without exercise (NASA).',
+  },
+  {
+    id: 'cert-shelter',
+    name: 'RADIATION SHIELDING',
+    mentor: 'Medical Officer',
+    icon: 'shield',
+    place: 'shelter',
+    task: 'FILL THE WATER WALL',
+    fact: 'Water blocks radiation from the Sun',
+    source: 'Simulated pulse from Curiosity RAD data (NASA RadLab). Water shielding: PREDICCS model.',
+  },
+];
+
+export const CERTIFICATE_IDS = CERTIFICATES.map((cert) => cert.id);
+
+export function certificateById(id) {
+  return CERTIFICATES.find((cert) => cert.id === id) ?? null;
+}
+
+// Selo de certificado (aparece no meio da tela). O de blindagem roda um pulso de radiacao
+// simulado: quanto a parede de agua que o cadete encheu corta da dose (curva do PREDICCS).
+export function certificateBadge(cert, { shelterWaterL = 0 } = {}) {
+  const line = cert.id === 'cert-shelter'
+    ? `Test pulse: your ${Math.round(shelterWaterL)} L wall blocks ${Math.round((1 - shelterDoseFactor(shelterWaterL)) * 100)}% of it`
+    : cert.fact;
+  return { icon: cert.icon, title: 'CERTIFICATE UNLOCKED', name: cert.name, mentor: cert.mentor, line, source: cert.source };
+}
+
 // Card do primeiro relatorio pelo radio. A distancia e o atraso vem do CommsLink (o mesmo radio
 // do terminal da base): { millionKm, oneWayMinutes, dateIso } calculados para a data real do jogo.
-export function commsCard({ millionKm, oneWayMinutes, dateIso }) {
+// Com o treino de cadete (issue #88), a espera da resposta vira hora de treinar.
+export function commsCard({ millionKm, oneWayMinutes, dateIso }, { training = false } = {}) {
   return {
     title: 'MESSAGE SENT',
     link: { minutes: oneWayMinutes, millionKm },
     lines: [
       { icon: 'clock', text: 'Earth cannot help fast: you decide' },
-      { icon: 'ice', text: 'Do not wait: go get 1 ice' },
+      training
+        ? { icon: 'medal', text: 'While you wait: cadet training' }
+        : { icon: 'ice', text: 'Do not wait: go get 1 ice' },
     ],
     source: `Distance calculated for ${formatDateDMY(dateIso)} from NASA/JPL planet orbits`,
   };
@@ -87,6 +169,10 @@ export const OBJECTIVES = {
   'enter-base': 'Go inside the base',
   report: 'Call Earth at the command console',
   'collect-ice': 'Get 1 block of ice from the ice crater',
+  'cert-power': 'Cadet training: check the battery in the power room',
+  'cert-greenhouse': 'Cadet training: harvest 1 plant at the food monitor',
+  'cert-gym': 'Cadet training: do 1 workout in the gym',
+  'cert-shelter': 'Cadet training: fill the storm shelter water wall',
   act2: 'Get the rocket ready to go home',
   'storm-guide': 'Get safe: storm shelter with water in its wall, or the Shield Remote',
   fuel: 'Fill the rocket with ice',

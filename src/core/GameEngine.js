@@ -11,6 +11,8 @@ import donkiCme from '../data/donkiCme.json';
 import { MissionSystem, oxygenPointsToKg } from '../mission/MissionSystem.js';
 import { NO_STORM_DATA_TEXT, formatDateDMY, formatDose, formatHours, stormEventMessage } from '../mission/missionText.js';
 import { MissionHud } from '../ui/MissionHud.js';
+import { missionReport } from '../mission/missionReport.js';
+import { renderReportCard } from '../ui/ReportCard.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
 import { createCarrotTexture } from '../graphics/carrotTexture.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
@@ -49,6 +51,7 @@ import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
 import { buildBaseDecor } from '../base/baseDecor.js';
 import { buildGreenhouseFields } from '../base/greenhouseFields.js';
+import { earthCard, plantsStalled } from '../base/greenhouseCare.js';
 import { MenuScreens } from '../ui/MenuScreens.js';
 import { StoryDirector } from '../story/StoryDirector.js';
 import { objectiveView } from '../story/objectiveView.js';
@@ -210,6 +213,8 @@ export class GameEngine {
       onClose: () => this._closeMavPanel(),
     });
     this._wasDead = false;
+    this.deathCount = 0; // para o boletim do cadete (issue #90)
+    this._startHours = this._skyHours();
     this._initStory();
 
     // Tripulacao NPC (issues #47 e #48): o tamanho e escolhido no menu antes do primeiro Play
@@ -408,7 +413,7 @@ export class GameEngine {
       this.stationPanel.open(target.type);
       return;
     }
-    this.hud.showToast(message);
+    this.hud.showSystemNotice(message, 'AIRLOCK');
   }
 
   mountGym(mode) {
@@ -456,10 +461,10 @@ export class GameEngine {
     } else if (type === 'manual-open') {
       this.audio.playManualCrank();
     } else if (type === 'clean-skipped') {
-      this.hud.showToast('No power to clean your suit: Mars dust came inside with you!', 4500);
+      this.hud.showSystemNotice('No power to clean your suit: Mars dust came inside with you!', 'AIRLOCK');
     } else if (type === 'suit-cleaned' && !this._dustFactShown) {
       this._dustFactShown = true;
-      this.hud.showToast('Suit clean! Apollo astronauts got "lunar hay fever" from dust that came inside on their suits.', 6000);
+      this.hud.showSystemNotice('Suit clean! Apollo astronauts got "lunar hay fever" from dust that came inside on their suits.', 'AIRLOCK', 6000);
     }
   }
 
@@ -810,7 +815,29 @@ export class GameEngine {
       'Radio delay: Earth-Mars distance from NASA/JPL planet orbits; solar conjunction rules from NASA/JPL. ' +
       'Trip time, thin air and launch windows: NASA Mars facts.';
     this.missionHud.showVictory(rows, sources);
+    renderReportCard(document.getElementById('victory-report'), missionReport(this._reportStats()));
     document.exitPointerLock();
+  }
+
+  // O que o boletim do cadete (issue #90) avalia, lido dos sistemas no fim da partida
+  _reportStats() {
+    const m = this.mission;
+    const s = this.stations;
+    return {
+      hoursPlayed: this._skyHours() - (this._startHours ?? 0),
+      sols: this.sky.solCount,
+      deaths: this.deathCount,
+      stormHours: m.stormHours,
+      protectedStormHours: m.protectedStormHours,
+      totalDoseMsv: m.totalDoseMsv,
+      boneDensity: s.boneDensity,
+      muscleStrength: s.muscleStrength,
+      workoutCount: s.workoutCount,
+      harvestCount: s.harvestCount,
+      cropVariety: s.cropCollection.size,
+      iceDelivered: m.iceDelivered,
+      standbyHours: m.standbyHours,
+    };
   }
 
   _updateMission(dt) {
@@ -831,6 +858,7 @@ export class GameEngine {
     );
 
     if (this.survival.isDead && !this._wasDead) {
+      this.deathCount++;
       this.mission.markDeath();
       this.missionHud.closeMavPanel(); // a tela de morte precisa aparecer por cima
       this.hud.showDeathScreen(this.survival); // a radiacao pode matar depois do hud.update deste frame
@@ -859,7 +887,29 @@ export class GameEngine {
       this.stationCrop.scale.y = 0.2 + 0.8 * crop.progress / CROP_CONFIG[crop.type].seconds;
       for (const [type, model] of Object.entries(this.stationCropModels)) model.visible = type === crop.type;
     }
-    this.greenhouseFields.update(this.stations.plots, this.stations.harvestBaskets);
+    this.greenhouseFields.update(this.stations.plots, {
+      stalled: this.stations.hasGrowingCrops() && plantsStalled(this.greenhouseState()),
+      stock: this.stations.harvestBaskets,
+    });
+    // Cada colheita mostra um card "Ciencia espacial na Terra" (issue #89)
+    const harvests = this.stations.harvestCount;
+    if (harvests > (this._harvestsSeen ?? 0)) {
+      this._harvestsSeen = harvests;
+      this.storyHud.showCard(earthCard(harvests));
+    }
+  }
+
+  // Os 3 cuidados da estufa (luz, agua reciclada, sem poeira) para o monitor e para as plantas
+  greenhouseState() {
+    return {
+      lightsOn: this.utility.greenhouseLightsOn,
+      powered: this.expedition.greenhousePowered,
+      cold: this.utility.cold,
+      waterL: this.survival.baseWater,
+      thirsty: this.stations.cropsThirsty,
+      recovery: this.utility.waterRecovery,
+      contaminated: this.stations.contaminated,
+    };
   }
 
   // Estado do jogo que as telas e os pontos de informacao da base mostram
@@ -916,6 +966,12 @@ export class GameEngine {
         ? 'It is now night on Mars: the solar panels make no power.'
         : 'It is now noon on Mars: the solar panels are charging the battery.';
     }
+    if (action === 'skip-training') {
+      if (this.story.skipTraining(this._storySnapshot)) return 'Cadet training skipped. Press Back, then Play: go get 1 ice.';
+      return this.story.act === 0
+        ? 'Cadet training is off for this game: after calling Earth you go straight to the ice.'
+        : 'Cadet training is already done or skipped.';
+    }
     if (action === 'battery') {
       this.mission.battery.charge = Math.min(this.mission.battery.charge, this.mission.battery.capacity * 0.1);
       return 'Battery drained to 10%. Watch what the base has to give up.';
@@ -927,7 +983,10 @@ export class GameEngine {
 
   _initStory() {
     // A historia usa o mesmo radio do terminal da base (CommsLink): distancia e atraso de hoje
+    // Vezes que o jogador abriu o painel de energia (certificado de engenharia, issue #88)
+    this.powerChecks = 0;
     this.story = new StoryDirector({
+      training: true, // treino de cadete (issue #88); o menu Demo Controls pode pular
       replyDelayHours: this.comms.roundTripGameSeconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND,
       comms: {
         millionKm: Math.round(this.comms.distanceKm / 1e6),
@@ -942,6 +1001,7 @@ export class GameEngine {
       hours: 0, insideHabitat: false, iceCount: 0, iceNeeded: 0, atConsole: false,
       stormPhase: 'calm', stormsSurvived: 0, propellantPct: 0, dataSent: false, launched: false,
       needsBase: false,
+      powerChecks: 0, harvestCount: 0, workoutCount: 0, shelterWaterL: 0,
     };
 
     // Setas do objetivo: uma flutua no mundo e a outra fica na tela (aponta mesmo atraves das paredes)
@@ -985,6 +1045,9 @@ export class GameEngine {
       powerroom: { x: -15.5, y: ground + 2.5, z: -16.5, label: 'POWER & HEAT CONTROL' },
       lifeSupport: { x: 10.6, y: ground + 2.5, z: -3, label: 'LIFE SUPPORT' },
       recycler: { x: -16, y: ground + 2.2, z: -38.3, label: 'WATER RECYCLER' },
+      // Treino de cadete (issue #88): monitor da estufa e academia
+      greenhouse: { x: GREENHOUSE_MONITOR_POS.x, y: ground + 3, z: GREENHOUSE_MONITOR_POS.z, label: WAYPOINT_LABELS.greenhouse },
+      gym: { x: -7.5, y: ground + 3, z: 10.2, label: WAYPOINT_LABELS.gym },
     };
   }
 
@@ -1083,16 +1146,25 @@ export class GameEngine {
     s.propellantPct = this.mission.propellant;
     s.dataSent = this.mission.dataSent;
     s.launched = this.mission.launched;
+    s.powerChecks = this.powerChecks;
+    s.harvestCount = this.stations.harvestCount;
+    s.workoutCount = this.stations.workoutCount;
+    s.shelterWaterL = this.mission.shelterWaterL;
     this.story.update(s);
 
     for (const event of this.story.drainEvents()) {
       if (event.type === 'card') this.storyHud.showCard(event.card);
+      else if (event.type === 'certificate') {
+        this.storyHud.showCertificate(event.badge);
+        this._playGymTone(520, 0.22, 780);
+      }
       else if (event.type === 'start-storms') {
         this.mission.startStorms(s.hours);
         if (this.mission.noStormData) this.hud.showToast(`Space weather is calm. ${NO_STORM_DATA_TEXT}`, 6000);
       }
       else if (event.type === 'window-closed') {
         this.storyHud.showWindowClosed();
+        renderReportCard(document.getElementById('window-report'), missionReport(this._reportStats()));
         this.waypointBeacon.hide();
         document.exitPointerLock();
       }
@@ -1200,7 +1272,7 @@ export class GameEngine {
           Sam: 'I am doing a quick habitat check.', Noor: 'The corridor is clear for the next shift.', Kai: 'I spotted a dust plume outside.',
           Iris: 'The rock layers outside look fascinating.', Ravi: 'Earth will get our message when the signal window opens.',
         };
-        this.hud.showToast(`${speaker.name}: ${replies[speaker.name]}`, 3500);
+        this.hud.showCaption(`${speaker.name}: ${replies[speaker.name]}`);
       }
     }
   }
@@ -1294,7 +1366,7 @@ export class GameEngine {
   handlePlayerInteract() {
     if (this.missionHud.isVictoryShown) return;
     if (this.currentInteraction === 'crew' && this.talkTarget) {
-      this.hud.showToast(`${this.talkTarget.name}: ${this.talkTarget.dialogue}`, 6500);
+      this.hud.showCaption(`${this.talkTarget.name}: ${this.talkTarget.dialogue}`);
       return;
     }
     if (this.missionHud.isMavPanelOpen) {

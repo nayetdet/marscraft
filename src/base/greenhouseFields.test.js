@@ -44,10 +44,10 @@ describe('greenhouse harvest baskets', () => {
       })
     );
 
-    fields.update([], { potato: 1, lettuce: 4, soy: 20 });
+    fields.update([], { stock: { potato: 1, lettuce: 4, soy: 20 }, stalled: true });
     expect(getVisibleCounts()).toEqual({ potato: 1, lettuce: 4, soy: 8 });
 
-    fields.update([], { potato: 0, lettuce: 2, soy: 0 });
+    fields.update([], { stock: { potato: 0, lettuce: 2, soy: 0 }, stalled: false });
     expect(getVisibleCounts()).toEqual({ potato: 0, lettuce: 2, soy: 0 });
   });
 });
