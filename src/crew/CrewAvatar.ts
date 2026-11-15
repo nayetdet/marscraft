@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { pointAlong } from './crewRails.ts';
 import { buildSpacesuitRig } from '../graphics/spacesuitModel.ts';
 import { CrewInstances } from './crewInstances.ts';
+import { getCrewProfile } from './crewProfiles.ts';
 
 const FLOOR_Y = 10; // topo do piso da base (nasaModelsBuilder: floorTopY)
 const HALF_PI = Math.PI / 2;
@@ -63,38 +64,73 @@ function sampleSmoothRoute(route, distance, routeLen) {
   return { x, z, heading };
 }
 
-function makeNameLabel(text, accentColor) {
+const LABEL_FONT = '"Monocraft", monospace';
+const LABEL_TINT_MIX = 0.55;
+const LABEL_WIDTH = 256;
+const LABEL_HEIGHT = 64;
+const LABEL_SCALE_X = 1.08;
+const LABEL_SCALE_Y = 0.27;
+const _rgb = { r: 0, g: 0, b: 0 };
+
+// Clareia a cor do traje em sRGB para preservar o matiz exato (laranja nao vira rosa, amarelo nao vira creme).
+export function lightNameColor(accentColor) {
+  new THREE.Color(accentColor).getRGB(_rgb, THREE.SRGBColorSpace);
+  const toHex = (channel) => Math.round((channel + (1 - channel) * LABEL_TINT_MIX) * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `#${toHex(_rgb.r)}${toHex(_rgb.g)}${toHex(_rgb.b)}`;
+}
+
+export function makeNameLabel(text, accentColor) {
   if (typeof document === 'undefined') {
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ depthWrite: false }));
-    sprite.scale.set(1.05, 0.24, 1);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false, toneMapped: false }));
+    sprite.scale.set(LABEL_SCALE_X, LABEL_SCALE_Y, 1);
     return sprite;
   }
   const canvas = document.createElement('canvas');
-  canvas.width = 192;
-  canvas.height = 44;
+  canvas.width = LABEL_WIDTH;
+  canvas.height = LABEL_HEIGHT;
   const ctx = canvas.getContext('2d');
-  const hex = `#${new THREE.Color(accentColor).getHexString()}`;
+  ctx.clearRect(0, 0, LABEL_WIDTH, LABEL_HEIGHT);
 
-  // Placa HUD escura com borda chanfrada e faixa da cor do especialista
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
-  ctx.fillRect(2, 2, 188, 40);
-  ctx.strokeStyle = 'rgba(148, 163, 184, 0.7)';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(3, 3, 186, 38);
+  let fontSize = 28;
+  ctx.font = `bold ${fontSize}px ${LABEL_FONT}`;
+  while (fontSize > 14 && ctx.measureText(text).width > LABEL_WIDTH - 24) {
+    fontSize -= 2;
+    ctx.font = `bold ${fontSize}px ${LABEL_FONT}`;
+  }
 
-  ctx.fillStyle = hex;
-  ctx.fillRect(4, 4, 8, 36);
-
-  ctx.fillStyle = '#f8fafc';
-  ctx.font = 'bold 22px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(text.toUpperCase(), 100, 23);
+  const cx = LABEL_WIDTH / 2;
+  const cy = LABEL_HEIGHT / 2;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+  ctx.shadowBlur = 5;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 2;
+  ctx.fillStyle = 'rgba(10, 14, 24, 0.92)';
+  ctx.fillText(text, cx + 3, cy + 3);
+  ctx.restore();
+
+  ctx.fillStyle = lightNameColor(accentColor);
+  ctx.fillText(text, cx, cy);
 
   const texture = new THREE.CanvasTexture(canvas);
-  texture.magFilter = THREE.NearestFilter;
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthWrite: false }));
-  sprite.scale.set(1.05, 0.24, 1);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.magFilter = THREE.LinearFilter;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.anisotropy = 4;
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthWrite: false,
+      toneMapped: false,
+    })
+  );
+  sprite.scale.set(LABEL_SCALE_X, LABEL_SCALE_Y, 1);
   return sprite;
 }
 
@@ -103,7 +139,12 @@ export class CrewAvatar {
   constructor(scene, member, accentColor) {
     this.member = member;
     this.group = new THREE.Group();
-    const rig = buildSpacesuitRig({ accentColor, suitColor: SUIT_COLOR.clone(), instanced: true });
+    const rig = buildSpacesuitRig({
+      accentColor,
+      suitColor: SUIT_COLOR.clone(),
+      instanced: true,
+      crewProfile: getCrewProfile(member),
+    });
     this.bodyGroup = rig.bodyGroup;
     this.suitMat = rig.suitMat;
     this.statusLightMat = rig.statusLightMat;
@@ -521,7 +562,8 @@ export class CrewAvatar {
     const materials = new Set();
     this.group.traverse((obj) => {
       obj.geometry?.dispose();
-      if (obj.material) materials.add(obj.material);
+      const mats = Array.isArray(obj.material) ? obj.material : obj.material ? [obj.material] : [];
+      for (const mat of mats) materials.add(mat);
     });
     for (const mat of materials) {
       mat.map?.dispose();
