@@ -228,7 +228,7 @@ export const PACING_CONFIG = {
 // O O2 do tripulante e pago em energia, como o O2 do jogador no habitat (reciclagem + MOXIE).
 export const CREW_CONFIG = {
   MAX_CREW: 8,
-  DEFAULT_CREW: 8,
+  DEFAULT_CREW: 2,
   NAMES: ['Ana', 'Leo', 'Maya', 'Sam', 'Noor', 'Kai', 'Iris', 'Ravi'],
   // Papeis da issue #48: escolher 1, 2 ou 3 tripulantes leva o engenheiro, depois a botanica,
   // depois a medica. Cada um comeca na sua estacao e rende mais nela.

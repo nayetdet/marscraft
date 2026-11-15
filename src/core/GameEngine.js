@@ -213,7 +213,7 @@ export class GameEngine {
     this.utility = new UtilityModule({ mission: this.mission, survival: this.survival, stations: this.stations, base: this.crewStock });
     this._utilityHours = null;
     this.crewAvatars = [];
-    this._buildCrew(CREW_CONFIG.DEFAULT_CREW);
+    this._buildCrew(CREW_CONFIG.NAMES.length);
     this.menuScreens = new MenuScreens({
       donkiDate: formatDateDMY(donkiCme.fetched),
       onDemo: (action) => this._runDemo(action),
