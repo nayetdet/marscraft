@@ -1,4 +1,4 @@
-import { DUST_STORM_VISUAL_CONFIG, SURVIVAL_CONFIG, TERRAIN_CONFIG } from '../config/constants.js';
+import { DUST_STORM_VISUAL_CONFIG, SURVIVAL_CONFIG, TERRAIN_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 
 // Parede de poeira que marca a borda da area jogavel: um anel em volta do centro da base.
 // Logica pura, usada pelo HUD (aviso), pelo visual (DustStormEffect) e pela parede invisivel.
@@ -8,10 +8,16 @@ const CENTER = TERRAIN_CONFIG.BASE_CENTER;
 const START = SURVIVAL_CONFIG.DUST_STORM_START_RADIUS;
 const RANGE = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS - START;
 const WARNING = SURVIVAL_CONFIG.DUST_STORM_WARNING_DISTANCE;
+const HALF_MAP_X = WORLD_CONFIG.SIZE_X / 2;
+const HALF_MAP_Z = WORLD_CONFIG.SIZE_Z / 2;
 
 export const DUST_STORM_CENTER = CENTER;
 export const DUST_STORM_WALL_RADIUS = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS;
 export const DUST_STORM_MIDDLE_WALL_RADIUS = START + RANGE / 2;
+export const DUST_STORM_WORLD_RADIUS = Math.hypot(
+  HALF_MAP_X + Math.abs(CENTER.x),
+  HALF_MAP_Z + Math.abs(CENTER.z)
+);
 const VISUAL_START = DUST_STORM_WALL_RADIUS - DUST_STORM_VISUAL_CONFIG.VISUAL_LEAD;
 const VISUAL_RANGE = DUST_STORM_WALL_RADIUS - VISUAL_START;
 

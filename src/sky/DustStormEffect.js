@@ -1,10 +1,11 @@
 import * as THREE from 'three';
-import { DUST_STORM_VISUAL_CONFIG as V, DUST_WEATHER_CONFIG as W, SURVIVAL_CONFIG } from '../config/constants.js';
+import { DUST_STORM_VISUAL_CONFIG as V, DUST_WEATHER_CONFIG as W, SURVIVAL_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import {
   DUST_STORM_CENTER,
   DUST_STORM_MIDDLE_WALL_RADIUS,
   DUST_STORM_WALL_RADIUS,
   dustStormProximity,
+  DUST_STORM_WORLD_RADIUS,
   dustStormVisualStrength,
 } from '../world/dustStormZone.js';
 
@@ -128,6 +129,37 @@ const PARTICLE_FRAGMENT = /* glsl */ `
   }
 `;
 
+const OVERHEAD_VERTEX = /* glsl */ `
+  varying vec2 vWorld;
+  void main() {
+    vec4 world = modelMatrix * vec4(position, 1.0);
+    vWorld = world.xz;
+    gl_Position = projectionMatrix * viewMatrix * world;
+  }
+`;
+
+const OVERHEAD_FRAGMENT = /* glsl */ `
+  uniform float uTime;
+  uniform float uOpacity;
+  uniform float uInner;
+  uniform float uOuter;
+  uniform vec2 uCenter;
+  uniform vec3 uColor;
+  varying vec2 vWorld;
+
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  void main() {
+    float radius = distance(vWorld, uCenter);
+    float edge = min(radius - uInner, uOuter - radius);
+    float edgeFade = smoothstep(0.0, 3.5, edge);
+    float grain = hash(floor(vWorld * 0.16 + uTime * 0.04));
+    float alpha = uOpacity * edgeFade * (0.82 + grain * 0.18);
+    if (alpha < 0.005) discard;
+    gl_FragColor = vec4(uColor, alpha);
+    #include <colorspace_fragment>
+  }
+`;
+
 export class DustStormEffect {
   constructor(scene, renderer) {
     this.scene = scene;
@@ -137,6 +169,7 @@ export class DustStormEffect {
     this.haze = 0;
 
     this._buildWall();
+    this._buildOverheadFog();
     this._buildDome();
     this._buildParticles();
   }
@@ -182,6 +215,41 @@ export class DustStormEffect {
     wall.renderOrder = -1;
     this.scene.add(wall);
     return { mesh: wall, uniforms };
+  }
+
+  _buildOverheadFog() {
+    const bands = [
+      [SURVIVAL_CONFIG.DUST_STORM_START_RADIUS, DUST_STORM_MIDDLE_WALL_RADIUS, V.OVERHEAD_INNER_BAND_OPACITY],
+      [DUST_STORM_MIDDLE_WALL_RADIUS, DUST_STORM_WALL_RADIUS, V.OVERHEAD_MIDDLE_BAND_OPACITY],
+      [DUST_STORM_WALL_RADIUS, DUST_STORM_WORLD_RADIUS, V.OVERHEAD_OUTER_BAND_OPACITY],
+    ];
+    this.overheadFog = bands.map(([inner, outer, opacity]) => {
+      const uniforms = {
+        uTime: { value: 0 },
+        uOpacity: { value: opacity },
+        uInner: { value: inner },
+        uOuter: { value: outer },
+        uCenter: { value: new THREE.Vector2(DUST_STORM_CENTER.x, DUST_STORM_CENTER.z) },
+        uColor: { value: new THREE.Color() },
+      };
+      const material = new THREE.ShaderMaterial({
+        vertexShader: OVERHEAD_VERTEX,
+        fragmentShader: OVERHEAD_FRAGMENT,
+        uniforms,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        fog: false,
+      });
+      const geometry = new THREE.PlaneGeometry(outer * 2, outer * 2, 1, 1);
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(DUST_STORM_CENTER.x, WORLD_CONFIG.GROUND_LEVEL + V.OVERHEAD_FOG_HEIGHT, DUST_STORM_CENTER.z);
+      mesh.frustumCulled = false;
+      mesh.renderOrder = 1;
+      this.scene.add(mesh);
+      return { mesh, uniforms };
+    });
   }
 
   _buildDome() {
@@ -273,6 +341,22 @@ export class DustStormEffect {
     this.innerWallUniforms.uTime.value = this.time;
     this.innerWallUniforms.uOpacity.value = V.INNER_WALL_OPACITY;
     this.innerWallUniforms.uColor.value.copy(_dust);
+
+    // Faixas vistas de cima: surgem com a altitude da camera para nao cobrir o chao na caminhada.
+    const viewHeight = camera.position.y - WORLD_CONFIG.GROUND_LEVEL;
+    const overheadVisibility = THREE.MathUtils.smoothstep(
+      viewHeight,
+      V.OVERHEAD_FOG_VIEW_START,
+      V.OVERHEAD_FOG_VIEW_END
+    );
+    for (const band of this.overheadFog) {
+      band.uniforms.uTime.value = this.time;
+      band.uniforms.uColor.value.copy(_dust);
+      band.mesh.visible = overheadVisibility > 0.005;
+    }
+    this.overheadFog[0].uniforms.uOpacity.value = V.OVERHEAD_INNER_BAND_OPACITY * overheadVisibility;
+    this.overheadFog[1].uniforms.uOpacity.value = V.OVERHEAD_MIDDLE_BAND_OPACITY * overheadVisibility;
+    this.overheadFog[2].uniforms.uOpacity.value = V.OVERHEAD_OUTER_BAND_OPACITY * overheadVisibility;
 
     // Cupula: mesma cor da neblina, para o chao e o ceu sumirem juntos na poeira
     const domeOpacity = Math.max(
