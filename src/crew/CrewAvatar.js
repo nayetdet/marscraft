@@ -273,8 +273,6 @@ export class CrewAvatar {
 
   update(dt) {
     const m = this.member;
-    this.group.visible = m.state !== 'evacuated';
-    if (!this.group.visible) return;
 
     this._time += dt;
     const p = pointAlong(m.route, m.distance);
@@ -311,6 +309,13 @@ export class CrewAvatar {
       armSwingL = -0.25;
       armSwingR = -0.25;
       bobY = -0.02;
+    } else if (m.state === 'bedridden') {
+      // De repouso na enfermaria: bem curvado, cabeca baixa, respiracao lenta
+      torsoLean = 0.55;
+      headPitch = 0.4;
+      armSwingL = -0.45;
+      armSwingR = -0.45;
+      bobY = -0.05 + Math.sin(this._time * 1.2) * 0.008;
     } else {
       // Descansando / em espera: respiracao sutil e olhar calmo ao redor
       bobY = Math.sin(this._time * 2.4) * 0.012;
@@ -329,7 +334,7 @@ export class CrewAvatar {
     this.headGroup.rotation.x = headPitch;
     this.headGroup.rotation.y = headYaw;
 
-    const isWeak = m.state === 'weak';
+    const isWeak = m.state === 'weak' || m.state === 'bedridden';
     this.suitMat.color.copy(isWeak ? WEAK_COLOR : SUIT_COLOR);
     this.statusLightMat.color.setHex(isWeak ? 0xef4444 : 0x4ade80);
     this.statusLightMat.emissive.setHex(isWeak ? 0xb91c1c : 0x16a34a);

@@ -97,18 +97,102 @@ describe('CrewManager needs', () => {
     expect(crew.drainEvents().map((e) => e.type)).toContain('recovered');
   });
 
-  it('is sent back to Earth after too many hours without supplies', () => {
-    const { crew } = makeCrew(1, { food: 0 });
-    crew.update(CREW_CONFIG.EVACUATE_AFTER_HOURS - 0.5, 0);
-    expect(crew.members[0].state).toBe('weak');
-    crew.update(CREW_CONFIG.EVACUATE_AFTER_HOURS + 0.5, 0);
-    expect(crew.members[0].state).toBe('evacuated');
-    expect(crew.drainEvents().map((e) => e.type)).toContain('evacuated');
+  it('rests in the medical bay after too many hours without supplies, and still needs supplies (issue #111)', () => {
+    const { crew, base } = makeCrew(1, { food: 0 });
+    const member = crew.members[0];
+    crew.update(CREW_CONFIG.BEDRIDDEN_AFTER_HOURS - 0.5, 0);
+    expect(member.state).toBe('weak');
+    crew.update(1, 0);
+    expect(member.state).toBe('bedridden');
+    expect(member.node).toBe('medbay');
+    expect(member.canWork).toBe(false);
+    const types = crew.drainEvents().map((e) => e.type);
+    expect(types).toContain('bedridden');
+    expect(types).not.toContain('evacuated');
 
-    // Quem voltou para a Terra nao consome mais nada
-    const food = crew.base.food;
-    crew.update(CREW_CONFIG.EVACUATE_AFTER_HOURS + 5, 0);
-    expect(crew.base.food).toBe(food);
+    // Ninguem foi embora: quem esta de repouso continua bebendo, comendo e respirando
+    base.food = 10;
+    const water = base.water;
+    const charge = base.battery.charge;
+    crew.update(1, 0);
+    expect(10 - base.food).toBeCloseTo(CREW_CONFIG.FOOD_PER_HOUR);
+    expect(water - base.water).toBeCloseTo(CREW_CONFIG.WATER_L_PER_HOUR);
+    expect(base.battery.charge).toBeLessThan(charge);
+    expect(member.state).toBe('bedridden');
+  });
+
+  it('gets back to work after enough rest with air, water and food (issue #111)', () => {
+    const { crew, base } = makeCrew(1, { food: 0 });
+    const member = crew.members[0];
+    crew.update(CREW_CONFIG.BEDRIDDEN_AFTER_HOURS + 0.5, 0);
+    expect(member.state).toBe('bedridden');
+    crew.drainEvents();
+
+    base.food = 20;
+    crew.update(CREW_CONFIG.BED_REST_HOURS - 0.5, 0);
+    expect(member.state).toBe('bedridden');
+    expect(crew.drainEvents().map((e) => e.type)).not.toContain('recovered');
+
+    crew.update(1, 0);
+    expect(crew.drainEvents().map((e) => e.type)).toContain('recovered');
+    // Sai da enfermaria andando ate a tarefa que tinha, e so entao volta a trabalhar
+    expect(member.state).toBe('walking');
+    expect(member.route).toEqual(findRoute('medbay', 'oxygen'));
+    crew.updateMovement(60);
+    expect(member.state).toBe('working');
+    expect(member.node).toBe('oxygen');
+    expect(member.hoursStarved).toBe(0);
+  });
+
+  it('rest does not count while something is still missing (issue #111)', () => {
+    const { crew, base } = makeCrew(1, { food: 0 });
+    const member = crew.members[0];
+    crew.update(CREW_CONFIG.BEDRIDDEN_AFTER_HOURS + 0.5, 0);
+    crew.update(CREW_CONFIG.BED_REST_HOURS * 3, 0);
+    expect(member.state).toBe('bedridden');
+    expect(member.restHours).toBe(0);
+
+    // Comida de volta por pouco tempo, depois falta de novo: o repouso feito fica guardado
+    base.food = CREW_CONFIG.FOOD_PER_HOUR * 2;
+    base.battery.charge = 100; // o ar tambem precisa estar em dia para o repouso contar
+    crew.update(2, 0);
+    expect(member.restHours).toBeCloseTo(2);
+    crew.update(CREW_CONFIG.BED_REST_HOURS, 0);
+    expect(member.state).toBe('bedridden');
+    expect(member.restHours).toBeCloseTo(2);
+  });
+
+  it('recovers twice as fast with someone working at the medical bay (issue #111)', () => {
+    expect(CREW_CONFIG.MEDIC_RECOVERY_SPEED).toBe(2);
+    const bedridden = (crew) => {
+      const patient = crew.members[0];
+      patient.state = 'bedridden';
+      patient.restHours = 0;
+      return patient;
+    };
+
+    // Maya, a medica, comeca de plantao na enfermaria
+    const cared = makeCrew(3);
+    const patient = bedridden(cared.crew);
+    cared.crew.update(CREW_CONFIG.BED_REST_HOURS / 2 - 0.25, 0);
+    expect(patient.state).toBe('bedridden');
+    cared.crew.update(0.5, 0);
+    expect(patient.state).not.toBe('bedridden');
+
+    // Sem ninguem na enfermaria o mesmo tempo nao basta
+    const alone = makeCrew(2);
+    const lonely = bedridden(alone.crew);
+    alone.crew.update(CREW_CONFIG.BED_REST_HOURS / 2 + 0.25, 0);
+    expect(lonely.state).toBe('bedridden');
+    alone.crew.update(CREW_CONFIG.BED_REST_HOURS / 2, 0);
+    expect(lonely.state).not.toBe('bedridden');
+
+    // Quem esta de repouso nao conta como plantao de si mesmo
+    const self = makeCrew(1);
+    const only = bedridden(self.crew);
+    only.task = 'medbay';
+    self.crew.update(CREW_CONFIG.BED_REST_HOURS / 2 + 0.25, 0);
+    expect(only.state).toBe('bedridden');
   });
 });
 
@@ -136,10 +220,23 @@ describe('CrewManager orders and movement', () => {
     expect(crew.members[0].task).toBe('oxygen');
   });
 
-  it('cannot give orders to someone who went back to Earth', () => {
+  it('cannot give orders to someone resting in the medical bay (issue #111)', () => {
     const { crew } = makeCrew(1);
-    crew.members[0].state = 'evacuated';
-    expect(crew.assign(0, 'water').ok).toBe(false);
+    crew.members[0].state = 'bedridden';
+    const result = crew.assign(0, 'water');
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('Ana is too weak and must rest in the medical bay.');
+    expect(result.reason).not.toMatch(/Earth/);
+    expect(crew.members[0].task).toBe('oxygen');
+  });
+
+  it('someone resting in the medical bay does not operate any station (issue #111)', () => {
+    const { crew } = makeCrew(1);
+    const oxygen = crew.stations.find((s) => s.kind === 'oxygen');
+    expect(crew.workersAt(oxygen)).toHaveLength(1);
+    crew.members[0].state = 'bedridden';
+    expect(crew.workersAt(oxygen)).toHaveLength(0);
+    expect(crew.effortAt(oxygen)).toBe(0);
   });
 
   it('only crew members who are working count as operators', () => {

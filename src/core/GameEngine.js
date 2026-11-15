@@ -1133,7 +1133,6 @@ export class GameEngine {
     let best = null;
     let bestDist = CREW_CONFIG.TALK_RADIUS;
     for (const avatar of this.crewAvatars) {
-      if (!avatar.member.isActive) continue;
       const p = avatar.position;
       const dx = p.x - this.player.pos.x;
       const dz = p.z - this.player.pos.z;

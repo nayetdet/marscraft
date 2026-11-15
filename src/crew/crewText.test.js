@@ -10,9 +10,22 @@ describe('crewEventMessage', () => {
       .toBe("Ana: I'm too weak to work. We need water and food!");
     expect(crewEventMessage({ type: 'weak', member: ana, lacking: ['air'] })).toMatch(/battery/);
     expect(crewEventMessage({ type: 'recovered', member: ana })).toMatch(/^Ana:/);
-    expect(crewEventMessage({ type: 'evacuated', member: ana })).toMatch(/Earth/);
+    expect(crewEventMessage({ type: 'bedridden', member: ana }))
+      .toBe('Ana is too weak and must rest in the medical bay. Bring air, water and food back so Ana can get better.');
     expect(crewEventMessage({ type: 'alert', member: ana, text: 'Commander, help!' })).toBe('Ana: Commander, help!');
     expect(crewEventMessage({ type: 'unknown', member: ana })).toBeNull();
+  });
+
+  it('never says a crew member went back to Earth: the only way home is the rocket (issue #111)', () => {
+    const events = [
+      { type: 'weak', member: ana, lacking: ['air', 'water', 'food'] },
+      { type: 'recovered', member: ana },
+      { type: 'bedridden', member: ana },
+      { type: 'alert', member: ana, text: 'Commander, help!' },
+    ];
+    for (const event of events) expect(crewEventMessage(event)).not.toMatch(/Earth/i);
+    // O evento antigo nao existe mais
+    expect(crewEventMessage({ type: 'evacuated', member: ana })).toBeNull();
   });
 });
 

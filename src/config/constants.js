@@ -209,7 +209,16 @@ export const CREW_CONFIG = {
   FOOD_PER_HOUR: 0.3, // racoes
   START_FOOD: 15,
   MAX_FOOD: 40,
-  EVACUATE_AFTER_HOURS: 12, // horas seguidas sem recurso ate voltar para a Terra
+  // Horas seguidas sem ar, agua ou comida ate o tripulante ficar de repouso na enfermaria.
+  // Ninguem volta para a Terra fora do foguete: a janela de lancamento so abre a cada ~26 meses.
+  BEDRIDDEN_AFTER_HOURS: 12,
+  // Horas de repouso, com ar, agua e comida em dia, ate voltar ao trabalho (escala de jogo)
+  BED_REST_HOURS: 6,
+  // Com alguem de plantao na enfermaria o repouso rende em dobro
+  MEDIC_RECOVERY_SPEED: 2,
+  // Blocos entre o posto da enfermaria e quem esta de repouso (no trilho, rumo ao hub),
+  // para o avatar nao ficar em cima de quem trabalha ali
+  BED_REST_OFFSET: 0.9,
   ALERT_COOLDOWN_S: 30, // segundos reais entre avisos da mesma estacao
   WALK_SPEED: 2.2, // blocos por segundo real
   TALK_RADIUS: 2.6,
