@@ -33,7 +33,8 @@ export const PHYSICS_CONFIG = {
   JUMP_SPEED: 6.4,
   WALK_SPEED: 6.2,
   SPRINT_SPEED: 8.7,
-  INVENTORY_GROUND_DECELERATION: 18.0, // blocks por segundo ao quadrado
+  INVENTORY_HORIZONTAL_DAMPING: 24.0, // por segundo enquanto inventário/journal estão abertos
+  INVENTORY_STOP_SPEED: 0.1,
   PLAYER_HEIGHT: 1.7,
   PLAYER_RADIUS: 0.34,
   SPAWN_POS: { x: 0, y: 10.75, z: 11.5 },
