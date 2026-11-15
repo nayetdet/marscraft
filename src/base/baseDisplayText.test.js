@@ -46,6 +46,9 @@ describe('base display text', () => {
     const storm = { phase: 'active', hoursUntil: 0, hoursLeft: 2, speedKmS: 900, date: '05/11/2026' };
     expect(shelterModel(state({ storm })).rows.at(-1).value).toBe('STAND HERE!');
     expect(shelterModel(state({ storm, inShelter: true })).rows.at(-1).value).toBe('YOU ARE SAFE HERE');
+    // Dentro do abrigo com a parede vazia a dose ainda machuca: o medidor nao chama de seguro
+    const dry = shelterModel(state({ storm, inShelter: true, doseRate: 1.4, shelterWaterL: 0 }));
+    expect(dry.rows.at(-1).value).toBe('ADD WATER TO THE WALL!');
     expect(shelterModel(state()).rows.at(-1).value).toBe('NO STORM');
     expect(shelterModel(state()).rows[2].value).toBe('20 L');
   });

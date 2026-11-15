@@ -126,16 +126,28 @@ export const RADIATION_CONFIG = {
   // [Ref] Fator de qualidade medio na superficie de Marte ~3,05 (0,21 mGy/dia -> 0,64 mSv/dia),
   // Hassler et al., Science 343 (2014), dados do MSL-RAD
   QUALITY_FACTOR: 3.05,
-  // [API, numeros-reais] pico de tempestade = centenas a mil vezes a dose normal.
-  // Mapeamento do jogo: multiplicador = velocidade da CME em km/s, limitado a essa faixa.
-  STORM_MULTIPLIER_PER_KMS: 1,
-  STORM_MULTIPLIER_MIN: 250,
-  STORM_MULTIPLIER_MAX: 1000,
+  // Tempestade solar (issue #99). A dose TOTAL de uma tempestade, la fora e sem protecao, fica
+  // entre dois eventos reais medidos pelo Curiosity (RAD) na superficie de Marte:
+  // [Ref] 11/09/2017: a dose na superficie dobrou e ficou alta por ~2 dias (NASA JPL, 2017).
+  //       No jogo: 2 x 6,93 uGy/h x 48 h = ~665 uGy
+  STORM_DOSE_MIN_UGY: 665,
+  // [Ref] 20/05/2024 (flare X12): 8.100 uGy, a maior tempestade ja medida em Marte, igual a
+  //       "30 raios-X de torax" e nao letal (NASA, 2024). Nenhuma tempestade do jogo passa disso.
+  STORM_DOSE_MAX_UGY: 8100,
+  // Regra do jogo (nao e medida): CME mais rapida = tempestade mais forte, do minimo em
+  // STORM_SPEED_MIN_KMS ate o recorde em STORM_SPEED_MAX_KMS. Golpe de raspao em Marte vale menos.
+  STORM_SPEED_MIN_KMS: 300,
+  STORM_SPEED_MAX_KMS: 1200,
+  STORM_GLANCING_FACTOR: 0.75,
   HABITAT_FACTOR: 0.25, // paredes do habitat seguram parte das particulas
   SHIELD_FACTOR: 0.2, // blindagem ligada
-  // Dose acima desta taxa (mSv/h) machuca; abaixo, o corpo aguenta durante a tempestade
-  HARM_THRESHOLD_MSV_PER_HOUR: 3,
-  DAMAGE_PER_EXCESS_MSV: 1.5, // pontos de vida por mSv acima do limite
+  // Escala de jogo: dose acima desta taxa (mSv por hora de jogo) machuca. Calibrado para que
+  // toda tempestade machuque la fora, as fortes machuquem dentro do habitat sem abrigo, e o
+  // abrigo com a parede cheia ou a blindagem dentro do habitat protejam em qualquer tempestade.
+  HARM_THRESHOLD_MSV_PER_HOUR: 0.5,
+  // Acima desta taxa o HUD mostra radiacao alta (ainda sem dano)
+  WARN_MSV_PER_HOUR: 0.1,
+  DAMAGE_PER_EXCESS_MSV: 3, // pontos de vida por mSv acima do limite (escala de jogo)
   // [Ref] limite de carreira de astronautas da NASA: 600 mSv (NASA-STD-3001, 2022)
   CAREER_LIMIT_MSV: 600,
   // Abrigo de tempestade com parede de agua (issue #56, A1).
@@ -150,14 +162,14 @@ export const RADIATION_CONFIG = {
 };
 
 export const STORM_CONFIG = {
-  // [Ref] distancia media Sol-Marte: 227,9 milhoes de km (semieixo maior, NASA Mars Fact Sheet)
-  SUN_MARS_DISTANCE_KM: 227.9e6,
+  // So entram na fila CMEs com impacto previsto em Marte pelo modelo WSA-ENLIL da NASA (DONKI).
+  // O tempo de aviso e a viagem prevista (saida do Sol ate a chegada em Marte), encolhida:
   // 1 dia real de viagem da CME = 1 hora de jogo de aviso
   REAL_HOURS_PER_GAME_HOUR: 24,
-  // So CMEs a partir de 500 km/s (classe C ou mais) viram tempestade no jogo
-  MIN_SPEED_KMS: 500,
   FIRST_WARNING_AFTER_HOURS: 1,
   GAP_BETWEEN_STORMS_HOURS: 2,
+  // Horas de jogo de tempestade. Na mesma escala do aviso sao ~3 dias reais; a tempestade de
+  // 2017 ficou alta por mais de 2 dias (NASA JPL)
   DURATION_HOURS: 3,
   // Controle de demo (menu "Demo controls"): aviso curto antes da tempestade chegar (~10 s reais)
   DEMO_LEAD_HOURS: 0.2,

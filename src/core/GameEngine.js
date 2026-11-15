@@ -10,7 +10,7 @@ import { crewEventMessage } from '../crew/crewText.js';
 import { CrewPanel, CrewPicker } from '../ui/CrewPanel.js';
 import donkiCme from '../data/donkiCme.json';
 import { MissionSystem, oxygenPointsToKg } from '../mission/MissionSystem.js';
-import { formatDateDMY, formatDose, formatHours, stormEventMessage } from '../mission/missionText.js';
+import { NO_STORM_DATA_TEXT, formatDateDMY, formatDose, formatHours, stormEventMessage } from '../mission/missionText.js';
 import { MissionHud } from '../ui/MissionHud.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
 import { createCarrotTexture } from '../graphics/carrotTexture.js';
@@ -791,8 +791,9 @@ export class GameEngine {
       ['Solar energy collected', `${(m.solarEnergyCollected / m.battery.capacity).toFixed(1)} full batteries`],
       ['Time left in the launch window', formatHours(this.story.windowHoursLeft ?? 0)],
     ];
-    const sources = `Solar storms: real CMEs from NASA DONKI (real data from ${formatDateDMY(donkiCme.fetched)}). ` +
-      'Radiation: Curiosity RAD on the Mars surface (NASA RadLab). Sunlight on Mars: 43% of Earth (NASA Mars Fact Sheet). ' +
+    const sources = `Solar storms: real CMEs that NASA predicted would reach Mars, from NASA DONKI (real data from ${formatDateDMY(donkiCme.fetched)}). ` +
+      'Radiation: Curiosity RAD on the Mars surface (NASA RadLab); how strong each storm is in the game is a game rule, never above the biggest storm Curiosity measured. ' +
+      'Sunlight on Mars: 43% of Earth (NASA Mars Fact Sheet). ' +
       'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station. ' +
       'Storm shelter water wall: PREDICCS shielding model (University of New Hampshire, Curiosity RAD data) and NASA storm shelter studies. ' +
       'Radio delay: Earth-Mars distance from NASA/JPL planet orbits; solar conjunction rules from NASA/JPL. ' +
@@ -888,9 +889,10 @@ export class GameEngine {
   // Controles de demo do menu (para jurados e para gravar o video): mexem so no relogio e na bateria
   _runDemo(action) {
     if (action === 'storm') {
-      return this.mission.triggerStormSoon()
-        ? 'Storm warning sent. Press Back, then Play: the solar storm hits in about 10 seconds.'
-        : 'A solar storm is already hitting the base.';
+      if (!this.mission.triggerStormSoon()) {
+        return this.mission.noStormData ? NO_STORM_DATA_TEXT : 'A solar storm is already hitting the base.';
+      }
+      return 'Storm warning sent. Press Back, then Play: the solar storm hits in about 10 seconds.';
     }
     if (action === 'night' || action === 'noon') {
       const target = action === 'night' ? 21 : 12;
@@ -1053,7 +1055,7 @@ export class GameEngine {
     s.iceNeeded = this.mission.iceNeeded();
     s.atConsole = this.currentInteraction === 'rover_terminal';
     s.stormPhase = this.mission.storm.phase;
-    s.stormsSurvived = this.mission.stormsSurvived;
+    s.stormsSurvived = this.mission.stormCredit;
     s.propellantPct = this.mission.propellant;
     s.dataSent = this.mission.dataSent;
     s.launched = this.mission.launched;
@@ -1061,7 +1063,10 @@ export class GameEngine {
 
     for (const event of this.story.drainEvents()) {
       if (event.type === 'card') this.storyHud.showCard(event.card);
-      else if (event.type === 'start-storms') this.mission.startStorms(s.hours);
+      else if (event.type === 'start-storms') {
+        this.mission.startStorms(s.hours);
+        if (this.mission.noStormData) this.hud.showToast(`Space weather is calm. ${NO_STORM_DATA_TEXT}`, 6000);
+      }
       else if (event.type === 'window-closed') {
         this.storyHud.showWindowClosed();
         this.waypointBeacon.hide();

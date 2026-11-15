@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { MissionSystem, mavProgress, oxygenPointsToKg } from './MissionSystem.js';
 import { ENERGY_CONFIG, MAV_CONFIG, STORM_CONFIG } from '../config/constants.js';
 
-const cmes = [{ id: 'cme', startTime: '2026-11-05T20:00Z', speedKmS: 900 }];
+// CME com impacto direto previsto em Marte 3 dias depois (3 horas de jogo de aviso)
+const cmes = [{
+  id: 'cme', startTime: '2026-11-05T20:00Z', speedKmS: 900,
+  headedToMars: true, marsArrivalTime: '2026-11-08T20:00Z', isGlancingBlow: false,
+}];
 
 function createMission(startHours = 12) {
   return new MissionSystem({ cmes, startHours });
@@ -117,7 +121,10 @@ describe('MissionSystem storms', () => {
     const mission = createMission(0);
     const storm = mission.schedule[0];
     mission.update(storm.warningStart + 0.01);
-    expect(mission.drainEvents().map((e) => e.type)).toContain('storm-warning');
+    const warning = mission.drainEvents().find((e) => e.type === 'storm-warning');
+    expect(warning.storm).toBe(storm);
+    // O aviso dura a viagem que a NASA previu para a CME
+    expect(warning.hoursUntil).toBeCloseTo(3, 1);
 
     mission.update(storm.arrival + 0.01, { insideHabitat: true });
     expect(mission.drainEvents().map((e) => e.type)).toContain('storm-start');
@@ -163,6 +170,35 @@ describe('MissionSystem storms', () => {
     mission.update(storm.end + 0.1, { active: false });
     expect(mission.stormsSurvived).toBe(0);
     expect(mission.drainEvents().map((e) => e.type)).toContain('storm-missed');
+  });
+});
+
+describe('MissionSystem without storms headed to Mars (issue #99)', () => {
+  const elsewhere = [{ id: 'to-earth', startTime: '2026-11-05T20:00Z', speedKmS: 1500, headedToMars: false }];
+
+  it('keeps the queue empty instead of using CMEs that went somewhere else', () => {
+    const mission = new MissionSystem({ cmes: elsewhere, startHours: 0 });
+    expect(mission.schedule).toEqual([]);
+    expect(mission.noStormData).toBe(true);
+    mission.update(100);
+    expect(mission.storm.phase).toBe('calm');
+    expect(mission.drainEvents().some((e) => e.type.startsWith('storm'))).toBe(false);
+    expect(mission.triggerStormSoon()).toBe(false);
+  });
+
+  it('does not lock the rocket behind storms that will never come', () => {
+    const mission = new MissionSystem({ cmes: elsewhere, startHours: 0 });
+    mission.propellant = 100;
+    mission.dataSent = true;
+    expect(mission.stormsSurvived).toBe(0);
+    expect(mission.stormCredit).toBe(MAV_CONFIG.STORMS_TO_SURVIVE);
+    expect(mission.progress.ready).toBe(true);
+  });
+
+  it('still asks for the storms while the story has not started them', () => {
+    const mission = new MissionSystem({ cmes: elsewhere, startHours: 0, stormsStarted: false });
+    expect(mission.noStormData).toBe(false);
+    expect(mission.stormCredit).toBe(0);
   });
 });
 

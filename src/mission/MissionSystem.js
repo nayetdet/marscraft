@@ -73,8 +73,19 @@ export class MissionSystem {
     this.oxygenCostMultiplier = 1;
   }
 
+  // A fila de tempestades comecou, mas os dados nao tem nenhuma CME com destino a Marte
+  get noStormData() {
+    return this.stormsStarted && this.schedule.length === 0;
+  }
+
+  // Tempestades que contam para o foguete e para a janela de lancamento. Sem nenhuma CME para
+  // Marte nos dados nao ha o que sobreviver: a exigencia cai, em vez de travar a partida.
+  get stormCredit() {
+    return this.noStormData ? MAV_CONFIG.STORMS_TO_SURVIVE : this.stormsSurvived;
+  }
+
   get progress() {
-    return mavProgress(this);
+    return mavProgress({ propellant: this.propellant, stormsSurvived: this.stormCredit, dataSent: this.dataSent });
   }
 
   // Avanca a missao ate `hours`. `active` = jogo rodando (sem pausa e jogador vivo):
@@ -112,9 +123,8 @@ export class MissionSystem {
     this._runFactory(h);
     this._updateStormPhase();
 
-    const multiplier = this.storm.phase === 'active' ? this.storm.storm.multiplier : 1;
     this.doseRate = doseRateMsvPerHour({
-      stormMultiplier: multiplier,
+      stormDoseUGyPerHour: this.storm.phase === 'active' ? this.storm.storm.doseUGyPerHour : 0,
       insideHabitat,
       shieldOn: this.shieldOn && this.insideShield,
       shelterWaterL: this.insideShelter ? this.shelterWaterL : 0,
@@ -178,7 +188,7 @@ export class MissionSystem {
       this._playedDuringStorm = false;
     }
 
-    if (this.storm.phase === 'warning') this._emit('storm-warning', this.storm.storm);
+    if (this.storm.phase === 'warning') this._emit('storm-warning', this.storm.storm, this.storm.hoursUntil);
     if (this.storm.phase === 'active') {
       this._emit('storm-start', this.storm.storm);
     }
@@ -200,8 +210,9 @@ export class MissionSystem {
     return true;
   }
 
-  _emit(type, storm = null) {
-    this.events.push({ type, storm });
+  // `hoursUntil` = horas de jogo ate a tempestade chegar (so no aviso)
+  _emit(type, storm = null, hoursUntil = null) {
+    this.events.push({ type, storm, hoursUntil });
   }
 
   drainEvents() {

@@ -1,35 +1,53 @@
 import { RADIATION_CONFIG, STORM_CONFIG } from '../config/constants.js';
 
-// Horas de jogo entre a CME sair do Sol e chegar a Marte (tempo de aviso)
-export function leadTimeHours(speedKmS) {
-  const realHours = STORM_CONFIG.SUN_MARS_DISTANCE_KM / speedKmS / 3600;
+const REAL_HOUR_MS = 3600 * 1000;
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+// Horas de jogo entre a CME sair do Sol e chegar a Marte (tempo de aviso). Vem da chegada
+// prevista pelo modelo da NASA para aquela CME (`marsArrivalTime`), nao de uma conta nossa.
+export function leadTimeHours(cme) {
+  const realHours = (Date.parse(cme.marsArrivalTime) - Date.parse(cme.startTime)) / REAL_HOUR_MS;
   return realHours / STORM_CONFIG.REAL_HOURS_PER_GAME_HOUR;
 }
 
-// Quantas vezes a dose normal durante a tempestade
-export function stormMultiplier(speedKmS) {
-  const raw = speedKmS * RADIATION_CONFIG.STORM_MULTIPLIER_PER_KMS;
-  return Math.min(RADIATION_CONFIG.STORM_MULTIPLIER_MAX, Math.max(RADIATION_CONFIG.STORM_MULTIPLIER_MIN, raw));
+// So viram tempestade as CMEs que a NASA previu que chegariam a Marte
+export function marsBoundCmes(cmes) {
+  return cmes.filter((cme) => cme.headedToMars && cme.marsArrivalTime && leadTimeHours(cme) > 0);
 }
 
-// Fila de tempestades a partir das CMEs reais, em ordem cronologica, repetindo a lista se acabar.
-// Cada tempestade: aviso -> chegada (aviso + tempo de viagem) -> fim (chegada + duracao).
+// Dose total (uGy) que a tempestade entrega la fora, sem protecao. E regra do jogo: quanto mais
+// rapida a CME, mais forte, e golpe de raspao vale menos. O resultado fica sempre entre os dois
+// eventos reais medidos pelo Curiosity (RADIATION_CONFIG.STORM_DOSE_MIN_UGY e _MAX_UGY).
+export function stormTotalDoseUGy(cme) {
+  const R = RADIATION_CONFIG;
+  const speedPart = clamp01((cme.speedKmS - R.STORM_SPEED_MIN_KMS) / (R.STORM_SPEED_MAX_KMS - R.STORM_SPEED_MIN_KMS));
+  const strength = speedPart * (cme.isGlancingBlow ? R.STORM_GLANCING_FACTOR : 1);
+  return R.STORM_DOSE_MIN_UGY + (R.STORM_DOSE_MAX_UGY - R.STORM_DOSE_MIN_UGY) * strength;
+}
+
+// Fila de tempestades a partir das CMEs reais com destino a Marte, em ordem cronologica,
+// repetindo a lista se acabar. Sem nenhuma CME para Marte a fila fica vazia: o jogo nao usa
+// CMEs que iam para outro lugar.
+// Cada tempestade: aviso -> chegada (aviso + viagem prevista pela NASA) -> fim (chegada + duracao).
 export function buildStormSchedule(cmes, startHours, count = 24) {
-  const candidates = cmes.filter((cme) => cme.speedKmS >= STORM_CONFIG.MIN_SPEED_KMS);
+  const candidates = marsBoundCmes(cmes);
   if (candidates.length === 0) return [];
 
   const schedule = [];
   let warningStart = startHours + STORM_CONFIG.FIRST_WARNING_AFTER_HOURS;
   for (let i = 0; i < count; i++) {
     const cme = candidates[i % candidates.length];
-    const leadHours = leadTimeHours(cme.speedKmS);
+    const leadHours = leadTimeHours(cme);
     const arrival = warningStart + leadHours;
     const end = arrival + STORM_CONFIG.DURATION_HOURS;
+    const totalDoseUGy = stormTotalDoseUGy(cme);
     schedule.push({
       index: i,
       cme,
       leadHours,
-      multiplier: stormMultiplier(cme.speedKmS),
+      totalDoseUGy,
+      // A dose total e entregue ao longo da tempestade (uGy por hora de jogo)
+      doseUGyPerHour: totalDoseUGy / STORM_CONFIG.DURATION_HOURS,
       warningStart,
       arrival,
       end,

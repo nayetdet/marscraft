@@ -1,3 +1,4 @@
+import { RADIATION_CONFIG } from '../config/constants.js';
 import { formatDateDMY, formatHours } from '../mission/missionText.js';
 
 // Estado da missao -> o que o painel do canto superior direito mostra.
@@ -14,8 +15,8 @@ const RADIATION = {
 };
 
 export function radiationTone(doseRate) {
-  if (doseRate >= 3) return 'danger';
-  if (doseRate >= 0.5) return 'warn';
+  if (doseRate >= RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR) return 'danger';
+  if (doseRate >= RADIATION_CONFIG.WARN_MSV_PER_HOUR) return 'warn';
   return 'ok';
 }
 

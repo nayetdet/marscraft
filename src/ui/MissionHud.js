@@ -222,7 +222,7 @@ export class MissionHud {
     setText(this.loadAllBtn, `Load all ice (${iceInBag})`, 'mc-btn');
     setText(this.factoryBtn, `Factory: ${mission.factoryOn ? 'ON' : 'OFF'}`, 'mc-btn');
 
-    setText(this.stormsEl, `${Math.min(mission.stormsSurvived, MAV_CONFIG.STORMS_TO_SURVIVE)}/${MAV_CONFIG.STORMS_TO_SURVIVE}`);
+    setText(this.stormsEl, `${Math.min(mission.stormCredit, MAV_CONFIG.STORMS_TO_SURVIVE)}/${MAV_CONFIG.STORMS_TO_SURVIVE}`);
     setText(this.dataEl, mission.dataSent ? 'Yes' : 'No');
     setText(this.mavPowerEl, `Base battery: ${Math.round(mission.battery.percent)}%. Fuel making, the shield, the radio and making oxygen all share this energy.`, 'mav-status');
     this.igniteBtn.disabled = !progress.ready;

@@ -22,18 +22,27 @@ export function formatDose(msv) {
 }
 
 export function stormSourceText(storm, fetchedIso) {
-  return `Based on a real CME seen on ${formatDateDMY(storm.cme.startTime)} at ${Math.round(storm.cme.speedKmS)} km/s (NASA DONKI, real data from ${formatDateDMY(fetchedIso)})`;
+  return `Based on a real CME that left the Sun on ${formatDateDMY(storm.cme.startTime)} at ${Math.round(storm.cme.speedKmS)} km/s, headed to Mars (NASA DONKI, real data from ${formatDateDMY(fetchedIso)})`;
 }
+
+// Quando a NASA previu que a CME chegaria a Marte (modelo WSA-ENLIL, vem junto no DONKI)
+export function stormArrivalText(storm) {
+  return `NASA's model said it would reach Mars on ${formatDateDMY(storm.cme.marsArrivalTime)}`;
+}
+
+export const NO_STORM_DATA_TEXT = 'No storms headed to Mars in this data.';
 
 // Computador da missao: a mesma tempestade que o HUD mostra (aviso ou ativa), com a fonte.
 // Em calmaria nao adianta a proxima da fila: o aviso so existe depois que a CME sai do Sol.
-export function stormStatusText(state, fetchedIso) {
+// `noStormData` = os dados nao tem nenhuma CME com destino a Marte (MissionSystem.noStormData).
+export function stormStatusText(state, fetchedIso, noStormData = false) {
   const { phase, storm, hoursUntil, hoursLeft } = state;
+  if (noStormData) return `SOLAR STORM: ${NO_STORM_DATA_TEXT}`;
   if (phase === 'active') {
     return `SOLAR STORM: ACTIVE, ${formatHours(hoursLeft)} left.\n${stormSourceText(storm, fetchedIso)}.`;
   }
   if (phase === 'warning') {
-    return `SOLAR STORM: on the way, reaches Mars in ${formatHours(hoursUntil)}.\n${stormSourceText(storm, fetchedIso)}.`;
+    return `SOLAR STORM: on the way, reaches Mars in ${formatHours(hoursUntil)} of game time.\n${stormArrivalText(storm)}. ${stormSourceText(storm, fetchedIso)}.`;
   }
   return 'SOLAR STORM: none on the way right now.';
 }
@@ -49,9 +58,9 @@ export function stormEventMessage(event, fetchedIso) {
   const { type, storm } = event;
   switch (type) {
     case 'storm-warning':
-      return `Solar storm coming! The Sun threw out a cloud of fast particles (a CME). It reaches Mars in ${formatHours(storm.leadHours)}. ${stormSourceText(storm, fetchedIso)}.`;
+      return `Solar storm coming! The Sun threw out a giant cloud of particles (a CME). ${stormArrivalText(storm)}: in the game that is ${formatHours(event.hoursUntil ?? storm.leadHours)} from now. ${stormSourceText(storm, fetchedIso)}.`;
     case 'storm-start':
-      return 'SOLAR STORM! Radiation is very high. Stand in the storm shelter inside the base, or use the Shield Remote to turn on the shield.';
+      return 'SOLAR STORM! Radiation is much higher than normal. Stand in the storm shelter with water in its wall, or use the Shield Remote to turn on the shield.';
     case 'storm-survived':
       return 'The solar storm is over. You made it!';
     case 'storm-failed':

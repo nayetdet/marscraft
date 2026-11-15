@@ -79,7 +79,11 @@ export function powerModel(s) {
 export function shelterModel(s) {
   let status = 'NO STORM';
   if (s.storm.phase === 'warning') status = 'STORM COMING';
-  if (s.storm.phase === 'active') status = s.inShelter ? 'YOU ARE SAFE HERE' : 'STAND HERE!';
+  if (s.storm.phase === 'active') {
+    // Parede vazia nao protege mais que o habitat: so e seguro se a dose aqui dentro nao machuca
+    const safe = s.doseRate < RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR;
+    status = !s.inShelter ? 'STAND HERE!' : safe ? 'YOU ARE SAFE HERE' : 'ADD WATER TO THE WALL!';
+  }
   return {
     title: 'RADIATION METER',
     rows: [

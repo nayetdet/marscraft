@@ -190,7 +190,7 @@ export class AdminPanel {
     const { mission, survival, sky, player } = this.engine;
     const { phase, hoursUntil, hoursLeft, storm } = mission.storm;
     const stormLine = phase === 'active'
-      ? `ACTIVE, ${hoursLeft.toFixed(2)} h left (x${Math.round(storm.multiplier)} dose)`
+      ? `ACTIVE, ${hoursLeft.toFixed(2)} h left (${Math.round(storm.totalDoseUGy)} uGy total outside)`
       : phase === 'warning' ? `WARNING, arrives in ${hoursUntil.toFixed(2)} h` : `calm, next in ${Number.isFinite(hoursUntil) ? hoursUntil.toFixed(1) : '-'} h`;
     const hh = Math.floor(sky.timeOfDay);
     const mm = String(Math.floor((sky.timeOfDay - hh) * 60)).padStart(2, '0');
