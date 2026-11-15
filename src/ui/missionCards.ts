@@ -158,7 +158,8 @@ export function missionStatus(mission, source, base = {}) {
   if (radTone === 'danger' && !shielded && phase !== 'active') {
     alerts.push({ id: 'radiation', icon: 'radiation', tone: 'danger', title: 'Radiation very high', text: 'Go through the airlock to the storm shelter. Press F at the water wall to add shielding.', target: 'shelter' });
   }
-  if (progress.ready) {
+  // Depois da decolagem (modo livre, #411) o foguete ja foi embora: sem aviso de IGNITE
+  if (progress.ready && !mission.launched) {
     alerts.push({ id: 'rocket', icon: 'rocket', tone: 'ok', title: 'Rocket ready!', text: 'Go to the MAV and press IGNITE.', target: 'mav' });
   }
 

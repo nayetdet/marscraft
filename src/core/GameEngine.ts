@@ -87,6 +87,7 @@ import { FirstTimeMoments, momentLogText } from '../story/firstTimeMoments.ts';
 import { MenuScreens } from '../ui/MenuScreens.ts';
 import { StoryDirector } from '../story/StoryDirector.ts';
 import { createActControllers } from '../story/acts/index.ts';
+import { Act5Controller } from '../story/acts/Act5Controller.ts';
 import { objectiveView } from '../story/objectiveView.ts';
 import { WAYPOINT_LABELS, objectiveTarget, routeWaypoint } from '../story/waypoints.ts';
 import { WaypointBeacon } from '../story/WaypointBeacon.ts';
@@ -241,6 +242,7 @@ export class GameEngine {
     try {
       const saved = JSON.parse(window.localStorage.getItem('marscraft-save-v1') || 'null');
       this._savedArrivalPlayed = saved?.arrivalPlayed === true;
+      this._savedFreePlay = saved?.freePlay === true; // ja decolou nesta partida (ato 5, #411)
       if (saved?.survival) {
         Object.assign(this.survival, saved.survival);
         if (Array.isArray(saved.survival.inventorySlots)) {
@@ -354,12 +356,14 @@ export class GameEngine {
       onUnloadSample: () => this._loadSampleTube(false),
       onToggleFactory: () => this.mission.toggleFactory(),
       onIgnite: () => this._launchMav(),
+      onContinue: () => this.act5.continueAfterVictory(),
       onClose: () => this._closeMavPanel(),
     });
     this._wasDead = false;
     this.deathCount = 0; // para o boletim do cadete (issue #90)
     this._startHours = this._skyHours();
     this._initStory();
+    if (this._savedFreePlay) this.act5.restoreFreePlay();
     this._initWeather();
     this._initEvents();
 
@@ -1082,7 +1086,8 @@ export class GameEngine {
 
   _isNearMav() {
     const { x, z } = MAV_CONFIG.PAD_POSITION;
-    return Math.hypot(this.player.pos.x - x, this.player.pos.z - z) <= MAV_CONFIG.INTERACT_RADIUS;
+    // Depois da decolagem (modo livre, #411) nao ha foguete na plataforma
+    return !this.mission.launched && Math.hypot(this.player.pos.x - x, this.player.pos.z - z) <= MAV_CONFIG.INTERACT_RADIUS;
   }
 
   _openMavPanel() {
@@ -1299,6 +1304,8 @@ export class GameEngine {
   // Escolha feita num card de radio sem parar o jogo (issue #135). Devolve false para o card
   // continuar aberto. O escudo liga pelo mesmo caminho do Shield Remote: gasta a mesma bateria.
   _onCardChoice(id) {
+    const act5Choice = this.act5.onCardChoice(id); // ato 5 (#423): como deixar a base
+    if (act5Choice !== null) return act5Choice;
     if (id === 'hide') {
       this.hud.showToast('Follow the arrow to the base. Hide in the storm shelter and fill its water wall!', 6000);
       return true;
@@ -1413,6 +1420,9 @@ export class GameEngine {
       cropVariety: s.cropCollection.size,
       iceDelivered: m.iceDelivered,
       standbyHours: m.standbyHours,
+      launched: m.launched,
+      launchWindow: this.story.launchWindow,
+      baseHandover: this.act5.handoverStats(),
       ...this._scienceReportStats(),
     };
   }
@@ -1855,6 +1865,7 @@ export class GameEngine {
     this.tutorialCounts = { drink: 0, meal: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0, suitUps: 0 };
     // Atos 2 a 5 da historia: cada um liga os seus passos ao jogo (src/story/acts/)
     this.actControllers = createActControllers(this);
+    this.act5 = this.actControllers.find((act) => act instanceof Act5Controller);
     this._lastStepId = null;
     this.story = new StoryDirector({
       training: false, // tutorial padrao: so os 5 passos que a missao usa (CORE_STEPS)
@@ -1869,6 +1880,7 @@ export class GameEngine {
     // Escolha rapida dos cards de radio ([1] HIDE / [2] SHIELD): so com o jogo rodando
     this.storyHud.canChoose = () => Boolean(this._wasGameRunning);
     this.storyHud.onChoice = (id) => this._onCardChoice(id);
+    this.storyHud.onContinue = () => this.act5.continueAfterWindowClosed();
     this._objectiveText = '';
     // Retrato do jogo que o diretor le a cada frame (objeto reaproveitado)
     this._storySnapshot = {
@@ -2543,7 +2555,7 @@ export class GameEngine {
   // descarrega o gelo direto no tanque do foguete, para a missao continuar sem saidas a pe.
   _roverFuelsMav() {
     const rover = this.roverController;
-    if (!this.mission.grounded || rover.iceCargo <= 0) return false;
+    if (!this.mission.grounded || rover.iceCargo <= 0 || this.mission.launched) return false;
     const { x, z } = MAV_CONFIG.PAD_POSITION;
     if (Math.hypot(rover.pos.x - x, rover.pos.z - z) > DOSE_CONFIG.ROVER_MAV_REACH) return false;
     const blocks = roverMavBlocks(rover.iceCargo, this.mission.iceNeeded());
@@ -2829,7 +2841,7 @@ export class GameEngine {
     try {
       const survival = {};
       for (const key of ['health','oxygen','suitEquipped','suitThermal','suitOxygen','suitScrubber','suitDust','suitIntegrity','baseOxygen','baseBreached','water','food','baseWater','maxBaseWater','graywater','inventorySlots','isDead']) survival[key] = this.survival[key];
-      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed }));
+      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed, freePlay: this.mission.launched }));
       return true;
     } catch { return false; }
   }

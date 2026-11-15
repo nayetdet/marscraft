@@ -122,6 +122,9 @@ A distância e o atraso de rádio que aparecem no jogo **não são constantes**:
 | Duração da viagem Terra–Marte | **~7 meses** (Mars 2020: 30/07/2020 a 18/02/2021, 203 dias) | Legenda da chegada | [NASA Mars 2020](https://science.nasa.gov/mission/mars-2020-perseverance/) |
 | Pressão na superfície | Marte **6,36 mbar** × Terra **1.014 mbar** (~0,6 %) | Legenda "Mars air is 100 times thinner" (a NASA usa "about 100 times thinner") | [Mars Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html) |
 | Período sinódico de Marte | **779,94 dias ≈ 26 meses** | Fim alternativo: a janela de lançamento só reabre em ~26 meses | [Mars Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html) |
+| Base usada por uma tripulação depois da outra | A Estação Espacial Internacional está **ocupada sem interrupção desde novembro de 2000**; na troca de tripulação ("crew handover") as duas ficam a bordo ao mesmo tempo | Card LEAVING THE BASE do ato 5 (issue #423): "crews hand the Space Station to the next crew" | [NASA: International Space Station Facts and Figures](https://www.nasa.gov/international-space-station/space-station-facts-and-figures/) ("The space station has been continuously occupied since November 2000"; "Sometimes more are aboard the station during a crew handover"), consultado em 15/11/2026 |
+
+Como deixar a base (issue #423, `ACT5_CONFIG`): arrumar a base antes do IGNITE gasta **2 h de jogo** da janela de lançamento (`HANDOVER_WINDOW_HOURS`), e a base conta como pronta com o tanque de água pela metade, até 15 % de poeira nos painéis e metade dos campos plantada. Tudo isso é **regra de jogo**; o que é real é a prática de uma tripulação entregar a estação para a seguinte.
 
 A janela de lançamento do jogo (`STORY_CONFIG.WINDOW_HOURS = 8` horas de jogo) é **escala de jogo**, não um número real: o que é real é a existência da janela e o intervalo de ~26 meses.
 

@@ -51,6 +51,22 @@ export function renderReportCard(container, report) {
     container.append(finds);
   }
 
+  // Em qual janela de lancamento o foguete decolou (ato 5, #411)
+  if (report.launch) {
+    const launch = document.createElement('p');
+    launch.className = report.launch.onTime ? 'report-launch' : 'report-launch is-late';
+    launch.textContent = report.launch.text;
+    container.append(launch);
+  }
+
+  // Como a base ficou para a proxima tripulacao (ato 5, #423)
+  if (report.handover) {
+    const handover = document.createElement('p');
+    handover.className = report.handover.allReady ? 'report-launch' : 'report-launch is-late';
+    handover.textContent = report.handover.text;
+    container.append(handover);
+  }
+
   const profile = document.createElement('p');
   profile.className = 'report-profile';
   const title = document.createElement('b');

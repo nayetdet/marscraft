@@ -118,6 +118,11 @@ describe('missionStatus', () => {
     expect(s.alerts[0]).toMatchObject({ id: 'rocket', tone: 'ok' });
   });
 
+  it('stops asking for IGNITE after liftoff (free play, issue #411)', () => {
+    const s = missionStatus(fakeMission({ progress: { overallPct: 100, ready: true }, launched: true }), FETCHED);
+    expect(s.alerts.some((alert) => alert.id === 'rocket')).toBe(false);
+  });
+
   it('shows base water in liters and base O2 as clean air', () => {
     const s = missionStatus(fakeMission(), FETCHED, { water: 37.4, maxWater: 100, co2: 12 });
     expect(s.water).toEqual({ liters: 37, pct: 37, tone: 'ok', greenhouseDry: false });
