@@ -55,6 +55,8 @@ describe('GymEquipmentController (in-world 3D treadmill & exercise bike)', () =>
       controller.triggerRep();
     }
     expect(controller.progress).toBeCloseTo(87.5, 2);
+    expect(onPlaySound).toHaveBeenCalledTimes(7);
+    expect(onPlaySound).toHaveBeenNthCalledWith(1, 'bike', false);
     controller.update(0.05);
     expect(controller.avatar.armL.rotation.x).toBeLessThan(-0.8); // hands reaching handlebars
 
@@ -64,6 +66,7 @@ describe('GymEquipmentController (in-world 3D treadmill & exercise bike)', () =>
     controller.triggerRep();
 
     expect(controller.progress).toBe(0);
+    expect(onPlaySound).toHaveBeenLastCalledWith('bike', true);
     expect(stations.muscleStrength).toBeGreaterThan(prevMuscle);
     expect(stations.boneDensity).toBeGreaterThan(prevBone);
     expect(onPlaySound).toHaveBeenCalled();
@@ -71,7 +74,7 @@ describe('GymEquipmentController (in-world 3D treadmill & exercise bike)', () =>
   });
 
   it('mounts the space treadmill, runs in 3D on [SPACE], and dismounts back onto the gym floor', () => {
-    const { controller, stations, player, onDismount } = createSetup();
+    const { controller, stations, player, onPlaySound, onDismount } = createSetup();
 
     controller.mount('treadmill');
     expect(controller.isActive).toBe(true);
@@ -84,6 +87,7 @@ describe('GymEquipmentController (in-world 3D treadmill & exercise bike)', () =>
       controller.triggerRep();
     }
     expect(stations.boneDensity).toBeGreaterThan(prevBone);
+    expect(onPlaySound).toHaveBeenLastCalledWith('treadmill', true);
 
     controller.dismount();
     expect(controller.isActive).toBe(false);

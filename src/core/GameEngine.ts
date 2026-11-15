@@ -306,7 +306,10 @@ export class GameEngine {
       expedition: this.expedition,
       survival: this.survival,
       hud: this.hud,
-      onPlaySound: (f1, d, f2) => this._playGymTone(f1, d, f2),
+      onPlaySound: (mode, completed) => {
+        if (completed) this.audio.playUiConfirm();
+        else this.audio.playGymRep(mode);
+      },
       onDismount: () => {
         this.playerHand.handGroup.visible = !this.isZoomed && !this.isThirdPerson && !this.roverController.isActive;
         this.hud.showToast('Stepped off gym equipment');
@@ -1249,7 +1252,12 @@ export class GameEngine {
       flame: this.engineFlame,
       smoke: this.puffs,
       pad,
-      onEnd: () => this._showVictory(),
+      onIgnition: () => this.audio.playRocket({ liftoff: true }),
+      onFadeOut: () => this.audio.fadeOutRocket(),
+      onEnd: () => {
+        this.audio.stopRocket();
+        this._showVictory();
+      },
     }));
   }
 

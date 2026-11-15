@@ -5,16 +5,19 @@
 | Area | Audio feedback |
 |---|---|
 | Movement and rover | Habitat/surface footsteps and rover motor loops |
-| World interaction | Regolith placement, mining, block-break impacts, landing, and rocket arrival |
+| World interaction | Regolith placement, mining, block-break impacts, landing, rocket arrival, and MAV liftoff |
 | Airlock and suit | Door cycles, decompression, manual crank, suit equip, and suit dock |
 | Survival | Danger loop, damage cue with cooldown, and successful food use |
 | Interface | Quiet pointer hover, menu navigation, inventory, journal, scanner open/close, terminal actions, modal navigation, and a click preview while changing volume |
 | Scanner and science | Confirmation when a scan completes and when science is sent |
 | Greenhouse | Click when a crop drag starts, then success/error feedback on drop; no sound while the pointer moves |
 | Stations and rover | Success/error cues for actions; rover interaction feedback is separate from its motor loop |
-| Procedural effects | Mars wind and solar-panel brushing are generated with Web Audio in `src/audio/AudioManager.ts` |
+| Gym | Treadmill steps and bike pedal actions have distinct short cues; completing a set confirms success |
+| Procedural effects | Mars wind, solar-panel brushing, and gym movement cues are generated with Web Audio in `src/audio/AudioManager.ts` |
 
 Interface sounds are event-driven. Frame updates do not emit click sounds. Hover feedback is limited to mouse and pen, ignores disabled and touch-only controls, and has a short cooldown. Changing the volume previews the click at the selected level, with a cooldown while the slider moves. Controls that already give a success/error cue skip the generic click, so an action produces one clear response.
+
+The existing rocket engine loop now starts when the MAV ignites in the launch cutscene, fades with the final shot, and stops if the cutscene is skipped. The arrival cue remains unchanged.
 
 ## Mix and loudness
 

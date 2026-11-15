@@ -10,8 +10,10 @@ const FADE_START = 13.5;
 // Altura (acima da origem do foguete) de onde sai a chama
 export const MAV_NOZZLE_Y = 0.5;
 
-export function createLaunchCutscene({ camera, rocket, flame, smoke, pad, onEnd }) {
+export function createLaunchCutscene({ camera, rocket, flame, smoke, pad, onIgnition, onFadeOut, onEnd }) {
   const accel = CUTSCENE_CONFIG.LAUNCH_ACCEL;
+  let ignitionSoundStarted = false;
+  let rocketAudioFadeStarted = false;
 
   return {
     duration: CUTSCENE_CONFIG.LAUNCH_SECONDS,
@@ -33,6 +35,15 @@ export function createLaunchCutscene({ camera, rocket, flame, smoke, pad, onEnd 
     ],
 
     update(t, dt) {
+      if (!ignitionSoundStarted && t >= IGNITION) {
+        ignitionSoundStarted = true;
+        onIgnition?.();
+      }
+      if (!rocketAudioFadeStarted && t >= FADE_START) {
+        rocketAudioFadeStarted = true;
+        onFadeOut?.();
+      }
+
       const flight = Math.max(0, t - LIFTOFF);
       const altitude = 0.5 * accel * flight * flight;
       const power = t < IGNITION ? 0 : t < LIFTOFF ? 0.6 * (t - IGNITION) : 1;
