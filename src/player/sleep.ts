@@ -11,7 +11,6 @@ export const SLEEP_BLOCK_TEXT = Object.freeze({
   outside: 'You can only sleep in a bunk inside the base.',
   'no-air': 'The base is losing air. Fix the leak before you sleep!',
   storm: 'A solar storm is coming. Stay awake and get to the storm shelter!',
-  battery: 'The battery is empty. Life support needs power while you sleep.',
   alarm: 'An alarm is on in the base. Fix it before you sleep.',
   hungry: 'You are too hungry to sleep. Eat something first.',
   thirsty: 'You are too thirsty to sleep. Drink some water first.',
@@ -20,7 +19,6 @@ export const SLEEP_BLOCK_TEXT = Object.freeze({
 // O que acordou o jogador antes da hora
 export const WAKE_TEXT = Object.freeze({
   storm: 'A solar storm warning woke you up!',
-  battery: 'The battery ran out and the alarm woke you up!',
   breach: 'The base is losing air! You woke up.',
   crew: 'The crew woke you up: an alarm is on in the base.',
   hungry: 'Your growling stomach woke you up.',
@@ -55,12 +53,11 @@ export function sleepNeedsCost(hours) {
 // Da para deitar agora? Devolve o motivo (chave de SLEEP_BLOCK_TEXT) ou null.
 export function sleepBlocker({
   insideBase, baseBreached = false, baseOxygen = 100, stormPhase = 'none',
-  batteryCharge = 1, alarm = false, food = Infinity, water = Infinity,
+  alarm = false, food = Infinity, water = Infinity,
 }) {
   if (!insideBase) return 'outside';
   if (baseBreached || baseOxygen < SLEEP_CONFIG.MIN_BASE_OXYGEN) return 'no-air';
   if (stormPhase === 'warning' || stormPhase === 'active') return 'storm';
-  if (batteryCharge <= 0) return 'battery';
   if (alarm) return 'alarm';
   if (food <= SLEEP_CONFIG.WAKE_NEED_LEVEL) return 'hungry';
   if (water <= SLEEP_CONFIG.WAKE_NEED_LEVEL) return 'thirsty';
@@ -70,12 +67,11 @@ export function sleepBlocker({
 // Algo neste passo acorda o jogador? `events` = tipos de evento da missao que sairam no passo.
 // Devolve o motivo (chave de WAKE_TEXT) ou null.
 export function wakeReason({
-  events = [], batteryCharge = 1, baseBreached = false, crewAlert = false,
+  events = [], baseBreached = false, crewAlert = false,
   food = Infinity, water = Infinity,
 }) {
   if (events.includes('storm-warning') || events.includes('storm-start')) return 'storm';
   if (baseBreached) return 'breach';
-  if (batteryCharge <= 0) return 'battery';
   if (crewAlert) return 'crew';
   if (food <= SLEEP_CONFIG.WAKE_NEED_LEVEL) return 'hungry';
   if (water <= SLEEP_CONFIG.WAKE_NEED_LEVEL) return 'thirsty';
