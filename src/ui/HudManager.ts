@@ -50,6 +50,9 @@ export class HudManager {
     this.systemNoticeMessageEl = document.getElementById('system-notice-message');
     this._systemNoticeTimer = null;
     this.dangerVignetteEl = document.getElementById('danger-vignette');
+    this.dangerWarningEl = document.getElementById('danger-warning');
+    this.dangerWarningMessageEl = document.getElementById('danger-warning-message');
+    this._dangerWarningText = '';
     this.damageSourceEl = document.getElementById('damage-source');
     this._damageSourceText = '';
     this.deathOverlayEl = document.getElementById('death-overlay');
@@ -478,6 +481,24 @@ export class HudManager {
     this.damageSourceEl.classList.toggle('visible', Boolean(feedback));
   }
 
+  _updateDangerWarning(survival) {
+    const threshold = SURVIVAL_CONFIG.DANGER_THRESHOLD;
+    const warnings = [];
+    if (survival.oxygen <= threshold) warnings.push('OXYGEN');
+    if (survival.food <= threshold) warnings.push('FOOD');
+    if (survival.water <= threshold) warnings.push('WATER');
+    if (survival.health <= threshold) warnings.push('HEALTH');
+
+    const text = warnings.map((resource) => `LOW ${resource}`).join(' · ');
+    if (text !== this._dangerWarningText) {
+      this._dangerWarningText = text;
+      if (this.dangerWarningMessageEl) this.dangerWarningMessageEl.textContent = text;
+    }
+    const visible = Boolean(text) && !survival.isDead;
+    this.dangerWarningEl?.classList.toggle('hidden', !visible);
+    this.dangerWarningEl?.setAttribute('aria-hidden', String(!visible));
+  }
+
   // Cria os 10 icones (SVG) uma unica vez; depois so troca a classe dos que mudaram
   _createIconBar(container, type, count = ICONS_PER_BAR) {
     container.innerHTML = '';
@@ -653,6 +674,7 @@ export class HudManager {
     }
     this._updateDamageSource(survival);
     this.dangerVignetteEl?.classList.toggle('hidden', !survival.isInDanger || survival.isDead);
+    this._updateDangerWarning(survival);
     if (survival.isDead) {
       this.showDeathScreen(survival);
       return;
