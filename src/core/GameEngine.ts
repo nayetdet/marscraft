@@ -4,7 +4,7 @@ import { createCropItemModel, createCropPlantModel } from '../graphics/cropModel
 import { createSpaceRationModel } from '../graphics/rationModel.ts';
 import { createSampleRockModel } from '../graphics/sampleModels.ts';
 import * as THREE from 'three';
-import { BLOCK_INTERACTION_CONFIG, CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, STORY_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
+import { BLOCK_INTERACTION_CONFIG, CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
 import { separateCrew } from '../crew/separateCrew.ts';
 import { CrewManager } from '../crew/CrewManager.ts';
 import { CrewAvatar } from '../crew/CrewAvatar.ts';
@@ -2033,17 +2033,8 @@ export class GameEngine {
     separateCrew(this.crewAvatars);
 
     this.input.keys = {};
-    // Ato 1 (#407): a crianca comeca dentro da base, ao lado do terminal de radio, com o traje
-    // guardado no Suitport. Vestir o traje pela primeira vez e um passo da historia.
-    const start = STORY_CONFIG.START_INSIDE;
-    this.player.pos.set(start.x, HABITAT_LAYOUT.FLOOR_Y + 1 + start.eyeAboveFloor, start.z);
-    this.player.vel.set(0, 0, 0);
-    this.player.yaw = start.yaw;
-    this.player.pitch = 0;
-    this.survival.suitEquipped = false;
-    this._wasSuitEquipped = false;
-    this.suitport.setEquipped(false, false);
-    this.playerHand.setSuitEquipped(false);
+    // Comeca na rampa, diante da entrada da base, como no spawn original.
+    this.player.resetToShipRamp();
     this.playerHand.handGroup.visible = !this.isZoomed;
     // O lookAt da animacao deixa a camera rolada; _updateCamera so escreve yaw e pitch
     this.camera.rotation.set(0, 0, 0);

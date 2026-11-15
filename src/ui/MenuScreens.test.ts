@@ -22,6 +22,7 @@ function makeDocument() {
     'menu-main', 'demo-feedback', 'sources-terrain-coords', 'sources-terrain-date', 'sources-donki-date',
     'sources-screen', 'sources-btn', 'sources-back-btn',
     'options-screen', 'options-btn', 'options-back-btn',
+    'language-select',
     'demo-screen', 'demo-btn', 'demo-back-btn',
     'shaders-btn', 'volume-slider', 'volume-value',
   ];
@@ -59,5 +60,30 @@ describe('MenuScreens volume controls', () => {
 
     slider.fire('change');
     expect(onVolumePreview).toHaveBeenLastCalledWith({ final: true });
+  });
+});
+
+describe('MenuScreens language control', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('selects the saved language and applies valid language changes', () => {
+    const { document, elements } = makeDocument();
+    vi.stubGlobal('document', document);
+    const onLanguageChange = vi.fn();
+    new MenuScreens({
+      donkiDate: '15/11/2026',
+      onDemo: vi.fn(),
+      onLanguageChange,
+    });
+
+    const select = elements.get('language-select');
+    expect(select.value).toBe('en');
+    select.value = 'es';
+    select.fire('change');
+    expect(onLanguageChange).toHaveBeenCalledWith('es');
+
+    select.value = 'fr';
+    select.fire('change');
+    expect(onLanguageChange).toHaveBeenCalledOnce();
   });
 });
