@@ -15,10 +15,41 @@ export function solarChargePerHour(timeOfDay) {
   );
 }
 
+// Fluxo liquido da bateria (% por hora de jogo) suavizado, para o HUD mostrar "+4/h" sem
+// tremer a cada quadro (issue #85). `windowHours` = quanto tempo de jogo a media cobre.
+export function smoothNetRate(previous, deltaPct, deltaHours, windowHours = 0.3) {
+  if (!(deltaHours > 0)) return previous;
+  const rate = deltaPct / deltaHours;
+  if (previous === null || previous === undefined) return rate;
+  const k = Math.min(1, deltaHours / windowHours);
+  return previous + (rate - previous) * k;
+}
+
 export class Battery {
   constructor(charge = ENERGY_CONFIG.START_CHARGE, capacity = ENERGY_CONFIG.BATTERY_CAPACITY) {
     this.capacity = capacity;
     this.charge = Math.min(capacity, Math.max(0, charge));
+    // Energia do RTG reservada ao suporte de vida (issue #85), na mesma unidade da carga.
+    // Nao entra em `charge`: fabrica, blindagem e luzes nao podem usar.
+    this.lifeSupportCredit = 0;
+  }
+
+  // O RTG entrega `amount` ao suporte de vida; o que passar de `max` guardado e perdido
+  addLifeSupportPower(amount, max) {
+    this.lifeSupportCredit = Math.min(max, this.lifeSupportCredit + Math.max(0, amount));
+  }
+
+  // Suporte de vida (ar): usa primeiro o RTG e depois a bateria. Devolve quanto saiu.
+  drainLifeSupport(amount) {
+    const need = Math.max(0, amount);
+    const fromRtg = Math.min(this.lifeSupportCredit, need);
+    this.lifeSupportCredit -= fromRtg;
+    return fromRtg + this.drain(need - fromRtg);
+  }
+
+  // Energia que o suporte de vida pode usar agora
+  get lifeSupportAvailable() {
+    return this.charge + this.lifeSupportCredit;
   }
 
   // Devolve quanto realmente entrou (a bateria cheia desperdica o resto)
