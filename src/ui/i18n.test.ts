@@ -133,6 +133,10 @@ describe('game language catalog', () => {
     expect(translate(`Solar storm coming! The Sun threw out a giant cloud of particles (a CME). NASA's model said it would reach Mars on 18/11/2026: in the game that is 4h 20m from now. Based on a real CME that left the Sun on 15/11/2026 at 500 km/s, headed to Mars (NASA DONKI, real data from 15/11/2026).`, 'pt-BR'))
       .toContain('Tempestade solar a caminho!');
     expect(translate('POWER 72%', 'en')).toBe('POWER 72%');
+    for (const technicalName of ['MarsCraft', 'NASA', 'MAV', 'MOXIE', 'EVA']) {
+      expect(translate(technicalName, 'pt-BR')).toBe(technicalName);
+      expect(translate(technicalName, 'es')).toBe(technicalName);
+    }
     expect(translate('New untranslated text', 'es')).toBe('New untranslated text');
     expect(translate('THE SUN', 'pt-BR')).toBe('O SOL');
     expect(translate('0.14 km/h top speed', 'es')).toBe('Velocidad máxima: 0,14 km/h');
@@ -246,6 +250,37 @@ describe('game language catalog', () => {
       .toBe('CIÊNCIA 12 | ENVIADOS 8/30');
     expect(translate(dustDevilPanelsToast(3, 5), 'es'))
       .toBe('¡El remolino de polvo limpió 3 de tus 5 paneles solares! Limpia los demás tú mismo.');
+  });
+
+  it('translates dynamic resource and science messages in both selected languages', () => {
+    const messages = [
+      'Science sent: 12 / 30 points',
+      'Send 2 items = 8 points to Earth (5% power)',
+      'Not enough power: this upload needs 5% of the battery. Wait for the Sun.',
+      'Not enough science points: this needs 4 points that were not sent to Earth yet.',
+      'Question sent. The answer needs about 30 s (game time) to come back.',
+      'Regolith analyzed: +1 science point. Plain regolith only counts once: the glowing sample spots outside are worth more.',
+      'Tool upgraded (-3 science points, not sent to Earth): collecting blocks is faster.',
+      'Suit upgrade installed (-5 science points, not sent to Earth): outside, less radiation hurts you and less dose adds up.',
+      'Moved 2 L into the wall. Less water to drink, more protection.',
+      'Moved 2 L back to the tank. More water to drink, less protection.',
+      'Need 10% base power for full suit repair.',
+      'Need 10% base power for electrostatic cleaning.',
+      'Commander, the water recycler has no power! The battery is empty.',
+      'Commander, it is freezing! The greenhouse stopped. Turn the heater on in the power room.',
+      'Fission reactor ON: +12%/h day and night. Your radiation dose climbs faster while it runs.',
+      'The rocket takes ice in loads of 5 kg. Drill more first.',
+      'Rover loaded 6 ice into the rocket. No walk outside needed!',
+      'EVA suit below minimum launch levels (40% O2 / 25% Heat). Wait for recharge.',
+      'The battery will be empty before sunrise (2 h to go). Turn something off, or start the fission reactor.',
+    ];
+    for (const text of messages) {
+      expect(translate(text, 'pt-BR'), text).not.toBe(text);
+      expect(translate(text, 'es'), text).not.toBe(text);
+    }
+    expect(translate(messages[0], 'pt-BR')).toBe('Ciência enviada: 12 / 30 pontos');
+    expect(translate(messages[1], 'es')).toBe('Enviar 2 artículos = 8 puntos a la Tierra (5% de energía)');
+    expect(translate(messages[8], 'pt-BR')).toContain('2 L');
   });
 
   it('saves and restores the language preference, using English for invalid values', () => {
