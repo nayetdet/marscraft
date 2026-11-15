@@ -354,11 +354,15 @@ export const STORM_CONFIG = {
   // Relogio da dose de radiacao: 1 hora de jogo = 1 dia real em Marte (radiation.ts)
   REAL_HOURS_PER_GAME_HOUR: 24,
   // O tempo de aviso e a viagem prevista da CME (saida do Sol ate a chegada em Marte), encolhida.
-  // Teste com jogadores em 15/11/2026: esperar minutos pelo aviso parava o jogo. Agora 500 horas
-  // reais de viagem = 1 hora de jogo: as CMEs do DONKI (38 a 173 h de viagem) dao 7 a 17 s reais
-  // de aviso. CME mais rapida continua dando menos aviso; o minimo e MIN_WARNING_HOURS (7,5 s).
-  WARNING_REAL_HOURS_PER_GAME_HOUR: 500,
-  MIN_WARNING_HOURS: 0.15,
+  // Teste com jogadores em 15/11/2026: esperar minutos pelo aviso parava o jogo. Agora 250 horas
+  // reais de viagem = 1 hora de jogo. CME mais lenta da mais aviso: as do DONKI (38 a 173 h de
+  // viagem) dao de 20 a 35 s reais.
+  WARNING_REAL_HOURS_PER_GAME_HOUR: 250,
+  // Aviso minimo: 0,4 h de jogo = 20 s reais. E o tempo justo para a crianca que esta no lugar
+  // mais longe (a cratera de gelo, ~43 blocos da porta) ler o alerta (~4 s), voltar andando sem
+  // correr e sem ir em linha reta (~10 s), passar pelo airlock (~4 s) e entrar no abrigo (~1 s).
+  // balance.test.ts refaz essa conta: se a base ou a velocidade mudarem, o teste avisa.
+  MIN_WARNING_HOURS: 0.4,
   // Calmaria antes do primeiro aviso e entre tempestades: 0,4 h de jogo = 20 s reais
   FIRST_WARNING_AFTER_HOURS: 0.4,
   GAP_BETWEEN_STORMS_HOURS: 0.4,
@@ -385,10 +389,10 @@ export const SPACE_WEATHER_CONFIG = {
   FETCH_TIMEOUT_MS: 5000,
   // SEP (particulas solares energeticas) so entra quando o fetch ao vivo trouxe uma; nunca inventamos.
   // Regras do jogo: a cada 3 tempestades, a 3a e um pico de SEP. As particulas voam quase na
-  // velocidade da luz, entao o aviso e curto (~5 s reais, menor que o de qualquer CME). O DONKI nao da a forca da SEP em Marte:
+  // velocidade da luz, entao o aviso e curto (15 s reais, menor que o de qualquer CME: da tempo correndo ou com a blindagem). O DONKI nao da a forca da SEP em Marte:
   // o pico usa a menor tempestade que o Curiosity mediu (RADIATION_CONFIG.STORM_DOSE_MIN_UGY).
   SEP_EVERY_N_STORMS: 3,
-  SEP_WARNING_HOURS: 0.1,
+  SEP_WARNING_HOURS: 0.3,
 };
 
 export const MAV_CONFIG = {

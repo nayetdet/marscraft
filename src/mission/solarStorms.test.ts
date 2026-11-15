@@ -28,7 +28,7 @@ describe('leadTimeHours', () => {
   it('matches the real prediction saved from DONKI: left 01/11 19:00Z, Mars on 07/11 06:00Z', () => {
     const cme = donki.cmes.find((c) => c.id === '2026-11-01T19:00:00-CME-001');
     expect(cme.marsArrivalTime).toBe('2026-11-07T06:00Z');
-    // 5 dias e 11 horas reais = 131 h -> 131 / 500 horas de jogo (~13 s reais de aviso)
+    // 5 dias e 11 horas reais = 131 h -> 131 / 250 horas de jogo (~26 s reais de aviso)
     expect(leadTimeHours(cme)).toBeCloseTo(131 / STORM_CONFIG.WARNING_REAL_HOURS_PER_GAME_HOUR, 6);
   });
 });

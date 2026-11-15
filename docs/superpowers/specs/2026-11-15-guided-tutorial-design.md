@@ -32,7 +32,7 @@ Data: 15/11/2026. Origem: teste com jogadores no dia da submissão.
 | Espera | Antes | Agora |
 |---|---|---|
 | Resposta da Terra (11 min-luz) | ~66 s | ~8 s (`GAME_SECONDS_PER_LIGHT_MINUTE: 0.35`) |
-| Aviso de tempestade solar | 80 a 360 s | 7 a 17 s (`WARNING_REAL_HOURS_PER_GAME_HOUR: 500`, mínimo 0,15 h) |
+| Aviso de tempestade solar | 80 a 360 s | 20 a 35 s (`WARNING_REAL_HOURS_PER_GAME_HOUR: 250`, mínimo 0,4 h) |
 | Tempestade solar | 50 s | 10 s (`DURATION_HOURS: 0.2`) |
 | Calmaria entre tempestades | 100 s | 20 s |
 | Fábrica, por bloco de gelo | 30 s | 7,5 s (`ISRU_HOURS_PER_ICE_BLOCK: 0.15`) |
@@ -42,6 +42,7 @@ O que anda junto, para nenhuma escolha ficar de graça:
 - A dose total de cada tempestade não muda; `HARM_THRESHOLD` e `WARN` sobem x5.
 - Blindagem: 110 %/h, ou 22 % da bateria por tempestade (eram 25 %).
 - Fábrica: 50 %/h, ou 7,5 % da bateria por bloco de gelo (eram 15 %). O tanque cheio custa 75 %.
+- O aviso mínimo (20 s) é o tempo de ler o alerta, voltar andando da cratera de gelo, passar pelo airlock e entrar no abrigo; `balance.test.ts` refaz a conta.
 - O aviso continua proporcional à viagem real da CME prevista pelo DONKI: CME mais rápida, menos aviso.
 - O card do rádio continua mostrando o atraso real em minutos; só a espera no jogo encolhe.
 
