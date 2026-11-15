@@ -12,10 +12,11 @@ const HALF_MAP_X = WORLD_CONFIG.SIZE_X / 2;
 const HALF_MAP_Z = WORLD_CONFIG.SIZE_Z / 2;
 
 export const DUST_STORM_CENTER = CENTER;
-// Usa o raio do círculo inscrito no mapa para a parede não ultrapassar seus limites.
-export const DUST_STORM_WALL_RADIUS = Math.min(
-  HALF_MAP_X - Math.abs(CENTER.x),
-  HALF_MAP_Z - Math.abs(CENTER.z)
+export const DUST_STORM_WALL_RADIUS = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS;
+export const DUST_STORM_MIDDLE_WALL_RADIUS = START + RANGE / 2;
+export const DUST_STORM_WORLD_RADIUS = Math.hypot(
+  HALF_MAP_X + Math.abs(CENTER.x),
+  HALF_MAP_Z + Math.abs(CENTER.z)
 );
 const VISUAL_START = DUST_STORM_WALL_RADIUS - DUST_STORM_VISUAL_CONFIG.VISUAL_LEAD;
 const VISUAL_RANGE = DUST_STORM_WALL_RADIUS - VISUAL_START;
@@ -36,7 +37,7 @@ export function dustStormProximity(x, z) {
   return clamp01((distanceFromBaseCenter(x, z) - (START - WARNING)) / WARNING);
 }
 
-// O visual cresce apenas na aproximação da borda física do mapa.
+// A névoa cresce em duas etapas entre a primeira frente e a borda externa.
 export function dustStormVisualStrength(x, z) {
   return clamp01((distanceFromBaseCenter(x, z) - VISUAL_START) / VISUAL_RANGE);
 }
