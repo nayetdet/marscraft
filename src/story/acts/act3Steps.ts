@@ -1,4 +1,5 @@
-import { CROP_CONFIG, RADIATION_CONFIG, STATION_CONFIG, UTILITY_CONFIG } from '../../config/constants.ts';
+import { CROP_CONFIG, RADIATION_CONFIG, UTILITY_CONFIG } from '../../config/constants.ts';
+import { GYM_NEEDS, GYM_STEP_ID } from './act3Gym.ts';
 import { PLANT_NEEDS } from '../tutorialDetours.ts';
 import type { StorySnapshot, StoryStep } from './actTypes.ts';
 
@@ -120,7 +121,7 @@ export const ACT3_STEPS: StoryStep[] = [
     example: oneMore('rationsMade'),
   },
   {
-    id: 'gym-workout',
+    id: GYM_STEP_ID,
     act: 3,
     zone: 'gym',
     certificate: 'cert-gym',
@@ -134,7 +135,8 @@ export const ACT3_STEPS: StoryStep[] = [
       { icon: 'check', text: 'Press SPACE in the green zone' },
       { icon: 'down', text: 'Low gravity makes bones weak' },
     ],
-    needs: [{ resource: 'power', amount: STATION_CONFIG.EXERCISE_COST }],
+    // Bateria da base, e comida e agua da crianca (issue #421): se faltar, o desvio manda buscar
+    needs: [...GYM_NEEDS],
     done: more('workoutCount'),
     example: oneMore('workoutCount'),
   },

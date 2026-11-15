@@ -3,6 +3,7 @@ import { SIGNS, ZONE_COLORS } from '../base/basePosters.ts';
 import { speakerForZone } from './radioSpeakers.ts';
 import { RADIATION_CONFIG, ROVER_CONFIG, STATION_CONFIG, STORY_CONFIG, UTILITY_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.ts';
 import { PLANT_NEEDS, detourById } from './tutorialDetours.ts';
+import { GYM_NEEDS } from './acts/act3Gym.ts';
 import { ACT2_STEPS } from './acts/act2Steps.ts';
 import { ACT3_STEPS } from './acts/act3Steps.ts';
 import { ACT4_STEPS } from './acts/act4Steps.ts';
@@ -132,6 +133,7 @@ export const TUTORIAL_STEPS = [
     lines: [
       { icon: 'bolt', text: 'Go to the POWER ROOM: press F' },
       { icon: 'sun', text: 'Sun by day, battery by night' },
+      { icon: 'radiation', text: 'The REACTOR gives power day and night' },
     ],
     done: more('powerChecks'),
   },
@@ -182,7 +184,8 @@ export const TUTORIAL_STEPS = [
       { icon: 'check', text: 'Press SPACE in the green zone' },
       { icon: 'down', text: 'Low gravity makes bones weak' },
     ],
-    needs: [{ resource: 'power', amount: STATION_CONFIG.EXERCISE_COST }],
+    // Bateria da base, e comida e agua da crianca (issue #421): se faltar, o desvio manda buscar
+    needs: [...GYM_NEEDS],
     done: more('workoutCount'),
   },
   {

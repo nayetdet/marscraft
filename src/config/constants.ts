@@ -255,8 +255,8 @@ export const SURVIVAL_CONFIG = {
   SUIT_DUST_MOVE_MULTIPLIER: 2.0,
   SUIT_WEAR_PER_SECOND: 100 / 420, // ~7 min continuous EVA before suit wears out
   SUIT_WEAR_DUST_MULTIPLIER: 1.75,
-  SUIT_REPAIR_POWER_COST: 4,
-  SUIT_CLEAN_POWER_COST: 2,
+  SUIT_REPAIR_POWER_COST: 2,
+  SUIT_CLEAN_POWER_COST: 1,
   SUIT_NO_SUIT_O2_DRAIN_MULTIPLIER: 2.0,
   // Borda da area jogavel (parede de poeira), medida a partir de TERRAIN_CONFIG.BASE_CENTER.
   // Issue #103: a borda nao machuca mais. O vento de Marte nao derruba ninguem (o ar e fino
@@ -388,8 +388,8 @@ export const ROVER_CONFIG = {
   LOW_BATTERY: 15,
   LOW_BATTERY_SPEED_FACTOR: 0.35,
   CHARGE_PER_SECOND: 8, // % da bateria do rover por segundo real, parado no deposito
-  // % da bateria da base por 1 % do rover: uma carga completa do rover custa 10 % da base
-  BASE_COST_PER_ROVER_PERCENT: 0.1,
+  // % da bateria da base por 1 % do rover: uma carga completa do rover custa 5 % da base
+  BASE_COST_PER_ROVER_PERCENT: 0.05,
   // Mesmo raio da doca onde o rover descarrega o gelo (WATER_SYSTEM_CONFIG.ICE_DEPOT_POS)
   CHARGE_RADIUS: 5.8,
 };
@@ -398,7 +398,7 @@ export const ROVER_CONFIG = {
 // Taxas "por hora de jogo": com GAME_HOURS_PER_SECOND = 0.02, 1 hora de jogo = 50 s reais.
 // Fontes dos numeros reais em docs/data/numeros-reais.md.
 export const MISSION_CONFIG = {
-  AIRLOCK_COST: 1, AIRLOCK_CYCLE: 0.8, DOOR_SPEED: 10,
+  AIRLOCK_COST: 0.5, AIRLOCK_CYCLE: 0.8, DOOR_SPEED: 10,
   // Limpeza eletrostatica do traje no airlock (segundos). Sem energia, o aviso fica na tela
   // SUIT_CLEAN_SKIP_TIME e a poeira entra na base. Ver docs/data/airlock-e-poeira.md
   SUIT_CLEAN_TIME: 0.8, SUIT_CLEAN_SKIP_TIME: 0.6,
@@ -426,12 +426,12 @@ export const ENERGY_CONFIG = {
   // Custos (em % de bateria)
   OXYGEN_COST_PER_POINT: 1.5, // reciclar 1 ponto de O2 no habitat (MOXIE + reciclagem)
   // Blindagem contra radiacao ligada. Anda junto com STORM_CONFIG.DURATION_HOURS: com a
-  // tempestade de 0,2 h (10 s reais) uma tempestade inteira custa 22 % da bateria (era 25 %
-  // com a tempestade de 1 h e 25 %/h). Esquecida ligada, esvazia a bateria em ~45 s.
-  SHIELD_DRAIN_PER_HOUR: 110,
+  // tempestade de 0,2 h (10 s reais) uma tempestade inteira custa 11 % da bateria (era 22 %
+  // com 110 %/h, cortado pela metade em 15/11/2026). Esquecida ligada, esvazia a bateria em ~90 s.
+  SHIELD_DRAIN_PER_HOUR: 55,
   // Fabrica de combustivel ligada. Anda junto com MAV_CONFIG.ISRU_HOURS_PER_ICE_BLOCK: um bloco
-  // de gelo custa 7,5 % da bateria (era 15 % com 0,6 h por bloco e 25 %/h).
-  ISRU_DRAIN_PER_HOUR: 50,
+  // de gelo custa 3,75 % da bateria (era 7,5 % com 50 %/h, cortado pela metade em 15/11/2026).
+  ISRU_DRAIN_PER_HOUR: 25,
   // Gerador nuclear (issue #85). [Ref] O MMRTG do Curiosity e do Perseverance gera ~110 W de
   // eletricidade de dia e de noite, com calor do plutonio (NASA). Na base ele so paga o suporte
   // de vida minimo (O2 do jogador e da tripulacao, filtro de CO2): fabrica, blindagem, luz da
@@ -442,9 +442,10 @@ export const ENERGY_CONFIG = {
   // Reator de fissao tipo Kilopower: energia de dia e de noite, para a base toda.
   // [Ref] NASA Kilopower / KRUSTY (teste em Nevada, nov/2017 a mar/2018): 1 a 10 kW de eletricidade
   // por pelo menos 10 anos; 4 unidades dariam conta de um posto avancado (NASA, 02/05/2018).
-  // Potencia em escala de jogo: paga o gasto parado da base a noite (~6 %/h), mas nao a fabrica
-  // nem a blindagem. O custo dele e dose de radiacao: DOSE_CONFIG.REACTOR_MSV_PER_HOUR.
-  REACTOR_CHARGE_PER_HOUR: 8,
+  // Potencia em escala de jogo: paga o gasto parado da base a noite (~6 %/h) e ainda carrega a
+  // bateria, mas sozinho nao segura a fabrica nem a blindagem (era 8 ate 15/11/2026).
+  // O custo dele e dose de radiacao: DOSE_CONFIG.REACTOR_MSV_PER_HOUR.
+  REACTOR_CHARGE_PER_HOUR: 16,
   // Hora do aviso de por do sol (o Sol se poe as 18h): hora de conferir a bateria
   SUNSET_WARNING_HOUR: 16.5,
   // Abaixo disso (%) a bateria esta vazia: maquinas em espera, so o RTG mantem o ar
@@ -725,9 +726,9 @@ export const STATION_CONFIG = {
   MEDBAY_HEAL_PER_HOUR: 2, // pontos de vida por hora de jogo
   MEDBAY_LOW_HEALTH: 8,
   FILTER_DECAY: 0.2, CO2_RISE: 0.08, CO2_CLEAR: 0.12,
-  DUST_DAMAGE: 0.015, DECONTAMINATION_COST: 2, FILTER_COST: 4,
-  EXERCISE_COST: 3, TREATMENT_COST: 5,
-  COMMS_COST: 3, COMMS_DELAY: 40,
+  DUST_DAMAGE: 0.015, DECONTAMINATION_COST: 1, FILTER_COST: 2,
+  EXERCISE_COST: 2, TREATMENT_COST: 3,
+  COMMS_COST: 2, COMMS_DELAY: 40,
   FITNESS_DECAY: 0.015,
   SUIT_RADIATION_DAMAGE_FACTOR: 0.65,
 };
@@ -752,7 +753,9 @@ export const STORY_CONFIG = {
   // o passo, a crianca e mandada buscar. Para o passo voltar, o recurso precisa passar do minimo
   // por esta folga (L de agua, % de bateria, porcoes de comida, % da bateria do rover): sem ela a
   // tarefa ficaria piscando entre o passo e o desvio.
-  DETOUR_RESUME_EXTRA: { water: 20, power: 2, food: 0, roverPower: 5 },
+  // As barras da crianca (bodyFood e bodyWater, issue #421) nao tem folga: comer ou beber ja
+  // passa bem do minimo do treino.
+  DETOUR_RESUME_EXTRA: { water: 20, power: 2, food: 0, roverPower: 5, bodyFood: 0, bodyWater: 0 },
   // Racoes na despensa que o passo de comer pede (UtilityModule.eatRation tira 1)
   TUTORIAL_RATIONS_NEEDED: 1,
   // Trade-off do primeiro gelo (ato 1, issue #413, src/story/firstIceChoice.ts): blocos de gelo
@@ -864,7 +867,7 @@ export const OXYGEN_PLANT_CONFIG = {
   SABATIER_WATER_RETURN: 0.5,
   // Custo de montar o reator de Sabatier na impressora 3D (escala de jogo)
   SABATIER_REGOLITH: 3,
-  SABATIER_POWER: 8,
+  SABATIER_POWER: 4,
   // Avisos do tripulante: o modo escolhido esta gastando o recurso que esta acabando
   LOW_WATER_WARN_L: 100,
   LOW_BATTERY_WARN_PCT: 25,
@@ -901,7 +904,7 @@ export const DUST_WEATHER_CONFIG = {
   START_PANEL_DUST: 0.1,
   // Limpar os paineis a mao (no campo solar, a oeste da sala de energia): cada vez tira esta
   // poeira e gasta ar do traje (pontos de O2, de 20). Esperar custa energia; limpar custa ar.
-  CLEAN_STEP: 0.25,
+  CLEAN_STEP: 0.5,
   CLEAN_O2_COST: 1,
   CLEAN_RADIUS: 10, // blocos do centro do campo solar
   CLEAN_ANIM_DURATION: 1.05, // segundos da animacao em 1a pessoa escovando o painel solar
@@ -950,12 +953,12 @@ export const SCIENCE_CONFIG = {
   // do mapa ficam em SAMPLE_TYPES (src/data/sampleTypes.ts).
   REGOLITH_POINTS: 1,
   // Custo do envio em % de bateria: base (ligar o radio e falar com o orbitador) + por item
-  UPLOAD_BASE_COST: 8,
-  UPLOAD_COST_PER_ITEM: 3,
+  UPLOAD_BASE_COST: 4,
+  UPLOAD_COST_PER_ITEM: 2,
   // Itens por envio (uma passagem do orbitador). O resto espera o proximo envio.
   MAX_ITEMS_PER_UPLOAD: 8,
   // Analisar 1 amostra no laboratorio (% de bateria)
-  ANALYZE_POWER_COST: 2,
+  ANALYZE_POWER_COST: 1,
   // Melhorias do laboratorio: gastam pontos ainda NAO enviados (a amostra fica na bancada em vez
   // de ir para a Terra). Trade-off: melhorar o traje agora ou decolar mais cedo.
   SUIT_UPGRADE_POINTS: 4,
@@ -1137,9 +1140,18 @@ export const ACT2_CONFIG = {
   STORY_REPAIR_FETCH_SECONDS: 10,
   // Trade-off "quem sai do posto para ajudar" (issue #415, act2CrewHelp.ts). Regra de jogo.
   CREW_HELP_CARD_SECONDS: 15, // tempo do card da escolha na tela
-  CREW_HELP_DEFAULT_SECONDS: 20, // sem resposta neste tempo (segundos reais), vem o engenheiro
+  CREW_HELP_DEFAULT_SECONDS: 20, // sem resposta neste tempo (segundos reais), vem a opcao padrao
   CREW_HELP_HOURS: 1, // horas de jogo que a maquina de quem ajuda fica parada (50 s reais)
   REPAIR_REACH: 4.5, // blocos: distancia maxima para trocar a janela rachada
+  // Fichas raras que so existem na tempestade (issue #419, act2StormScans.ts). Regra de jogo.
+  // Caixa de mira do redemoinho, em blocos: meia largura e altura (o funil desenhado tem 11 de
+  // altura e cerca de 2,3 de raio no topo, em MarsEventEffects.ts)
+  STORM_SCAN_DEVIL_HALF_WIDTH: 2.5,
+  STORM_SCAN_DEVIL_HEIGHT: 11,
+  STORM_SCAN_NOTICE_MS: 9000, // tempo do aviso "Rare scan outside" na tela
+  // O aviso sai este tempo (segundos reais) depois de o evento comecar, para nao ser trocado
+  // na mesma hora pelo aviso da propria tempestade ("The dust storm is here")
+  STORM_SCAN_NOTICE_DELAY_SECONDS: 4,
 };
 
 // Ato 3 (issue #409): abrigo na tempestade solar, planta, racao e academia.
@@ -1153,6 +1165,18 @@ export const ACT3_CONFIG = {
   WORKOUT_FOOD_PCT: 10,
   WORKOUT_WATER_PCT: 15,
   WORKOUT_HOURS: 2,
+  // Pular o treino (issue #421). Com os ossos ou o preparo abaixo deste nivel (0 a 100) o corpo
+  // esta fraco: o trabalho anda nesta fracao da velocidade e a vida so se recupera ate esta
+  // porcentagem da barra (nunca tira vida: so nao deixa passar dai). Na decolagem, corpo fraco e
+  // carregado pela tripulacao ate o foguete. Regra de jogo: quanto osso se perde em 0,38 g
+  // ninguem mediu (docs/data/numeros-reais.md).
+  WEAK_BODY_BELOW: 40,
+  WEAK_WORK_SPEED: 0.6,
+  WEAK_HEAL_CAP_PCT: 70,
+  // Segundos reais do card TRAIN NOW x LATER na tela
+  GYM_CARD_SECONDS: 20,
+  // Segundos da cena da ida ate o foguete, antes da decolagem (boardingCutscene.ts)
+  BOARDING_SECONDS: 7,
 };
 
 // Ato 4 (issue #410): traje, 3 amostras de cada tipo, analise e envio.

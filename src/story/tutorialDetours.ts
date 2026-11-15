@@ -1,4 +1,4 @@
-import { CROP_CONFIG, GREENHOUSE_PLOT_YIELD, ROVER_CONFIG, STORY_CONFIG } from '../config/constants.ts';
+import { CROP_CONFIG, GREENHOUSE_PLOT_YIELD, ROVER_CONFIG, STORY_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.ts';
 
 // Desvios do tutorial guiado (issue #237). Alguns passos gastam um recurso da base (agua, energia,
 // comida, bateria do rover). Se a base nao tem o minimo, a crianca ficava presa sem saber o que
@@ -11,7 +11,9 @@ import { CROP_CONFIG, GREENHOUSE_PLOT_YIELD, ROVER_CONFIG, STORY_CONFIG } from '
 // Um desvio tambem pode precisar de outro recurso (`needs`): buscar agua com o rover pede bateria
 // no rover. Ai vale o desvio mais fundo, que e o que a crianca consegue fazer agora.
 
-export type TutorialResource = 'water' | 'power' | 'food' | 'roverPower';
+// `bodyFood` e `bodyWater` (issue #421) sao as barras da crianca, nao recursos da base: o treino
+// da academia gasta comida e agua dela, entao o passo da academia manda comer ou beber antes.
+export type TutorialResource = 'water' | 'power' | 'food' | 'roverPower' | 'bodyFood' | 'bodyWater';
 
 export interface TutorialNeed {
   resource: TutorialResource;
@@ -27,6 +29,8 @@ export interface ResourceSnapshot {
   foodStock?: number; // racoes na despensa + plantas colhidas na mochila
   roverBattery?: number; // bateria do rover (%)
   roverActive?: boolean; // a crianca esta dirigindo o rover
+  playerFood?: number; // barra de comida da crianca, em pontos (issue #421)
+  playerWater?: number; // barra de agua da crianca, em pontos (issue #421)
 }
 
 export interface TutorialLine {
@@ -91,13 +95,13 @@ export const TUTORIAL_DETOURS: Readonly<Record<TutorialResource, TutorialDetour>
     zone: 'power',
     icon: 'bolt',
     label: 'SAVE POWER',
-    hint: 'Power room: press F, switch things OFF. The Sun fills the battery',
+    hint: 'Power room: press F, switch things OFF or start the REACTOR',
     place: 'powerroom',
-    objective: 'The battery is almost empty: switch things off in the power room and wait for the Sun',
+    objective: 'The battery is almost empty: switch things off or start the reactor in the power room',
     lines: [
       { icon: 'bolt', text: 'The battery is almost empty' },
       { icon: 'check', text: 'POWER ROOM: press F, switch OFF what you can' },
-      { icon: 'sun', text: 'The solar panels fill it when the Sun is up' },
+      { icon: 'sun', text: 'The Sun fills it. The REACTOR too, day and night' },
     ],
     read: (s) => known(s.batteryCharge),
   },
@@ -136,6 +140,44 @@ export const TUTORIAL_DETOURS: Readonly<Record<TutorialResource, TutorialDetour>
       { icon: 'clock', text: 'It charges there, using the base battery' },
     ],
     read: (s) => known(s.roverBattery),
+  },
+  // Fome da crianca (issue #421): o treino gasta comida da barra dela. O cozinheiro entrega a
+  // racao; se a despensa esta vazia, vale o desvio da comida (plantar e colher).
+  bodyFood: {
+    id: 'need-eat',
+    resource: 'bodyFood',
+    zone: 'kitchen',
+    icon: 'food',
+    label: 'EAT A MEAL',
+    hint: 'Kitchen: press F on the cook, then eat the ration',
+    place: 'kitchen',
+    objective: 'Too hungry to train: get a ration from the cook and eat it',
+    lines: [
+      { icon: 'heart', text: 'Too hungry to train' },
+      { icon: 'food', text: 'KITCHEN: press F on the cook' },
+      { icon: 'check', text: 'Pick the ration, then right-click to eat' },
+    ],
+    needs: [{ resource: 'food', amount: STORY_CONFIG.TUTORIAL_RATIONS_NEEDED }],
+    read: (s) => known(s.playerFood),
+  },
+  // Sede da crianca (issue #421): o treino gasta agua da barra dela. A torneira usa o tanque da
+  // base; com o tanque vazio, vale o desvio da agua (gelo com o rover).
+  bodyWater: {
+    id: 'need-drink',
+    resource: 'bodyWater',
+    zone: 'water',
+    icon: 'drop',
+    label: 'DRINK WATER',
+    hint: 'Water tap: press F',
+    place: 'water',
+    objective: 'Too thirsty to train: drink water at the water tap',
+    lines: [
+      { icon: 'heart', text: 'Too thirsty to train' },
+      { icon: 'drop', text: 'Go to the WATER TAP: press F' },
+      { icon: 'home', text: 'It comes from the base tank' },
+    ],
+    needs: [{ resource: 'water', amount: WATER_SYSTEM_CONFIG.DRINK_AMOUNT_FROM_DISPENSER }],
+    read: (s) => known(s.playerWater),
   },
 });
 

@@ -105,7 +105,7 @@ describe('airlock', () => {
     airlock.onEvent = (type) => events.push(type);
     airlock.pressurized = false;
     stations.dirtySuit = true;
-    mission.energy = 1.5; // paga o ciclo (1), mas nao a limpeza (2)
+    mission.energy = 1; // paga o ciclo (0,5), mas nao a limpeza (1)
 
     airlock.request(airlock.doors[0], inChamber);
     run(airlock, inChamber, 6);

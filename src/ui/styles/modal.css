@@ -21,12 +21,10 @@
   width: 100%;
 }
 
-body:not(.pause-menu-open) .mc-menu-card #quit-btn { display: none; }
+body:not(.pause-menu-open) .mc-menu-card .menu-admin-row { display: none; }
+body:not(.pause-menu-open) .mc-menu-card .menu-end-row #quit-btn { display: none; }
+body:not(.pause-menu-open) .mc-menu-card .menu-end-row #reset-world-btn { grid-column: 1 / -1; }
 body.pause-menu-open .mc-menu-card #quit-btn { display: grid; }
-body:not(.pause-menu-open) .mc-menu-card #demo-btn { display: none; }
-body:not(.pause-menu-open) .mc-menu-card #sources-btn { grid-column: 1 / -1; }
-body:not(.pause-menu-open) .mc-menu-card #credits-btn { grid-column: 1 / -1; }
-body:not(.pause-menu-open) .mc-menu-card #reset-world-btn { grid-column: 1 / -1; }
 body.pause-menu-open .crew-picker { display: none; }
 
 .mc-overlay.hidden,
@@ -1044,8 +1042,9 @@ body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 
   }
 }
 
-/* Menu: fontes e ferramentas de demo ficam em linhas separadas. */
-.menu-row { display: grid; grid-template-columns: 1fr; gap: 8px; }
+/* Ações do menu ficam agrupadas em linhas de duas colunas. */
+.menu-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.menu-admin-row #demo-btn { grid-column: 1 / -1; }
 .mc-menu-card .menu-row .mc-btn { font-size: 14px; padding: 10px 8px; }
 
 .controls-screen.info-screen {
@@ -1090,20 +1089,32 @@ body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 
 .option-row h3 { margin: 0 0 4px; color: #ffffa0; font-size: 14px; text-shadow: 1px 1px #333; }
 .option-row p { margin: 0; color: #d6d0c8; font-size: 12px; line-height: 1.4; }
 .option-row > .mc-btn { width: auto; min-width: 145px; min-height: 44px; }
-.language-select {
+.language-option-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.language-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.language-choice {
   box-sizing: border-box;
-  min-width: 280px;
-  min-height: 44px;
-  padding: 8px 34px 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 6px;
   color: #fff;
   font: inherit;
-  font-size: 14px;
+  font-size: 11px;
+  line-height: 1.15;
+  text-align: left;
   background: #29231e;
   border: 2px solid #a66a43;
-  border-radius: 0;
+  border-radius: 2px;
   cursor: pointer;
 }
-.language-select:focus-visible { outline: 3px solid #ffffa0; outline-offset: 2px; }
+.language-choice:hover { background: #3a3029; }
+.language-choice.is-selected { background: #49382a; border-color: #ffd36a; box-shadow: inset 0 0 0 1px #ffd36a; }
+.language-choice:focus-visible { outline: 3px solid #ffffa0; outline-offset: 2px; }
+.language-flag { flex: 0 0 24px; width: 24px; height: 16px; border-radius: 2px; image-rendering: pixelated; }
+.language-choice span { min-width: 0; }
 .volume-control { display: flex; align-items: center; gap: 10px; min-width: 180px; }
 .volume-control input {
   width: 100%; height: 18px; margin: 0; padding: 0;
@@ -1154,17 +1165,6 @@ body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 
   gap: 3px;
   flex: 0 0 auto;
   text-align: center;
-}
-.credits-edition {
-  padding: 3px 8px;
-  color: #f6ce82;
-  background: #34271e;
-  border: 1px solid #80583b;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .11em;
-  line-height: 1.25;
-  text-transform: uppercase;
 }
 .credits-header h2 {
   margin: 0;
@@ -1269,8 +1269,8 @@ body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 
 
 @media (max-width: 520px) {
   .option-row { align-items: stretch; flex-direction: column; gap: 8px; }
+  .language-option-row { display: grid; }
   .option-row > .mc-btn { width: 100%; }
-  .language-select { width: 100%; }
   .volume-control { min-width: 0; }
   .credit-link { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px auto; justify-items: center; gap: 4px; min-height: 76px; padding: 6px 18px 6px 6px; text-align: center; }
   .credit-link img { grid-column: 1; grid-row: 1; }

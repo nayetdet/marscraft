@@ -269,13 +269,13 @@ describe('Act2Controller: hidden leak, scope and repair', () => {
     const engineer = f.engine.crew.members[0];
     f.act.leak.found = true;
     f.act.onStepStart('fix-window', {});
-    f.act.onCardChoice('help-engineer'); // #415: a crianca chama o engenheiro
+    f.act.onCardChoice('help-water'); // #415: base de teste com 2 pessoas, o engenheiro entrega
     // Enquanto o engenheiro busca o vidro, a seta mostra a janela achada
     expect(f.act.interactionPrompt(engineer)).toBeNull();
     expect(f.act.waypoint(ACT2_PLACES.repair).label).toBe('CRACKED WINDOW');
     f.act.update(C.STORY_REPAIR_FETCH_SECONDS + 0.1, { hours: 1 }, true);
-    expect(f.act.waypoint(ACT2_PLACES.repair).label).toBe('ANA, ENGINEER');
-    expect(f.act.interactionPrompt(engineer)).toBe('[F] Get the new window glass from Ana');
+    expect(f.act.waypoint(ACT2_PLACES.repair).label).toBe('WATER TECH');
+    expect(f.act.interactionPrompt(engineer)).toBe('[F] Get the new window glass from the water tech');
     f.act.interact();
     expect(f.engine.survival.countItem(BLOCK_IDS.HAB_GLASS)).toBe(1);
 
@@ -323,12 +323,18 @@ describe('Act2Controller: three scans and the journal lesson', () => {
   it('wants one Mars target, one sky target and one base target scanned in this mission', () => {
     const f = fakeEngine();
     const scans = f.engine.scanJournal.missionScans;
-    expect(snapshot(f)).toMatchObject({ act2ScanMars: false, act2ScanSky: false, act2ScanBase: false });
-    scans.add('crater-rim'); // paisagem tambem e Marte
+    scans.add('crater-rim');
     scans.add('habitat');
-    expect(snapshot(f)).toMatchObject({ act2ScanMars: true, act2ScanSky: false, act2ScanBase: true });
+    f.act.onStepStart('scan-three', {});
+    expect(snapshot(f)).toMatchObject({ act2ScanMars: false, act2ScanSky: false, act2ScanBase: false });
+    scans.add('earth');
+    expect(snapshot(f)).toMatchObject({ act2ScanMars: false, act2ScanSky: true, act2ScanBase: false });
     expect(ACT2_STEPS[4].done(snapshot(f), {})).toBe(false);
-    scans.add('phobos'); // sem a Terra no ceu, qualquer alvo do ceu vale
+    scans.add('base');
+    expect(snapshot(f)).toMatchObject({ act2ScanMars: false, act2ScanSky: true, act2ScanBase: true });
+    expect(ACT2_STEPS[4].done(snapshot(f), {})).toBe(false);
+    scans.add('regolith'); // um alvo de Marte completa a lista; scans anteriores nao contam
+    expect(snapshot(f)).toMatchObject({ act2ScanMars: true, act2ScanSky: true, act2ScanBase: true });
     expect(ACT2_STEPS[4].done(snapshot(f), {})).toBe(true);
   });
 

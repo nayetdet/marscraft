@@ -5,7 +5,10 @@ import { createSpaceRationModel } from '../graphics/rationModel.ts';
 import { createSampleRockModel } from '../graphics/sampleModels.ts';
 import { UTILITY_CONFIG } from '../config/constants.ts';
 import { LIGHTS_OFF_ID, LIGHTS_ON_ID, nightLightsToast } from '../story/acts/act3NightLights.ts';
-import { FIRST_ICE_NO_ICE_TOAST, FIRST_ICE_ROCKET_ID, FIRST_ICE_ROCKET_TOAST, FIRST_ICE_TANK_ID, firstIceCard, firstIceTankToast, firstIceWaterL, shouldAskFirstIce } from '../story/firstIceChoice.ts';
+import { BOARDING_ROW_LABEL, WEAK_BODY_WARNING, boardingSummary, gymChoiceToast, isBodyWeak } from '../story/acts/act3Gym.ts';
+import { createBoardingCutscene } from '../story/cutscene/boardingCutscene.ts';
+import { ACT3_CONFIG } from '../config/constants.ts';
+import { FIRST_ICE_NO_ICE_TOAST, FIRST_ICE_ROCKET_ID, FIRST_ICE_ROCKET_TOAST, FIRST_ICE_TANK_ID, firstIceCard, firstIceTankToast, firstIceWaterL, restoreFirstIce, saveFirstIce, shouldAskFirstIce } from '../story/firstIceChoice.ts';
 import * as THREE from 'three';
 import { BLOCK_INTERACTION_CONFIG, CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STORY_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
 import { separateCrew } from '../crew/separateCrew.ts';
@@ -26,7 +29,7 @@ import { noTubeSampleText, pickTubeSample, tubeLoadedText, tubeableCount } from 
 import { SampleSiteMarkers } from '../world/SampleSiteMarkers.ts';
 import { naturalGroundTop } from '../world/surfaceRocks.ts';
 import { isBuildZone } from '../world/terrainGenerator.ts';
-import { SAMPLE_TYPES, sampleFactView, sampleLogText, sampleTypeById } from '../data/sampleTypes.ts';
+import { SAMPLE_TYPES, sampleLogText, sampleTypeById } from '../data/sampleTypes.ts';
 import { journalRank } from '../ui/journalProgress.ts';
 import { MissionHud } from '../ui/MissionHud.ts';
 import { missionReport } from '../mission/missionReport.ts';
@@ -77,7 +80,7 @@ import { resolveScanTarget, collectScanBlocks } from '../scanner/scanTargeting.t
 import { ScanHighlight } from '../scanner/scanHighlight.ts';
 import { isInsideShieldZone, SHIELD_ZONE } from '../mission/shieldZone.ts';
 import { HABITAT_LAYOUT, SOLAR_FIELD, SOLAR_FIELD_CENTER, isInsideKitchen, isInsideShelter } from '../world/habitatLayout.ts';
-import { rationDeliveryCropOnEntry } from './rationDeliveryTrigger.ts';
+import { rationDeliveryCropWhileInside } from './rationDeliveryTrigger.ts';
 import { ShieldBubble } from '../graphics/shieldBubble.ts';
 import { IceSensorEffect } from '../scanner/iceSensor.ts';
 import { ScannerHud } from '../ui/ScannerHud.ts';
@@ -242,6 +245,11 @@ export class GameEngine {
       this._savedArrivalPlayed = saved?.arrivalPlayed === true;
       this._savedFreePlay = saved?.freePlay === true; // ja decolou nesta partida (ato 5, #411)
       if (saved?.playerAppearance) this.playerAppearance = normalizePlayerAppearance(saved.playerAppearance);
+      // Trade-offs que valem para a partida inteira: o primeiro gelo (#413) e a maquina parada (#415)
+      const firstIce = restoreFirstIce(saved?.firstIce);
+      this._firstIceAsked = firstIce.asked;
+      this._firstIceChoice = firstIce.choice;
+      this._savedCrewHelp = saved?.crewHelp ?? null;
       if (saved?.survival) {
         Object.assign(this.survival, saved.survival);
         if (Array.isArray(saved.survival.inventorySlots)) {
@@ -382,6 +390,7 @@ export class GameEngine {
     this.crewStock = createBaseStock({ survival: this.survival, mission: this.mission });
     // Modulo norte (issue #56, parte B): energia/aquecimento, cozinha, banheiro e oficina
     this.utility = new UtilityModule({ mission: this.mission, survival: this.survival, stations: this.stations, base: this.crewStock });
+    this.act2.restoreState(this._savedCrewHelp); // ato 2 (#415): a parada em andamento continua
     this._utilityHours = null;
     // Diario de bordo por sol e estudos reais do OSDR (issue #106). Outros sistemas podem
     // escrever com this.missionLog.add({ text, kind, hours }).
@@ -470,7 +479,7 @@ export class GameEngine {
       isInputBlocked: () => this.cutscenes.isActive || Boolean(this.sleep?.isSleeping) || Boolean(this.tradeoffHud?.isOpen),
       getInteraction: () => this._getInteraction(),
       isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen || Boolean(this.sleep?.isPanelOpen),
-      getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || this.sleep?.isTired ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
+      getWorkSpeed: () => (isBodyWeak(this.stations) || this.sleep?.isTired ? ACT3_CONFIG.WEAK_WORK_SPEED : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
       onRequestCharacterSetup: (confirmAndStart) => {
         this.characterCreator.open(this.playerAppearance, (chosen) => {
           this._setPlayerAppearance(chosen);
@@ -546,7 +555,7 @@ export class GameEngine {
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
     const tiredWarning = this.sleep.updateWarning();
     // Ato 2 (#415): a maquina de quem saiu para ajudar esta parada
-    document.getElementById('station-warning').textContent = this.act2.stationWarning ?? this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : tiredWarning;
+    document.getElementById('station-warning').textContent = this.act2.stationWarning ?? (this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : isBodyWeak(this.stations) ? WEAK_BODY_WARNING : tiredWarning);
   }
 
   // Avanca o modulo norte no relogio do ceu e repassa o estado para a tripulacao
@@ -967,14 +976,15 @@ export class GameEngine {
     box.minY = rp.y; box.maxY = rp.y + 2.7;
     box.minZ = rp.z - 1.6; box.maxZ = rp.z + 1.6;
 
-    const target = resolveScanTarget({
+    // Ato 2 (#419): o redemoinho e alvo so enquanto existe; na tempestade, la fora, o ceu e a parede de poeira
+    const target = this.act2.stormScanTarget(resolveScanTarget({
       world: this.world,
       origin,
       dir,
-      objects: [...this.customColliders, box],
+      objects: [...this.customColliders, box, this.act2.stormScanBox()],
       skyBodies: this._skyBodies,
       maxDist: this.scanJournal.scanRange(),
-    });
+    }));
     const isScanning = this.input.isScanButtonHeld;
     // Ato 2 (#408): procurando o vazamento, um vidro na mira responde se esta inteiro ou rachado
     const windowScan = this.act2.scanWindow(dt, target, isScanning);
@@ -1017,6 +1027,7 @@ export class GameEngine {
       if (c.scanId === id || (id === 'base' && !c.scanId)) boxes.push(c);
     }
     if (id === 'rover') boxes.push({ ...this._roverScanBox });
+    if (id === 'dust-devil') boxes.push({ ...this.act2.stormScans.devilBox }); // #419
     return boxes.length ? { boxes } : null;
   }
 
@@ -1227,7 +1238,9 @@ export class GameEngine {
     const found = this.scanJournal.record(type.id, { mission: false });
     if (found.isNew) this.scannerHud.unseen.add(type.id, SAMPLE_CATEGORY);
     this.missionLog.add({ text: sampleLogText(type), kind: 'study', hours: this._skyHours() });
-    this._momentQueue.push(sampleFactView(type));
+    // Station screens pause the game loop. Update the story here so it can observe the analyzed
+    // science before the player sends it without closing the terminal.
+    this._updateStory(0);
   }
 
   // Tudo o que a crianca achou nesta partida, como itens de ciencia com pontos (issue #269):
@@ -1265,7 +1278,9 @@ export class GameEngine {
   // Envia a ciencia para a Terra (issues #105 e #269). Devolve a frase para o painel ou o aviso.
   sendSciencePackage() {
     if (this.comms.blackout) return 'Radio silent: the Sun is between Mars and Earth. Send your science after the solar conjunction.';
-    return uploadResultText(this.mission.sendData(this.scienceItems()));
+    const result = this.mission.sendData(this.scienceItems());
+    if (result.status === 'sent') this._updateStory(0);
+    return uploadResultText(result);
   }
 
   // Melhorias do laboratorio: gastam pontos que ainda nao foram enviados. Devolve os pontos gastos.
@@ -1351,6 +1366,12 @@ export class GameEngine {
       this.hud.showToast(nightLightsToast(this.utility.greenhouseLightsOn), 6000);
       return true;
     }
+    // Ato 3 (#421): academia agora ou depois. Informativo: a crianca escolhe treinando ou nao
+    const gymToast = gymChoiceToast(id);
+    if (gymToast) {
+      this.hud.showToast(gymToast, 6000);
+      return true;
+    }
     if (id === 'hide') {
       this.hud.showToast('Follow the arrow to the base. Hide in the storm shelter and fill its water wall!', 6000);
       return true;
@@ -1413,6 +1434,22 @@ export class GameEngine {
     this.mavRocket.add(this.engineFlame.group);
     this.puffs.clear();
     this.puffs.setColor(0xd9d2c8);
+    // Ato 3 (#421): a forma fisica na decolagem decide como a crianca chega ao foguete (andando
+    // ou carregada pela tripulacao). A cena da ida vem antes da decolagem.
+    this._walkedToRocket = !isBodyWeak(this.stations);
+    this._syncRationObserverAppearance();
+    this.cutscenes.play(createBoardingCutscene({
+      camera: this.camera,
+      child: this._rationObserver,
+      rigs: this._boardingRigs,
+      crew: this.crewAvatars,
+      pad,
+      walks: this._walkedToRocket,
+      onEnd: () => this._playLaunchCutscene(pad),
+    }));
+  }
+
+  _playLaunchCutscene(pad) {
     this.cutscenes.play(createLaunchCutscene({
       camera: this.camera,
       rocket: this.mavRocket,
@@ -1443,6 +1480,8 @@ export class GameEngine {
       ['Ice turned into rocket fuel', `${m.iceDelivered} blocks`],
       ['Solar energy collected', `${(m.solarEnergyCollected / m.battery.capacity).toFixed(1)} full batteries`],
       ['Time left in the launch window', formatHours(this.story.windowHoursLeft ?? 0)],
+      // Ato 3 (#421): foi andando ate o foguete ou a tripulacao carregou
+      ...(boardingSummary(this._reportStats()) ? [[BOARDING_ROW_LABEL, boardingSummary(this._reportStats()).short]] : []),
       ['Mars events you saw', eventsSummary(this.events.history)],
       ['Mission seed', `${this.events.seed} (replay: ?seed=${this.events.seed})`],
     ];
@@ -1492,6 +1531,8 @@ export class GameEngine {
       launchWindow: this.story.launchWindow,
       baseHandover: this.act5.handoverStats(),
       firstIceChoice: this._firstIceChoice ?? null, // ato 1 (#413)
+      walkedToRocket: this._walkedToRocket ?? null, // ato 3 (#421)
+      stormScansMissed: this.act2.stormScansMissed(), // ato 2 (#419)
       ...this._scienceReportStats(),
     };
   }
@@ -1811,9 +1852,13 @@ export class GameEngine {
   // no diario de bordo [J]. A colheita da tripulacao nao chama isto (issue #216).
   onPlayerHarvest(type) {
     const card = this.earthFacts.onPlayerHarvest(type);
-    if (!card) return;
-    this.missionLog.add({ text: earthFactLogText(card), kind: 'study', hours: this._skyHours() });
-    this._momentQueue.push(earthFactView(card));
+    if (card) {
+      this.missionLog.add({ text: earthFactLogText(card), kind: 'study', hours: this._skyHours() });
+      this._momentQueue.push(earthFactView(card));
+    }
+    // Station screens pause the game loop. Advance the tutorial immediately after harvesting so
+    // it does not snapshot the harvest as part of the previous planting step.
+    this._updateStory(0);
   }
 
   // Chamado a cada quadro com o jogo rodando (sem painel aberto, sem animacao da historia):
@@ -2211,10 +2256,13 @@ export class GameEngine {
       this._rationObserver.add(rig.bodyGroup);
     }
     this._syncRationObserverAppearance();
+    // Os dois bonecos da crianca para a cena de embarque acompanham a aparencia escolhida.
+    this._boardingRigs = [this._rationObserverEva, this._rationObserverIva];
   }
 
   _initRationVisuals() {
     this._wasInsideRationKitchen = false;
+    this._rationKitchenWaitingForCrop = false;
     this._rationObserver = new THREE.Group();
     this._rationObserver.visible = false;
     this._rebuildRationObserver();
@@ -2256,14 +2304,20 @@ export class GameEngine {
 
   _maybePlayRationDeliveryCutscene() {
     const inside = isInsideKitchen(this.player.pos.x, this.player.pos.y, this.player.pos.z);
-    const crop = rationDeliveryCropOnEntry(this._wasInsideRationKitchen, inside, this.stations.harvestBaskets, this.utility.base.food, this.utility.lastRationCrop);
-    if (!crop) { this._wasInsideRationKitchen = inside; return; }
-    if (!this._arrivalPlayed || this.cutscenes.isActive) return;
+    if (!inside) {
+      this._wasInsideRationKitchen = false;
+      this._rationKitchenWaitingForCrop = false;
+      return;
+    }
+    if (!this._wasInsideRationKitchen) this._rationKitchenWaitingForCrop = true;
+    this._wasInsideRationKitchen = true;
+    const crop = rationDeliveryCropWhileInside(inside, this._rationKitchenWaitingForCrop, this.stations.harvestBaskets);
+    if (!crop || !this._arrivalPlayed || this.cutscenes.isActive) return;
     if (this.mission.storm?.phase === 'active') return;
     if (!this.input.isLocked || this.input.isPortraitRequired || this.survival.isDead) return;
     if (this.roverController.isActive || this.gymController.isActive) return;
     if (this.stationPanel.isOpen || this.hud.isInventoryOpen || this.scannerHud.isJournalOpen) return;
-    this._wasInsideRationKitchen = inside;
+    this._rationKitchenWaitingForCrop = false;
     this._playRationDeliveryCutscene(crop);
   }
 
@@ -3049,7 +3103,7 @@ export class GameEngine {
     try {
       const survival = {};
       for (const key of ['health','oxygen','suitEquipped','suitThermal','suitOxygen','suitScrubber','suitDust','suitIntegrity','baseOxygen','baseBreached','water','food','baseWater','maxBaseWater','graywater','inventorySlots','isDead']) survival[key] = this.survival[key];
-      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed, freePlay: this.mission.launched, playerAppearance: this.playerAppearance }));
+      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed, freePlay: this.mission.launched, playerAppearance: this.playerAppearance, firstIce: saveFirstIce(this._firstIceAsked, this._firstIceChoice), crewHelp: this.act2.saveState() }));
       return true;
     } catch { return false; }
   }

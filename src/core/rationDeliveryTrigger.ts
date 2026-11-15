@@ -1,12 +1,9 @@
-/** Choose the crop to show when entering with harvested food or prepared rations. */
-export function rationDeliveryCropOnEntry(
-  wasInside: boolean,
+/** Choose a crop for the kitchen scene once harvested food is available during this visit. */
+export function rationDeliveryCropWhileInside(
   isInside: boolean,
+  waitingForCrop: boolean,
   baskets: Record<string, number>,
-  rationCount = 0,
-  lastRationCrop: string | null = null,
 ): string | null {
-  if (wasInside || !isInside) return null;
-  return Object.keys(baskets).find((crop) => baskets[crop] > 0)
-    ?? (rationCount > 0 ? lastRationCrop ?? 'potato' : null);
+  if (!isInside || !waitingForCrop) return null;
+  return Object.keys(baskets).find((crop) => baskets[crop] > 0) ?? null;
 }

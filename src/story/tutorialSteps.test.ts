@@ -7,6 +7,7 @@ import { objectiveTarget, routeWaypoint } from './waypoints.ts';
 import { CERTIFICATES, certificateBadge } from './storyChapters.ts';
 import { ACT1_STEPS, CORE_STEPS, STEP_COLORS, TUTORIAL_STEPS, TUTORIAL_STEP_IDS, detourCard, stepCard, tutorialStepById } from './tutorialSteps.ts';
 import { PLANT_NEEDS, TUTORIAL_DETOURS, detourById, findDetours } from './tutorialDetours.ts';
+import { GYM_NEEDS } from './acts/act3Gym.ts';
 import {
   CREW_CONFIG, CROP_CONFIG, ENERGY_CONFIG, RADIATION_CONFIG, ROVER_CONFIG, STATION_CONFIG, STORY_CONFIG,
   UTILITY_CONFIG, WATER_SYSTEM_CONFIG,
@@ -261,7 +262,9 @@ describe('tutorial resource detours: the data', () => {
     expect(needs.report).toEqual([{ resource: 'power', amount: STATION_CONFIG.COMMS_COST }]);
     expect(needs.plant).toBe(PLANT_NEEDS);
     expect(needs['cert-greenhouse']).toBe(PLANT_NEEDS);
-    expect(needs['cert-gym']).toEqual([{ resource: 'power', amount: STATION_CONFIG.EXERCISE_COST }]);
+    // Academia (#421): bateria da base, e comida e agua das barras da crianca
+    expect(needs['cert-gym']).toEqual([...GYM_NEEDS]);
+    expect(GYM_NEEDS[0]).toEqual({ resource: 'power', amount: STATION_CONFIG.EXERCISE_COST });
     expect(needs['cert-shelter']).toEqual([{ resource: 'water', amount: RADIATION_CONFIG.SHELTER_FILL_MIN_L }]);
     expect(needs['rover-ice']).toEqual([{ resource: 'roverPower', amount: ROVER_CONFIG.LOW_BATTERY }]);
     // Plantar: a semente mais barata no menor campo

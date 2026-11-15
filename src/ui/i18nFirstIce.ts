@@ -1,11 +1,12 @@
 import {
   FIRST_ICE_NO_ICE_TOAST, FIRST_ICE_ROCKET_TOAST, firstIceBatteryPct, firstIceRocketBad, firstIceRocketReport,
-  firstIceTankGood, firstIceTankReport, firstIceTankToast, firstIceWaterL,
+  firstIceTankGood, firstIceTankReport, firstIceWaterL,
 } from '../story/firstIceChoice.ts';
 
 // Textos do trade-off do primeiro gelo (ato 1, issue #413) em pt-BR e es. As chaves com numero
 // sao montadas pelas mesmas funcoes do card (src/story/firstIceChoice.ts): se uma constante
-// mudar, a chave muda junto e a traducao continua valendo.
+// mudar, a chave muda junto e a traducao continua valendo. O aviso do tanque (firstIceTankToast)
+// muda com a agua que coube: fica nos padroes de src/ui/i18n.ts.
 const liters = firstIceWaterL();
 const battery = String(firstIceBatteryPct()).replace('.', ',');
 
@@ -20,7 +21,6 @@ export const FIRST_ICE_PT_BR: Record<string, string> = {
   'Fuel to fly home sooner': 'Combustível para voltar mais cedo',
   [firstIceRocketBad()]: `Gasta ${battery}% da bateria, sem água nova`,
   'Real: the Space Station makes oxygen from water (NASA OGA)': 'Real: a Estação Espacial faz oxigênio com água (NASA OGA)',
-  [firstIceTankToast(liters)]: `Gelo no tanque da base: +${liters} L de água. O foguete ainda precisa deste bloco.`,
   [FIRST_ICE_ROCKET_TOAST]: 'Leve o gelo ao foguete: siga a seta. Fazer combustível gasta bateria.',
   [FIRST_ICE_NO_ICE_TOAST]: 'Não há gelo na sua mochila.',
   [firstIceTankReport()]: `Primeiro gelo: tanque da base (+${liters} L de água, o foguete esperou)`,
@@ -38,7 +38,6 @@ export const FIRST_ICE_ES: Record<string, string> = {
   'Fuel to fly home sooner': 'Combustible para volver antes',
   [firstIceRocketBad()]: `Gasta ${battery}% de la batería, sin agua nueva`,
   'Real: the Space Station makes oxygen from water (NASA OGA)': 'Real: la Estación Espacial produce oxígeno con agua (NASA OGA)',
-  [firstIceTankToast(liters)]: `Hielo en el tanque de la base: +${liters} L de agua. El cohete aún necesita este bloque.`,
   [FIRST_ICE_ROCKET_TOAST]: 'Lleva el hielo al cohete: sigue la flecha. Hacer combustible gasta batería.',
   [FIRST_ICE_NO_ICE_TOAST]: 'No hay hielo en tu mochila.',
   [firstIceTankReport()]: `Primer hielo: tanque de la base (+${liters} L de agua, el cohete esperó)`,
