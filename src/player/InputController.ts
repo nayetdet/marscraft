@@ -33,6 +33,7 @@ export class InputController {
     isJournalOpen = () => false,
     onToggleJournal = () => {},
     onSaveGame = () => {},
+    onBeforeFirstPlay = () => false,
   }) {
     this.onToggleShield = onToggleShield;
     this.onSendData = onSendData;
@@ -63,6 +64,8 @@ export class InputController {
     this.isJournalOpen = isJournalOpen;
     this.onToggleJournal = onToggleJournal;
     this.onSaveGame = onSaveGame;
+    // Primeiro Play: quem responde `true` assumiu a tela (briefing da missao) e chama `start` depois
+    this.onBeforeFirstPlay = onBeforeFirstPlay;
 
     this.keys = {};
     this.isLocked = false;
@@ -461,6 +464,7 @@ export class InputController {
     };
 
     startBtn.addEventListener('click', () => {
+      if (!this.hasStarted && this.onBeforeFirstPlay(() => resumeGame())) return;
       resumeGame();
     });
 

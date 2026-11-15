@@ -82,7 +82,8 @@ src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades
 src/story/                 história em 3 atos: StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
                            tutorialSteps (os passos do tutorial guiado do ato 1, um por vez, em dados),
                            objectiveView (o que o painel do objetivo desenha), waypoints (para onde a seta aponta) e WaypointBeacon (seta 3D),
-                           firstTimeMoments (a animacao e o fato real da primeira vez de cada acao principal, em dados; quem desenha e o FirstTimeHud)
+                           firstTimeMoments (a animacao e o fato real da primeira vez de cada acao principal, em dados; quem desenha e o FirstTimeHud),
+                           missionBriefing (as 3 telas de trade-off do primeiro Play, em dados; quem desenha e o MissionBriefingHud)
   cutscene/                animações de chegada e de decolagem: timeline (keyframes), CutscenePlayer, efeitos, cápsula
 src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu), StoryHud
                            (card de rádio), WaypointHud (seta na tela), CutsceneHud (legendas, pular), FirstTimeHud (abertura e card das animações de primeira vez; desenhos coloridos 12x12 em pixelSprites) + CSS
