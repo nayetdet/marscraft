@@ -22,9 +22,10 @@ export const MARTIAN_SKY_FRAGMENT_SHADER = `
     float dayFactor = smoothstep(-0.15, 0.25, uSunElevation);
     float twilightFactor = smoothstep(-0.22, 0.05, uSunElevation) * (1.0 - smoothstep(0.05, 0.36, uSunElevation));
 
-    // Cores diurnas claras e alaranjadas de Marte
-    vec3 dayZenith = vec3(0.84, 0.54, 0.28);
-    vec3 dayHorizon = vec3(0.98, 0.78, 0.52);
+    // Dia em Marte: ceu caramelo, mais claro e empoeirado perto do horizonte.
+    // Bem mais palido que o chao, para o relevo nao se confundir com o ceu.
+    vec3 dayZenith = vec3(0.70, 0.52, 0.36);
+    vec3 dayHorizon = vec3(0.93, 0.82, 0.68);
 
     // Crepúsculo marciano claro
     vec3 duskZenith = vec3(0.28, 0.22, 0.30);
@@ -52,7 +53,7 @@ export const MARTIAN_SKY_FRAGMENT_SHADER = `
     skyColor += vec3(0.98, 0.98, 1.0) * sunCore * 0.9;
 
     if (vWorldDirection.y < 0.0) {
-      vec3 groundCol = mix(vec3(0.18, 0.11, 0.06), vec3(0.82, 0.52, 0.26), dayFactor);
+      vec3 groundCol = mix(vec3(0.18, 0.11, 0.06), vec3(0.60, 0.38, 0.26), dayFactor);
       skyColor = mix(skyColor, groundCol, clamp(-vWorldDirection.y * 4.0, 0.0, 1.0));
     }
 

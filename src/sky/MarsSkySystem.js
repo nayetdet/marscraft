@@ -14,7 +14,7 @@ const SUN_TWILIGHT_COLOR = new THREE.Color(0xbbe0ff);
 const SUN_NIGHT_COLOR = new THREE.Color(0x64748b);
 const FOG_NIGHT_COLOR = new THREE.Color(0x241914);
 const FOG_SUNSET_COLOR = new THREE.Color(0xd98245);
-const FOG_DAY_COLOR = new THREE.Color(0xf2a65e);
+const FOG_DAY_COLOR = new THREE.Color(0xe6cba6); // mesma cor do horizonte do ceu de dia
 const _sunDir = new THREE.Vector3();
 
 export class MarsSkySystem {
@@ -59,11 +59,12 @@ export class MarsSkySystem {
   }
 
   _initLights() {
-    // Iluminação fosca, clara e uniforme para que nada fique escuro
-    this.baseAmbient = new THREE.AmbientLight(0xfff4e6, 0.72);
+    // Luz ambiente moderada e Sol mais forte: as faces de cima e de lado dos blocos ficam
+    // diferentes, e o relevo aparece. A sombra de canto vem da cor por vertice (VoxelWorld).
+    this.baseAmbient = new THREE.AmbientLight(0xfff4e6, 0.7);
     this.scene.add(this.baseAmbient);
 
-    this.ambientLight = new THREE.HemisphereLight(0xffe4c4, 0xc87d44, 0.85);
+    this.ambientLight = new THREE.HemisphereLight(0xffe4c4, 0xd6a27c, 0.85);
     this.scene.add(this.ambientLight);
 
     this.sunLight = new THREE.DirectionalLight(0xfff7eb, 1.15);
@@ -103,15 +104,16 @@ export class MarsSkySystem {
       (1.0 - THREE.MathUtils.smoothstep(sunDir.y, 0.05, 0.35));
 
     this.sunLight.position.copy(sunDir).multiplyScalar(120).add(playerPos);
-    this.sunLight.intensity = 0.45 + dayStrength * 0.95;
+    // A noite fica igual a antes; so o dia ganha mais Sol e menos luz ambiente
+    this.sunLight.intensity = 0.45 + dayStrength * 1.15;
 
     this.sunLight.color
       .copy(SUN_NIGHT_COLOR)
       .lerp(SUN_DAY_COLOR, dayStrength)
       .lerp(SUN_TWILIGHT_COLOR, twilightStrength * 0.55);
 
-    this.ambientLight.intensity = 0.55 + dayStrength * 0.55;
-    this.baseAmbient.intensity = 0.5 + dayStrength * 0.35;
+    this.ambientLight.intensity = 0.55 + dayStrength * 0.45;
+    this.baseAmbient.intensity = 0.5 + dayStrength * 0.2;
 
     this.scene.fog.color
       .copy(FOG_NIGHT_COLOR)

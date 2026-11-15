@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { generateMartianTerrain } from './terrainGenerator.js';
+import { generateMartianTerrain, isBuildZone } from './terrainGenerator.js';
 import { buildNasaSpaceshipAndBase } from './nasaSpaceshipBuilder.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { WORLD_CONFIG } from '../config/constants.js';
+import { CUTSCENE_CONFIG, MAV_CONFIG, WATER_SYSTEM_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { terrainOffset } from '../data/marsTerrain.js';
 
 function createArrayWorld() {
   const sizeX = WORLD_CONFIG.SIZE_X;
@@ -64,5 +65,45 @@ describe('Martian Terrain & NASA Base Builder', () => {
     // Canteiros de plantação dentro da Redoma de Estufa (x = -16, z = 2) e corredor central (-18, z = 2)
     expect(world.getBlock(-18, floorY, 2)).toBe(BLOCK_IDS.NASA_HULL);
     expect(world.getBlock(-24, floorY, 3)).toBe(BLOCK_IDS.HYDRO_PLANT);
+  });
+
+  // y do bloco solido mais alto da coluna
+  function surfaceY(world, x, z) {
+    let y = world.sizeY - 1;
+    while (y > 0 && world.getBlock(x, y, z) === BLOCK_IDS.AIR) y -= 1;
+    return y;
+  }
+
+  it('follows the real elevation outside the levelled pads', () => {
+    const world = createArrayWorld();
+    generateMartianTerrain(world);
+
+    // Pontos longe da base, do MAV, da ala norte, da estufa e da cratera de gelo
+    for (const [x, z] of [[64, 64], [96, 8], [-70, -60], [100, -40]]) {
+      expect(surfaceY(world, x, z)).toBe(WORLD_CONFIG.GROUND_LEVEL + Math.round(terrainOffset(x, z)));
+    }
+    // A borda real da cratera fica bem acima da base
+    expect(surfaceY(world, 100, -40)).toBeGreaterThanOrEqual(WORLD_CONFIG.GROUND_LEVEL + 6);
+  });
+
+  it('keeps the MAV pad and the cutscene landing site at ground level', () => {
+    const world = createArrayWorld();
+    generateMartianTerrain(world);
+
+    const pad = MAV_CONFIG.PAD_POSITION;
+    const site = CUTSCENE_CONFIG.LANDING_SITE;
+    expect(surfaceY(world, pad.x, pad.z)).toBe(WORLD_CONFIG.GROUND_LEVEL);
+    expect(surfaceY(world, site.x, site.z)).toBe(WORLD_CONFIG.GROUND_LEVEL);
+  });
+
+  it('knows where the ground was shaped for the game', () => {
+    const pad = MAV_CONFIG.PAD_POSITION;
+    const ice = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER;
+    for (const [x, z] of [[-4, 0], [pad.x, pad.z], [ice.x, ice.z], [-28, -40], [-27, 16]]) {
+      expect(isBuildZone(x, z)).toBe(true);
+    }
+    for (const [x, z] of [[64, 64], [-70, -60], [100, -40], [0, 60]]) {
+      expect(isBuildZone(x, z)).toBe(false);
+    }
   });
 });

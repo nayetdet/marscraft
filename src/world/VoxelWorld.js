@@ -6,38 +6,52 @@ import { generateMartianTerrain } from './terrainGenerator.js';
 import { buildNasaSpaceshipAndBase } from './nasaSpaceshipBuilder.js';
 import { raycastVoxel } from './voxelRaycaster.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
+import { OCCLUSION_BRIGHTNESS, naturalTint, vertexOcclusion } from './voxelShading.js';
+import { createSurfaceRocks } from './surfaceRocks.js';
 
 const CHUNK_SIZE = 16;
 
 // Cada face: normal, vizinho a checar e 4 cantos em ordem anti-horaria vista de fora
 // (inferior-esquerdo, inferior-direito, superior-direito, superior-esquerdo).
+// "u" e "v" sao os dois eixos do plano da face (0 = x, 1 = y, 2 = z), usados na oclusao dos cantos.
 const FACES = [
-  { dir: [1, 0, 0], corners: [[1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]] },
-  { dir: [-1, 0, 0], corners: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]] },
-  { dir: [0, 1, 0], corners: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]] },
-  { dir: [0, -1, 0], corners: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]] },
-  { dir: [0, 0, 1], corners: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]] },
-  { dir: [0, 0, -1], corners: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]] },
+  { dir: [1, 0, 0], u: 1, v: 2, corners: [[1, 0, 1], [1, 0, 0], [1, 1, 0], [1, 1, 1]] },
+  { dir: [-1, 0, 0], u: 1, v: 2, corners: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]] },
+  { dir: [0, 1, 0], u: 0, v: 2, corners: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]] },
+  { dir: [0, -1, 0], u: 0, v: 2, corners: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]] },
+  { dir: [0, 0, 1], u: 0, v: 1, corners: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]] },
+  { dir: [0, 0, -1], u: 0, v: 1, corners: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]] },
 ];
+
+// Buffers reaproveitados pelo montador de chunks (nada e alocado por face)
+const UNSHADED = [1, 1, 1, 1];
+const _shades = [1, 1, 1, 1];
+const _levels = [3, 3, 3, 3];
+const _cell = [0, 0, 0];
 
 class FaceBuffer {
   constructor() {
     this.positions = [];
     this.normals = [];
     this.uvs = [];
+    this.colors = [];
     this.indices = [];
   }
 
-  addFace(x, y, z, face, rect) {
+  // "shades": brilho de cada um dos 4 cantos. "flip" troca a diagonal do quadrado para a
+  // sombra de canto nao ficar torta.
+  addFace(x, y, z, face, rect, shades = UNSHADED, flip = false) {
     const base = this.positions.length / 3;
     const [nx, ny, nz] = face.dir;
     const c = face.corners;
     for (let i = 0; i < 4; i++) {
       this.positions.push(x + c[i][0], y + c[i][1], z + c[i][2]);
       this.normals.push(nx, ny, nz);
+      this.colors.push(shades[i], shades[i], shades[i]);
     }
     this.uvs.push(rect.u0, rect.v0, rect.u1, rect.v0, rect.u1, rect.v1, rect.u0, rect.v1);
-    this.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    if (flip) this.indices.push(base + 1, base + 2, base + 3, base + 1, base + 3, base);
+    else this.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
   }
 
   toGeometry() {
@@ -46,6 +60,7 @@ class FaceBuffer {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(this.positions, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(this.normals, 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(this.uvs, 2));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(this.colors, 3));
     geo.setIndex(this.indices);
     geo.computeBoundingSphere();
     return geo;
@@ -73,7 +88,7 @@ export class VoxelWorld {
     // beyond the crater rim. It has no collision and sits below the playable map.
     this.horizonGround = new THREE.Mesh(
       new THREE.CircleGeometry(1100, 96),
-      new THREE.MeshLambertMaterial({ color: 0x8d4b31, side: THREE.DoubleSide })
+      new THREE.MeshLambertMaterial({ color: 0x9a6040, side: THREE.DoubleSide })
     );
     this.horizonGround.rotation.x = -Math.PI / 2;
     this.horizonGround.position.y = -3;
@@ -113,6 +128,9 @@ export class VoxelWorld {
       if (this.data[idx] !== BLOCK_IDS.HAB_GLASS) this.baseWindows.delete(idx);
     }
     this.rebuildMeshes();
+    // Pedras decorativas sobre o terreno natural (sem colisao)
+    this.surfaceRocks = createSurfaceRocks(this);
+    this.scene.add(this.surfaceRocks);
   }
 
   _index(x, y, z) {
@@ -353,17 +371,49 @@ export class VoxelWorld {
     return collected;
   }
 
-  // Marca o chunk do bloco e, se ele estiver na borda, o chunk vizinho (a face dele muda)
+  // Marca o chunk do bloco e, se ele estiver na borda, os chunks vizinhos: a face deles muda,
+  // e a sombra de canto alcanca tambem o vizinho na diagonal
   _markDirtyAround(ix, iz) {
     const cx = Math.floor(ix / CHUNK_SIZE);
     const cz = Math.floor(iz / CHUNK_SIZE);
     const lx = ix - cx * CHUNK_SIZE;
     const lz = iz - cz * CHUNK_SIZE;
+    const dx = lx === 0 ? -1 : lx === CHUNK_SIZE - 1 ? 1 : 0;
+    const dz = lz === 0 ? -1 : lz === CHUNK_SIZE - 1 ? 1 : 0;
     this._markDirty(cx, cz);
-    if (lx === 0) this._markDirty(cx - 1, cz);
-    if (lx === CHUNK_SIZE - 1) this._markDirty(cx + 1, cz);
-    if (lz === 0) this._markDirty(cx, cz - 1);
-    if (lz === CHUNK_SIZE - 1) this._markDirty(cx, cz + 1);
+    if (dx) this._markDirty(cx + dx, cz);
+    if (dz) this._markDirty(cx, cz + dz);
+    if (dx && dz) this._markDirty(cx + dx, cz + dz);
+  }
+
+  // Bloco que faz sombra de canto: tudo que e opaco (ar e vidro nao)
+  _occludes(ix, iy, iz) {
+    const id = this._getBlockForMeshing(ix, iy, iz);
+    return id !== BLOCK_IDS.AIR && id !== BLOCK_IDS.HAB_GLASS;
+  }
+
+  // Preenche _shades (brilho dos 4 cantos da face) e devolve se a diagonal deve ser trocada.
+  // Cada canto olha 3 vizinhos na camada a frente da face: os dois lados e a quina.
+  _shadeFace(ix, iy, iz, face, tint) {
+    _cell[0] = ix + face.dir[0];
+    _cell[1] = iy + face.dir[1];
+    _cell[2] = iz + face.dir[2];
+    const { u, v } = face;
+    for (let i = 0; i < 4; i++) {
+      const su = face.corners[i][u] ? 1 : -1;
+      const sv = face.corners[i][v] ? 1 : -1;
+      _cell[u] += su;
+      const side1 = this._occludes(_cell[0], _cell[1], _cell[2]);
+      _cell[v] += sv;
+      const corner = this._occludes(_cell[0], _cell[1], _cell[2]);
+      _cell[u] -= su;
+      const side2 = this._occludes(_cell[0], _cell[1], _cell[2]);
+      _cell[v] -= sv;
+      _levels[i] = vertexOcclusion(side1, side2, corner);
+      _shades[i] = tint * OCCLUSION_BRIGHTNESS[_levels[i]];
+    }
+    // A diagonal liga o par de cantos mais claro
+    return _levels[0] + _levels[2] < _levels[1] + _levels[3];
   }
 
   _markDirty(cx, cz) {
@@ -409,12 +459,19 @@ export class VoxelWorld {
           const target = isGlass ? glass : opaque;
           const wx = ix - this.halfX;
           const wz = iz - this.halfZ;
+          const tint = isGlass ? 1 : naturalTint(id, wx, iy, wz);
 
           for (const face of FACES) {
             const nb = this._getBlockForMeshing(ix + face.dir[0], iy + face.dir[1], iz + face.dir[2]);
             // Bloco opaco aparece atras de ar ou vidro; vidro so aparece contra o ar
             const visible = isGlass ? nb === AIR : nb === AIR || nb === GLASS;
-            if (visible) target.addFace(wx, iy, wz, face, rect);
+            if (!visible) continue;
+            if (isGlass) {
+              target.addFace(wx, iy, wz, face, rect);
+            } else {
+              const flip = this._shadeFace(ix, iy, iz, face, tint);
+              target.addFace(wx, iy, wz, face, rect, _shades, flip);
+            }
           }
         }
       }

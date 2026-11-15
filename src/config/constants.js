@@ -5,6 +5,14 @@ export const WORLD_CONFIG = {
   GROUND_LEVEL: 8,
 };
 
+// Disco nivelado sob a base (terrainGenerator.js). O nivel de referencia do terreno real
+// (src/data/marsTerrain.js) e a media das alturas reais dentro do raio plano.
+export const TERRAIN_CONFIG = {
+  BASE_CENTER: { x: -4, z: 0 },
+  BASE_FLAT_RADIUS: 28,
+  BASE_BLEND_RADIUS: 36,
+};
+
 export const PHYSICS_CONFIG = {
   MARS_GRAVITY: 12.0,
   JUMP_SPEED: 6.4,
