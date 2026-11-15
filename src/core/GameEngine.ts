@@ -328,6 +328,7 @@ export class GameEngine {
       onGymAction: () => this.gymController.triggerRep(),
       onGymLook: (dx, dy) => this.gymController.look(dx, dy),
       onInteract: () => this.handlePlayerInteract(),
+      onSaveGame: () => this._saveGame(),
       onRoverAction: () => this.handleRoverAction(),
       onRoverLook: (dx, dy) => this.roverController.look(dx, dy),
       onToggleShield: () => this._toggleShield(),
@@ -2019,6 +2020,15 @@ export class GameEngine {
     this.hud.showToast(dustDevilPanelsToast(typeof cleaned === 'number' ? Math.round(cleaned * 100) : 0), 6000);
   }
 
+  _saveGame() {
+    try {
+      const survival = {};
+      for (const key of ['health','oxygen','suitEquipped','suitThermal','suitOxygen','suitScrubber','suitDust','suitIntegrity','baseOxygen','baseBreached','water','food','baseWater','maxBaseWater','graywater','inventorySlots','isDead']) survival[key] = this.survival[key];
+      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ world: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival }));
+      return true;
+    } catch { return false; }
+  }
+
   start() {
     const loop = () => {
       requestAnimationFrame(loop);
@@ -2030,11 +2040,7 @@ export class GameEngine {
       this._saveTimer += dt;
       if (this._saveTimer >= 5) {
         this._saveTimer = 0;
-        try {
-          const survival = {};
-          for (const key of ['health','oxygen','suitEquipped','suitThermal','suitOxygen','suitScrubber','suitDust','suitIntegrity','baseOxygen','baseBreached','water','food','baseWater','maxBaseWater','graywater','inventorySlots','isDead']) survival[key] = this.survival[key];
-          window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ world: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival }));
-        } catch { /* Storage may be full or disabled. */ }
+        this._saveGame();
       }
 
       // Primeiro Play: a historia abre com a animacao de chegada
