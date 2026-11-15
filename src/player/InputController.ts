@@ -32,6 +32,7 @@ export class InputController {
     getWorkSpeed,
     isJournalOpen = () => false,
     onToggleJournal = () => {},
+    onSaveGame = () => {},
   }) {
     this.onToggleShield = onToggleShield;
     this.onSendData = onSendData;
@@ -61,6 +62,7 @@ export class InputController {
     this.getWorkSpeed = getWorkSpeed;
     this.isJournalOpen = isJournalOpen;
     this.onToggleJournal = onToggleJournal;
+    this.onSaveGame = onSaveGame;
 
     this.keys = {};
     this.isLocked = false;
@@ -483,7 +485,23 @@ export class InputController {
       try { window.localStorage.removeItem('marscraft-save-v1'); } catch { /* Ignore unavailable storage. */ }
       window.location.reload();
     });
-    quitBtn.addEventListener('click', () => window.location.reload());
+    quitBtn.addEventListener('click', () => {
+      this.onSaveGame();
+      this.hasStarted = false;
+      this.isLocked = false;
+      this.keys = {};
+      this.player.isMoving = false;
+      this._cancelBreaking();
+      document.body.classList.remove('touch-mode');
+      if (document.pointerLockElement === this.domElement) document.exitPointerLock();
+      else {
+        menuCardHome.append(menuCard);
+        startBtn.textContent = 'Play';
+        overlay.classList.remove('hidden');
+        pauseOverlay.classList.add('hidden');
+        document.body.classList.remove('pause-menu-open');
+      }
+    });
 
     if (respawnBtn) {
       respawnBtn.addEventListener('click', () => {
