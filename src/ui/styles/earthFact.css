@@ -1,0 +1,245 @@
+/* Recompensa "Space science on Earth" (issue #216): abertura no meio da tela e card do fato.
+   Tudo em degraus (steps), como as outras animacoes pixeladas do HUD. */
+
+/* --- Marte -> sinal -> Terra (usado na abertura e no card) --- */
+.ef-link { display: flex; align-items: center; gap: 4px; }
+.ef-planet { flex: none; width: 24px; height: 24px; filter: drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.7)); }
+.ef-planet svg { display: block; width: 100%; height: 100%; }
+.ef-beam {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 34px;
+  height: 4px;
+  background: repeating-linear-gradient(90deg, #59636a 0 4px, transparent 4px 8px);
+}
+.ef-beam i {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--hud-accent);
+  box-shadow: 0 0 0 2px rgba(255, 201, 74, 0.35);
+  animation: ef-beam-dot 1.4s steps(10, end) infinite;
+}
+@keyframes ef-beam-dot {
+  from { left: 0; }
+  to { left: calc(100% - 8px); }
+}
+
+/* --- Abertura: DISCOVERY! no meio da tela, abaixo do card de radio da historia --- */
+.earth-fact-burst {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 30;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 26px 44px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  font-family: 'Monocraft', monospace;
+  color: #ffffff;
+  text-align: center;
+  background: radial-gradient(ellipse at center, rgba(10, 14, 18, 0.82) 0 45%, rgba(10, 14, 18, 0) 72%);
+}
+.earth-fact-burst.hidden { display: none; }
+.earth-fact-burst.is-leaving { animation: ef-burst-out 0.3s steps(5, end) both; }
+@keyframes ef-burst-out {
+  to { opacity: 0; transform: translate(-50%, -62%); }
+}
+
+.ef-stamp {
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #ffe45c;
+  text-shadow: 4px 4px 0 #6b3a00, 0 0 0 #000;
+  animation: ef-stamp-in 0.45s steps(6, end) both;
+}
+@keyframes ef-stamp-in {
+  0% { transform: scale(2.6); opacity: 0; }
+  60% { transform: scale(0.9); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.ef-sparks { position: absolute; top: 38%; left: 50%; width: 0; height: 0; }
+.ef-sparks i {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 8px;
+  height: 8px;
+  background: #ffe45c;
+  opacity: 0;
+  animation: ef-spark 0.8s steps(8, end) 0.2s both;
+}
+.ef-sparks i:nth-child(3n) { background: #65d3ed; }
+.ef-sparks i:nth-child(3n + 1) { background: #ff9a5c; width: 6px; height: 6px; }
+@keyframes ef-spark {
+  0% { transform: translate(0, 0); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+}
+
+.earth-fact-burst .ef-link { width: 230px; gap: 8px; }
+.earth-fact-burst .ef-planet { width: 48px; height: 48px; animation: ef-pop 0.3s steps(4, end) both; }
+.earth-fact-burst .ef-planet.is-mars { animation-delay: 0.3s; }
+.earth-fact-burst .ef-planet.is-earth { animation-delay: 0.95s; }
+.earth-fact-burst .ef-beam { height: 6px; animation: ef-fade 0.2s steps(2, end) 0.45s both; }
+.earth-fact-burst .ef-beam i {
+  top: -3px;
+  width: 12px;
+  height: 12px;
+  animation: ef-beam-dot-big 0.55s steps(9, end) 0.45s both;
+}
+@keyframes ef-beam-dot-big {
+  from { left: 0; }
+  to { left: calc(100% - 12px); }
+}
+@keyframes ef-pop {
+  0% { transform: scale(0); }
+  75% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+@keyframes ef-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ef-burst-reason {
+  font-size: 16px;
+  color: #8cff8c;
+  text-shadow: 2px 2px 0 #000;
+  animation: ef-fade 0.3s steps(3, end) 0.6s both;
+}
+
+/* --- Card do fato, na coluna da direita (abaixo da caixa da missao) --- */
+.earth-fact {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 0 5px;
+  overflow: hidden;
+  font-family: 'Monocraft', monospace;
+  color: #ffffff;
+  background: #181d23;
+  border: 3px solid #11171b;
+  box-shadow: inset 0 0 0 2px #2f7fd1, 4px 4px rgba(0, 0, 0, 0.6);
+  animation: ef-card-in 0.35s steps(6, end) both;
+}
+.earth-fact.hidden { display: none; }
+.earth-fact.is-leaving { animation: ef-card-out 0.3s steps(6, end) both; }
+@keyframes ef-card-in {
+  from { transform: translateX(calc(100% + 24px)); }
+  to { transform: translateX(0); }
+}
+@keyframes ef-card-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(100% + 24px)); }
+}
+
+.ef-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 2px 2px 0;
+  padding: 7px 10px 6px;
+  background: linear-gradient(90deg, #4a2114 0 34%, #14304f 100%);
+  border-bottom: 2px solid #11171b;
+}
+.ef-titles { display: grid; gap: 1px; min-width: 0; }
+.ef-titles small { font-size: 11px; letter-spacing: 2px; color: #ffe45c; text-shadow: 2px 2px 0 #3f2a00; }
+.ef-titles strong { font-size: 13px; line-height: 1.2; text-shadow: 2px 2px 0 #000; }
+.ef-head .ef-link { flex: none; width: 96px; }
+
+.ef-reason {
+  margin: 7px 12px 0;
+  font-size: 12px;
+  color: #8cff8c;
+}
+
+.ef-lines { display: grid; gap: 6px; margin: 7px 12px 0; padding: 0; list-style: none; }
+.ef-lines li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  /* uma frase de cada vez, depois que o card entrou */
+  animation: ef-line-in 0.3s steps(4, end) calc(0.45s + var(--i) * 0.45s) both;
+}
+@keyframes ef-line-in {
+  from { transform: translateX(18px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.ef-icon {
+  flex: none;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  color: #11171b;
+  background: #c3c9c7;
+}
+.ef-icon svg { display: block; width: 100%; height: 100%; }
+.ef-lines li.is-mars .ef-icon { background: #e07a4a; }
+.ef-lines li.is-earth .ef-icon { background: #65d3ed; }
+.ef-lines li.is-space .ef-icon { background: #ffc94a; }
+
+.ef-source {
+  display: block;
+  margin: 7px 12px 4px;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--hud-muted);
+}
+
+/* Quanto tempo o card ainda fica na tela */
+.ef-timer {
+  position: absolute;
+  left: 2px;
+  bottom: 2px;
+  width: calc(100% - 4px);
+  height: 3px;
+  background: #2f7fd1;
+  transform-origin: left center;
+  animation: ef-timer var(--ef-ms, 9000ms) steps(45, end) both;
+}
+@keyframes ef-timer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* Paisagem no celular: tudo menor para caber ao lado das barras */
+@media (max-height: 500px) {
+  .earth-fact-burst { top: 60%; gap: 5px; padding: 14px 30px; }
+  .ef-stamp { font-size: 26px; text-shadow: 3px 3px 0 #6b3a00; }
+  .earth-fact-burst .ef-link { width: 170px; }
+  .earth-fact-burst .ef-planet { width: 34px; height: 34px; }
+  .ef-burst-reason { font-size: 13px; }
+
+  .ef-head { padding: 5px 8px 4px; }
+  .ef-titles small { font-size: 9px; }
+  .ef-titles strong { font-size: 11px; }
+  .ef-head .ef-link { width: 76px; }
+  .ef-head .ef-planet { width: 18px; height: 18px; }
+  .ef-reason { display: none; } /* ja apareceu na abertura */
+  .ef-lines { gap: 4px; margin: 5px 9px 0; }
+  .ef-lines li { gap: 7px; font-size: 11px; }
+  .ef-icon { width: 18px; height: 18px; padding: 3px; }
+  .ef-source { margin: 5px 9px 3px; font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .earth-fact,
+  .earth-fact.is-leaving,
+  .ef-lines li,
+  .ef-beam i,
+  .ef-timer {
+    animation: none;
+  }
+}

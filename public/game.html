@@ -138,6 +138,8 @@
     </div>
     <!-- Ficha do alvo escaneado e aviso de descoberta (nao pausam o jogo) -->
     <div class="scan-side">
+      <!-- Fato "Space science on Earth", recompensa da estufa (EarthFactHud) -->
+      <div id="earth-fact" class="earth-fact hidden" role="status" aria-live="polite"></div>
       <div id="scan-discovery" class="scan-discovery hidden" role="status"></div>
       <aside id="scan-card" class="scan-card hidden" aria-live="polite"></aside>
     </div>
@@ -620,6 +622,9 @@
     <small id="story-card-source"></small>
     <button id="story-card-ok" class="mc-btn story-card-ok" type="button">OK <span class="story-key">[Enter]</span></button>
   </aside>
+
+  <!-- Abertura "DISCOVERY!" do fato "Space science on Earth" (issue #216) -->
+  <div id="earth-fact-burst" class="earth-fact-burst hidden" aria-hidden="true"></div>
 
   <!-- Selo de certificado do treino de cadete (issue #88) -->
   <div id="cert-badge" class="cert-badge hidden" role="status" aria-live="polite">
