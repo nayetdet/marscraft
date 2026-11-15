@@ -61,6 +61,7 @@ export class Act2Controller extends ActController {
   // Tres scans
   scans = { mars: false, sky: false, base: false };
   private scanCountSeen = -1;
+  private scanStepBaseline = new Set<string>();
   private checklist = [
     { icon: 'rock', state: 'todo' },
     { icon: 'moon', state: 'todo' },
@@ -117,6 +118,7 @@ export class Act2Controller extends ActController {
     const scans = this.scans;
     scans.mars = scans.sky = scans.base = false;
     for (const id of journal.missionScans) {
+      if (this.stepId === 'scan-three' && this.scanStepBaseline.has(id)) continue;
       const category: string = getScanEntry(id)?.category ?? '';
       if (MARS_CATEGORIES.has(category)) scans.mars = true;
       else if (category === 'sky') scans.sky = true;
@@ -136,8 +138,12 @@ export class Act2Controller extends ActController {
     else if (id === 'fix-window') {
       this.repairWait = C.STORY_REPAIR_FETCH_SECONDS;
       this.askCrewHelp();
-    } else if (id === 'scan-three' && !this.scans.sky && !this.earthIsUp()) {
-      this.engine.storyHud?.showCard(ACT2_CARDS.earthHidden);
+    } else if (id === 'scan-three') {
+      this.scanStepBaseline = new Set(this.engine.scanJournal?.missionScans ?? []);
+      this.scans.mars = this.scans.sky = this.scans.base = false;
+      this.checklist[0].state = this.checklist[1].state = this.checklist[2].state = 'todo';
+      this.scanCountSeen = -1;
+      if (!this.earthIsUp()) this.engine.storyHud?.showCard(ACT2_CARDS.earthHidden);
     }
     void s;
   }

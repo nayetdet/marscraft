@@ -79,7 +79,7 @@ import { resolveScanTarget, collectScanBlocks } from '../scanner/scanTargeting.t
 import { ScanHighlight } from '../scanner/scanHighlight.ts';
 import { isInsideShieldZone, SHIELD_ZONE } from '../mission/shieldZone.ts';
 import { HABITAT_LAYOUT, SOLAR_FIELD, SOLAR_FIELD_CENTER, isInsideKitchen, isInsideShelter } from '../world/habitatLayout.ts';
-import { rationDeliveryCropOnEntry } from './rationDeliveryTrigger.ts';
+import { rationDeliveryCropWhileInside } from './rationDeliveryTrigger.ts';
 import { ShieldBubble } from '../graphics/shieldBubble.ts';
 import { IceSensorEffect } from '../scanner/iceSensor.ts';
 import { ScannerHud } from '../ui/ScannerHud.ts';
@@ -2181,6 +2181,7 @@ export class GameEngine {
 
   _initRationVisuals() {
     this._wasInsideRationKitchen = false;
+    this._rationKitchenWaitingForCrop = false;
     this._rationObserver = new THREE.Group();
     this._rationObserver.visible = false;
     this._rationObserverEva = buildSpacesuitRig({
@@ -2237,14 +2238,20 @@ export class GameEngine {
 
   _maybePlayRationDeliveryCutscene() {
     const inside = isInsideKitchen(this.player.pos.x, this.player.pos.y, this.player.pos.z);
-    const crop = rationDeliveryCropOnEntry(this._wasInsideRationKitchen, inside, this.stations.harvestBaskets, this.utility.base.food, this.utility.lastRationCrop);
-    if (!crop) { this._wasInsideRationKitchen = inside; return; }
-    if (!this._arrivalPlayed || this.cutscenes.isActive) return;
+    if (!inside) {
+      this._wasInsideRationKitchen = false;
+      this._rationKitchenWaitingForCrop = false;
+      return;
+    }
+    if (!this._wasInsideRationKitchen) this._rationKitchenWaitingForCrop = true;
+    this._wasInsideRationKitchen = true;
+    const crop = rationDeliveryCropWhileInside(inside, this._rationKitchenWaitingForCrop, this.stations.harvestBaskets);
+    if (!crop || !this._arrivalPlayed || this.cutscenes.isActive) return;
     if (this.mission.storm?.phase === 'active') return;
     if (!this.input.isLocked || this.input.isPortraitRequired || this.survival.isDead) return;
     if (this.roverController.isActive || this.gymController.isActive) return;
     if (this.stationPanel.isOpen || this.hud.isInventoryOpen || this.scannerHud.isJournalOpen) return;
-    this._wasInsideRationKitchen = inside;
+    this._rationKitchenWaitingForCrop = false;
     this._playRationDeliveryCutscene(crop);
   }
 
