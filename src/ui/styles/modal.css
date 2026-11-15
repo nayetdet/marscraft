@@ -21,12 +21,10 @@
   width: 100%;
 }
 
-body:not(.pause-menu-open) .mc-menu-card #quit-btn { display: none; }
+body:not(.pause-menu-open) .mc-menu-card .menu-admin-row { display: none; }
+body:not(.pause-menu-open) .mc-menu-card .menu-end-row #quit-btn { display: none; }
+body:not(.pause-menu-open) .mc-menu-card .menu-end-row #reset-world-btn { grid-column: 1 / -1; }
 body.pause-menu-open .mc-menu-card #quit-btn { display: grid; }
-body:not(.pause-menu-open) .mc-menu-card #demo-btn { display: none; }
-body:not(.pause-menu-open) .mc-menu-card #sources-btn { grid-column: 1 / -1; }
-body:not(.pause-menu-open) .mc-menu-card #credits-btn { grid-column: 1 / -1; }
-body:not(.pause-menu-open) .mc-menu-card #reset-world-btn { grid-column: 1 / -1; }
 body.pause-menu-open .crew-picker { display: none; }
 
 .mc-overlay.hidden,
@@ -1044,8 +1042,8 @@ body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 
   }
 }
 
-/* Menu: fontes e ferramentas de demo ficam em linhas separadas. */
-.menu-row { display: grid; grid-template-columns: 1fr; gap: 8px; }
+/* Ações do menu ficam agrupadas em linhas de duas colunas. */
+.menu-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .mc-menu-card .menu-row .mc-btn { font-size: 14px; padding: 10px 8px; }
 
 .controls-screen.info-screen {
@@ -1154,17 +1152,6 @@ body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 
   gap: 3px;
   flex: 0 0 auto;
   text-align: center;
-}
-.credits-edition {
-  padding: 3px 8px;
-  color: #f6ce82;
-  background: #34271e;
-  border: 1px solid #80583b;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .11em;
-  line-height: 1.25;
-  text-transform: uppercase;
 }
 .credits-header h2 {
   margin: 0;
