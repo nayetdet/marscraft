@@ -33,7 +33,6 @@ export class InputController {
     isJournalOpen = () => false,
     onToggleJournal = () => {},
     onSaveGame = () => {},
-    onBeforeFirstPlay = () => false,
     onBlockPlaced = () => {},
     onStartRegolithBreak = () => {},
     onStopRegolithBreak = () => {},
@@ -69,8 +68,6 @@ export class InputController {
     this.isJournalOpen = isJournalOpen;
     this.onToggleJournal = onToggleJournal;
     this.onSaveGame = onSaveGame;
-    // Primeiro Play: quem responde `true` assumiu a tela (briefing da missao) e chama `start` depois
-    this.onBeforeFirstPlay = onBeforeFirstPlay;
     this.onBlockPlaced = onBlockPlaced;
     this.onStartRegolithBreak = onStartRegolithBreak;
     this.onStopRegolithBreak = onStopRegolithBreak;
@@ -482,7 +479,6 @@ export class InputController {
     };
 
     startBtn.addEventListener('click', () => {
-      if (!this.hasStarted && this.onBeforeFirstPlay(() => resumeGame())) return;
       resumeGame();
     });
 
@@ -519,7 +515,10 @@ export class InputController {
 
     resetWorldBtn.addEventListener('click', () => {
       if (!window.confirm('Reset the world? This will erase your saved game.')) return;
-      try { window.localStorage.removeItem('marscraft-save-v1'); } catch { /* Ignore unavailable storage. */ }
+      try {
+        window.localStorage.removeItem('marscraft-save-v1');
+        window.localStorage.removeItem('marscraft-tradeoffs-seen-v1'); // os trade-offs voltam a ser explicados (TradeoffHud)
+      } catch { /* Ignore unavailable storage. */ }
       window.location.reload();
     });
     quitBtn.addEventListener('click', () => {

@@ -1,0 +1,141 @@
+/* Modal de trade-off (TradeoffHud): no meio da tela, na hora da tarefa ou do evento.
+   Animacoes em degraus (steps), como as outras do HUD. --to-accent e a cor da cena. */
+
+.tradeoff-modal {
+  --to-accent: #ffd24a;
+  --to-step: 1.2s; /* tempo em que cada ponta fica acesa nas cenas "pick" */
+  --to-src: 84px;
+  --to-art: 40px;
+  --to-dot: 10px;
+  position: fixed;
+  inset: 0;
+  z-index: 29; /* acima do HUD e dos cards, abaixo do menu de pausa (30) e do aviso de girar (60) */
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: rgba(8, 8, 12, 0.6);
+  font-family: 'Monocraft', monospace;
+  color: #ffffff;
+}
+.tradeoff-modal.hidden { display: none; }
+
+.to-window {
+  box-sizing: border-box;
+  width: min(520px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  padding: 14px 18px 16px;
+  background: #1b2228;
+  border: 4px solid #0b0f12;
+  box-shadow: inset 3px 3px 0 #3d4a54, inset -3px -3px 0 #10151a, 0 0 0 2px var(--to-accent), 8px 8px 0 rgba(0, 0, 0, 0.6);
+}
+.tradeoff-modal.is-in .to-window { animation: to-window-in 0.3s steps(5, end) both; }
+@keyframes to-window-in {
+  0% { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.to-head { display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: 2px; color: #9fb0bd; }
+.to-head i { width: 8px; height: 8px; background: var(--to-accent); }
+
+.to-body { display: grid; justify-items: center; gap: 14px; padding: 18px 0 16px; }
+
+/* --- A cena: [recurso] ... pontas --- */
+.to-stage { display: flex; align-items: center; gap: 12px; width: min(400px, 100%); }
+.to-source, .to-art { flex: none; filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.7)); }
+.to-source svg, .to-art svg { display: block; width: 100%; height: 100%; }
+.to-source { width: var(--to-src); height: var(--to-src); animation: to-beat var(--to-step) steps(6, end) infinite; }
+@keyframes to-beat {
+  0%, 100% { transform: scale(1); }
+  20% { transform: scale(1.12); }
+  45% { transform: scale(0.97); }
+}
+.to-rows { flex: 1 1 auto; display: grid; gap: 10px; min-width: 0; }
+.to-row { --to-tone: var(--to-accent); display: flex; align-items: center; gap: 10px; }
+.to-art { width: var(--to-art); height: var(--to-art); }
+/* largura fixa (cabe "- RADIATION"): as pontas ficam alinhadas */
+.to-row b { flex: none; box-sizing: border-box; width: calc(11ch + 12px); font-size: 15px; letter-spacing: 1px; color: var(--to-tone); text-shadow: 2px 2px 0 #0b0f12; white-space: nowrap; }
+.to-track {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 36px;
+  height: 4px;
+  background: repeating-linear-gradient(90deg, #59636a 0 4px, transparent 4px 8px);
+}
+.to-track i {
+  position: absolute;
+  top: calc((4px - var(--to-dot)) / 2);
+  left: 0;
+  width: var(--to-dot);
+  height: var(--to-dot);
+  background: var(--to-tone);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--to-tone) 35%, transparent);
+}
+
+/* pick: so uma ponta acesa por vez. O ciclo tem --n pontas; cada uma espera a sua vez (--i). */
+.to-row.is-pick { opacity: 0.4; animation: to-pick calc(var(--to-step) * 3) steps(1, end) calc(var(--to-step) * var(--i)) infinite; }
+.to-row.is-pick .to-track i { opacity: 0; animation: to-pick-dot calc(var(--to-step) * 3) calc(var(--to-step) * var(--i)) infinite; }
+.to-row.is-pick .to-art { animation: to-pick-art calc(var(--to-step) * 3) calc(var(--to-step) * var(--i)) infinite; }
+@keyframes to-pick {
+  0% { opacity: 1; }
+  33.3%, 100% { opacity: 0.4; }
+}
+@keyframes to-pick-dot {
+  0% { left: 0; opacity: 1; animation-timing-function: steps(9, end); }
+  30% { left: calc(100% - var(--to-dot)); opacity: 1; animation-timing-function: steps(1, end); }
+  33.3%, 100% { left: 0; opacity: 0; }
+}
+@keyframes to-pick-art {
+  0%, 24% { transform: scale(1); animation-timing-function: steps(1, end); }
+  25% { transform: scale(1.3); animation-timing-function: steps(3, end); }
+  33.3%, 100% { transform: scale(1); }
+}
+
+/* gain: o pontinho vem da ponta para voce. cost: vai de voce para a ponta. */
+.to-row.is-gain { --to-tone: #6fe08a; }
+.to-row.is-cost { --to-tone: #ff6b5c; }
+.to-row.is-gain .to-track i { animation: to-flow var(--to-step) steps(9, end) infinite reverse; }
+.to-row.is-cost .to-track i { animation: to-flow var(--to-step) steps(9, end) calc(var(--i) * 0.25s) infinite; }
+.to-row.is-gain .to-art { animation: to-beat var(--to-step) steps(6, end) infinite; }
+.to-row.is-cost .to-art { animation: to-shake 0.4s steps(2, end) infinite; }
+@keyframes to-flow {
+  0% { left: 0; }
+  100% { left: calc(100% - var(--to-dot)); }
+}
+@keyframes to-shake {
+  50% { transform: translateY(-10%); }
+}
+
+/* --- Texto: uma palavra e uma frase --- */
+.to-text { display: grid; justify-items: center; gap: 6px; text-align: center; }
+.to-word { margin: 0; font-size: 38px; letter-spacing: 3px; line-height: 1; color: var(--to-accent); text-shadow: 4px 4px 0 #0b0f12; }
+.to-word.is-long { font-size: 30px; letter-spacing: 2px; }
+.to-line { margin: 0; font-size: 16px; line-height: 1.4; color: #eef3f6; }
+
+.to-actions { display: flex; justify-content: center; }
+.to-actions .mc-btn { width: auto; min-width: 190px; min-height: 44px; padding: 8px 14px; font-size: 15px; }
+.to-key { font-size: 12px; opacity: 0.8; }
+body.touch-device .to-key { display: none; }
+
+/* Com o menu de pausa aberto (Esc), o modal espera escondido e volta quando o jogo voltar */
+body.pause-menu-open .tradeoff-modal { visibility: hidden; }
+
+/* Paisagem baixa (celular deitado): cena e texto lado a lado */
+@media (orientation: landscape) and (max-height: 500px) {
+  .tradeoff-modal { --to-src: 64px; --to-art: 34px; }
+  .to-window { width: min(700px, 100%); padding: 10px 14px 12px; }
+  .to-body { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: center; gap: 16px; padding: 10px 0; }
+  .to-stage { gap: 8px; width: 100%; }
+  .to-rows { gap: 6px; }
+  .to-row { gap: 6px; }
+  .to-row b { font-size: 13px; }
+  .to-word, .to-word.is-long { font-size: 26px; letter-spacing: 2px; }
+  .to-line { font-size: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tradeoff-modal * { animation: none !important; }
+  .to-row.is-pick { opacity: 1; }
+  .to-track i, .to-row.is-pick .to-track i { opacity: 1; left: calc(50% - var(--to-dot) / 2); }
+}

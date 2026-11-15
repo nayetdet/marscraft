@@ -699,7 +699,8 @@ export const DUST_WEATHER_CONFIG = {
   // o recorde a geracao cai em linha reta.
   SOLAR_FACTOR_AT_RECORD: 0.2,
   // Escala de jogo (horas de jogo; 1 h = 100 s reais). O clima so comeca no ato 2 da historia.
-  FIRST_STORM_AFTER_HOURS: [8, 16],
+  // A primeira vem cedo (3 a 7 min reais): numa partida curta a crianca precisa ver uma
+  FIRST_STORM_AFTER_HOURS: [2, 4],
   GAP_BETWEEN_STORMS_HOURS: [24, 36],
   WARNING_HOURS: 2,
   STORM_HOURS: [6, 9],
@@ -821,8 +822,8 @@ export const SLEEP_CONFIG = {
 export const EVENTS_CONFIG = Object.freeze({
   // Eventos sorteados (a aurora nao entra: ela vem depois de uma tempestade solar sobrevivida)
   RANDOM_TYPES: Object.freeze(['meteor', 'marsquake', 'eclipse', 'dustDevil', 'frost']),
-  // Horas de jogo do inicio do ato 2 ate o primeiro evento (1 h de jogo = 100 s reais)
-  FIRST_DELAY_HOURS: Object.freeze([1, 2]),
+  // Horas de jogo do primeiro selo do tutorial ate o primeiro evento (1 h de jogo = 100 s reais)
+  FIRST_DELAY_HOURS: Object.freeze([0.5, 1]),
   // Horas de jogo entre o fim de um evento e o inicio do proximo, na agenda sorteada
   GAP_HOURS: Object.freeze([2.5, 5]),
   // Intervalo minimo garantido entre dois eventos, mesmo depois de adiar um deles
