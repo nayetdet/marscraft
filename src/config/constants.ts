@@ -370,6 +370,11 @@ export const STORM_CONFIG = {
   // Calmaria antes do primeiro aviso e entre tempestades: 2 h de jogo = 100 s reais
   FIRST_WARNING_AFTER_HOURS: 0.4,
   GAP_BETWEEN_STORMS_HOURS: 2,
+  // No maximo duas tempestades em qualquer janela de 24 h de jogo. O micro intervalo evita
+  // contar tres eventos nas duas pontas exatas da mesma janela.
+  MAX_STORMS_PER_GAME_DAY: 2,
+  GAME_DAY_HOURS: 24,
+  DAILY_SPACING_EPSILON_HOURS: 0.000001,
   // Horas de jogo de tempestade. Na mesma escala do aviso sao ~3 dias reais; a tempestade de
   // 2017 ficou alta por mais de 2 dias (NASA JPL)
   // Teste com jogadores em 15/11/2026: 3 h de jogo (2,5 min reais) parado no abrigo cansava.

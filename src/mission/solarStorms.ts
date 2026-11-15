@@ -63,7 +63,12 @@ export function buildStormSchedule(cmes, startHours, count = 24, seps = []) {
     };
     if (isSep) Object.assign(storm, { kind: 'sep', sep });
     schedule.push(storm);
-    warningStart = end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS;
+    const dailyLimitSpacing = STORM_CONFIG.GAME_DAY_HOURS / STORM_CONFIG.MAX_STORMS_PER_GAME_DAY
+      + STORM_CONFIG.DAILY_SPACING_EPSILON_HOURS;
+    warningStart = Math.max(
+      end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS,
+      warningStart + dailyLimitSpacing,
+    );
   }
   return schedule;
 }

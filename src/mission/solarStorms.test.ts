@@ -79,8 +79,26 @@ describe('buildStormSchedule', () => {
     for (const [i, storm] of schedule.entries()) {
       expect(storm.arrival - storm.warningStart).toBeCloseTo(leadTimeHours(storm.cme));
       expect(storm.end - storm.arrival).toBeCloseTo(STORM_CONFIG.DURATION_HOURS);
-      if (i > 0) expect(storm.warningStart).toBeCloseTo(schedule[i - 1].end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS);
+      if (i > 0) {
+        const previous = schedule[i - 1];
+        const minimumSpacing = STORM_CONFIG.GAME_DAY_HOURS / STORM_CONFIG.MAX_STORMS_PER_GAME_DAY
+          + STORM_CONFIG.DAILY_SPACING_EPSILON_HOURS;
+        expect(storm.warningStart).toBeGreaterThanOrEqual(previous.end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS);
+        expect(storm.warningStart).toBeGreaterThanOrEqual(previous.warningStart + minimumSpacing);
+      }
     }
+  });
+
+  it('limits DONKI CME and SEP storms to two in every rolling 24 game hours', () => {
+    const liveSep = [{ id: 'live-sep', eventTime: '2026-11-04T12:00Z', seenBy: ['STEREO A'] }];
+    const schedule = buildStormSchedule(donki.cmes, 10, 24, liveSep);
+    const maxEventsInDay = Math.max(...schedule.map((storm) =>
+      schedule.filter((candidate) => candidate.warningStart >= storm.warningStart
+        && candidate.warningStart < storm.warningStart + STORM_CONFIG.GAME_DAY_HOURS).length));
+
+    expect(maxEventsInDay).toBe(STORM_CONFIG.MAX_STORMS_PER_GAME_DAY);
+    expect(schedule.some((storm) => storm.cme?.id && donki.cmes.some((cme) => cme.id === storm.cme.id))).toBe(true);
+    expect(schedule.some((storm) => storm.kind === 'sep' && storm.sep === liveSep[0])).toBe(true);
   });
 
   it('stays empty when no CME was headed to Mars, instead of using the others', () => {
