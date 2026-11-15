@@ -107,7 +107,7 @@ O ponto de interação da estufa abre o painel de cultivo. As folhas das portas 
 
 ## Educação e experiência do jogador — 14/11/2026
 
-- **Causa da morte (#83, `src/player/deathReport.js`):** o `SurvivalSystem` guarda o que zerou a vida (`deathCause`: ar do traje, vazamento, radiação, CO2, poeira, água, comida, tempestade de poeira). A tela de morte mostra título, diagnóstico, "NEXT TIME" e a fonte real.
+- **Causa da morte (#83, PRs #141 e #142, `src/player/deathReport.js`):** feita fora desta leva. Com o RTG o CO2 só sobe com o filtro cheio, então a morte por ar ruim aparece como filtro, não como falta de energia.
 - **Alertas (#82, PR #144):** feita fora desta leva (prioridade, texto de ação e seta para a estação). Com a bateria vazia o alerta de energia vale também para o modo de espera do RTG.
 - **Noite e RTG (#85):** o RTG (`ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR`) paga só o suporte de vida (O2 e filtro de CO2); com a bateria vazia as máquinas param, mas ninguém morre dentro da base. O painel mostra o fluxo líquido da bateria (`+4/h`) e às 16h30 vem o aviso de pôr do sol. O aquecedor ficou na bateria de propósito, para a escolha de desligá-lo à noite continuar valendo.
 - **Treino de cadete (#88):** depois de chamar a Terra, 4 certificados dentro da base (energia, estufa, academia e parede de água do abrigo, com um pulso de radiação simulado). As tempestades só começam depois do primeiro gelo. "Skip cadet training" fica em Demo Controls. A issue pedia regolito sobre o abrigo e o ARED; o jogo usa a parede de água e a esteira/bicicleta, que já são mecânicas reais dele.
