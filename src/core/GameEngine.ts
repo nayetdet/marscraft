@@ -352,6 +352,7 @@ export class GameEngine {
       onStopRegolithBreak: () => this.audio.stopRegolithBreak(),
       onStartShipBlockBreak: () => this.audio.playShipBlockBreak(),
       onStopShipBlockBreak: () => this.audio.stopShipBlockBreak(),
+      onBlockBroken: (blockId) => this.audio.playBlockBreakImpact(blockId === BLOCK_IDS.REGOLITH),
       onSuitportAction: (action) => this._handleSuitportShortcut(action),
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown
