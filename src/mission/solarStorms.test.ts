@@ -79,7 +79,13 @@ describe('buildStormSchedule', () => {
     for (const [i, storm] of schedule.entries()) {
       expect(storm.arrival - storm.warningStart).toBeCloseTo(leadTimeHours(storm.cme));
       expect(storm.end - storm.arrival).toBeCloseTo(STORM_CONFIG.DURATION_HOURS);
-      if (i > 0) expect(storm.warningStart).toBeCloseTo(schedule[i - 1].end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS);
+      if (i > 0) {
+        const previous = schedule[i - 1];
+        const minimumSpacing = STORM_CONFIG.GAME_DAY_HOURS / STORM_CONFIG.MAX_STORMS_PER_GAME_DAY
+          + STORM_CONFIG.DAILY_SPACING_EPSILON_HOURS;
+        expect(storm.warningStart).toBeGreaterThanOrEqual(previous.end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS);
+        expect(storm.warningStart).toBeGreaterThanOrEqual(previous.warningStart + minimumSpacing);
+      }
     }
   });
 
