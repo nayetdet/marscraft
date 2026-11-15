@@ -20,6 +20,9 @@ export class SurvivalSystem {
     this.isDead = false;
     this.deathCause = null;
     this.deathDetail = null;
+    this.damageFeedbackCause = null;
+    this.damageFeedbackDetail = null;
+    this.damageFeedbackTime = 0;
     this.insidePressurizedShip = false;
     this.dustStormIntensity = 0;
     this.dustStormProximity = 0;
@@ -70,6 +73,7 @@ export class SurvivalSystem {
   // maxOxygenRefill: quanto O2 a bateria da base consegue pagar neste frame (sem energia = 0)
   update(dt, playerPos, maxOxygenRefill = Infinity, baseBreached = false) {
     this.lastOxygenRefilled = 0;
+    this.damageFeedbackTime = Math.max(0, this.damageFeedbackTime - dt);
     if (this.isDead) return;
 
     this.insidePressurizedShip = this.isPlayerInsideShip(playerPos);
@@ -144,6 +148,9 @@ export class SurvivalSystem {
   takeDamage(amount, cause = 'BIOLOGICAL_COLLAPSE', detail = cause) {
     if (this.isDead || amount <= 0) return;
     this.health = Math.max(0, this.health - amount);
+    this.damageFeedbackCause = cause;
+    this.damageFeedbackDetail = detail;
+    this.damageFeedbackTime = SURVIVAL_CONFIG.DAMAGE_FEEDBACK_SECONDS;
     if (this.health <= 0) {
       this.isDead = true;
       this.deathCause = cause;

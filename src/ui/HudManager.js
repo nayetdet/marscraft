@@ -3,7 +3,7 @@ import { BLOCK_IDS } from '../config/blockTypes.js';
 import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { airlockProgress } from './airlockProgress.js';
 import { roverBatteryText } from '../rover/roverText.js';
-import { getDeathReport } from '../player/deathReport.js';
+import { getDamageFeedback, getDeathReport } from '../player/deathReport.js';
 
 const ICONS_PER_BAR = 10;
 
@@ -46,6 +46,8 @@ export class HudManager {
     this.zoomOverlayEl = document.getElementById('zoom-overlay');
     this.toastEl = document.getElementById('toast');
     this.dangerVignetteEl = document.getElementById('danger-vignette');
+    this.damageSourceEl = document.getElementById('damage-source');
+    this._damageSourceText = '';
     this.deathOverlayEl = document.getElementById('death-overlay');
     this.deathTitleEl = document.getElementById('death-title');
     this.deathDiagnosisEl = document.getElementById('death-diagnosis');
@@ -311,6 +313,18 @@ export class HudManager {
     this.deathOverlayEl.classList.add('hidden');
   }
 
+  _updateDamageSource(survival) {
+    const feedback = !survival.isDead && survival.damageFeedbackTime > 0
+      ? getDamageFeedback(survival.damageFeedbackCause, survival.damageFeedbackDetail)
+      : null;
+    const text = feedback ? `${feedback.source}: ${feedback.message}` : '';
+    if (text !== this._damageSourceText) {
+      this._damageSourceText = text;
+      this.damageSourceEl.textContent = text;
+    }
+    this.damageSourceEl.classList.toggle('visible', Boolean(feedback));
+  }
+
   // Cria os 10 icones (SVG) uma unica vez; depois so troca a classe dos que mudaram
   _createIconBar(container, type) {
     container.innerHTML = '';
@@ -414,6 +428,7 @@ export class HudManager {
   }
 
   update({ player, survival, sky, camera, isScopeOpen = false, isRoverActive = false, roverTelemetry = null, mission, airlock = null }) {
+    this._updateDamageSource(survival);
     this.dangerVignetteEl?.classList.toggle('hidden', !survival.isInDanger || survival.isDead);
     if (survival.isDead) {
       this.showDeathScreen(survival);
