@@ -5,6 +5,31 @@ import { CrewAvatar } from './CrewAvatar.ts';
 import { findRoute, routeLength } from './crewRails.ts';
 
 describe('CrewAvatar articulated movement', () => {
+  it('animates the controlled astronaut and blends back to an idle pose', () => {
+    const scene = new THREE.Scene();
+    const avatar = new CrewAvatar(scene, { id: 99, name: 'Astronaut', state: 'resting' }, 0xf97316);
+    let minLegSwing = Infinity;
+    let maxLegSwing = -Infinity;
+
+    for (let i = 0; i < 30; i++) {
+      avatar.posePlayer(1 / 30, true);
+      minLegSwing = Math.min(minLegSwing, avatar.legL.rotation.x);
+      maxLegSwing = Math.max(maxLegSwing, avatar.legL.rotation.x);
+    }
+    expect(maxLegSwing - minLegSwing).toBeGreaterThan(0.3);
+    expect(avatar._walkBlend).toBeGreaterThan(0.9);
+
+    const walkBlend = avatar._walkBlend;
+    avatar.posePlayer(1 / 30, false);
+    expect(avatar._walkBlend).toBeLessThan(walkBlend);
+
+    avatar.triggerPlayerAction('swing');
+    const idleArmRotation = avatar.armR.rotation.x;
+    avatar.posePlayer(0.05, false);
+    expect(avatar.armR.rotation.x).toBeLessThan(idleArmRotation);
+    avatar.dispose();
+  });
+
   it('bends knees backward (>= 0) and elbows forward (<= 0) smoothly while walking', () => {
     const scene = new THREE.Scene();
     const route = findRoute('quarters', 'hub');
