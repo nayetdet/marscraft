@@ -1,5 +1,6 @@
 import { MAV_CONFIG } from '../config/constants.js';
 import { formatHours } from '../mission/missionText.js';
+import { CERTIFICATES } from './storyChapters.js';
 
 // O que o painel do objetivo desenha, de cima para baixo:
 //   1. a meta da partida, sempre a vista (encher o foguete e voltar para casa), com o foguete em
@@ -25,7 +26,11 @@ const LOOP_STEPS = [
   { id: 'base', icon: 'home' },
 ];
 
+// Treino de cadete (issue #88): os 4 certificados viram os passos enquanto ele dura
+const TRAINING_STEPS = CERTIFICATES.map((cert) => ({ id: cert.id, icon: cert.icon }));
+
 const TASKS = {
+  ...Object.fromEntries(CERTIFICATES.map((cert) => [cert.id, { icon: cert.icon, label: cert.task }])),
   'enter-base': { icon: 'door', label: 'ENTER THE BASE' },
   report: { icon: 'radio', label: 'CALL EARTH' },
   'collect-ice': { icon: 'ice', label: 'GET 1 ICE' },
@@ -78,7 +83,10 @@ export function objectiveView(story, s) {
   // Passos: o tutorial no ato 1; depois, a volta de trabalho enquanto o tanque pede gelo
   let steps = null;
   let loop = false;
-  if (story.act === 1) {
+  const trainingStep = TRAINING_STEPS.findIndex((step) => step.id === story.objectiveId);
+  if (trainingStep >= 0) {
+    steps = stepStates(TRAINING_STEPS, trainingStep);
+  } else if (story.act === 1) {
     steps = stepStates(ARRIVAL_STEPS, ARRIVAL_STEPS.findIndex((step) => step.id === story.objectiveId));
   } else {
     const now = LOOP_STEPS.findIndex((step) => step.id === job);

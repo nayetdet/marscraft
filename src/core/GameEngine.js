@@ -913,6 +913,12 @@ export class GameEngine {
         ? 'It is now night on Mars: the solar panels make no power.'
         : 'It is now noon on Mars: the solar panels are charging the battery.';
     }
+    if (action === 'skip-training') {
+      if (this.story.skipTraining(this._storySnapshot)) return 'Cadet training skipped. Press Back, then Play: go get 1 ice.';
+      return this.story.act === 0
+        ? 'Cadet training is off for this game: after calling Earth you go straight to the ice.'
+        : 'Cadet training is already done or skipped.';
+    }
     if (action === 'battery') {
       this.mission.battery.charge = Math.min(this.mission.battery.charge, this.mission.battery.capacity * 0.1);
       return 'Battery drained to 10%. Watch what the base has to give up.';
@@ -924,7 +930,10 @@ export class GameEngine {
 
   _initStory() {
     // A historia usa o mesmo radio do terminal da base (CommsLink): distancia e atraso de hoje
+    // Vezes que o jogador abriu o painel de energia (certificado de engenharia, issue #88)
+    this.powerChecks = 0;
     this.story = new StoryDirector({
+      training: true, // treino de cadete (issue #88); o menu Demo Controls pode pular
       replyDelayHours: this.comms.roundTripGameSeconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND,
       comms: {
         millionKm: Math.round(this.comms.distanceKm / 1e6),
@@ -939,6 +948,7 @@ export class GameEngine {
       hours: 0, insideHabitat: false, iceCount: 0, iceNeeded: 0, atConsole: false,
       stormPhase: 'calm', stormsSurvived: 0, propellantPct: 0, dataSent: false, launched: false,
       needsBase: false,
+      powerChecks: 0, harvestCount: 0, workoutCount: 0, shelterWaterL: 0,
     };
 
     // Setas do objetivo: uma flutua no mundo e a outra fica na tela (aponta mesmo atraves das paredes)
@@ -982,6 +992,9 @@ export class GameEngine {
       powerroom: { x: -15.5, y: ground + 2.5, z: -16.5, label: 'POWER & HEAT CONTROL' },
       lifeSupport: { x: 10.6, y: ground + 2.5, z: -3, label: 'LIFE SUPPORT' },
       recycler: { x: -16, y: ground + 2.2, z: -38.3, label: 'WATER RECYCLER' },
+      // Treino de cadete (issue #88): monitor da estufa e academia
+      greenhouse: { x: GREENHOUSE_MONITOR_POS.x, y: ground + 3, z: GREENHOUSE_MONITOR_POS.z, label: WAYPOINT_LABELS.greenhouse },
+      gym: { x: -7.5, y: ground + 3, z: 10.2, label: WAYPOINT_LABELS.gym },
     };
   }
 
@@ -1080,10 +1093,18 @@ export class GameEngine {
     s.propellantPct = this.mission.propellant;
     s.dataSent = this.mission.dataSent;
     s.launched = this.mission.launched;
+    s.powerChecks = this.powerChecks;
+    s.harvestCount = this.stations.harvestCount;
+    s.workoutCount = this.stations.workoutCount;
+    s.shelterWaterL = this.mission.shelterWaterL;
     this.story.update(s);
 
     for (const event of this.story.drainEvents()) {
       if (event.type === 'card') this.storyHud.showCard(event.card);
+      else if (event.type === 'certificate') {
+        this.storyHud.showCertificate(event.badge);
+        this._playGymTone(520, 0.22, 780);
+      }
       else if (event.type === 'start-storms') {
         this.mission.startStorms(s.hours);
         if (this.mission.noStormData) this.hud.showToast(`Space weather is calm. ${NO_STORM_DATA_TEXT}`, 6000);

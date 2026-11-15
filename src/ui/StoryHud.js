@@ -70,6 +70,15 @@ export class StoryHud {
     this.taskKeyEl = $('story-task-key');
     this.stepsEl = $('story-steps');
     this.stepEls = [...this.stepsEl.querySelectorAll('.story-step')];
+
+    // Selo de certificado do treino de cadete (issue #88)
+    this.certEl = $('cert-badge');
+    this.certIconEl = $('cert-badge-icon');
+    this.certNameEl = $('cert-badge-name');
+    this.certMentorEl = $('cert-badge-mentor');
+    this.certLineEl = $('cert-badge-line');
+    this.certSourceEl = $('cert-badge-source');
+    this._certTimer = null;
     this.goalsEl = $('story-goals');
     this.stormsGoalEl = $('story-goal-storms');
     this.dataGoalEl = $('story-goal-data');
@@ -127,6 +136,7 @@ export class StoryHud {
 
     setClass(this.stepsEl, !view.steps ? 'story-steps hidden' : view.loop ? 'story-steps is-loop' : 'story-steps');
     if (view.steps) {
+      if (view.steps.length !== this.stepEls.length) this._buildSteps(view.steps.length);
       view.steps.forEach((step, i) => {
         const node = this.stepEls[i];
         // No tutorial o passo feito vira um "certo"; na volta de trabalho o icone fica, porque
@@ -150,6 +160,30 @@ export class StoryHud {
       setWidth(this.timerFillEl, view.timer.fill);
       setText(this.timerLabelEl, view.timer.label);
     }
+  }
+
+  // Passos do painel: 3 no tutorial e na volta de trabalho, 4 no treino de cadete
+  _buildSteps(count) {
+    this.stepsEl.replaceChildren();
+    this.stepEls = [];
+    for (let i = 0; i < count; i++) {
+      if (i > 0) this.stepsEl.append(el('i'));
+      this.stepEls.push(this.stepsEl.appendChild(el('span', 'story-step')));
+    }
+  }
+
+  // badge: certificateBadge() de storyChapters.js. Fica alguns segundos e some sozinho.
+  showCertificate(badge, seconds = 5) {
+    this.certIconEl.innerHTML = pixelIconSvg(badge.icon);
+    this.certNameEl.textContent = badge.name;
+    this.certMentorEl.textContent = `Signed: ${badge.mentor}`;
+    this.certLineEl.textContent = badge.line;
+    this.certSourceEl.textContent = badge.source ?? '';
+    this.certEl.classList.remove('hidden', 'is-entering');
+    void this.certEl.offsetWidth;
+    this.certEl.classList.add('is-entering');
+    clearTimeout(this._certTimer);
+    this._certTimer = setTimeout(() => this.certEl.classList.add('hidden'), seconds * 1000);
   }
 
   // Card do radio recolhido: fechado o card (Enter, OK ou tempo), sobra uma faixa fina no mesmo

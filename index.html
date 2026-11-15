@@ -323,6 +323,7 @@
             <button class="mc-btn secondary" data-demo="battery">Drain the battery to 10%</button>
             <button class="mc-btn secondary" data-demo="night">Jump to night</button>
             <button class="mc-btn secondary" data-demo="noon">Jump to noon</button>
+            <button class="mc-btn secondary" data-demo="skip-training">Skip cadet training</button>
           </div>
           <p id="demo-feedback" class="info-note demo-feedback" role="status"></p>
           <button id="demo-back-btn" class="mc-btn secondary">Back</button>
@@ -485,6 +486,18 @@
     <small id="story-card-source"></small>
     <button id="story-card-ok" class="mc-btn story-card-ok" type="button">OK <span class="story-key">[Enter]</span></button>
   </aside>
+
+  <!-- Selo de certificado do treino de cadete (issue #88) -->
+  <div id="cert-badge" class="cert-badge hidden" role="status" aria-live="polite">
+    <span id="cert-badge-icon" class="cert-badge-icon" aria-hidden="true"></span>
+    <div class="cert-badge-body">
+      <small>CERTIFICATE UNLOCKED</small>
+      <strong id="cert-badge-name"></strong>
+      <span id="cert-badge-line"></span>
+      <i id="cert-badge-mentor"></i>
+      <em id="cert-badge-source"></em>
+    </div>
+  </div>
 
   <!-- Fim alternativo: a janela de lancamento fechou antes da decolagem -->
   <div id="window-overlay" class="mc-overlay victory-overlay hidden">
