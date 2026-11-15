@@ -481,7 +481,7 @@ describe('MissionSystem dose budget', () => {
     expect(mission.propellant).toBe(100);
     mission.stormsSurvived = MAV_CONFIG.STORMS_TO_SURVIVE;
     mission.battery.charge = 100;
-    expect(mission.sendData()).toBe('sent');
+    expect(mission.sendData({ discoveries: SCIENCE_CONFIG.MIN_DISCOVERIES, samples: 0 }).status).toBe('sent');
     expect(mission.ignite()).toBe(true);
   });
 
