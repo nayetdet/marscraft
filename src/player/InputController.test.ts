@@ -94,6 +94,39 @@ describe('time skip (issue #109)', () => {
 });
 
 describe('closing inventory', () => {
+  it('closes on Escape and waits until keyup before requesting pointer lock', () => {
+    const input = Object.create(InputController.prototype);
+    input.isTouchMode = false;
+    input.hud = { isInventoryOpen: true, closeInventory: vi.fn() };
+    input.domElement = { requestPointerLock: vi.fn() };
+    const event = { code: 'Escape', preventDefault: vi.fn() };
+
+    expect(input._handleInventoryKey(event)).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalledOnce();
+    expect(input.hud.closeInventory).toHaveBeenCalledOnce();
+    expect(input._resumeOnEscapeKeyUp).toBe(true);
+    expect(input.domElement.requestPointerLock).not.toHaveBeenCalled();
+  });
+
+  it('closes on Escape in touch mode without requesting pointer lock', () => {
+    const input = Object.create(InputController.prototype);
+    input.isTouchMode = true;
+    input.hud = { isInventoryOpen: true, closeInventory: vi.fn() };
+    const event = { code: 'Escape', preventDefault: vi.fn() };
+
+    expect(input._handleInventoryKey(event)).toBe(true);
+    expect(input.hud.closeInventory).toHaveBeenCalledOnce();
+    expect(input._resumeOnEscapeKeyUp).toBeUndefined();
+  });
+
+  it('lets E toggle the inventory and ignores other keys while it is open', () => {
+    const input = Object.create(InputController.prototype);
+    input.hud = { isInventoryOpen: true };
+
+    expect(input._handleInventoryKey({ code: 'KeyE' })).toBe(false);
+    expect(input._handleInventoryKey({ code: 'KeyW' })).toBe(true);
+  });
+
   it('closes and requests pointer lock on desktop', () => {
     const input = Object.create(InputController.prototype);
     input.isTouchMode = false;
