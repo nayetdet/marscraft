@@ -62,9 +62,9 @@ describe('Martian Terrain & NASA Base Builder', () => {
     expect(world.getBlock(4, floorY + 1, -12)).toBe(BLOCK_IDS.NASA_HULL);
     // Interior do Habitat livre (Ar)
     expect(world.getBlock(0, floorY + 2, 0)).toBe(BLOCK_IDS.AIR);
-    // Canteiros de plantação dentro da Redoma de Estufa (x = -16, z = 2) e corredor central (-18, z = 2)
+    // Corredor central da Redoma de Estufa (-18, z = 2) e o jardim, que usa o piso de bandejas como os campos
     expect(world.getBlock(-18, floorY, 2)).toBe(BLOCK_IDS.NASA_HULL);
-    expect(world.getBlock(-24, floorY, 3)).toBe(BLOCK_IDS.HYDRO_PLANT);
+    expect(world.getBlock(-24, floorY, 3)).toBe(BLOCK_IDS.THRUSTER_METAL);
   });
 
   // y do bloco solido mais alto da coluna

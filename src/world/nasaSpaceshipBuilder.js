@@ -1,4 +1,3 @@
-import { isGreenhouseBed } from './greenhouseLayout.js';
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { WORLD_CONFIG } from '../config/constants.js';
 import { EAST_WING, HABITAT_LAYOUT, NORTH_WING, domeFloorCell, mainHabCell, northLinkBox } from './habitatLayout.js';
@@ -116,8 +115,8 @@ function buildGreenhouseDome(world, groundY) {
 
       const x = domeCenterX + dx;
       const z = domeCenterZ + dz;
-      // Canteiros de terra do jardim (greenhouseLayout) por cima da planta do piso
-      world.setBlock(x, floorY, z, isGreenhouseBed(dx, dz) ? BLOCK_IDS.HYDRO_PLANT : FLOOR_BLOCKS[domeFloorCell(dx, dz)], false);
+      // O jardim (greenhouseLayout) usa o mesmo piso de bandejas dos campos; a terra vem de greenhouseFields
+      world.setBlock(x, floorY, z, FLOOR_BLOCKS[domeFloorCell(dx, dz)], false);
 
       // Casca da redoma acima do piso
       for (let dy = 1; dy <= domeRadius; dy++) {

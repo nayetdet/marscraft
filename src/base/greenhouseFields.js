@@ -62,11 +62,11 @@ export function buildGreenhouseFields(scene) {
   for (let dx = -R; dx <= R; dx++) {
     for (let dz = -R; dz <= R; dz++) {
       const index = plotIndexAt(dx, dz);
-      if (index > 0) cells[index].push([dx + 0.5, dz + 0.5]);
+      if (index >= 0) cells[index].push([dx + 0.5, dz + 0.5]);
     }
   }
 
-  // Terra das bandejas de todos os campos: uma malha so
+  // Terra das bandejas de todos os campos, jardim incluido (assim ele fica igual ao resto): uma malha so
   const soil = cells.flatMap((list) => list.map(([px, pz]) => coloredBox(SOIL, px, pz, color)));
   root.add(mergedMesh(soil, material));
 
