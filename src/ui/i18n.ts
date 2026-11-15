@@ -2477,6 +2477,7 @@ const renderedAttributes = new WeakMap<Element, Map<string, string>>();
 const LOCALIZED_ATTRIBUTES = ['aria-label', 'title', 'placeholder', 'alt'] as const;
 
 function translateTextNode(node: CharacterData, force = false): void {
+  if (node.parentElement?.closest('[data-no-translate]')) return;
   const current = node.data;
   const lastRendered = renderedText.get(node);
   if (!force && lastRendered === current) return;
@@ -2492,6 +2493,7 @@ function translateTextNode(node: CharacterData, force = false): void {
 }
 
 function translateElementAttributes(element: Element, force = false): void {
+  if (element.closest('[data-no-translate]')) return;
   let originals = originalAttributes.get(element);
   let rendered = renderedAttributes.get(element);
   if (!originals) { originals = new Map(); originalAttributes.set(element, originals); }

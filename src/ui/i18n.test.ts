@@ -50,7 +50,7 @@ const ALLOWED_SOURCE_NAMES = new Set([
   'Drosophila melanogaster', 'Homo sapiens', 'Mus musculus', 'Rattus norvegicus', 'Urocitellus parryii',
   'NASA OSDR', 'real data from ', 'noopener noreferrer',
   ': NASA study', 'Derick Bessa', 'João Pedro Moreira', 'Isaac Duarte', 'Letícia Freitas', 'Renan França', 'Lucas Rocha',
-  'João Pedro', 'Moreira', 'MarsCraft', 'NASA',
+  'João Pedro', 'Moreira', 'MarsCraft', 'MARS', 'CRAFT', 'NASA',
   'DOSE', 'Mouse', 'Shift', 'Volume',
 ]);
 
@@ -178,6 +178,17 @@ describe('game language catalog', () => {
       .toBe('Cochilo (1 h 30 min: comida −1, água −1)');
     expect(translate('), measured from orbit by HiRISE, a camera on NASA\'s Mars Reconnaissance Orbiter. One block is about 1 meter. Real data from 14/11/2026', 'pt-BR'))
       .toContain('medida em órbita pela HiRISE');
+  });
+
+  it('keeps the official English MarsCraft wordmark unchanged across languages', () => {
+    const markup = fs.readFileSync(path.join(process.cwd(), 'public/game.html'), 'utf8');
+    const protectedWordmarks = [...markup.matchAll(/<h1 class="mc-title" data-no-translate><span>MARS<\/span><span>CRAFT<\/span><\/h1>/g)];
+    expect(protectedWordmarks).toHaveLength(2);
+    for (const language of ['pt-BR', 'es'] as const) {
+      expect(translate('MARS', language)).toBe('MARTE');
+      expect(translate('CRAFT', language)).not.toBe('CRAFT');
+      expect(translate('MarsCraft', language)).toBe('MarsCraft');
+    }
   });
 
   it('has matching translation keys in both non-English catalogs', () => {
