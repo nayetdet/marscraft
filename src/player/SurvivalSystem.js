@@ -18,6 +18,8 @@ export class SurvivalSystem {
     this.water = this.maxStat;
     this.food = this.maxStat;
     this.isDead = false;
+    this.deathCause = null;
+    this.deathDetail = null;
     this.insidePressurizedShip = false;
     this.dustStormIntensity = 0;
     this.dustStormProximity = 0;
@@ -108,25 +110,30 @@ export class SurvivalSystem {
       this.health = Math.min(this.maxStat, this.health + 0.35 * dt);
     }
 
-    // Dano por falta de Oxigênio, Água ou Comida
-    let damageRate = 0;
-    if (this.oxygen <= 0) damageRate += SURVIVAL_CONFIG.STARVE_DAMAGE_RATE * 1.6;
-    if (this.water <= 0) damageRate += SURVIVAL_CONFIG.STARVE_DAMAGE_RATE;
-    if (this.food <= 0) damageRate += SURVIVAL_CONFIG.STARVE_DAMAGE_RATE * 0.8;
+    // Apply hazards separately so the one that removes the last health point is recorded.
+    const damageSources = [];
+    if (this.oxygen <= 0) {
+      damageSources.push({
+        rate: SURVIVAL_CONFIG.STARVE_DAMAGE_RATE * 1.6,
+        cause: this.oxygenNeedsPower ? 'POWER_FAILURE' : 'OXYGEN_DEPLETION',
+        detail: this.oxygenNeedsPower ? 'life-support-power' : 'oxygen-depleted',
+      });
+    }
+    if (this.water <= 0) {
+      damageSources.push({ rate: SURVIVAL_CONFIG.STARVE_DAMAGE_RATE, cause: 'BIOLOGICAL_COLLAPSE', detail: 'water-depleted' });
+    }
+    if (this.food <= 0) {
+      damageSources.push({ rate: SURVIVAL_CONFIG.STARVE_DAMAGE_RATE * 0.8, cause: 'BIOLOGICAL_COLLAPSE', detail: 'food-depleted' });
+    }
     // The first gusts are a warning. Exposure hurts only after the storm has
     // become strong enough that the player should already be heading back.
     const damageStart = SURVIVAL_CONFIG.DUST_STORM_DAMAGE_START;
     const damagingStorm = Math.max(0, (this.dustStormIntensity - damageStart) / (1 - damageStart));
     if (damagingStorm > 0) {
-      damageRate += damagingStorm * SURVIVAL_CONFIG.DUST_STORM_DAMAGE_RATE;
+      damageSources.push({ rate: damagingStorm * SURVIVAL_CONFIG.DUST_STORM_DAMAGE_RATE, cause: 'BIOLOGICAL_COLLAPSE', detail: 'dust-storm-exposure' });
     }
 
-    if (damageRate > 0) {
-      this.health = Math.max(0, this.health - damageRate * dt);
-      if (this.health <= 0) {
-        this.isDead = true;
-      }
-    }
+    for (const source of damageSources) this.takeDamage(source.rate * dt, source.cause, source.detail);
   }
 
   // Comida nao substitui ar: sem oxigenio suficiente, nada recupera vida.
@@ -134,10 +141,14 @@ export class SurvivalSystem {
     return this.oxygen > SURVIVAL_CONFIG.HEAL_MIN_OXYGEN;
   }
 
-  takeDamage(amount) {
+  takeDamage(amount, cause = 'BIOLOGICAL_COLLAPSE', detail = cause) {
     if (this.isDead || amount <= 0) return;
     this.health = Math.max(0, this.health - amount);
-    if (this.health <= 0) this.isDead = true;
+    if (this.health <= 0) {
+      this.isDead = true;
+      this.deathCause = cause;
+      this.deathDetail = detail;
+    }
   }
 
   countItem(blockId) {

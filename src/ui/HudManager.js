@@ -3,6 +3,7 @@ import { BLOCK_IDS } from '../config/blockTypes.js';
 import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { airlockProgress } from './airlockProgress.js';
 import { roverBatteryText } from '../rover/roverText.js';
+import { getDeathReport } from '../player/deathReport.js';
 
 const ICONS_PER_BAR = 10;
 
@@ -46,6 +47,10 @@ export class HudManager {
     this.toastEl = document.getElementById('toast');
     this.dangerVignetteEl = document.getElementById('danger-vignette');
     this.deathOverlayEl = document.getElementById('death-overlay');
+    this.deathTitleEl = document.getElementById('death-title');
+    this.deathDiagnosisEl = document.getElementById('death-diagnosis');
+    this.deathScienceEl = document.getElementById('death-science');
+    this.deathProtocolEl = document.getElementById('death-protocol');
     this.inventoryOverlayEl = document.getElementById('inventory-overlay');
     this.inventoryGridEl = document.getElementById('inventory-grid');
     this.inventoryHotbarEl = document.getElementById('inventory-hotbar');
@@ -288,9 +293,14 @@ export class HudManager {
     }, durationMs);
   }
 
-  showDeathScreen() {
+  showDeathScreen(survival = {}) {
     document.body.classList.add('game-paused');
     this.deathOverlayEl.classList.remove('hidden');
+    const report = getDeathReport(survival.deathCause, survival.deathDetail);
+    this.deathTitleEl.textContent = report.title;
+    this.deathDiagnosisEl.textContent = report.diagnosis;
+    this.deathScienceEl.textContent = report.science;
+    this.deathProtocolEl.textContent = report.protocol;
     if (document.pointerLockElement) {
       document.exitPointerLock();
     }
@@ -406,7 +416,7 @@ export class HudManager {
   update({ player, survival, sky, camera, isScopeOpen = false, isRoverActive = false, roverTelemetry = null, mission, airlock = null }) {
     this.dangerVignetteEl?.classList.toggle('hidden', !survival.isInDanger || survival.isDead);
     if (survival.isDead) {
-      this.showDeathScreen();
+      this.showDeathScreen(survival);
       return;
     }
 
