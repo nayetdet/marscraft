@@ -27,17 +27,6 @@ body.pause-menu-open .mc-menu-card #demo-btn { display: block; }
 body:not(.pause-menu-open) .mc-menu-card #demo-btn { display: none; }
 body:not(.pause-menu-open) .mc-menu-card #sources-btn { grid-column: 1 / -1; }
 body.pause-menu-open .crew-picker { display: none; }
-body.pause-menu-open #menu-main {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-body.pause-menu-open #menu-main.hidden { display: none; }
-body.pause-menu-open #menu-main > #start-btn,
-body.pause-menu-open #menu-main > #controls-btn,
-body.pause-menu-open #menu-main > .menu-row { grid-column: 1 / -1; }
-body.pause-menu-open #menu-main > #options-btn { grid-column: 1; grid-row: 4; }
-body.pause-menu-open #menu-main > #quit-btn { grid-column: 2; grid-row: 4; }
 
 .mc-overlay.hidden,
 .victory-overlay.hidden,
@@ -238,10 +227,17 @@ body.pause-menu-open #menu-main > #quit-btn { grid-column: 2; grid-row: 4; }
 }
 
 #menu-main {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
+
+#menu-main > #start-btn,
+#menu-main > .menu-row { grid-column: 1 / -1; }
+
+body.pause-menu-open #menu-main > #start-btn,
+body.pause-menu-open #menu-main > #controls-btn { grid-column: 1 / -1; }
+body.pause-menu-open #menu-main > #quit-btn { grid-column: 2; grid-row: 3; }
 
 .controls-screen {
   width: 100%;
@@ -1067,13 +1063,16 @@ body.pause-menu-open #menu-main > #quit-btn { grid-column: 2; grid-row: 4; }
 .demo-feedback { min-height: 34px; margin-top: 10px; color: #ffffa0; }
 .controls-screen.info-screen > .mc-btn { margin-top: 10px; }
 
-/* Celular em paisagem: botoes mais baixos e opcoes permanecem abaixo dos controles */
+/* Celular em paisagem: preserve os grupos lado a lado e compacte o titulo. */
 @media (max-height: 460px) {
-  #menu-main { display: grid; grid-template-columns: 1fr 1fr; }
-  #menu-main.hidden { display: none; }
-  #menu-main > #start-btn, #menu-main > #controls-btn, #menu-main > #options-btn,
-  #menu-main > #reset-world-btn, #menu-main > #quit-btn, #menu-main > .menu-row { grid-column: 1 / -1; }
-  .mc-menu-card .mc-btn { min-height: 44px; padding: 8px 10px; }
+  .mc-menu { gap: 6px; }
+  .mc-title { font-size: clamp(44px, 9vw, 60px); letter-spacing: -2px; }
+  .mc-title-wrap { margin-bottom: 0; }
+  .mc-splash { font-size: 12px; margin-left: 100px; }
+  .mc-menu-card { padding-top: 4px; gap: 5px; }
+  #menu-main { gap: 6px; }
+  .mc-menu-card .mc-btn { min-height: 44px; padding: 8px 10px; font-size: 14px; }
+  .mc-menu-card .menu-row .mc-btn { font-size: 11px; padding: 7px 5px; }
   .controls-screen.info-screen { max-height: calc(100dvh - 48px); }
 }
 
