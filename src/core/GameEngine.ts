@@ -2,6 +2,7 @@
 import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS, GREENHOUSE_BASKETS } from '../world/greenhouseLayout.ts';
 import { createCropItemModel, createCropPlantModel } from '../graphics/cropModels.ts';
 import { createSpaceRationModel } from '../graphics/rationModel.ts';
+import { UTILITY_CONFIG } from '../config/constants.ts';
 import * as THREE from 'three';
 import { CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, STORY_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
 import { separateCrew } from '../crew/separateCrew.ts';
@@ -426,7 +427,8 @@ export class GameEngine {
       onStartShipBlockBreak: () => this.audio.playShipBlockBreak(),
       onStopShipBlockBreak: () => this.audio.stopShipBlockBreak(),
       onBlockBroken: (blockId) => this.audio.playBlockBreakImpact(blockId === BLOCK_IDS.REGOLITH),
-      onFoodConsumed: () => this.audio.playUiConfirm(),
+      // Comer pela hotbar conta para o passo de comer do passeio completo (a cozinha nao tem mais painel)
+      onFoodConsumed: () => { this.tutorialCounts.meal++; this.audio.playUiConfirm(); },
       onSuitportAction: (action) => this._handleSuitportShortcut(action),
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown
@@ -434,7 +436,7 @@ export class GameEngine {
       isInputBlocked: () => this.cutscenes.isActive || Boolean(this.sleep?.isSleeping) || Boolean(this.tradeoffHud?.isOpen),
       getInteraction: () => this._getInteraction(),
       isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen || Boolean(this.sleep?.isPanelOpen),
-      getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || !this.stations.freshFood || this.sleep?.isTired ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
+      getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || this.sleep?.isTired ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
     });
     // Dormir no beliche (issue #109): passa o tempo com custo, no lugar da antiga tecla T
     this.sleep = new SleepController(this);
@@ -495,6 +497,8 @@ export class GameEngine {
     this.stations.update(dt, insideCore, this.survival, !inside);
     this.stations.updateCrewHarvest(dt, this.crew.members.some(member => member.task === 'greenhouse' && member.stationary && member.canWork));
     this.utility.updateRations(dt, this.crew.members.some(member => member.task === 'kitchen' && member.stationary && member.canWork));
+    const cookedCrop = this.utility.updatePlayerRation(dt);
+    if (cookedCrop) this._deliverPlayerRation(cookedCrop);
     this._updateShelterWater();
     this.sampleSites.update(this.lastTime / 1000);
     this.updateCropVisuals();
@@ -675,8 +679,6 @@ export class GameEngine {
         { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
         { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
         { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
-        { type: 'galley', x: 13.1, y: 11.35, z: -16.2, label: 'Press F: kitchen' },
-        { type: 'galley', x: 16.1, y: 11.3, z: -21.0, label: 'Press F: pantry & kitchen' },
         { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
         ...GREENHOUSE_BASKETS.map(basket => ({ ...basket, cropType: basket.type, type: 'basket', minDot: 0.95, label: `Press F or tap: collect ${basket.type}` })),
         { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
@@ -1795,6 +1797,7 @@ export class GameEngine {
       drinkCount: 0, mealCount: 0, earthCalls: 0, plantCount: 0,
       roverDrives: 0, roverIceKg: 0, scanCount: 0, iceDelivered: 0,
       suitEquipped: false, suitUps: 0,
+      rationsMade: 0, // ato 3 (#409): racoes feitas com planta da crianca (Act3Controller)
       // Recursos da base, para os desvios do tutorial (issue #237, tutorialDetours.ts)
       baseWaterL: 0, batteryCharge: 0, foodStock: 0, roverBattery: 0, roverActive: false,
     };
@@ -2101,9 +2104,35 @@ export class GameEngine {
     this._activeRationHandoff = null;
   }
 
+  // [F] no cozinheiro, sem painel (ato 3, #409). Com planta colhida na mochila ele recebe a planta
+  // e prepara 1 racao (UtilityModule.startPlayerRation); sem planta entrega 1 racao da despensa.
   _giveRationFromCook(member) {
     if (this._activeRationHandoff) return;
     const cookAvatar = this.crewAvatars.find((avatar) => avatar.member === member);
+    if (this.utility.playerRation) {
+      const left = Math.ceil(this.utility.playerRationSecondsLeft);
+      this.hud.showCaption(left > 0
+        ? `${member.name}: Your ration is cooking! ${left} s to go.`
+        : `${member.name}: Your ration is ready! Make room in your bag.`);
+      return;
+    }
+    if (this.utility.playerCrop()) {
+      const cooking = this.utility.startPlayerRation();
+      if (!cooking.ok) {
+        this.audio.playUiError();
+        cookAvatar?.startHeadShake(this.player.pos, 1.0);
+        this.hud.showToast(cooking.message);
+        return;
+      }
+      this.audio.playUiConfirm();
+      this.playerHand.triggerSwing();
+      cookAvatar?.startHandoff(this.player.pos, 1.2);
+      this.hud.renderHotbar(this.survival.slots);
+      const heldSlot = this.survival.slots[this.hud.selectedSlot];
+      this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
+      this.hud.showCaption(`${member.name}: Thanks for the ${cooking.crop}! Your ration is ready in ${UTILITY_CONFIG.RATION_PREP_SECONDS} s.`);
+      return;
+    }
     const res = this.utility.takeRation();
     if (!res.ok) {
       this.audio.playUiError();
@@ -2116,12 +2145,29 @@ export class GameEngine {
       return;
     }
     this.audio.playUiConfirm();
+    // Pegar a racao conta como a tentativa de comer do passeio completo (quem esta sem fome nao trava)
+    this.tutorialCounts.meal++;
+    this._startRationHandoff(cookAvatar, `${member.name}: Here is a ration! ${res.remaining} left.`, res.message);
+  }
 
+  // A racao feita com a planta da crianca ficou pronta e ja esta na mochila: o cozinheiro entrega
+  _deliverPlayerRation(crop) {
+    const cookAvatar = this.crewAvatars.find((avatar) => avatar.member.task === 'kitchen');
+    this._finishRationHandoffEarly();
+    this._startRationHandoff(
+      cookAvatar,
+      `${cookAvatar?.member.name ?? 'Cook'}: Your ${crop} ration is ready!`,
+      `Got a Space Ration made from your ${crop}! Eat it from your hotbar.`,
+    );
+  }
+
+  // A racao (que ja esta no inventario) voa da mao do cozinheiro ate a crianca
+  _startRationHandoff(cookAvatar, caption, message) {
     if (!cookAvatar) {
       this.hud.renderHotbar(this.survival.slots);
       const heldSlot = this.survival.slots[this.hud.selectedSlot];
       this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
-      this.hud.showToast(res.message);
+      this.hud.showToast(message);
       return;
     }
 
@@ -2130,13 +2176,13 @@ export class GameEngine {
     this._handoffRationProp.position.copy(this._handoffStart);
     this._handoffRationProp.rotation.set(0.1, cookAvatar.group.rotation.y, 0);
     this._handoffRationProp.visible = true;
-    this.hud.showCaption(`${member.name}: Here is a ration! ${res.remaining} left.`);
+    this.hud.showCaption(caption);
     this._activeRationHandoff = {
       cookAvatar,
       elapsed: 0,
       duration: 0.85,
       delivered: false,
-      message: res.message,
+      message,
     };
   }
 
@@ -2237,7 +2283,9 @@ export class GameEngine {
         if (event.card.stepId) this._tradeoff(`step:${event.card.stepId}`);
       }
       else if (event.type === 'certificate') {
-        this.events.start(s.hours); // primeiro selo do tutorial: os eventos de Marte ja podem acontecer
+        // Primeiro selo do passeio completo: os eventos de Marte ja podem acontecer. Nos atos
+        // guiados (o ato 3 tambem da selos) eles so comecam no fim dos passos, com `start-storms`
+        if (this.story.training) this.events.start(s.hours);
         this.storyHud.showCertificate(event.badge);
         this._playGymTone(520, 0.22, 780);
       }
@@ -2535,9 +2583,14 @@ export class GameEngine {
       this.talkTarget = member;
       if (member.task === 'kitchen') {
         const count = Math.floor(this.crewStock.food);
-        const prompt = count >= 1
-          ? `[F] Get space ration from ${member.name} (${count} in pantry)`
-          : `[F] Talk to ${member.name} (pantry empty)`;
+        const crop = this.utility.playerCrop();
+        const prompt = this.utility.playerRation
+          ? `${member.name} is cooking your ration (${Math.ceil(this.utility.playerRationSecondsLeft)} s)`
+          : crop
+            ? `[F] Give ${crop} to ${member.name}: 1 ration (${UTILITY_CONFIG.RATION_PREP_POWER}% battery)`
+            : count >= 1
+              ? `[F] Get space ration from ${member.name} (${count} in pantry)`
+              : `[F] Talk to ${member.name} (pantry empty)`;
         this.hud.setInteractionPrompt(true, prompt);
       } else {
         this.hud.setInteractionPrompt(true, `[F] Talk to ${member.name}`);

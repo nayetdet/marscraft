@@ -13,7 +13,7 @@ function setup({ night = false, charge = 80 } = {}) {
     removeItems: (id, n) => { items[id] -= n; return n; },
   };
   const mission = { battery: new Battery(charge), chargeRate: night ? 0 : 10, factoryOn: true, iceStock: 0, propellant: 0, shieldOn: false };
-  const stations = { freshFood: 0, filter: 100 };
+  const stations = { filter: 100 };
   // Agua limpa e agua cinza no mesmo tanque do jogador, como em createBaseStock
   const base = {
     food: 3, graywater: 0,
@@ -101,16 +101,56 @@ describe('north module (issue #56, part B)', () => {
     expect(base.food).toBe(1);
   });
 
-  it('a ration feeds you but empties the shared pantry; a fresh meal costs water, power and a carrot', () => {
-    const { utility, survival, base, stations, items } = setup();
+  it('a ration feeds you but empties the shared pantry', () => {
+    const { utility, base } = setup();
     utility.eatRation();
     expect(base.food).toBe(2);
-    utility.cookMeal();
-    expect(items[BLOCK_IDS.HYDRO_PLANT]).toBe(0);
-    expect(survival.baseWater).toBe(10 - U.MEAL_WATER_L);
-    // A agua de cozinhar entra no ciclo: vira agua cinza para o reciclador (issue #101)
-    expect(base.graywater).toBe(U.MEAL_WATER_L);
-    expect(stations.freshFood).toBe(STATION_CONFIG.FRESH_FOOD_DURATION);
+  });
+
+  // Ato 3 (#409): [F] no cozinheiro com planta na mochila, sem painel
+  it('the cook turns one plant from your bag into one ration, for power and time', () => {
+    const { utility, survival, mission, base, items } = setup();
+    const added = [];
+    let room = false;
+    survival.addBlockToInventory = (id) => { if (room) added.push(id); return room; };
+    items[BLOCK_IDS.LETTUCE] = 2;
+    expect(utility.playerCrop()).toBe('lettuce');
+
+    const start = utility.startPlayerRation();
+    expect(start).toMatchObject({ ok: true, crop: 'lettuce' });
+    expect(items[BLOCK_IDS.LETTUCE]).toBe(1);
+    expect(mission.battery.charge).toBeCloseTo(80 - U.RATION_PREP_POWER);
+    expect(base.food).toBe(3); // a despensa da tripulacao nao muda
+    expect(utility.startPlayerRation()).toMatchObject({ ok: false, reason: 'busy' });
+    expect(items[BLOCK_IDS.LETTUCE]).toBe(1);
+
+    expect(utility.updatePlayerRation(U.RATION_PREP_SECONDS / 2)).toBeNull();
+    expect(utility.playerRationSecondsLeft).toBeCloseTo(U.RATION_PREP_SECONDS / 2);
+    // Pronta com a mochila cheia: espera ate caber, sem perder a racao
+    expect(utility.updatePlayerRation(U.RATION_PREP_SECONDS)).toBeNull();
+    expect(utility.playerRationsMade).toBe(0);
+    room = true;
+    expect(utility.updatePlayerRation(0.016)).toBe('lettuce');
+    expect(added).toEqual([BLOCK_IDS.RATION]);
+    expect(utility.playerRationsMade).toBe(1);
+    expect(utility.updatePlayerRation(1)).toBeNull();
+  });
+
+  it('the cook needs a plant and battery power: nothing is taken when one is missing', () => {
+    const { utility, mission, items } = setup();
+    // A cenoura de Marte que ja vem na mochila nao e planta colhida: o cozinheiro nao a pede
+    expect(items[BLOCK_IDS.HYDRO_PLANT]).toBe(1);
+    expect(utility.playerCrop()).toBeNull();
+    expect(utility.startPlayerRation()).toMatchObject({ ok: false, reason: 'no-plant' });
+    items[BLOCK_IDS.SOY] = 1;
+    mission.battery.charge = 0;
+    expect(utility.startPlayerRation()).toMatchObject({ ok: false, reason: 'power' });
+    expect(items[BLOCK_IDS.SOY]).toBe(1);
+    mission.battery.charge = 50;
+    expect(utility.startPlayerRation()).toMatchObject({ ok: true, crop: 'soy' });
+    expect(items[BLOCK_IDS.SOY]).toBe(0);
+    expect(items[BLOCK_IDS.HYDRO_PLANT]).toBe(1);
+    expect(mission.battery.charge).toBeCloseTo(50 - U.RATION_PREP_POWER);
   });
 
   it('the recycler cleans gray water by itself, gives back 98% and charges the battery per liter', () => {

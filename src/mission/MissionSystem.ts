@@ -60,6 +60,8 @@ export class MissionSystem {
     this.dataSource = dataSource;
     this.stormsStarted = stormsStarted;
     this.schedule = stormsStarted ? tutorialStorm(cmes, startHours, dataSource) : [];
+    // A tempestade do tutorial ja entrou na fila (por `startStorms` ou, no ato 3, `startTutorialStorm`)
+    this.tutorialStormScheduled = stormsStarted;
     // A tempestade do tutorial ja acabou (sobrevivendo ou nao): a exigencia do foguete esta paga
     this.tutorialStormDone = false;
     // Eventos reais do DONKI que ja viraram tempestade nesta partida (cada um entra uma vez so)
@@ -265,10 +267,36 @@ export class MissionSystem {
   }
 
   // Comeca a fila de tempestades a partir de `hours`. Chamar de novo nao refaz a fila.
+  // Se a historia ja marcou a tempestade do tutorial (`startTutorialStorm`, ato 3), ela fica
+  // como esta: aqui so se liberam as tempestades reais e a poeira.
   startStorms(hours) {
     if (this.stormsStarted) return;
     this.stormsStarted = true;
     this.dustWeather.start(hours);
+    if (this.tutorialStormScheduled) return;
+    this._scheduleTutorialStorm(hours);
+  }
+
+  // Ato 3 da historia (#409): marca so a tempestade do tutorial, a partir de `hours`, sem liberar
+  // as tempestades reais nem a poeira (isso continua no fim dos passos guiados, `startStorms`).
+  // Devolve false se ela ja estava marcada ou se a fila ja comecou.
+  startTutorialStorm(hours) {
+    if (this.stormsStarted || this.tutorialStormScheduled) return false;
+    this._scheduleTutorialStorm(hours);
+    return true;
+  }
+
+  // A tempestade do tutorial ja passou (ou os dados nao tem nenhuma CME para Marte, entao ela
+  // nunca vem): o passo de se abrigar do ato 3 pode terminar. Chamado a cada frame: nao aloca.
+  get tutorialStormOver() {
+    if (!this.tutorialStormScheduled) return false;
+    if (this.tutorialStormDone) return true;
+    for (const storm of this.schedule) if (storm.scripted) return false;
+    return true;
+  }
+
+  _scheduleTutorialStorm(hours) {
+    this.tutorialStormScheduled = true;
     this.schedule = tutorialStorm(this.cmes, hours, this.dataSource);
     this.storm = stormStateAt(this.schedule, hours);
     this._phaseKey = this._keyFor(this.storm);

@@ -460,6 +460,40 @@ describe('MissionSystem tutorial storm and live DONKI storms', () => {
     return mission;
   };
 
+  // Ato 3 (#409): a tempestade do tutorial vem no comeco do ato, antes das reais
+  it('act 3 schedules the tutorial storm early; live storms and dust wait for the guided steps to end', () => {
+    const mission = new MissionSystem({ cmes, startHours: 12, stormsStarted: false });
+    expect(mission.tutorialStormOver).toBe(false);
+    expect(mission.startTutorialStorm(20)).toBe(true);
+    expect(mission.startTutorialStorm(25)).toBe(false);
+    expect(mission.schedule).toHaveLength(1);
+    expect(mission.schedule[0]).toMatchObject({ scripted: true, warningStart: 20 + STORM_CONFIG.FIRST_WARNING_AFTER_HOURS });
+    expect(mission.stormsStarted).toBe(false);
+    expect(mission.queueLiveStorms(live(), NOW)).toEqual([]);
+
+    mission.update(mission.schedule[0].arrival + 0.01, { insideHabitat: true });
+    expect(mission.storm.phase).toBe('active');
+    expect(mission.tutorialStormOver).toBe(false);
+    const end = mission.schedule[0].end;
+    mission.update(end + 0.01, { insideHabitat: true });
+    expect(mission.tutorialStormOver).toBe(true);
+    expect(mission.stormCredit).toBe(MAV_CONFIG.STORMS_TO_SURVIVE);
+
+    // Fim dos passos guiados: a mesma tempestade nao volta, e as reais passam a valer
+    mission.startStorms(end + 1);
+    expect(mission.schedule).toHaveLength(1);
+    expect(mission.schedule[0].end).toBe(end);
+    expect(mission.stormsStarted).toBe(true);
+    expect(mission.noStormData).toBe(false);
+  });
+
+  it('with no CME headed to Mars the act 3 storm never comes, and the story does not wait for it', () => {
+    const mission = new MissionSystem({ cmes: [], startHours: 12, stormsStarted: false });
+    mission.startTutorialStorm(12);
+    expect(mission.schedule).toHaveLength(0);
+    expect(mission.tutorialStormOver).toBe(true);
+  });
+
   it('the tutorial has exactly one storm, and it pays the rocket requirement', () => {
     const mission = new MissionSystem({ cmes, startHours: 12, stormsStarted: false });
     mission.startStorms(12);
