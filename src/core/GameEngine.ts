@@ -267,6 +267,13 @@ export class GameEngine {
       if (!control || control.disabled || control.closest('[data-action], [data-gym-step], [data-touch-action]')) return;
       this.audio.playUiClick();
     });
+    document.addEventListener('pointerover', (event) => {
+      if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return;
+      const control = event.target?.closest?.('button, [role="button"], a, [data-journal-entry], input[type="range"]');
+      if (!control || control.disabled || control.getAttribute('aria-disabled') === 'true' || control.closest('[data-touch-action]')) return;
+      if (event.relatedTarget && control.contains(event.relatedTarget)) return;
+      this.audio.playUiHover();
+    });
 
     // Maozinha 3D do jogador em primeira pessoa
     this.playerHand = new PlayerHand(this.camera, materials, carrot.texture);
@@ -358,6 +365,7 @@ export class GameEngine {
       onDemo: (action) => this._runDemo(action),
       volume: this.audio.masterVolume,
       onVolumeChange: (volume) => this.audio.setMasterVolume(volume),
+      onVolumePreview: (options) => this.audio.playUiVolumePreview(options),
     });
 
     this.input = new InputController({

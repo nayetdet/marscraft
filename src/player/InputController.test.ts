@@ -1,8 +1,16 @@
 // @ts-nocheck
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InputController } from './InputController.ts';
 import { BLOCK_IDS, SHIP_BLOCK_IDS } from '../config/blockTypes.ts';
 import { BLOCK_INTERACTION_CONFIG } from '../config/constants.ts';
+
+beforeEach(() => {
+  vi.stubGlobal('document', { getElementById: () => null });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('scope equipment', () => {
   it('does not open from the removed touch scope shortcut', () => {
