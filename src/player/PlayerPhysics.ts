@@ -47,6 +47,11 @@ export class PlayerPhysics {
     this.pitch = PHYSICS_CONFIG.SPAWN_PITCH;
   }
 
+  stopJumpMomentum() {
+    this.vel.y = 0;
+    this._jumpInProgress = false;
+  }
+
   getLookDirection(target = new THREE.Vector3()) {
     _lookEuler.set(this.pitch, this.yaw, 0, 'YXZ');
     return target.set(0, 0, -1).applyEuler(_lookEuler);
