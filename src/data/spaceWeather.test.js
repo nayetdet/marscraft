@@ -141,7 +141,7 @@ describe('loadSpaceWeather: live NASA DONKI with embedded fallback (issue #100)'
   });
 
   it('ignores a broken cache and works without localStorage', async () => {
-    expect(readCache(memoryStorage({ 'minemars.spaceWeather.v1': '{not json' }), NOW)).toBeNull();
+    expect(readCache(memoryStorage({ 'marscraft.spaceWeather.v1': '{not json' }), NOW)).toBeNull();
     const throwing = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
     expect((await load({ fetchImpl: mockFetch(), storage: throwing })).live).toBe(true);
     expect((await load({ fetchImpl: mockFetch(), storage: null })).live).toBe(true);

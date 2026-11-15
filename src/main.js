@@ -25,7 +25,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         // So vale se chegar antes do primeiro Play; depois, fica no cache para a proxima partida
         spaceWeatherPromise.then((spaceWeather) => engine.applySpaceWeather(spaceWeather));
         // So no `npm run dev`: deixa o motor acessivel no console para testar a historia e as animacoes
-        if (import.meta.env.DEV) window.__minemars = engine;
+        if (import.meta.env.DEV) window.__marscraft = engine;
         requestAnimationFrame(() => {
           loadingOverlay.classList.add('is-leaving');
           setTimeout(() => {
@@ -35,7 +35,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       } catch (error) {
         loadingOverlay.classList.add('mc-loading-error');
         loadingOverlay.querySelector('.loading-caption').textContent = 'Unable to load the game. Please refresh.';
-        console.error('MineMars failed to initialize:', error);
+        console.error('MarsCraft failed to initialize:', error);
       }
     }, 80);
   });

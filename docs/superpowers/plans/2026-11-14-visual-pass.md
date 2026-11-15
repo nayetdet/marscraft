@@ -16,7 +16,7 @@
 - Colors are art, not data: nothing here is labelled as NASA data.
 - Do not change the base geometry or the interior layout.
 - Color values in this plan are starting points; each task ends with before/after screenshots and the values are tuned against them.
-- Screenshots: `playwright-core` with system Chrome against the dev server on port 5310, using `window.__minemars` (see the memory note "validacao-visual-headless").
+- Screenshots: `playwright-core` with system Chrome against the dev server on port 5310, using `window.__marscraft` (see the memory note "validacao-visual-headless").
 - Conventional Commits; branch `feat/visual-pass`.
 
 ---
