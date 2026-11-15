@@ -297,6 +297,10 @@ export class HudManager {
     });
   }
 
+  setPlayerAppearance(profile) {
+    this.suitPreview?.setAppearance(profile);
+  }
+
   updateSuitportHolo(visible, suitCtx = null) {
     if (!this.suitportHoloEl) return;
     if (!visible || !suitCtx?.survival) {

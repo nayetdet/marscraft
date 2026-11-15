@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { CREW_PROFILES } from '../crew/crewProfiles.ts';
+import { buildPlayerCadetProfile } from '../crew/playerAppearance.ts';
 import { buildIvaAstronautRig, buildSpacesuitRig } from './spacesuitModel.ts';
 
 describe('buildIvaAstronautRig', () => {
@@ -39,5 +40,33 @@ describe('buildSpacesuitRig open helmet visor for NPCs', () => {
     ) as THREE.Mesh | undefined;
     expect(faceMesh).toBeDefined();
     expect(faceMesh?.material).toHaveLength(6);
+  });
+
+  it('renders custom player gender, hair length, and hair type in both IVA and EVA rigs', () => {
+    const shortMan = buildPlayerCadetProfile({
+      gender: 'man',
+      skinTone: 'tan',
+      hairType: 'straight',
+      hairLength: 'short',
+      hairColor: 'black',
+    });
+    const longCurlyWoman = buildPlayerCadetProfile({
+      gender: 'woman',
+      skinTone: 'deep',
+      hairType: 'coily',
+      hairLength: 'long',
+      hairColor: 'blonde',
+    });
+
+    const ivaShort = buildIvaAstronautRig({ crewProfile: shortMan });
+    const ivaLong = buildIvaAstronautRig({ crewProfile: longCurlyWoman });
+    expect(ivaLong.headGroup.children.length).toBeGreaterThan(ivaShort.headGroup.children.length);
+
+    const evaCustom = buildSpacesuitRig({ accentColor: 0xea580c, crewProfile: longCurlyWoman });
+    expect(evaCustom.visorMat.transparent).toBe(true);
+    const faceMesh = evaCustom.headGroup.children.find(
+      (obj) => (obj as THREE.Mesh).isMesh && Array.isArray((obj as THREE.Mesh).material)
+    ) as THREE.Mesh | undefined;
+    expect(faceMesh).toBeDefined();
   });
 });

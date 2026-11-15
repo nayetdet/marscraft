@@ -407,6 +407,27 @@
           <button id="reset-world-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-reset"></use></svg><span class="menu-button-label">Reset World</span></button>
           <button id="quit-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-quit"></use></svg><span class="menu-button-label">Quit</span></button>
         </div>
+        <section id="character-screen" class="info-screen character-screen hidden" aria-labelledby="character-title">
+          <div class="inventory-layout character-layout">
+            <aside class="inventory-suit-panel character-suit-panel">
+              <div class="inv-suit-preview-wrap character-preview-box">
+                <canvas id="character-preview-canvas" class="inv-suit-canvas character-preview-canvas" width="160" height="190" aria-label="Astronaut preview"></canvas>
+              </div>
+              <div class="character-suit-toggle" role="group" aria-label="Preview suit">
+                <button id="char-suit-iva" type="button" class="char-suit-btn is-selected" aria-pressed="true">Flight Suit</button>
+                <button id="char-suit-eva" type="button" class="char-suit-btn" aria-pressed="false">Spacesuit</button>
+              </div>
+            </aside>
+            <div class="inventory-window character-window">
+              <header>
+                <h2 id="character-title">Create Your Astronaut</h2>
+                <button id="character-back-btn" class="inventory-close" type="button">Back</button>
+              </header>
+              <div id="character-options" class="character-options-col"></div>
+              <button id="character-start-btn" type="button" class="mc-btn character-start-btn">Start Mission</button>
+            </div>
+          </div>
+        </section>
         <section id="options-screen" class="controls-screen info-screen hidden" aria-labelledby="options-title">
           <h2 id="options-title">Options</h2>
           <div class="options-list">

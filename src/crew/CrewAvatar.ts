@@ -136,14 +136,14 @@ export function makeNameLabel(text, accentColor) {
 
 // Astronauta 3D detalhado em estilo voxel NASA xEMU com joelhos, cotovelos, cintura e cabeca articulados.
 export class CrewAvatar {
-  constructor(scene, member, accentColor) {
+  constructor(scene, member, accentColor, crewProfile = getCrewProfile(member)) {
     this.member = member;
     this.group = new THREE.Group();
     const rig = buildSpacesuitRig({
       accentColor,
       suitColor: SUIT_COLOR.clone(),
       instanced: true,
-      crewProfile: getCrewProfile(member),
+      crewProfile,
     });
     this.bodyGroup = rig.bodyGroup;
     this.suitMat = rig.suitMat;

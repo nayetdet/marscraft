@@ -1,5 +1,9 @@
 import { CREW_CONFIG } from '../config/constants.ts';
 
+export type HairType = 'straight' | 'wavy' | 'curly' | 'coily';
+
+export type HairLength = 'short' | 'medium' | 'long';
+
 export type HairStyle =
   | 'swept'
   | 'puffs'
@@ -9,13 +13,15 @@ export type HairStyle =
   | 'bob'
   | 'parted'
   | 'bangs'
-  | 'sweep';
+  | 'sweep'
+  | `${HairType}_${HairLength}`;
 
 export type BrowStyle = 'arched' | 'straight';
 
 export type SkinCategory = 'light' | 'medium' | 'deep';
 
 export interface CadetAppearanceProfile {
+  gender?: 'woman' | 'man';
   skin: string;
   skinShade: string;
   cheek: string;
@@ -27,6 +33,8 @@ export interface CadetAppearanceProfile {
   eyeGlint: string;
   mouth: string;
   hairStyle: HairStyle;
+  hairType?: HairType;
+  hairLength?: HairLength;
   brows: BrowStyle;
   lashes: boolean;
   freckles: boolean;
