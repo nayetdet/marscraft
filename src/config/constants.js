@@ -66,9 +66,34 @@ export const SURVIVAL_CONFIG = {
   DANGER_THRESHOLD: 5,
   // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
   HEAL_MIN_OXYGEN: 5,
+  // Tempestade de poeira na borda da area jogavel, medida a partir de TERRAIN_CONFIG.BASE_CENTER
   DUST_STORM_START_RADIUS: 52,
   DUST_STORM_FATAL_RADIUS: 82,
   DUST_STORM_DAMAGE_RATE: 20,
+  // Intensidade (0..1) a partir da qual a tempestade machuca; antes disso e so aviso
+  DUST_STORM_DAMAGE_START: 0.55,
+  // Blocos antes do inicio da tempestade em que o HUD ja avisa que a borda esta perto
+  DUST_STORM_WARNING_DISTANCE: 8,
+};
+
+// Visual da tempestade da borda (src/sky/DustStormEffect.js). O dano fica no SURVIVAL_CONFIG.
+export const DUST_STORM_VISUAL_CONFIG = {
+  WALL_RADIUS_OFFSET: 2, // a parede de poeira fica 2 blocos depois do inicio da tempestade
+  WALL_BOTTOM_Y: -4,
+  WALL_HEIGHT: 44,
+  // A parede some perto da camera (entre estas distancias, em blocos) para nao virar um plano duro
+  WALL_FADE_NEAR: 1.5,
+  WALL_FADE_FAR: 8,
+  // A neblina e a cupula de poeira comecam um pouco antes da tempestade, junto com a parede
+  VISUAL_LEAD: 4,
+  DOME_RADIUS: 26,
+  DOME_MAX_OPACITY: 0.93,
+  FOG_BASE_DENSITY: 0.0015,
+  FOG_MAX_DENSITY: 0.11,
+  PARTICLE_COUNT: 1400,
+  PARTICLE_BOX: { x: 36, y: 16, z: 36 },
+  WIND_SPEED: 11, // blocos/s
+  WIND_PUSH: 0.45, // parte do vento que sopra de volta para a base
 };
 
 export const WATER_SYSTEM_CONFIG = {
