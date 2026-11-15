@@ -67,6 +67,14 @@ export function renderReportCard(container, report) {
     container.append(handover);
   }
 
+  // Para onde foi o primeiro gelo (ato 1, #413)
+  if (report.firstIce) {
+    const firstIce = document.createElement('p');
+    firstIce.className = 'report-launch';
+    firstIce.textContent = report.firstIce.text;
+    container.append(firstIce);
+  }
+
   const profile = document.createElement('p');
   profile.className = 'report-profile';
   const title = document.createElement('b');

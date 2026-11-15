@@ -293,7 +293,9 @@ export const TUTORIAL_STEPS = [
       { icon: 'check', text: 'Choose LOAD 1 ICE' },
       { icon: 'bolt', text: 'Ice becomes fuel, fuel uses battery' },
     ],
-    done: (s, b) => count(s, 'iceNeeded') < count(b, 'iceNeeded'),
+    // Tambem acaba se o primeiro gelo foi para o tanque da base (card de escolha, issue #413):
+    // a corrida final cobra o bloco que ficou faltando no foguete
+    done: (s, b) => count(s, 'iceNeeded') < count(b, 'iceNeeded') || Boolean(s.firstIceToTank),
     example: (s) => ({ iceCount: 0, iceNeeded: count(s, 'iceNeeded') - 1 }),
   },
   {
