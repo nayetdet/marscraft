@@ -67,6 +67,14 @@ export function renderReportCard(container, report) {
     container.append(handover);
   }
 
+  // Ciencia que ficou em Marte x protecao do traje (ato 2, #417)
+  if (report.suitTrade) {
+    const trade = document.createElement('p');
+    trade.className = report.suitTrade.usedPoints > 0 ? 'report-launch is-late' : 'report-launch';
+    trade.textContent = report.suitTrade.text;
+    container.append(trade);
+  }
+
   const profile = document.createElement('p');
   profile.className = 'report-profile';
   const title = document.createElement('b');

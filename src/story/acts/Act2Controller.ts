@@ -7,6 +7,7 @@ import { SOLAR_FIELD, SOLAR_FIELD_CENTER } from '../../world/habitatLayout.ts';
 import { ActController, type StorySnapshot, type Waypoint } from './actTypes.ts';
 import { ACT2_ENGINEER_NAME, ACT2_PLACES } from './act2Steps.ts';
 import { ACT2_CARDS, ACT2_TEXT, JournalLesson, WINDOW_SCAN_ENTRIES } from './act2Text.ts';
+import { SUIT_CHOICE_CARD, shouldShowSuitChoice } from './act2SuitChoice.ts';
 
 // Ato 2 (issue #408): liga os passos de act2Steps.ts ao jogo. Ver actTypes.ts.
 //   clean-panels   comeca a tempestade de poeira roteirizada; no meio dela o redemoinho cruza o
@@ -65,6 +66,7 @@ export class Act2Controller extends ActController {
   lesson = new JournalLesson();
   private lessonHud: { isVisible: boolean; onNext: () => void; show: Function; hide: Function; reposition: Function } | null = null;
   private lessonClock = 0;
+  suitChoiceShown = false; // card SUIT OR EARTH? (#417)
 
   // Luneta num vidro
   private windowState = { targetId: 'act2-window', entry: WINDOW_SCAN_ENTRIES.scanning, progress: 0, done: false, known: false, completed: null };
@@ -139,6 +141,11 @@ export class Act2Controller extends ActController {
     if (id === 'clean-panels') this.startLeak();
     else if (id === 'find-leak') this.engine.storyHud?.showCard(ACT2_CARDS.leakFound);
     else if (id === 'journal-lesson') this.lessonHud?.hide();
+    // Trade-off traje x Terra (#417): o engenheiro apresenta a escolha, uma vez por partida
+    if (shouldShowSuitChoice(id, this.suitChoiceShown)) {
+      this.suitChoiceShown = true;
+      this.engine.storyHud?.showCard(SUIT_CHOICE_CARD);
+    }
   }
 
   // Tutorial pulado (ou os passos guiados acabaram): quem pulou tambem recebe a luneta, e nada

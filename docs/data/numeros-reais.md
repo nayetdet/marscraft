@@ -111,6 +111,7 @@ Limite honesto: os 7 sols são quase iguais (mesma estação), então o que vari
 
 - Tempestade de poeira roteirizada do ato 2: aviso de 0,5 h de jogo, tempestade de 1,5 h (as sorteadas duram 6 a 9 h), tau de pico 9, poeira nos painéis a +40 %/h (cerca de 60 % no total).
 - Poeira **por painel**: cada um dos 5 painéis tem a sua; a geração solar usa a média. A criança limpa um painel por vez (25 % por escovada, 1 ponto de O2 do traje). O passo termina com a tempestade acabada e todos os painéis abaixo de 10 %.
+- Traje ou Terra (issue #417): a melhoria do traje custa **4 pontos de ciência** que nunca chegam à Terra e corta **35 %** da radiação lá fora (`SCIENCE_CONFIG.SUIT_UPGRADE_POINTS`, `STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR`). Tudo **regra de jogo**, sem fonte da NASA; o card e o boletim dizem isso.
 - O traje desgasta **2 vezes** mais rápido lá fora durante uma tempestade de poeira (`STORM_SUIT_WEAR_MULTIPLIER`). O fator 2 é do jogo; o card cita o fato da Apollo e diz que a regra da tempestade é do jogo.
 - Janela rachada: o ar da base cai 0,15 %/s e para em 30 % (ninguém morre do vazamento roteirizado). O buraco aberto pelo jogador continua em 5 %/s.
 - A luneta acha a rachadura em 1,2 s por janela e, numa janela inteira, diz a quantos blocos o vazamento "soa". É a versão de jogo do detector por ultrassom, que na Estação é um aparelho próprio, não uma luneta.

@@ -148,6 +148,13 @@ export const CUTSCENE_ES: Record<string, string> = {
 
 // Extra tutorial, objective, and mission-journal copy from the later story acts.
 export const STORY_MORE_PT_BR: Record<string, string> = {
+  // Ato 2 (#417): traje ou Terra
+  'SUIT OR EARTH?': 'TRAJE OU TERRA?', 'Your scans are science points': 'Seus scans valem pontos de ciência',
+  'Choose at the science & radio terminal': 'Escolha no terminal de ciência e rádio',
+  'UPGRADE SUIT': 'MELHORAR TRAJE', '35% less radiation outside': '35% menos radiação lá fora', '4 points never reach Earth': '4 pontos nunca chegam à Terra',
+  'SEND TO EARTH': 'ENVIAR À TERRA', 'Points count for the rocket': 'Os pontos contam para o foguete', 'Each upload eats battery': 'Cada envio gasta bateria',
+  'Game rule: the suit upgrade and its cost are not NASA data.': 'Regra do jogo: a melhoria do traje e o custo dela não são dados da NASA.',
+  'No suit upgrade: full radiation outside, more science for Earth': 'Traje sem melhoria: radiação cheia lá fora, mais ciência para a Terra',
   'USE YOUR SCOPE': 'USE A LUNETA', 'Left-click scans; right-click opens or closes it': 'Clique esquerdo escaneia; clique direito abre ou fecha a luneta.',
   'GET WATER': 'BUSCAR ÁGUA', 'SAVE POWER': 'ECONOMIZAR ENERGIA', 'GROW FOOD': 'CULTIVAR COMIDA', 'CHARGE THE ROVER': 'CARREGAR O ROVER',
   'Rover console: press F. Drill ice (SPACE), unload it at the base (SPACE)': 'Console do rover: pressione F. Perfure gelo (ESPAÇO) e descarregue na base (ESPAÇO)',
@@ -221,6 +228,13 @@ export const STORY_MORE_PT_BR: Record<string, string> = {
 };
 
 export const STORY_MORE_ES: Record<string, string> = {
+  // Acto 2 (#417): traje o Tierra
+  'SUIT OR EARTH?': '¿TRAJE O TIERRA?', 'Your scans are science points': 'Tus escaneos valen puntos de ciencia',
+  'Choose at the science & radio terminal': 'Elige en el terminal de ciencia y radio',
+  'UPGRADE SUIT': 'MEJORAR TRAJE', '35% less radiation outside': '35% menos radiación afuera', '4 points never reach Earth': '4 puntos nunca llegan a la Tierra',
+  'SEND TO EARTH': 'ENVIAR A LA TIERRA', 'Points count for the rocket': 'Los puntos cuentan para el cohete', 'Each upload eats battery': 'Cada envío gasta batería',
+  'Game rule: the suit upgrade and its cost are not NASA data.': 'Regla del juego: la mejora del traje y su costo no son datos de la NASA.',
+  'No suit upgrade: full radiation outside, more science for Earth': 'Traje sin mejora: radiación completa afuera, más ciencia para la Tierra',
   'USE YOUR SCOPE': 'USA LA MIRA', 'Left-click scans; right-click opens or closes it': 'El clic izquierdo escanea; el derecho abre o cierra la mira.',
   'GET WATER': 'BUSCA AGUA', 'SAVE POWER': 'AHORRA ENERGÍA', 'GROW FOOD': 'CULTIVA COMIDA', 'CHARGE THE ROVER': 'CARGA EL ROVER',
   'Rover console: press F. Drill ice (SPACE), unload it at the base (SPACE)': 'Consola del rover: pulsa F. Perfora hielo (ESPACIO) y descárgalo en la base (ESPACIO)',
