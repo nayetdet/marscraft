@@ -91,17 +91,25 @@ const PARTICLE_VERTEX = /* glsl */ `
   uniform float uScale;
   uniform vec3 uBox;
   uniform vec3 uOffset;
+  uniform vec3 uWind;
   attribute float aSeed;
   varying float vAlpha;
+  varying vec2 vWindScreen;
+  varying float vSeed;
 
   void main() {
     vec3 p = position + uOffset;
-    p.y += sin(uTime * 2.3 + aSeed * 40.0) * 0.6;
-    p.x += sin(uTime * 1.7 + aSeed * 23.0) * 0.4;
+    float lowDust = smoothstep(0.0, 0.55, aSeed);
+    p.y = mix(p.y, -uBox.y * 0.32 + p.y * 0.22, lowDust);
+    p += uWind * (sin(uTime * 1.4 + aSeed * 31.0) * 0.28);
+    p.y += sin(uTime * 2.3 + aSeed * 40.0) * 0.32;
     // Caixa de poeira que acompanha a camera: quem sai por um lado volta pelo outro
     p = mod(p - cameraPosition + uBox * 0.5, uBox) - uBox * 0.5 + cameraPosition;
 
     vec4 mv = viewMatrix * vec4(p, 1.0);
+    vec3 windView = mat3(viewMatrix) * vec3(uWind.x, 0.0, uWind.z);
+    vWindScreen = windView.xy;
+    vSeed = aSeed;
     gl_PointSize = min((0.6 + 1.6 * aSeed) * uScale / max(-mv.z, 0.5), 7.0);
 
     // Some perto das faces da caixa, para a volta nao aparecer
@@ -115,11 +123,18 @@ const PARTICLE_FRAGMENT = /* glsl */ `
   uniform vec3 uColor;
   uniform float uOpacity;
   varying float vAlpha;
+  varying vec2 vWindScreen;
+  varying float vSeed;
   void main() {
-    // Pontos alongados viram riscos de poeira carregados pelo vento, em vez de bolinhas.
-    vec2 streak = vec2((gl_PointCoord.x - 0.5) * 0.38, (gl_PointCoord.y - 0.5) * 1.8);
-    float shape = 1.0 - smoothstep(0.32, 0.5, length(streak));
-    gl_FragColor = vec4(uColor, vAlpha * uOpacity * shape);
+    // Alongar cada ponto na direcao do vento deixa o movimento legivel no horizonte.
+    vec2 windDir = normalize(vWindScreen + vec2(0.0001));
+    vec2 centered = gl_PointCoord - 0.5;
+    float along = dot(centered, windDir);
+    float across = dot(centered, vec2(-windDir.y, windDir.x));
+    float lengthScale = mix(1.2, 2.2, vSeed);
+    float shape = 1.0 - smoothstep(0.34, 0.5, length(vec2(along * 0.48, across * lengthScale)));
+    float shimmer = 0.78 + 0.22 * sin(vSeed * 91.0 + uOpacity * 8.0);
+    gl_FragColor = vec4(uColor, vAlpha * uOpacity * shape * shimmer);
     #include <colorspace_fragment>
   }
 `;
@@ -207,6 +222,7 @@ export class DustStormEffect {
       uScale: { value: 300 },
       uBox: { value: new THREE.Vector3(box.x, box.y, box.z) },
       uOffset: { value: new THREE.Vector3() },
+      uWind: { value: new THREE.Vector3(1, 0, 0) },
       uColor: { value: new THREE.Color() },
       uOpacity: { value: 0 },
     };
@@ -299,6 +315,7 @@ export class DustStormEffect {
 
     this.particleUniforms.uTime.value = this.time;
     this.particleUniforms.uOpacity.value = opacity;
+    this.particleUniforms.uWind.value.copy(_wind).normalize();
     // Um pouco mais clara que a neblina, para aparecer contra ela
     this.particleUniforms.uColor.value.copy(_dust).lerp(_skyFog, 0.4).multiplyScalar(1.15);
     // Tamanho do ponto proporcional a altura da imagem, como na projecao da camera

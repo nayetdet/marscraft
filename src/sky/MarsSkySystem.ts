@@ -101,6 +101,7 @@ export class MarsSkySystem {
     const sunAngle = ((this.timeOfDay - 6) / 24) * Math.PI * 2;
     const sunDir = _sunDir.set(Math.cos(sunAngle), Math.sin(sunAngle), -0.35).normalize();
 
+    this.skyUniforms.uTime.value += dt;
     this.sunGroup.position.copy(sunDir).multiplyScalar(360);
     this.skyUniforms.uSunDir.value.copy(sunDir);
     this.skyUniforms.uSunElevation.value = sunDir.y;
