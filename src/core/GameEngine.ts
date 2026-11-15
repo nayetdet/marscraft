@@ -50,7 +50,6 @@ import { getSuitTelemetryView } from '../player/suitTelemetry.ts';
 import { InputController } from '../player/InputController.ts';
 import { HudManager } from '../ui/HudManager.ts';
 import { DebugOverlay } from '../ui/DebugOverlay.ts';
-import { ResolutionScaler, isSoftwareRenderer } from '../graphics/resolutionScaler.ts';
 import { ShaderMode } from '../graphics/shaderMode/ShaderMode.ts';
 import { RoverController } from '../rover/RoverController.ts';
 import { GymEquipmentController } from '../player/GymEquipmentController.ts';
@@ -160,16 +159,7 @@ export class GameEngine {
       powerPreference: 'high-performance',
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    // Resolucao adaptativa: baixa o pixel ratio se o FPS ficar baixo (maquina sem placa de video)
-    this.resolution = new ResolutionScaler({
-      maxRatio: Math.min(window.devicePixelRatio || 1, GRAPHICS_CONFIG.MAX_PIXEL_RATIO),
-      steps: GRAPHICS_CONFIG.RES_STEPS,
-      minFps: GRAPHICS_CONFIG.RES_MIN_FPS,
-      seconds: GRAPHICS_CONFIG.RES_SECONDS,
-      warmupSeconds: GRAPHICS_CONFIG.RES_WARMUP_SECONDS,
-      software: isSoftwareRenderer(DebugOverlay.detectGpu(this.renderer)),
-    });
-    this._applyPixelRatio(this.resolution.ratio);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, GRAPHICS_CONFIG.MAX_PIXEL_RATIO));
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.localClippingEnabled = true;
     this.container.appendChild(this.renderer.domElement);
@@ -2651,13 +2641,6 @@ export class GameEngine {
     this.hud.showToast(`${speaker.name}: ${problemText(station, problem)}`, 6000);
   }
 
-  // Abaixo de 1 a imagem e ampliada pelo navegador: pixelada (como os blocos), nao borrada
-  _applyPixelRatio(ratio) {
-    this.renderer.setPixelRatio(ratio);
-    this.renderer.domElement.style.imageRendering = ratio < 1 ? 'pixelated' : '';
-    this.shaderMode?.setSize();
-  }
-
   _onResize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
@@ -3199,10 +3182,6 @@ export class GameEngine {
       this.shaderMode.render();
       if (isGameRunning && this.shaderMode.sampleFrame(frameMs)) {
         this.hud.showToast('Shaders turned off to keep the game smooth. Turn them back on in the menu.');
-      }
-      if (isGameRunning) {
-        const ratio = this.resolution.sample(frameMs);
-        if (ratio !== null) this._applyPixelRatio(ratio);
       }
       this.debug.frame(frameMs);
     };
