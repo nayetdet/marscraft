@@ -21,7 +21,6 @@ export class InputController {
     onInteract = () => {},
     onRoverAction = () => {},
     onToggleShield = () => {},
-    onToggleCrewPanel = () => {},
     onSendData = () => {},
     isMissionModalOpen = () => false,
     isInputBlocked = () => false,
@@ -33,7 +32,6 @@ export class InputController {
     onToggleJournal = () => {},
   }) {
     this.onToggleShield = onToggleShield;
-    this.onToggleCrewPanel = onToggleCrewPanel;
     this.onSendData = onSendData;
     this.isMissionModalOpen = isMissionModalOpen;
     // Animacao (cutscene) rodando: teclado, mouse e toque nao controlam o jogador
@@ -391,11 +389,53 @@ export class InputController {
       e.preventDefault();
     }, true);
 
-    startBtn.addEventListener('click', () => {
+    const resumeGame = ({ capturePointer = true } = {}) => {
       this.hasStarted = true;
       if (this.supportsTouch) this._startTouchMode();
-      else requestRawPointerLock(this.domElement);
+      else if (capturePointer) {
+        requestRawPointerLock(this.domElement);
+      } else {
+        // Browsers immediately release pointer lock when it is requested from
+        // Escape. Resume now and request it after that key has been released.
+        this._awaitingPointerLock = true;
+        this._resumeOnEscapeKeyUp = true;
+        this.isLocked = true;
+        menuCardHome.append(menuCard);
+        startBtn.textContent = 'Play';
+        overlay.classList.add('hidden');
+        pauseOverlay.classList.add('hidden');
+        document.body.classList.remove('pause-menu-open');
+      }
+    };
+
+    startBtn.addEventListener('click', () => {
+      resumeGame();
     });
+
+    // This capture listener runs before game/UI handlers. It resumes from the
+    // visible pause menu and prevents Escape from reaching any other overlay.
+    document.addEventListener('keydown', (e) => {
+      if (e.code !== 'Escape' || e.repeat) return;
+      if (!pauseOverlay.classList.contains('hidden')) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        resumeGame({ capturePointer: false });
+        return;
+      }
+      if (this._awaitingPointerLock && this.isLocked) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        this.isLocked = false;
+        showPauseMenu();
+        return;
+      }
+    }, true);
+
+    document.addEventListener('keyup', (e) => {
+      if (e.code !== 'Escape' || !this._resumeOnEscapeKeyUp) return;
+      this._resumeOnEscapeKeyUp = false;
+      requestRawPointerLock(this.domElement);
+    }, true);
 
     // Botão "Done" do diário: o clique é gesto do usuário, então já volta com o mouse travado.
     document.getElementById('journal-done')?.addEventListener('click', () => {
@@ -422,6 +462,7 @@ export class InputController {
 
     document.addEventListener('pointerlockchange', () => {
       this.isLocked = this.isTouchMode || document.pointerLockElement === this.domElement;
+      if (this.isLocked) this._awaitingPointerLock = false;
       if (!this.isLocked) {
         // Sem pointer lock o jogador para: sem teclas presas e sem animacao de caminhada.
         this._cancelBreaking();
@@ -461,10 +502,9 @@ export class InputController {
 
     window.addEventListener('keydown', (e) => {
       if (this.survival.isDead || this.isStationOpen?.() || this.isInputBlocked()) return;
-      // Painel do MAV, da tripulacao ou vitoria abertos: so [F] e [C] (fechar o painel) funcionam
+      // Painel do MAV ou tela de vitoria abertos: so [F] continua ativo.
       if (this.isMissionModalOpen()) {
         if (e.code === 'KeyF' && !e.repeat) this.onInteract();
-        if (e.code === 'KeyC' && !e.repeat) this.onToggleCrewPanel();
         return;
       }
       if (this.isGymActive?.()) {
@@ -485,7 +525,6 @@ export class InputController {
         this._handleJournalKey(e, showPauseMenu);
         return;
       }
-      if (e.code === 'KeyC' && this.isLocked && !e.repeat) this.onToggleCrewPanel();
       if (e.code === 'KeyG' && this.isLocked && !e.repeat) this.onSendData();
       if (this.isLocked && this._isBrowserShortcut(e)) e.preventDefault();
       if (e.code === 'KeyW' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -523,12 +562,6 @@ export class InputController {
 
       if (e.code === 'KeyF' && this.isLocked && !e.repeat) {
         this.onInteract?.();
-        return;
-      }
-
-      if (e.code === 'KeyJ' && this.isLocked && !e.repeat && !this.isRoverActive()) {
-        e.preventDefault();
-        this.openJournal();
         return;
       }
 
@@ -570,6 +603,10 @@ export class InputController {
     });
 
     window.addEventListener('mousedown', (e) => {
+      if (this._awaitingPointerLock && !this.isTouchMode) {
+        requestRawPointerLock(this.domElement);
+        return;
+      }
       if (!this.isLocked || this.survival.isDead || this.isRoverActive() || this.isInputBlocked()) return;
 
       if (this.isGymActive?.()) {

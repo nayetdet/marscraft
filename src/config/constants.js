@@ -227,18 +227,23 @@ export const PACING_CONFIG = {
 // Issue #81: ar, agua e comida cortados em 40-50 % (eram 1,5 / 0,5 / 0,3), mantendo a proporcao.
 // O O2 do tripulante e pago em energia, como o O2 do jogador no habitat (reciclagem + MOXIE).
 export const CREW_CONFIG = {
-  MAX_CREW: 3,
+  MAX_CREW: 8,
   DEFAULT_CREW: 2,
-  NAMES: ['Ana', 'Leo', 'Maya'],
+  NAMES: ['Ana', 'Leo', 'Maya', 'Sam', 'Noor', 'Kai', 'Iris', 'Ravi'],
   // Papeis da issue #48: escolher 1, 2 ou 3 tripulantes leva o engenheiro, depois a botanica,
   // depois a medica. Cada um comeca na sua estacao e rende mais nela.
   ROLES: [
     { title: 'Flight Engineer', specialties: ['oxygen', 'water'] },
     { title: 'Botanist', specialties: ['greenhouse'] },
     { title: 'Medical Officer', specialties: ['medbay'] },
+    { title: 'Power Engineer', specialties: ['oxygen'] },
+    { title: 'Water Specialist', specialties: ['water'] },
+    { title: 'Mission Specialist', specialties: ['rest'] },
+    { title: 'Geologist', specialties: ['greenhouse'] },
+    { title: 'Communications Officer', specialties: ['oxygen'] },
   ],
   SPECIALIST_EFFORT: 1.5,
-  SUIT_COLORS: [0xf97316, 0x22c55e, 0x3b82f6],
+  SUIT_COLORS: [0xf97316, 0x22c55e, 0x3b82f6, 0xeab308, 0xec4899, 0x06b6d4, 0xa855f7, 0xf43f5e],
   OXYGEN_ENERGY_PER_HOUR: 0.75, // % de bateria por tripulante
   WATER_L_PER_HOUR: 0.3,
   FOOD_PER_HOUR: 0.18, // racoes

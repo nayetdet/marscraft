@@ -6,8 +6,6 @@ import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
 import { createBaseStock } from '../crew/baseStock.js';
 import { createStations } from '../crew/stations.js';
-import { crewEventMessage } from '../crew/crewText.js';
-import { CrewPanel, CrewPicker } from '../ui/CrewPanel.js';
 import donkiCme from '../data/donkiCme.json';
 import { MissionSystem, oxygenPointsToKg } from '../mission/MissionSystem.js';
 import { NO_STORM_DATA_TEXT, formatDateDMY, formatDose, formatHours, stormEventMessage } from '../mission/missionText.js';
@@ -215,16 +213,7 @@ export class GameEngine {
     this.utility = new UtilityModule({ mission: this.mission, survival: this.survival, stations: this.stations, base: this.crewStock });
     this._utilityHours = null;
     this.crewAvatars = [];
-    this._buildCrew(CREW_CONFIG.DEFAULT_CREW);
-    this.crewPanel = new CrewPanel({
-      onAssign: (memberId, task) => this._assignCrew(memberId, task),
-      onClose: () => this._closeCrewPanel(),
-    });
-    this.crewPicker = new CrewPicker({
-      initial: CREW_CONFIG.DEFAULT_CREW,
-      onChange: (size) => this._buildCrew(size),
-    });
-    this.talkTarget = null;
+    this._buildCrew(CREW_CONFIG.NAMES.length);
     this.menuScreens = new MenuScreens({
       donkiDate: formatDateDMY(donkiCme.fetched),
       onDemo: (action) => this._runDemo(action),
@@ -260,10 +249,9 @@ export class GameEngine {
       onRoverAction: () => this.handleRoverAction(),
       onRoverLook: (dx, dy) => this.roverController.look(dx, dy),
       onToggleShield: () => this._toggleShield(),
-      onToggleCrewPanel: () => this._toggleCrewPanel(),
       onSendData: () => this._sendScienceData(),
       isMissionModalOpen: () =>
-        this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown || this.crewPanel.isOpen
+        this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown
         || this.storyHud.isWindowClosedShown,
       isInputBlocked: () => this.cutscenes.isActive,
       getInteraction: () => this._getInteraction(),
@@ -1101,33 +1089,10 @@ export class GameEngine {
 
   _buildCrew(size) {
     for (const avatar of this.crewAvatars) avatar.dispose();
-    this.crew = new CrewManager({ size, stations: createStations(), base: this.crewStock });
+    this.crew = new CrewManager({ size, stations: createStations(), base: this.crewStock, ambient: true });
     this.crewAvatars = this.crew.members.map(
       (member, i) => new CrewAvatar(this.scene, member, CREW_CONFIG.SUIT_COLORS[i])
     );
-  }
-
-  _openCrewPanel(memberId = null) {
-    this.crewPanel.open(memberId);
-    this.crewPanel.render(this.crew, this.crewStock);
-    document.exitPointerLock();
-  }
-
-  _closeCrewPanel() {
-    this.crewPanel.close();
-    requestRawPointerLock(this.renderer.domElement);
-  }
-
-  _toggleCrewPanel() {
-    if (this.crewPanel.isOpen) this._closeCrewPanel();
-    else if (this.input.isLocked && !this.roverController.isActive) this._openCrewPanel(null);
-  }
-
-  _assignCrew(memberId, task) {
-    const result = this.crew.assign(memberId, task);
-    this.hud.showToast(result.ok ? result.message : result.reason, 3500);
-    if (result.ok && this.crewPanel.focusId !== null) this._closeCrewPanel();
-    else this.crewPanel.render(this.crew, this.crewStock);
   }
 
   // Tripulante para quem o jogador esta olhando, dentro do raio de conversa.
@@ -1161,34 +1126,28 @@ export class GameEngine {
     this.crewStock.demandFactor = demandFactor;
     this.utility.demandFactor = demandFactor;
 
-    if (this.input.isLocked && !this.crewPicker.locked) this.crewPicker.lock();
-    const playing = this.input.isLocked || this.crewPanel.isOpen;
+    const playing = this.input.isLocked;
     const active = playing && !this.survival.isDead && !this.missionHud.isVictoryShown
       && !this.cutscenes.isActive && !this.storyHud.isWindowClosedShown;
 
-    if (active && delta > 0) {
-      this.crew.update(delta, performance.now() / 1000);
-      // Cura da enfermaria: so vale com o comandante dentro da base e com ar suficiente
-      if (this.survival.insidePressurizedShip && this.survival.canHeal()) {
-        this.survival.health = Math.min(this.survival.maxStat, this.survival.health + this.crewStock.playerHeal);
-      }
-    }
-    this.crewStock.playerHeal = 0;
     if (active) this.crew.updateMovement(dt);
 
-    this.mission.oxygenCostMultiplier = this.crew.oxygenCostMultiplier();
+    this.mission.oxygenCostMultiplier = 1;
     // Numa animacao quem posiciona a tripulacao e a propria animacao (o embarque no foguete)
-    if (!this.cutscenes.isActive) for (const avatar of this.crewAvatars) avatar.update(dt);
-
-    for (const event of this.crew.drainEvents()) {
-      const message = crewEventMessage(event);
-      if (message) this.hud.showToast(message, 5000);
-    }
-
-    this._crewPanelTimer = (this._crewPanelTimer ?? 0) + dt;
-    if (this.crewPanel.isOpen && this._crewPanelTimer > 0.25) {
-      this._crewPanelTimer = 0;
-      this.crewPanel.render(this.crew, this.crewStock);
+    for (const avatar of this.crewAvatars) avatar.update(dt);
+    if (active) {
+      this._crewChatterTimer = (this._crewChatterTimer ?? 0) + dt;
+      if (this._crewChatterTimer >= 35 && this.crew.members.length > 1) {
+        this._crewChatterTimer = 0;
+        const pair = this.crew.members;
+        const speaker = pair[Math.floor(Math.random() * pair.length)];
+        const replies = {
+          Ana: 'The habitat feels quiet today.', Leo: 'I was just checking on the plants.', Maya: 'The view of Mars never gets old.',
+          Sam: 'I am doing a quick habitat check.', Noor: 'The corridor is clear for the next shift.', Kai: 'I spotted a dust plume outside.',
+          Iris: 'The rock layers outside look fascinating.', Ravi: 'Earth will get our message when the signal window opens.',
+        };
+        this.hud.showToast(`${speaker.name}: ${replies[speaker.name]}`, 3500);
+      }
     }
   }
 
@@ -1244,12 +1203,11 @@ export class GameEngine {
       return;
     }
 
-    // Tripulante por perto: [F] para dar uma ordem
     const member = this._nearestCrewMember();
     if (member) {
       this.currentInteraction = 'crew';
-      this.talkTarget = member.id;
-      this.hud.setInteractionPrompt(true, `[F] Talk to ${member.name} (${member.role}) · [C] Crew panel`);
+      this.talkTarget = member;
+      this.hud.setInteractionPrompt(true, `[F] Talk to ${member.name}`);
       return;
     }
 
@@ -1289,12 +1247,8 @@ export class GameEngine {
 
   handlePlayerInteract() {
     if (this.missionHud.isVictoryShown) return;
-    if (this.crewPanel.isOpen) {
-      this._closeCrewPanel();
-      return;
-    }
-    if (this.currentInteraction === 'crew' && this.input.isLocked) {
-      this._openCrewPanel(this.talkTarget);
+    if (this.currentInteraction === 'crew' && this.talkTarget) {
+      this.hud.showToast(`${this.talkTarget.name}: ${this.talkTarget.dialogue}`, 6500);
       return;
     }
     if (this.missionHud.isMavPanelOpen) {

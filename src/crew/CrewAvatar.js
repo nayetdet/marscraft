@@ -276,7 +276,9 @@ export class CrewAvatar {
 
     this._time += dt;
     const p = pointAlong(m.route, m.distance);
-    this.group.position.set(p.x, FLOOR_Y, p.z);
+    // Keep ambient walkers in separate lanes so they do not overlap at shared rail nodes.
+    const lane = m.stationary ? 0 : (m.id % 2 === 0 ? -0.22 : 0.22);
+    this.group.position.set(p.x + Math.cos(p.heading) * lane, FLOOR_Y, p.z - Math.sin(p.heading) * lane);
     this.group.rotation.y = m.state === 'walking' ? p.heading : (NODE_FACING[m.node] ?? p.heading);
 
     let legSwing = 0;
