@@ -34,19 +34,20 @@ export function shouldShowSuitChoice(stepId: string, shown: boolean): boolean {
 }
 
 export interface SuitTradeSummary {
-  usedPoints: number; // ciencia gasta em Marte (nao enviada)
+  usedPoints: number; // ciencia gasta nas melhorias do laboratorio, traje e ferramenta (nao enviada)
   upgraded: boolean;
   text: string;
 }
 
-// Linha do boletim final: ciencia que ficou em Marte contra a protecao ganha. null quando o
-// boletim nao recebeu os dados (tela sem partida).
+// Linha do boletim final: ciencia que ficou em Marte contra a protecao ganha. `sciencePointsUsed`
+// soma todas as melhorias do laboratorio (traje e ferramenta), e a frase diz isso: o jogo nao
+// guarda quanto cada uma gastou. null quando o boletim nao recebeu os dados (tela sem partida).
 export function suitTradeSummary(stats: { sciencePointsUsed?: number; suitUpgraded?: boolean }): SuitTradeSummary | null {
   if (typeof stats?.suitUpgraded !== 'boolean') return null;
   const usedPoints = Number.isFinite(stats.sciencePointsUsed) ? Math.max(0, Number(stats.sciencePointsUsed)) : 0;
   const upgraded = stats.suitUpgraded;
   let text = 'No suit upgrade: full radiation outside, more science for Earth';
-  if (upgraded) text = `Science kept on Mars: ${usedPoints} pts. Suit: ${SUIT_RADIATION_CUT_PERCENT}% less radiation outside`;
-  else if (usedPoints > 0) text = `Science kept on Mars: ${usedPoints} pts. No suit upgrade`;
+  if (upgraded) text = `Lab upgrades used ${usedPoints} science pts. Suit: ${SUIT_RADIATION_CUT_PERCENT}% less radiation outside`;
+  else if (usedPoints > 0) text = `Lab upgrades used ${usedPoints} science pts. No suit upgrade`;
   return { usedPoints, upgraded, text };
 }

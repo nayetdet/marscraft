@@ -623,17 +623,34 @@ const DYNAMIC_PATTERNS: Array<{
     format: ([, value], language) => language === 'pt-BR' ? `+${value} mensagens a mais` : `+${value} mensajes más`,
   },
   {
-    // Boletim: ciencia que ficou em Marte x traje melhorado (#417)
-    match: /^Science kept on Mars: (\d+) pts\. Suit: (\d+)% less radiation outside$/,
+    // Boletim: ciencia gasta nas melhorias do laboratorio x traje melhorado (#417)
+    match: /^Lab upgrades used (\d+) science pts\. Suit: (\d+)% less radiation outside$/,
     format: ([, points, cut], language) => language === 'pt-BR'
-      ? `Ciência que ficou em Marte: ${points} pts. Traje: ${cut}% menos radiação lá fora`
-      : `Ciencia que se quedó en Marte: ${points} pts. Traje: ${cut}% menos radiación afuera`,
+      ? `Melhorias do laboratório gastaram ${points} pts de ciência. Traje: ${cut}% menos radiação lá fora`
+      : `Las mejoras del laboratorio gastaron ${points} pts de ciencia. Traje: ${cut}% menos radiación afuera`,
   },
   {
-    match: /^Science kept on Mars: (\d+) pts\. No suit upgrade$/,
+    match: /^Lab upgrades used (\d+) science pts\. No suit upgrade$/,
     format: ([, points], language) => language === 'pt-BR'
-      ? `Ciência que ficou em Marte: ${points} pts. Traje sem melhoria`
-      : `Ciencia que se quedó en Marte: ${points} pts. Traje sin mejora`,
+      ? `Melhorias do laboratório gastaram ${points} pts de ciência. Traje sem melhoria`
+      : `Las mejoras del laboratorio gastaron ${points} pts de ciencia. Traje sin mejora`,
+  },
+  {
+    // Dica do [F] na tela: HudManager.setInteractionPrompt troca "[F] " por "Press F: ". Usa a
+    // traducao da chave com [F] (ou a do texto sozinho) para a dica nao ficar em ingles.
+    match: /^Press F: (.+)$/,
+    format: ([, action], language) => {
+      const keyed = translate(`[F] ${action}`, language);
+      const text = keyed === `[F] ${action}` ? translate(action, language) : keyed.replace(/^\[F\]\s*/, '');
+      return `${language === 'pt-BR' ? 'Aperte F' : 'Pulsa F'}: ${text}`;
+    },
+  },
+  {
+    // Primeiro gelo no tanque (#413): o numero cai quando o tanque esta quase cheio
+    match: /^Ice in the base tank: \+(\d+) L of water\. The rocket still needs this block\.$/,
+    format: ([, liters], language) => language === 'pt-BR'
+      ? `Gelo no tanque da base: +${liters} L de água. O foguete ainda precisa deste bloco.`
+      : `Hielo en el tanque de la base: +${liters} L de agua. El cohete aún necesita este bloque.`,
   },
   {
     match: /^Total radiation: (.+) mSv$/,
