@@ -632,6 +632,8 @@
   stroke: none;
 }
 
+.mc-stat-icon svg rect { fill: currentColor; }
+
 .mc-stat-icon.empty { color: #55514b; }
 .mc-stat-icon.half { opacity: .62; }
 .mc-stat-icon.heart.full { color: #dc3540; }
