@@ -1044,6 +1044,7 @@ body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 
 
 /* Ações do menu ficam agrupadas em linhas de duas colunas. */
 .menu-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.menu-admin-row #demo-btn { grid-column: 1 / -1; }
 .mc-menu-card .menu-row .mc-btn { font-size: 14px; padding: 10px 8px; }
 
 .controls-screen.info-screen {
