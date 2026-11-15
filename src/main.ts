@@ -1,8 +1,10 @@
 // @ts-nocheck
 import { GameEngine } from './core/GameEngine.ts';
 import { loadSpaceWeather, pollSpaceWeather } from './data/spaceWeather.ts';
+import { startLocalization } from './ui/i18n.ts';
 
 export async function startGame() {
+  startLocalization();
   const container = document.getElementById('game-container');
   const loadingOverlay = document.getElementById('loading-overlay');
 

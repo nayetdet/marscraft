@@ -1,11 +1,12 @@
 // @ts-nocheck
 import { MARS_TERRAIN, formatCoords } from '../data/marsTerrain.ts';
 import { formatDateDMY } from '../mission/missionText.ts';
+import { getLanguage, isLanguage, setLanguage } from './i18n.ts';
 
 // Telas extras do menu: "Science & Sources", "Options" e "Demo Tools".
 // O menu principal e as telas trocam de lugar com a classe `hidden`, como a tela de controles.
 export class MenuScreens {
-  constructor({ donkiDate, onDemo, volume = 1, onVolumeChange, onVolumePreview }) {
+  constructor({ donkiDate, onDemo, volume = 1, onVolumeChange, onVolumePreview, onLanguageChange = setLanguage }) {
     const menuMain = document.getElementById('menu-main');
     const feedback = document.getElementById('demo-feedback');
     this.setDonkiSource(`Real data from ${donkiDate}`);
@@ -33,6 +34,11 @@ export class MenuScreens {
       if (action) feedback.textContent = onDemo(action);
     });
     this.shadersBtn = document.getElementById('shaders-btn');
+    this.languageSelect = document.getElementById('language-select');
+    this.languageSelect.value = getLanguage();
+    this.languageSelect.addEventListener('change', () => {
+      if (isLanguage(this.languageSelect.value)) onLanguageChange(this.languageSelect.value);
+    });
     const volumeSlider = document.getElementById('volume-slider');
     const volumeValue = document.getElementById('volume-value');
     volumeSlider.value = String(Math.round(volume * 100));
