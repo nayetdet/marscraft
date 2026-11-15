@@ -13,6 +13,7 @@ const NODE_FACING = {
   greenhouse: -HALF_PI,
   quarters: Math.PI,
   medbay: 0,
+  kitchen: HALF_PI,
 };
 // Cadencia da passada: sincronizada com CREW_CONFIG.WALK_SPEED (~2.2 blocos/s) para nao patinar no piso
 const WALK_RATE = 6.8;
@@ -145,11 +146,40 @@ export class CrewAvatar {
     this._walkBlend = member.state === 'walking' ? 1 : 0;
     this._heading = null;
     this._posInit = false;
+    this.cutsceneControlled = false;
+    this._handoff = null;
+    this._headShake = null;
     this._pose = {
       bobY: 0, swayX: 0, legL: 0, legR: 0, kneeL: 0, kneeR: 0,
       armL: 0, armR: 0, elbowL: 0, elbowR: 0, armSplay: 0.06,
       torsoLean: 0, torsoTwist: 0, torsoRoll: 0, headPitch: 0, headYaw: 0,
     };
+  }
+
+  startHandoff(targetPos, duration = 1.2) {
+    this._headShake = null;
+    this._handoff = {
+      targetX: targetPos.x,
+      targetZ: targetPos.z,
+      elapsed: 0,
+      duration,
+    };
+  }
+
+  startHeadShake(targetPos, duration = 1.0) {
+    this._handoff = null;
+    this._headShake = {
+      targetX: targetPos.x,
+      targetZ: targetPos.z,
+      elapsed: 0,
+      duration,
+    };
+  }
+
+  getRightHandWorldPosition(out) {
+    this.group.updateWorldMatrix(true, true);
+    out.set(0, -0.34, 0.08);
+    return this.elbowR.localToWorld(out);
   }
 
   get position() {
@@ -285,6 +315,7 @@ export class CrewAvatar {
   }
 
   update(dt) {
+    if (this.cutsceneControlled) return;
     const m = this.member;
     this._time += dt;
 
@@ -303,12 +334,35 @@ export class CrewAvatar {
       this.group.position.z += (targetZ - this.group.position.z) * posAlpha;
     }
 
-    const targetHeading = m.state === 'walking' ? p.heading : (NODE_FACING[m.node] ?? p.heading);
+    let handoffWeight = 0;
+    let shakeWeight = 0;
+    let shakePhase = 0;
+    let targetHeading = m.state === 'walking' ? p.heading : (NODE_FACING[m.node] ?? p.heading);
+    const activeReaction = this._handoff ?? this._headShake;
+    if (activeReaction) {
+      activeReaction.elapsed += dt;
+      const progress = Math.min(1, activeReaction.elapsed / activeReaction.duration);
+      const dx = activeReaction.targetX - this.group.position.x;
+      const dz = activeReaction.targetZ - this.group.position.z;
+      if (Math.hypot(dx, dz) > 0.05) targetHeading = Math.atan2(dx, dz);
+      if (activeReaction === this._handoff) {
+        // Smooth bell curve: quick reach forward, steady offer, gentle return
+        if (progress < 0.25) handoffWeight = Math.sin((progress / 0.25) * Math.PI * 0.5);
+        else if (progress < 0.72) handoffWeight = 1;
+        else handoffWeight = Math.cos(((progress - 0.72) / 0.28) * Math.PI * 0.5);
+        if (progress >= 1) this._handoff = null;
+      } else {
+        shakeWeight = Math.sin(progress * Math.PI);
+        shakePhase = progress * Math.PI * 5;
+        if (progress >= 1) this._headShake = null;
+      }
+    }
+
     if (this._heading === null || dt <= 0) {
       this._heading = targetHeading;
     }
     const angleDiff = shortestAngleDiff(this._heading, targetHeading);
-    this._heading += angleDiff * dampAlpha(7.5, dt);
+    this._heading += angleDiff * dampAlpha(activeReaction ? 14 : 7.5, dt);
     this.group.rotation.y = this._heading;
 
     // Transicao suave entre caminhar e parar (desacelera a cadencia junto com o passo)
@@ -326,6 +380,20 @@ export class CrewAvatar {
     if (this._walkBlend > 0.02) {
       pose.headYaw += Math.sin(this._time * 1.35) * 0.065 * this._walkBlend;
     }
+    if (handoffWeight > 0) {
+      pose.armR = pose.armR * (1 - handoffWeight) + (-1.18) * handoffWeight;
+      pose.elbowR = pose.elbowR * (1 - handoffWeight) + (-0.28) * handoffWeight;
+      pose.torsoLean += 0.1 * handoffWeight;
+      pose.torsoTwist += -0.16 * handoffWeight;
+      pose.headPitch = pose.headPitch * (1 - handoffWeight) + 0.09 * handoffWeight;
+      pose.headYaw *= (1 - handoffWeight);
+    } else if (shakeWeight > 0) {
+      pose.headYaw = pose.headYaw * (1 - shakeWeight) + Math.sin(shakePhase) * 0.42 * shakeWeight;
+      pose.headPitch = pose.headPitch * (1 - shakeWeight) + 0.06 * shakeWeight;
+      pose.elbowL = pose.elbowL * (1 - shakeWeight) + (-0.55) * shakeWeight;
+      pose.elbowR = pose.elbowR * (1 - shakeWeight) + (-0.55) * shakeWeight;
+      pose.armSplay += 0.08 * shakeWeight;
+    }
     this._applyJoints(pose);
 
     const isWeak = m.state === 'weak' || m.state === 'bedridden';
@@ -336,7 +404,7 @@ export class CrewAvatar {
 
   // Animacoes: poe o tripulante andando num ponto qualquer do mundo, fora dos trilhos da base.
   // O proximo update() devolve o avatar ao lugar e a pose do tripulante.
-  poseWalking(x, y, z, heading, dt) {
+  poseWalking(x, y, z, heading, dt, overrides = null) {
     this._time += dt;
     this._walkPhase += dt * WALK_RATE * this._tempo;
     this._walkBlend = 1;
@@ -347,7 +415,38 @@ export class CrewAvatar {
     this.group.rotation.y = heading;
 
     this._setWalkPose(this._pose, this._walkPhase, 1, 0, 0);
+    if (overrides) Object.assign(this._pose, overrides);
     this._applyJoints(this._pose);
+  }
+
+  // Animacoes: poe o tripulante parado em pose personalizada (cutscenes).
+  poseStanding(x, y, z, heading, overrides = null) {
+    this._walkBlend = 0;
+    this._heading = heading;
+    this._posInit = true;
+    this.group.visible = true;
+    this.group.position.set(x, y, z);
+    this.group.rotation.y = heading;
+
+    const p = this._pose;
+    p.bobY = 0;
+    p.swayX = 0;
+    p.legL = 0;
+    p.legR = 0;
+    p.kneeL = 0;
+    p.kneeR = 0;
+    p.armL = 0;
+    p.armR = 0;
+    p.elbowL = -0.18;
+    p.elbowR = -0.18;
+    p.armSplay = 0.06;
+    p.torsoLean = 0;
+    p.torsoTwist = 0;
+    p.torsoRoll = 0;
+    p.headPitch = 0;
+    p.headYaw = 0;
+    if (overrides) Object.assign(p, overrides);
+    this._applyJoints(p);
   }
 
   // Animacoes: o tripulante saiu de cena (entrou no foguete). O proximo update() o traz de volta.

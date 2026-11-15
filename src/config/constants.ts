@@ -210,7 +210,7 @@ export const SURVIVAL_CONFIG = {
   DUST_STORM_FATAL_RADIUS: DUST_STORM_MAP_EDGE_RADIUS,
 };
 
-// Visual da nevoa na borda do mapa (src/sky/DustStormEffect.js); nao causa dano.
+// Visual da nevoa na borda do mapa e ambientacao atmosferica (src/sky/DustStormEffect.ts); nao causa dano.
 export const DUST_STORM_VISUAL_CONFIG = {
   OUTER_WALL_OPACITY: 1,
   EDGE_FOG_LEAD: 24,
@@ -223,13 +223,36 @@ export const DUST_STORM_VISUAL_CONFIG = {
   WALL_FADE_NEAR: 1.5,
   WALL_FADE_FAR: 8,
   DOME_RADIUS: 26,
-  FOG_BASE_DENSITY: 0.0015,
-  PARTICLE_COUNT: 1400,
-  PARTICLE_BOX: { x: 36, y: 16, z: 36 },
+  FOG_BASE_DENSITY: 0.0058,
+  FOG_INDOOR_DENSITY: 0.0012,
+  FOG_GUST_DENSITY_BOOST: 0.0018,
+  FOG_TWILIGHT_DENSITY_BOOST: 0.0014,
+  FOG_INDOOR_BLEND_SPEED: 2.6,
+  AMBIENT_PARTICLE_OPACITY: 0.25,
+  GUST_PARTICLE_OPACITY: 0.18,
+  PARTICLE_SIZE_SCALE: 0.035,
+  PARTICLE_MIN_SIZE: 1,
+  PARTICLE_MAX_SIZE: 4,
+  PARTICLE_COUNT: 1800,
+  PARTICLE_BOX: { x: 40, y: 16, z: 40 },
   WIND_SPEED: 11, // blocos/s
   AMBIENT_PARTICLE_OPACITY: 0.22, // poeira baixa e constante ao ar livre, mesmo sem tempestade
   AMBIENT_WIND_SPEED: 1.4, // vento ambiente mais fraco que as rajadas da tempestade
 };
+
+// Vento e poeira rasa fora da base (src/sky/MarsWindEffect.ts, src/sky/windState.ts, AudioManager.ts)
+export const WIND_AMBIENCE_CONFIG = Object.freeze({
+  STREAK_COUNT: 96,
+  STREAK_BOX: Object.freeze({ x: 38, y: 11, z: 38 }),
+  STREAK_MIN_SPEED: 13,
+  STREAK_MAX_SPEED: 26,
+  MIST_COUNT: 44,
+  MIST_BOX: Object.freeze({ x: 84, z: 84 }),
+  MIST_BASE_OPACITY: 0.14,
+  MIST_STORM_OPACITY: 0.32,
+  AUDIO_BASE_GAIN: 0.026,
+  AUDIO_STORM_GAIN: 0.08,
+});
 
 export const WATER_SYSTEM_CONFIG = {
   MAX_BASE_WATER: 100, // Litros
@@ -489,7 +512,7 @@ export const CREW_CONFIG = {
   OXYGEN_ENERGY_PER_HOUR: 0.75, // % de bateria por tripulante
   WATER_L_PER_HOUR: 0.3,
   FOOD_PER_HOUR: 0.18, // racoes
-  START_FOOD: 15,
+  START_FOOD: 0,
   MAX_FOOD: 40,
   // Horas seguidas sem ar, agua ou comida ate o tripulante ficar de repouso na enfermaria.
   // Ninguem volta para a Terra fora do foguete: a janela de lancamento so abre a cada ~26 meses.
@@ -511,6 +534,8 @@ export const CREW_CONFIG = {
 // Modulo norte (issue #56, parte B): energia/aquecimento, cozinha, banheiro e oficina.
 // Custos em % de bateria; "por hora" = hora de jogo (100 s reais). Fontes em docs/data/numeros-reais.md.
 export const UTILITY_CONFIG = {
+  RATION_PREP_SECONDS: 10, // tempo de trabalho por racao (ajuste de jogo)
+  RATION_PREP_POWER: 0.5, // energia para preparar uma racao
   // B2 aquecedor: gasta mais quanto mais frio estiver la fora (issue #108). DAY = gasto no ar
   // mais quente do InSight (src/data/insightWeather.json), NIGHT = no mais frio; entre os dois,
   // proporcional a temperatura. Potencia em escala de jogo.
@@ -731,6 +756,7 @@ export const DUST_WEATHER_CONFIG = {
   CLEAN_STEP: 0.25,
   CLEAN_O2_COST: 1,
   CLEAN_RADIUS: 10, // blocos do centro do campo solar
+  CLEAN_ANIM_DURATION: 1.05, // segundos da animacao em 1a pessoa escovando o painel solar
   // [Ref] Ventos e redemoinhos limparam os paineis do Spirit e do Opportunity ("cleaning
   // events", NASA JPL). Escala de jogo: rajada do sol (InSight) acima do limite tira poeira.
   WIND_CLEAN_GUST_MS: 20,
@@ -740,7 +766,7 @@ export const DUST_WEATHER_CONFIG = {
   // Visual com a poeira no maximo (src/sky/DustStormEffect.js e MarsSkySystem.js)
   WEATHER_FOG_DENSITY: 0.035,
   WEATHER_DOME_OPACITY: 0.55,
-  WEATHER_PARTICLE_OPACITY: 0.85,
+  WEATHER_PARTICLE_OPACITY: 0.55,
   WEATHER_FRONT_OPACITY: 0.9, // frente de poeira no horizonte durante o aviso
   WEATHER_WIND: { x: -0.94, z: 0.34 }, // direcao do vento da tempestade (vem do leste)
   SUN_DIM: 0.65, // fracao da luz do Sol que some no pico

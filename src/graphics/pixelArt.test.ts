@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pixelGridToSvgDataUrl, pixelGridToSvgRects } from './pixelArt.ts';
-import { getJournalItemIcon, getScopeItemIcon, getShieldRemoteItemIcon } from './itemIcons.ts';
+import { getJournalItemIcon, getRationItemIcon, getScopeItemIcon, getShieldRemoteItemIcon } from './itemIcons.ts';
 import { getStatIconSvg, type StatIconType } from '../ui/statIcons.ts';
 
 describe('pixel-art icon helpers', () => {
@@ -12,7 +12,7 @@ describe('pixel-art icon helpers', () => {
   });
 
   it('builds valid crispEdges SVG data URLs for equipment items', () => {
-    const icons = [getScopeItemIcon(), getShieldRemoteItemIcon(), getJournalItemIcon()];
+    const icons = [getScopeItemIcon(), getShieldRemoteItemIcon(), getJournalItemIcon(), getRationItemIcon()];
     for (const url of icons) {
       expect(url.startsWith('data:image/svg+xml,')).toBe(true);
       const decoded = decodeURIComponent(url.slice('data:image/svg+xml,'.length));

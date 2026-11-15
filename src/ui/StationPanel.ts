@@ -15,13 +15,14 @@ import { createCropTexture } from '../graphics/cropTextures.ts';
 import { GymWorkout } from './gymWorkout.ts';
 import { growthChecks } from '../base/greenhouseCare.ts';
 import { MEDBAY_BONE_TEXT } from './stationText.ts';
-import { OXYGEN_SOURCES, oxygenPlantButtons, oxygenPlantText } from '../mission/oxygenText.ts';
+import { OXYGEN_SOURCES, oxygenPlantButtons } from '../mission/oxygenText.ts';
 import { formatTempC } from '../data/marsWeather.ts';
 import { solarReason } from '../mission/weatherText.ts';
 import { radlabChartHtml } from './missionJournalView.ts';
 import { getStudy } from '../data/osdrStudies.ts';
 import { powerPanelHtml, powerPanelModel } from './powerPanelView.ts';
-import { stationTextHtml } from './stationTextView.ts';
+import { pixelIconSvg } from './pixelIcons.ts';
+import { isCustomMachineType, machineModalTitle, nasaInfoButtonHtml, renderMachineMonitorHtml } from './machineViews.ts';
 
 // Efeito ao plantar (issue #139): particulas verdes no canteiro e flash do que foi gasto
 const PLANT_FX_PARTICLES = 14;
@@ -82,6 +83,8 @@ export class StationPanel {
     this._lastGhTick = 0;
     this.selectedCrop = 'lettuce';
     this.ghNotice = '';
+    this.machineNotice = '';
+    this.machineNoticeKind = 'info';
     this._ghDrag = null;
     this._ghGhost = null;
     this._suppressGhClick = false;
@@ -98,8 +101,8 @@ export class StationPanel {
       const action = target?.dataset.action;
       if (action && !target.hasAttribute('disabled')) {
         const msg = this.perform(action);
-        this.feedback.textContent = this.type === 'greenhouse' ? '' : msg;
         if (this.type === 'greenhouse') {
+          this.feedback.textContent = '';
           if (action === 'harvest' || action === 'harvestAll' || msg === 'harvested') {
             this._playGymSound(520, 0.09, 680);
           } else if (action.startsWith('seed:')) {
@@ -109,11 +112,57 @@ export class StationPanel {
           } else if (action.startsWith('plot:') && msg) {
             this._playGymSound(420, 0.09, 540);
           }
+        } else if (this.type === 'powerroom') {
+          this.feedback.textContent = '';
+          const turnedOn = /\bON\b/i.test(msg);
+          this._playGymSound(turnedOn ? 480 : 360, 0.07, turnedOn ? 640 : 260);
+        } else if (isCustomMachineType(this.type)) {
+          this.feedback.textContent = '';
+          const isWarn = /not enough|frozen|empty|full|silent|nothing|collect|already|unknown/i.test(msg);
+          this.machineNotice = msg;
+          this.machineNoticeKind = isWarn ? 'warn' : 'ok';
+          this._playGymSound(isWarn ? 220 : 480, 0.08, isWarn ? 0 : 620);
+        } else {
+          this.feedback.textContent = msg;
         }
         this.render();
       }
     };
     this.actions.addEventListener('click', handleActionClick);
+    this.content.addEventListener('click', handleActionClick);
+    this.content.addEventListener('input', event => {
+      const slider = event.target;
+      if (slider.id !== 'shelter-water-slider') return;
+      const wall = Number(slider.value);
+      const total = this.engine.mission.shelterWaterL + this.engine.survival.baseWater;
+      const tank = Math.max(0, total - wall);
+      const blocked = Math.round((1 - shelterDoseFactor(wall)) * 100);
+      this.content.querySelector('#shelter-preview-protection').textContent = `${blocked}%`;
+      this.content.querySelector('#shelter-preview-wall').textContent = `${Math.round(wall)} L`;
+      this.content.querySelector('#shelter-preview-tank').textContent = `${Math.round(tank)} L`;
+      const shieldBar = this.content.querySelector('#shelter-preview-shield-bar');
+      if (shieldBar) {
+        shieldBar.style.width = `${blocked}%`;
+        shieldBar.style.background = blocked >= 65 ? '#4ade80' : blocked >= 30 ? '#facc15' : '#ef4444';
+      }
+      const tankBar = this.content.querySelector('#shelter-preview-tank-bar');
+      if (tankBar) {
+        const maxTank = this.engine.survival.maxBaseWater || 100;
+        tankBar.style.width = `${Math.max(0, Math.min(100, Math.round((tank / maxTank) * 100)))}%`;
+      }
+      const wallBar = this.content.querySelector('#shelter-preview-wall-bar');
+      if (wallBar) {
+        wallBar.style.width = `${Math.max(0, Math.min(100, Math.round((wall / RADIATION_CONFIG.SHELTER_WALL_MAX_L) * 100)))}%`;
+      }
+      slider.setAttribute('aria-valuetext', `${Math.round(wall)} liters in wall, ${blocked}% radiation blocked`);
+    });
+    this.content.addEventListener('change', event => {
+      if (event.target.id !== 'shelter-water-slider') return;
+      this.engine.mission.setShelterWallWater(this.engine.survival, Number(event.target.value));
+      this.machineNotice = '';
+      this.render();
+      this.content.querySelector('#shelter-water-slider')?.focus();
+    });
     this.powerContainer.addEventListener('click', handleActionClick);
     if (this.greenhouseContainer) {
       this.greenhouseContainer.addEventListener('click', handleActionClick);
@@ -193,6 +242,8 @@ export class StationPanel {
     }
     this.feedback.textContent = '';
     this.ghNotice = '';
+    this.machineNotice = '';
+    this.machineNoticeKind = 'info';
     if (type === 'treadmill' || type === 'bike') {
       this.gymMode = type;
     }
@@ -928,14 +979,16 @@ export class StationPanel {
 
   _galleyText(survival) {
     const { crewStock, stations, utility } = this.engine;
-    return `PANTRY: ${Math.floor(crewStock.food)} / ${crewStock.maxFood} packaged rations (shared with the crew)\n` +
+    const baskets = Object.entries(stations.harvestBaskets).map(([crop, count]) => `${crop}: ${count}`).join(', ');
+    return `PANTRY: ${Math.floor(crewStock.food)} / ${crewStock.maxFood} rations (shared with the crew)\n` +
+      `GREENHOUSE BASKETS: ${baskets}\n` +
       `YOUR FOOD: ${Math.round(survival.food)} / ${survival.maxStat}\n` +
       `CARROTS IN YOUR BAG: ${survival.countItem(BLOCK_IDS.HYDRO_PLANT)}\n` +
       `FRESH FOOD BONUS: ${stations.freshFood > 0 ? 'ACTIVE (you work faster)' : 'none'}\n` +
       `BASE WATER TANK: ${Math.round(survival.baseWater)} L${utility.cold ? '   (FROZEN)' : ''}\n\n` +
-      'Rations are ready to eat and cost nothing now, but every ration you eat is one less for your crew. ' +
+      `The cook turns one harvested item into one ration using ${U.RATION_PREP_POWER}% power. Talk to the cook here in the kitchen [F] to pick up a packaged space ration for your inventory. Every ration you take is one less for your crew. ` +
       'A fresh meal from the greenhouse costs water and power, but fills you up and gives you energy to work.\n' +
-      'Real case: on the Space Station the galley warms up packaged food. An astronaut eats about 1.8 kg of food a day (NASA).';
+      'Real case: astronauts mostly eat food packed on Earth; fresh crops supplement their meals. Preparing rations on Mars is a game model.';
   }
 
   _hygieneText(survival) {
@@ -1083,7 +1136,7 @@ export class StationPanel {
       ['NASA: 28-day salad crop', 'https://www.nasa.gov/image-article/growing-veggies-space/'],
       ['CSA: food production', 'https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/'],
       ...plantResearch.studies.map(st => [st.id + ': NASA study', st.url]),
-    ].map(([label, url]) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`).join(' · ');
+    ];
 
     this.greenhouseContainer.innerHTML = `
       <div class="gh-top-bar">
@@ -1092,7 +1145,10 @@ export class StationPanel {
         <div class="gh-res-pill beds" title="Planted beds">${GH_ICONS.sprout} <strong>${plantedCount}/${s.plots.length}</strong></div>
         ${alertPill}
         ${s.contaminated ? `<button type="button" class="mc-btn gh-clean-btn" data-action="cleanBase">CLEAN</button>` : ''}
-        <details class="gym-learn"><summary aria-label="NASA info" title="NASA info">i</summary><p>Plants drink from the base tank and breathe water back for the recycler. NASA grew salad crops in 28 days on the Space Station.<br/><br/>${study ? `${study.id}: ${study.explanation}` : `Real NASA OSDR data (${formatDateDMY(plantResearch.retrieved.slice(0, 10))}).`}<br/>${ghLinks}</p></details>
+        ${nasaInfoButtonHtml(
+          `<p>Plants drink from the base tank and breathe water back for the recycler. NASA grew salad crops in 28 days on the Space Station.</p><p>${study ? `${study.id}: ${study.explanation}` : `Real NASA OSDR data (${formatDateDMY(plantResearch.retrieved.slice(0, 10))}).`}</p>`,
+          ghLinks,
+        )}
       </div>
       <div class="gh-checks" aria-label="What the plants need">
         ${growthChecks(this.engine.greenhouseState()).map((check) => `
@@ -1106,7 +1162,7 @@ export class StationPanel {
         </div>
         <div class="gh-side">
           <div class="gh-step-bar">DRAG OR TAP CROP → BED</div>
-          <p>Big fields grow more food, but use more water and power. Each plant gives 1 food.</p>
+          <div class="gh-step-sub">BIG BED = MORE FOOD + WATER</div>
           <div class="gh-seed-list">${seedCardsHtml}</div>
           ${readyCount > 0 ? `<button type="button" class="mc-btn gh-harvest-all-btn" data-action="harvestAll">HARVEST READY (${readyCount})</button>` : ''}
           ${noticeText ? `<div id="gh-notice" class="gh-notice is-${noticeKind}" data-kind="${noticeKind}" role="status">${noticeText}</div>` : ''}
@@ -1115,9 +1171,226 @@ export class StationPanel {
     `;
   }
 
+  // A compact dashboard keeps the decision and its resources visible together.
+  _renderMachineDashboard() {
+    const { expedition: m, stations: s, survival: v, mission, utility, crewStock, comms } = this.engine;
+    const round = (n) => Math.round(n ?? 0);
+    const pct = (n, max = 100) => Math.max(0, Math.min(100, (n ?? 0) / (max || 1) * 100));
+    const cards = {
+      console: [
+        ['POWER', `${round(m.energy)}%`, pct(m.energy), 'power'],
+        ['OXYGEN', `${round(v.oxygen)} / ${v.maxStat}`, pct(v.oxygen, v.maxStat), 'air'],
+        ['FILTER', `${round(s.filter)}%`, pct(s.filter), 'water'],
+        ['SCIENCE', `${s.science}`, null, 'science'],
+      ],
+      power: [
+        ['POWER', `${round(m.energy)}%`, pct(m.energy), 'power'],
+        ['WATER', `${v.baseWater.toFixed(1)} L`, pct(v.baseWater, v.maxBaseWater), 'water'],
+        ['AIR FILTER', `${round(s.filter)}%`, pct(s.filter), 'air'],
+        ['CO2', `${round(s.co2)}%`, pct(s.co2), 'warning'],
+      ],
+      medical: [
+        ['HEALTH', `${round(v.health)} / ${v.maxStat}`, pct(v.health, v.maxStat), 'health'],
+        ['BONES', `${round(s.boneDensity ?? s.fitness)}%`, pct(s.boneDensity ?? s.fitness), 'health'],
+        ['FITNESS', `${round(s.fitness)}%`, pct(s.fitness), 'food'],
+      ],
+      science: [
+        ['SCIENCE', `${s.science}`, null, 'science'],
+        ['SAMPLES', `${s.samples}`, null, 'earth'],
+        ['READY TO SEND', `${this.engine.currentSciencePackage().items}`, null, 'air'],
+        ['SIGNAL TO EARTH', comms.blackout ? 'OFFLINE' : `${comms.lightMinutes.toFixed(1)} min`, null, 'power'],
+      ],
+      galley: [
+        ['CREW RATIONS', `${Math.floor(crewStock.food)} / ${crewStock.maxFood}`, pct(crewStock.food, crewStock.maxFood), 'food'],
+        ['YOUR FOOD', `${round(v.food)} / ${v.maxStat}`, pct(v.food, v.maxStat), 'food'],
+        ['CARROTS', `${v.countItem(BLOCK_IDS.HYDRO_PLANT)}`, null, 'food'],
+        ['WATER', `${round(v.baseWater)} L`, pct(v.baseWater, v.maxBaseWater), 'water'],
+      ],
+      hygiene: [
+        ['CLEAN WATER', `${round(v.baseWater)} L`, pct(v.baseWater, v.maxBaseWater), 'water'],
+        ['USED WATER', `${crewStock.graywater.toFixed(1)} L`, null, 'water'],
+        ['FILTER', `${round(utility.waterFilter)}%`, pct(utility.waterFilter), 'air'],
+        ['RECOVERED', `${round(utility.waterRecovery * 100)}%`, pct(utility.waterRecovery * 100), 'water'],
+      ],
+      workshop: [
+        ['MARS DIRT', `${v.countItem(BLOCK_IDS.REGOLITH)}`, null, 'earth'],
+        ['POWER', `${round(m.energy)}%`, pct(m.energy), 'power'],
+        ...(this.engine.crew?.stations ?? []).map(st => [st.name, `${round(st.health * 100)}%`, pct(st.health * 100), 'science']),
+      ],
+      shelter: [
+        ['WATER WALL', `${round(mission.shelterWaterL)} / ${RADIATION_CONFIG.SHELTER_WALL_MAX_L} L`, pct(mission.shelterWaterL, RADIATION_CONFIG.SHELTER_WALL_MAX_L), 'water'],
+        ['RADIATION BLOCKED', `${round((1 - shelterDoseFactor(mission.shelterWaterL)) * 100)}%`, pct((1 - shelterDoseFactor(mission.shelterWaterL)) * 100), 'health'],
+        ['TANK WATER', `${round(v.baseWater)} L`, pct(v.baseWater, v.maxBaseWater), 'water'],
+        ['SOLAR STORM', mission.storm.phase === 'active' ? 'ACTIVE' : mission.storm.phase === 'warning' ? 'COMING' : 'CLEAR', null, 'warning'],
+      ],
+    };
+    const hints = {
+      console: m.objective,
+      power: mission.oxygenPlant.mode === 'moxie' ? 'Mars air saves water but uses more power.' : 'Water makes air with less power, but uses water.',
+      medical: 'Exercise helps keep your bones strong.',
+      science: 'Sending discoveries costs power. Signals take time to reach Earth.',
+      galley: 'Rations are shared with your crew. Fresh meals use water and power.',
+      hygiene: utility.cold ? 'Pipes are frozen! Warm the base to recycle water.' : 'Used water can be cleaned and used again.',
+      workshop: 'Print a part to fix the most worn crew station.',
+      shelter: 'Water in the wall shields you, but cannot be used for drinking.',
+    };
+    const symbols = { power: 'bolt', water: 'drop', air: 'air', health: 'heart', food: 'food', science: 'scope', earth: 'rock', warning: 'radiation' };
+    const scenes = {
+      console: ['MISSION CONTROL', 'Your base at a glance'],
+      power: ['AIR LAB', 'Pick how to make air'],
+      medical: ['HEALTH BAY', 'Take care of your crew'],
+      science: ['DISCOVERY LAB', 'Explore Mars, share with Earth'],
+      galley: ['SPACE KITCHEN', 'Fuel up for your next mission'],
+      hygiene: ['WATER WORKS', 'Every drop counts'],
+      workshop: ['MAKER STATION', 'Turn Mars dirt into a fix'],
+      shelter: ['STORM SHELTER', 'Build a water shield'],
+    };
+    const [eyebrow, subtitle] = scenes[this.type] ?? scenes.console;
+    const sceneIcons = {
+      console: ['home', 'radio'], power: ['drop', 'air'], medical: ['heart', 'check'],
+      science: ['scope', 'rock'], galley: ['plant', 'food'], hygiene: ['drop', 'check'],
+      workshop: ['rock', 'up'], shelter: ['shield', 'drop'],
+    };
+    const artwork = (sceneIcons[this.type] ?? sceneIcons.console).map(name => pixelIconSvg(name)).join('');
+    const hero = document.createElement('div'); hero.className = 'machine-hero';
+    hero.innerHTML = `<div class="machine-hero-art" aria-hidden="true">${artwork}</div><div class="machine-hero-copy"><span>${eyebrow}</span><strong>${subtitle}</strong></div><span class="machine-hero-spark" aria-hidden="true">${pixelIconSvg('medal')}</span>`;
+    const grid = document.createElement('div');
+    grid.className = 'machine-grid';
+    for (const [label, value, fill, kind] of cards[this.type] ?? []) {
+      const card = document.createElement('div');
+      card.className = `machine-card machine-${kind}`;
+      const icon = document.createElement('span'); icon.className = 'machine-icon'; icon.innerHTML = pixelIconSvg(symbols[kind]); icon.setAttribute('aria-hidden', 'true');
+      const info = document.createElement('div'); info.className = 'machine-card-info';
+      const name = document.createElement('span'); name.className = 'machine-label'; name.textContent = label;
+      const amount = document.createElement('strong'); amount.textContent = value;
+      info.append(name, amount);
+      if (fill !== null) {
+        const meter = document.createElement('span'); meter.className = 'machine-meter';
+        const bar = document.createElement('span'); bar.style.width = `${fill}%`; meter.append(bar); info.append(meter);
+      }
+      card.append(icon, info); grid.append(card);
+    }
+    const hint = document.createElement('p'); hint.className = 'machine-hint'; hint.textContent = hints[this.type] ?? '';
+    this.content.replaceChildren(hero, grid, hint);
+  }
+
+  _stationLinksFor(type) {
+    if (type === 'console') {
+      return [['NASA DONKI: space weather', DATA_SOURCES.donki], ['NASA RadLab: radiation data', DATA_SOURCES.radlab]];
+    }
+    if (type === 'power') {
+      return [
+        ['NASA: Oxygen Generation Assembly', OXYGEN_SOURCES.oga],
+        ['NASA ICES 2024: Sabatier', OXYGEN_SOURCES.sabatier],
+        ['NASA: MOXIE on Mars', OXYGEN_SOURCES.moxie],
+      ];
+    }
+    if (type === 'shelter') {
+      return [
+        ['PREDICCS: water shielding', SHELTER_SOURCES.prediccs],
+        ['NASA: storm shelters', SHELTER_SOURCES.nasa],
+      ];
+    }
+    if (type === 'galley') {
+      return [
+        ['NASA: space food systems', 'https://www.nasa.gov/directorates/esdmd/hhp/space-food-systems/'],
+        ['NASA: growing plants in space', 'https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/'],
+      ];
+    }
+    if (type === 'science') {
+      const links = [];
+      if (this.engine.spaceWeather?.bulletin) {
+        links.push(['NASA DONKI: space weather bulletin', this.engine.spaceWeather.bulletin.url]);
+      }
+      return links;
+    }
+    if (type === 'medical') {
+      const links = [['NASA RadLab: radiation data', DATA_SOURCES.radlab]];
+      for (const id of this.studyReveals?.revealed ?? []) {
+        const study = getStudy(id);
+        if (study && (study.topic === 'radiation' || study.topic === 'immune')) {
+          links.push([`${study.id}: NASA study`, study.url]);
+        }
+      }
+      return links;
+    }
+    return [];
+  }
+
+  _buildMachineViewData() {
+    const { expedition: m, stations: s, survival: v, mission, utility, crewStock, comms, crew, spaceWeather } = this.engine;
+    const pkg = this.engine.currentSciencePackage();
+    const totals = this.engine.scienceTotals();
+    return {
+      type: this.type,
+      notice: this.machineNotice,
+      noticeKind: this.machineNoticeKind,
+      energy: m.energy,
+      oxygen: v.oxygen,
+      maxStat: v.maxStat,
+      health: v.health,
+      food: v.food,
+      baseWater: v.baseWater,
+      maxBaseWater: v.maxBaseWater,
+      regolith: v.countItem(BLOCK_IDS.REGOLITH),
+      carrots: v.countItem(BLOCK_IDS.HYDRO_PLANT),
+      objective: m.objective,
+      filter: s.filter,
+      co2: s.co2,
+      contaminated: s.contaminated,
+      science: s.science,
+      samples: s.samples,
+      analyzedSamples: s.analyzedSamples,
+      upgraded: s.upgraded,
+      toolUpgraded: s.toolUpgraded,
+      boneDensity: s.boneDensity ?? s.fitness,
+      muscleStrength: s.muscleStrength ?? s.fitness,
+      dose: mission.doseBreakdown,
+      oxygenMode: mission.oxygenPlant.mode,
+      oxygenBlocked: mission.oxygenPlant.limitedBy,
+      sabatier: mission.oxygenPlant.sabatier,
+      waterUsedL: mission.oxygenPlant.waterUsedL,
+      stormPhase: mission.storm.phase,
+      shelterWaterL: mission.shelterWaterL,
+      shelterBlockedPct: Math.round((1 - shelterDoseFactor(mission.shelterWaterL)) * 100),
+      crewFood: crewStock.food,
+      maxCrewFood: crewStock.maxFood,
+      freshFoodActive: s.freshFood > 0,
+      graywater: crewStock.graywater,
+      waterFilter: utility.waterFilter,
+      waterRecoveryPct: Math.round(utility.waterRecovery * 100),
+      cold: utility.cold,
+      isNight: utility.isNight,
+      crewStations: (crew?.stations ?? []).map((st) => ({ name: st.name, health: st.health })),
+      commsBlackout: comms.blackout,
+      commsDistanceMkm: comms.distanceKm / 1e6,
+      commsLightMin: comms.lightMinutes,
+      commsDate: formatDateDMY(comms.date.toISOString()),
+      commsPending: s.messageTimer > 0,
+      donkiLive: Boolean(spaceWeather?.live),
+      donkiLabel: spaceWeather ? donkiLabel(spaceWeather) : 'Saved data',
+      donkiBulletin: spaceWeather?.bulletin ? bulletinText(spaceWeather.bulletin) : '',
+      pkgItems: pkg.items,
+      pkgCost: pkg.cost,
+      sentDiscoveries: mission.sentDiscoveries,
+      sentSamples: mission.sentSamples,
+      totalDiscoveries: totals.discoveries,
+      totalSamples: totals.samples,
+      radlabHtml: this.type === 'medical' ? radlabChartHtml() : undefined,
+      medbayBoneFact: MEDBAY_BONE_TEXT,
+      links: this._stationLinksFor(this.type),
+    };
+  }
+
   render() {
     const { expedition: m, stations: s, survival: v, mission } = this.engine;
+    const isCustom = isCustomMachineType(this.type);
+    const isPower = this.type === 'powerroom';
     this.element.classList.toggle('is-greenhouse', this._isGreenhouseStation());
+    this.element.classList.toggle('is-machine', isCustom);
+    this.element.classList.toggle('is-powerroom', isPower);
+    this.element.dataset.station = this.type;
+    if (this._radlabEl) this._radlabEl.style.display = 'none';
 
     if (this._isGymStation() && this.gymContainer) {
       this.title.textContent = 'MARS GYM';
@@ -1147,47 +1420,53 @@ export class StationPanel {
     if (this.greenhouseContainer) this.greenhouseContainer.classList.add('hidden');
 
     // Energia e calor: painel proprio, com os interruptores na linha de cada consumidor
-    const isPower = this.type === 'powerroom';
     this.powerContainer.classList.toggle('hidden', !isPower);
     this.content.classList.toggle('hidden', isPower);
     if (isPower) {
       this.title.textContent = 'POWER & HEAT ROOM';
-      this.powerContainer.innerHTML = powerPanelHtml(powerPanelModel(this._powerState()));
-      this.sources.replaceChildren(...[['NASA: Kilopower fission reactor test (2018)', POWER_SOURCES.kilopower], ['NASA: InSight retires after dust covers its panels', POWER_SOURCES.insight]].map(([label, url]) => {
-        const link = document.createElement('a');
-        link.textContent = label;
-        link.href = url;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        return link;
-      }));
+      const powerNasa = nasaInfoButtonHtml(
+        '<p><strong>Real Case:</strong> NASA\'s InSight lander shut down in 2022 when dust covered its solar panels.</p><p>In 2018 NASA tested <strong>Kilopower</strong>, a small fission reactor that makes power day and night without sunlight. In the game it sits close to the base, so it adds radiation.</p>',
+        [['NASA: Kilopower test (2018)', POWER_SOURCES.kilopower], ['NASA: InSight & solar dust', POWER_SOURCES.insight]],
+      );
+      this.powerContainer.innerHTML = powerPanelHtml(powerPanelModel(this._powerState()), powerNasa);
+      this.sources.replaceChildren();
+      this.actions.replaceChildren();
+      return;
+    }
+
+    if (isCustom) {
+      this.title.textContent = machineModalTitle(this.type);
+      this.content.innerHTML = renderMachineMonitorHtml(this._buildMachineViewData());
+      this.sources.replaceChildren();
       this.actions.replaceChildren();
       return;
     }
 
     const pages = {
-      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nFILTER: ${Math.round(s.filter)}%   SCIENCE POINTS: ${s.science}\n\n${radiationStatusText(mission)}\n\n${stormStatusText(mission.storm, this.engine.spaceWeather, mission.noStormData)}\n\n${this.engine.spaceWeather.live ? `Storm data: ${donkiLabel(this.engine.spaceWeather)}.` : 'The NASA data is saved inside the game, it is not live.'} Storm length and damage are game rules.`, [['mission', 'Show mission objective'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
-      power: ['LIFE SUPPORT / ECLSS', `BATTERY: ${Math.round(m.energy)}%   BASE WATER TANK: ${v.baseWater.toFixed(1)} L\nCO2 FILTER: ${Math.round(s.filter)}%\nCO2: ${Math.round(s.co2)}%\n\n${oxygenPlantText(mission.oxygenPlant)}\n\nThe oxygen system and greenhouse need power. A worn filter lets CO2 build up.`, [...oxygenPlantButtons(mission.oxygenPlant), ['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
+      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nFILTER: ${Math.round(s.filter)}%   SCIENCE POINTS: ${s.science}\n\n${radiationStatusText(mission)}\n\n${stormStatusText(mission.storm, this.engine.spaceWeather, mission.noStormData)}\n\n${this.engine.spaceWeather.live ? `Storm data: ${donkiLabel(this.engine.spaceWeather)}.` : 'The NASA data is saved inside the game, it is not live.'} Storm length and damage are game rules.`, [['mission', 'Show mission objective'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
+      power: ['MAKE AIR', '', [...oxygenPlantButtons(mission.oxygenPlant).map(([action, label]) => [action, action === 'o2mode:electrolysis' ? `${label} · uses water, less power` : action === 'o2mode:moxie' ? `${label} · no water, more power` : label]), ['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
       greenhouse: ['MARS GARDEN / FIELD NOTEBOOK', this.gardenText(s, m, v), [
         ...Object.entries(CROP_CONFIG).map(([type, r]) => ['plant:' + type, type.toUpperCase() + ' | ' + s.plotCost(type).water + ' L water / ' + s.plotCost(type).energy + '% power / ' + r.seconds + 's / +' + r.nutrition + ' food']),
         ['harvest', 'Harvest & discover NASA research'], ['cleanBase', 'Clean habitat'],
       ]],
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\n${doseHistoryText(mission.doseBreakdown)}\n\n${MEDBAY_BONE_TEXT}`, [['treat', 'Use medical station']]],
-      science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   REGOLITH TO ANALYZE: ${s.samples}\n\n${this._packageText()}\n\n${this._radioText(s)}`, [['sendScience', uploadButtonLabel(this.engine.currentSciencePackage())], ['analyze', `Analyze regolith (${SCIENCE_CONFIG.ANALYZE_POWER_COST}% power)`], ['send', 'Call Earth (ask Mission Control)'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
-      galley: ['KITCHEN & PANTRY', this._galleyText(v), [['eatRation', 'Eat a ration (pantry)'], ['cookMeal', `Cook fresh meal (1 carrot, ${U.MEAL_WATER_L} L, ${U.MEAL_POWER}% power)`]]],
+      science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   REGOLITH TO ANALYZE: ${s.samples}\n\n${this._packageText()}\n\n${this._radioText(s)}`, [['sendScience', uploadButtonLabel(this.engine.currentSciencePackage())], ['analyze', `Analyze regolith (${SCIENCE_CONFIG.ANALYZE_POWER_COST}% power)`], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
+      galley: ['KITCHEN & PANTRY', this._galleyText(v), [['cookMeal', `Cook fresh meal (1 carrot, ${U.MEAL_WATER_L} L, ${U.MEAL_POWER}% power)`]]],
       hygiene: ['BATHROOM & WATER RECYCLER', this._hygieneText(v), [['washUp', `Wash up (${U.WASH_WATER_L} L of water)`], ['serviceFilter', `Clean water filter (${U.FILTER_SERVICE_POWER}% power)`]]],
       workshop: ['WORKSHOP & 3D PRINTER', this._workshopText(v), [['printPart', `Print spare part (${U.PRINT_REGOLITH} regolith, ${U.PRINT_POWER}% power)`]]],
       shelter: ['STORM SHELTER', this._shelterText(mission, v), [['fillWall', `Fill wall (+${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`], ['drainWall', `Drain wall (-${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`]]],
     };
     const [title, text, buttons] = pages[this.type];
     this.title.textContent = title;
-    this.content.innerHTML = stationTextHtml(text);
+    this._renderMachineDashboard();
     const links = this.type === 'console'
       ? [['NASA DONKI: space weather events', DATA_SOURCES.donki], ['NASA RadLab: radiation data', DATA_SOURCES.radlab]]
       : this.type === 'power'
         ? [['NASA: Oxygen Generation Assembly (ISS)', OXYGEN_SOURCES.oga], ['NASA ICES 2024: Sabatier and oxygen recovery', OXYGEN_SOURCES.sabatier], ['NASA: MOXIE made oxygen on Mars', OXYGEN_SOURCES.moxie]]
       : this.type === 'shelter'
         ? [['PREDICCS: water shielding (UNH, MSL/RAD data)', SHELTER_SOURCES.prediccs], ['NASA: storm shelters and water walls', SHELTER_SOURCES.nasa]]
+        : this.type === 'galley'
+          ? [['NASA: space food systems', 'https://www.nasa.gov/directorates/esdmd/hhp/space-food-systems/'], ['NASA: growing plants in space', 'https://www.nasa.gov/exploration-research-and-technology/growing-plants-in-space/']]
         : this.type === 'science' && this.engine.spaceWeather?.bulletin
           ? [['NASA DONKI: read the full space weather bulletin', this.engine.spaceWeather.bulletin.url]]
         : this.type === 'greenhouse' ? [['CSA: food production', 'https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/'], ...plantResearch.studies.map(study => [study.id + ': NASA study', study.url])] : [];
@@ -1200,8 +1479,25 @@ export class StationPanel {
       link.rel = 'noopener noreferrer';
       return link;
     }));
+    const actionIcons = { 'o2mode:electrolysis': 'drop', 'o2mode:moxie': 'air', buildSabatier: 'up', filter: 'air', cleanBase: 'home', treat: 'heart', sendScience: 'radio', analyze: 'rock', send: 'radio', upgrade: 'up', upgradeTool: 'up', cookMeal: 'food', washUp: 'drop', serviceFilter: 'drop', printPart: 'rock', fillWall: 'up', drainWall: 'down', mission: 'medal' };
     this.actions.replaceChildren(...buttons.map(([action, label]) => {
-      const button = document.createElement('button'); button.className = 'mc-btn'; button.dataset.action = action; button.textContent = label;
+      const button = document.createElement('button'); button.className = 'mc-btn machine-action'; button.dataset.action = action;
+      const icon = document.createElement('span'); icon.className = 'machine-action-icon'; icon.innerHTML = pixelIconSvg(actionIcons[action] ?? 'check'); icon.setAttribute('aria-hidden', 'true');
+      const copy = document.createElement('span'); copy.className = 'machine-action-copy';
+      if (action.startsWith('o2mode:')) {
+        const selected = action === `o2mode:${mission.oxygenPlant.mode}`;
+        button.setAttribute('aria-pressed', String(selected));
+        const name = document.createElement('strong'); name.textContent = action.endsWith('electrolysis') ? 'From water' : 'From Mars air';
+        const cost = document.createElement('small'); cost.textContent = action.endsWith('electrolysis') ? 'Uses water · less power' : 'No water · more power';
+        const badge = document.createElement('em'); badge.textContent = selected ? '✓ ON' : 'CHOOSE';
+        copy.append(name, cost, badge);
+      } else {
+        const match = label.match(/^(.*?)\s*\(([^)]+)\)$/);
+        const name = document.createElement('strong'); name.textContent = match ? match[1] : label;
+        copy.append(name);
+        if (match) { const cost = document.createElement('small'); cost.textContent = match[2]; copy.append(cost); }
+      }
+      button.append(icon, copy);
       if (this.type === 'greenhouse') {
         if (action.startsWith('plant:')) {
           const cost = s.plotCost(action.slice(6));
@@ -1217,9 +1513,9 @@ export class StationPanel {
   _renderMedbayResearch(links) {
     const show = this.type === 'medical';
     if (!this._radlabEl && show) {
-      this._radlabEl = document.createElement('div');
+      this._radlabEl = document.createElement('details');
       this._radlabEl.className = 'station-radlab';
-      this._radlabEl.innerHTML = radlabChartHtml();
+      this._radlabEl.innerHTML = `<summary>Explore radiation data</summary>${radlabChartHtml()}`;
       this.content.after(this._radlabEl);
     }
     if (this._radlabEl) this._radlabEl.style.display = show ? '' : 'none';

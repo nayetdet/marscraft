@@ -1,4 +1,6 @@
 // @ts-nocheck
+import { WIND_AMBIENCE_CONFIG } from '../config/constants.ts';
+
 const AUDIO_BASE_URL = '/audio/';
 const LOOP_VOLUME = 0.45;
 const ROCKET_VOLUME = 0.7;
@@ -53,6 +55,8 @@ export class AudioManager {
     this._wasInDanger = false;
     this._wasLandingFromJump = false;
     this._lastPosition = null;
+    this._windNodes = null;
+    this._windTime = 0;
     this._lastHealth = null;
     this._damageSoundCooldown = 0;
   }
@@ -173,6 +177,36 @@ export class AudioManager {
     window.setTimeout(() => this.playUiConfirm(), 250);
   }
 
+  playSolarClean() {
+    const ctx = this._getSynthContext();
+    if (!ctx || this.masterVolume <= 0) return;
+    const sampleCount = Math.floor(ctx.sampleRate * 0.18);
+    if (!this._brushNoiseBuffer || this._brushNoiseBuffer.length !== sampleCount) {
+      const buffer = ctx.createBuffer(1, sampleCount, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < sampleCount; i++) data[i] = Math.random() * 2 - 1;
+      this._brushNoiseBuffer = buffer;
+    }
+    const peak = 0.045 * this.masterVolume;
+    for (const [offset, freq] of [[0.08, 1250], [0.34, 1500], [0.60, 1300]]) {
+      const t0 = ctx.currentTime + offset;
+      const src = ctx.createBufferSource();
+      src.buffer = this._brushNoiseBuffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(freq, t0);
+      filter.Q.setValueAtTime(1.4, t0);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.linearRampToValueAtTime(peak, t0 + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+      src.connect(filter).connect(gain).connect(ctx.destination);
+      src.start(t0);
+      src.stop(t0 + 0.19);
+    }
+    this._playSuitTone(ctx, 587.33, 0.85, 0.14, 'sine', 0.035);
+  }
+
   playRocket() {
     this._rocketFadeElapsed = null;
     this._setAudioVolume(this.rocket, ROCKET_VOLUME);
@@ -213,8 +247,65 @@ export class AudioManager {
     this._activeFootsteps = null;
   }
 
-  update({ dt = 0, player, survival, isGameRunning, isRoverActive, roverSpeed = 0, sprinting }) {
+  _ensureWindNodes() {
+    if (this._windNodes) return this._windNodes;
+    const ctx = this._getSynthContext();
+    if (!ctx) return null;
+
+    // Buffer de 2 segundos com ruido rosa suave para o vento fino de Marte
+    const length = Math.max(1, Math.floor(ctx.sampleRate * 2));
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let b0 = 0; let b1 = 0; let b2 = 0;
+    for (let i = 0; i < length; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99765 * b0 + white * 0.099046;
+      b1 = 0.96300 * b1 + white * 0.2965164;
+      b2 = 0.57000 * b2 + white * 1.0526913;
+      data[i] = (b0 + b1 + b2 + white * 0.1848) * 0.12;
+    }
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 260;
+    filter.Q.value = 1.25;
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+
+    source.connect(filter).connect(gain).connect(ctx.destination);
+    source.start();
+    this._windNodes = { ctx, source, filter, gain };
+    return this._windNodes;
+  }
+
+  _updateWindAudio(dt, isGameRunning, outdoorFactor, windIntensity) {
+    if (!isGameRunning && !this._windNodes) return;
+    if (outdoorFactor <= 0.01 && !this._windNodes) return;
+    const nodes = this._ensureWindNodes();
+    if (!nodes) return;
+
+    this._windTime += Math.max(0, dt);
+    const { ctx, filter, gain } = nodes;
+    const active = isGameRunning ? Math.max(0, Math.min(1, outdoorFactor)) : 0;
+    const intensity = Math.max(0, Math.min(1, windIntensity));
+    const targetGain = active > 0.01
+      ? this.masterVolume * active * (WIND_AMBIENCE_CONFIG.AUDIO_BASE_GAIN + WIND_AMBIENCE_CONFIG.AUDIO_STORM_GAIN * intensity * intensity)
+      : 0;
+    const sweep = 0.5 + 0.5 * Math.sin(this._windTime * 0.7);
+    const targetFreq = 210 + intensity * 260 + sweep * (55 + intensity * 90);
+    const now = ctx.currentTime;
+    gain.gain.setTargetAtTime(targetGain, now, 0.22);
+    filter.frequency.setTargetAtTime(targetFreq, now, 0.25);
+  }
+
+  update({ dt = 0, player, survival, isGameRunning, isRoverActive, roverSpeed = 0, sprinting, outdoorFactor = 0, windIntensity = 0 }) {
     this._updateRocketFade(dt);
+    this._updateWindAudio(dt, isGameRunning, outdoorFactor, windIntensity);
 
     this._damageSoundCooldown = Math.max(0, this._damageSoundCooldown - dt);
     if (this._lastHealth !== null && survival.health < this._lastHealth && this._damageSoundCooldown <= 0) {

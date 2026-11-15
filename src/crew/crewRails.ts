@@ -12,6 +12,8 @@ export const RAIL_NODES = {
   tunnelWest: { x: -14.5, z: 0 },
   greenhouse: { x: -21.5, z: -2.4 }, // na beira do caminho, ao lado das bandejas da estufa
   medbay: { x: -2.5, z: 3.5 }, // canto sudoeste do habitat
+  northHub: { x: -2.5, z: -21.5 },
+  kitchen: { x: 11, z: -21.5 },
 };
 
 const EDGES = [
@@ -22,6 +24,8 @@ const EDGES = [
   ['hub', 'water'],
   ['hub', 'medbay'],
   ['hub', 'tunnelEast'],
+  ['hub', 'northHub'],
+  ['northHub', 'kitchen'],
   ['tunnelEast', 'tunnelWest'],
   ['tunnelWest', 'greenhouse'],
 ];
@@ -31,6 +35,7 @@ export const TASK_NODE = {
   water: 'water',
   oxygen: 'oxygen',
   medbay: 'medbay',
+  kitchen: 'kitchen',
   rest: 'quarters',
 };
 

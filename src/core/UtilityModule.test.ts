@@ -19,6 +19,24 @@ function setup({ night = false, charge = 80 } = {}) {
 }
 
 describe('north module (issue #56, part B)', () => {
+  it('prepares rations only from harvested basket stock, with a cook and enough power', () => {
+    const { utility, stations, base, mission } = setup();
+    base.food = 0;
+    base.maxFood = 2;
+    stations.harvestBaskets = { potato: 1, lettuce: 1, soy: 0 };
+    utility.updateRations(U.RATION_PREP_SECONDS, false);
+    expect(base.food).toBe(0);
+    utility.updateRations(U.RATION_PREP_SECONDS, true);
+    expect(base.food).toBe(1);
+    expect(stations.harvestBaskets).toEqual({ potato: 0, lettuce: 1, soy: 0 });
+    expect(mission.battery.charge).toBeCloseTo(80 - U.RATION_PREP_POWER);
+    utility.eatRation();
+    expect(utility.eatenRationCrop).toBe('potato');
+    mission.battery.charge = 0;
+    utility.updateRations(U.RATION_PREP_SECONDS, true);
+    expect(stations.harvestBaskets.lettuce).toBe(1);
+    expect(base.food).toBe(0);
+  });
   it('heater costs more at night, and turning it off at night freezes the base', () => {
     const { utility, mission } = setup({ night: true });
     utility.update(1);
@@ -50,6 +68,32 @@ describe('north module (issue #56, part B)', () => {
     const before = mission.battery.charge;
     utility.update(0.01);
     expect(before - mission.battery.charge).toBeCloseTo(dawn * 0.01);
+  });
+
+  it('takeRation puts a Space Ration into inventory and respects empty pantry and full inventory', () => {
+    const { utility, survival, base } = setup();
+    const added: number[] = [];
+    let allowAdd = true;
+    survival.addBlockToInventory = (id: number) => {
+      if (!allowAdd) return false;
+      added.push(id);
+      return true;
+    };
+
+    base.food = 0;
+    expect(utility.takeRation()).toMatchObject({ ok: false, reason: 'empty' });
+
+    base.food = 2;
+    allowAdd = false;
+    expect(utility.takeRation()).toMatchObject({ ok: false, reason: 'full' });
+    expect(base.food).toBe(2);
+
+    allowAdd = true;
+    utility.rationIngredients.push('soy');
+    const res = utility.takeRation();
+    expect(res).toMatchObject({ ok: true, crop: 'soy', remaining: 1 });
+    expect(added).toEqual([BLOCK_IDS.RATION]);
+    expect(base.food).toBe(1);
   });
 
   it('a ration feeds you but empties the shared pantry; a fresh meal costs water, power and a carrot', () => {

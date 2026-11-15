@@ -1,8 +1,9 @@
 // @ts-nocheck
 import { createCropItemModel } from '../graphics/cropModels.ts';
+import { createSpaceRationModel } from '../graphics/rationModel.ts';
 import * as THREE from 'three';
 import { BLOCK_IDS, CROP_TYPES_BY_ID } from '../config/blockTypes.ts';
-import { BLOCK_INTERACTION_CONFIG } from '../config/constants.ts';
+import { BLOCK_INTERACTION_CONFIG, DUST_WEATHER_CONFIG } from '../config/constants.ts';
 import { makeCanvasTexture } from '../graphics/textureGenerator.ts';
 
 export class PlayerHand {
@@ -11,7 +12,10 @@ export class PlayerHand {
     this.materials = materials;
     this.carrotTexture = carrotTexture;
     this.eatTime = 0;
+    this.cleanTime = 0;
+    this.receiveTime = 0;
     this.pendingHeldBlock = null;
+    this._currentHeld = { blockId: null, count: 0 };
 
     this.handGroup = new THREE.Group();
     this.basePos = new THREE.Vector3(0.56, -0.46, -0.72);
@@ -34,6 +38,15 @@ export class PlayerHand {
     this._buildScopeMesh();
     this._buildShieldRemoteMesh();
     this._buildJournalMesh();
+    this._buildBrushMesh();
+
+    this.heldRationMesh = createSpaceRationModel();
+    this.heldRationMesh.scale.setScalar(0.36);
+    this.heldRationMesh.position.set(-0.08, 0.15, -0.22);
+    this.heldRationMesh.rotation.set(0.2, 0.45, -0.18);
+    this.heldRationMesh.visible = false;
+    this.heldRationMesh.traverse((node) => { node.renderOrder = 999; });
+    this.handGroup.add(this.heldRationMesh);
 
     this.heldCrops = {};
     for (const [id, type] of Object.entries(CROP_TYPES_BY_ID)) {
@@ -305,6 +318,47 @@ export class PlayerHand {
     this.handGroup.add(book);
   }
 
+  // Escova eletrostatica usada para varrer a poeira dos paineis solares em 1a pessoa
+  _buildBrushMesh() {
+    const brush = new THREE.Group();
+    const handleMat = new THREE.MeshLambertMaterial({ color: 0xf1f5f9 });
+    const gripMat = new THREE.MeshLambertMaterial({ color: 0xea580c });
+    const mountMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+    const stripMat = new THREE.MeshLambertMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.45,
+    });
+    const bristleMat = new THREE.MeshLambertMaterial({ color: 0x64748b });
+    const addPart = (w, h, d, mat, x, y, z) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      mesh.position.set(x, y, z);
+      mesh.renderOrder = 999;
+      brush.add(mesh);
+    };
+    addPart(0.055, 0.055, 0.34, handleMat, 0, 0, 0.04);
+    addPart(0.065, 0.065, 0.08, gripMat, 0, 0, 0.14);
+    addPart(0.36, 0.055, 0.09, mountMat, 0, 0, -0.15);
+    addPart(0.32, 0.02, 0.03, stripMat, 0, 0.035, -0.15);
+    addPart(0.34, 0.065, 0.08, bristleMat, 0, -0.055, -0.15);
+    brush.position.set(-0.08, 0.15, -0.24);
+    brush.rotation.set(0.15, 0.15, 0.05);
+    brush.visible = false;
+    this.heldBrushMesh = brush;
+    this.handGroup.add(brush);
+  }
+
+  _hideHeldItems() {
+    this.heldBlockMesh.visible = false;
+    this.heldCarrotMesh.visible = false;
+    this.heldRationMesh.visible = false;
+    this.heldJournalMesh.visible = false;
+    this.heldScopeMesh.visible = false;
+    this.heldShieldRemoteMesh.visible = false;
+    this.heldBrushMesh.visible = false;
+    for (const model of Object.values(this.heldCrops)) model.visible = false;
+  }
+
   // Um clone por tipo de bloco, reaproveitado (antes clonava a cada troca de slot e vazava)
   _getHandMaterial(blockId) {
     if (!this._handMaterials) this._handMaterials = {};
@@ -320,34 +374,36 @@ export class PlayerHand {
   }
 
   setHeldBlock(blockId, count) {
-    if (this.eatTime > 0) {
+    if (this.eatTime > 0 || this.cleanTime > 0) {
       this.pendingHeldBlock = { blockId, count };
       return;
     }
-    this.heldCarrotMesh.visible = false;
-    for (const model of Object.values(this.heldCrops)) model.visible = false;
+    this._currentHeld = { blockId, count };
+    this._hideHeldItems();
     this.heldJournalMesh.visible = blockId === BLOCK_IDS.JOURNAL && count > 0;
     this.heldScopeMesh.visible = blockId === BLOCK_IDS.SCOPE && count > 0;
     this.heldShieldRemoteMesh.visible = blockId === BLOCK_IDS.SHIELD_REMOTE && count > 0;
     if (this.heldScopeMesh.visible || this.heldShieldRemoteMesh.visible || this.heldJournalMesh.visible) {
-      this.heldBlockMesh.visible = false;
       this.armMesh.position.set(0.08, -0.06, 0.08);
       return;
     }
     if (!blockId || count <= 0) {
-      this.heldBlockMesh.visible = false;
       this.armMesh.position.set(0, 0, 0);
       return;
     }
 
+    if (blockId === BLOCK_IDS.RATION) {
+      this.heldRationMesh.visible = true;
+      this.armMesh.position.set(0.08, -0.06, 0.08);
+      return;
+    }
+
     if (this.heldCrops[blockId]) {
-      this.heldBlockMesh.visible = false;
       this.heldCrops[blockId].visible = true;
       this.armMesh.position.set(.08, -.06, .08);
       return;
     }
     if (blockId === BLOCK_IDS.HYDRO_PLANT) {
-      this.heldBlockMesh.visible = false;
       this.heldCarrotMesh.visible = true;
       this.armMesh.position.set(0.08, -0.06, 0.08);
       return;
@@ -386,8 +442,24 @@ export class PlayerHand {
   }
 
   triggerEat() {
+    this.cleanTime = 0;
+    this.heldBrushMesh.visible = false;
     this.eatTime = BLOCK_INTERACTION_CONFIG.EAT_ANIMATION_DURATION;
     this.isSwinging = false;
+  }
+
+  triggerCleanSolar() {
+    this.pendingHeldBlock ??= { ...this._currentHeld };
+    this.cleanTime = DUST_WEATHER_CONFIG.CLEAN_ANIM_DURATION;
+    this.eatTime = 0;
+    this.isSwinging = false;
+    this._hideHeldItems();
+    this.heldBrushMesh.visible = true;
+    this.armMesh.position.set(0.08, -0.06, 0.08);
+  }
+
+  triggerReceive() {
+    this.receiveTime = 0.42;
   }
 
   triggerSwing() {
@@ -442,6 +514,34 @@ export class PlayerHand {
         this.pendingHeldBlock = null;
         this.setHeldBlock(blockId, count);
       }
+    }
+
+    if (this.cleanTime > 0) {
+      this.cleanTime = Math.max(0, this.cleanTime - dt);
+      const p = 1 - this.cleanTime / DUST_WEATHER_CONFIG.CLEAN_ANIM_DURATION;
+      const env = Math.sin(p * Math.PI);
+      const sweep = Math.sin(p * Math.PI * 5) * env;
+      swingOffsetX += -0.24 * env + 0.28 * sweep;
+      swingOffsetY += 0.08 * env - 0.05 * Math.abs(sweep);
+      swingOffsetZ += -0.26 * env;
+      swingRotX += -0.42 * env;
+      swingRotY += 0.35 * env + 0.45 * sweep;
+      swingRotZ += 0.25 * sweep;
+      if (this.cleanTime === 0) {
+        this.heldBrushMesh.visible = false;
+        const next = this.pendingHeldBlock ?? this._currentHeld;
+        this.pendingHeldBlock = null;
+        this.setHeldBlock(next.blockId, next.count);
+      }
+    }
+
+    if (this.receiveTime > 0) {
+      this.receiveTime = Math.max(0, this.receiveTime - dt);
+      const rp = 1 - this.receiveTime / 0.42;
+      const lift = Math.sin(rp * Math.PI);
+      swingOffsetY += -0.06 * lift + 0.08 * Math.sin(rp * Math.PI * 0.5);
+      swingOffsetZ += -0.08 * lift;
+      swingRotX += 0.22 * lift;
     }
 
     if (!this.handGroup.visible) {

@@ -606,19 +606,17 @@
 .mc-caption-line {
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0 5px;
   padding: 4px 10px;
   color: #fff;
   background: rgba(0, 0, 0, 0.76);
-  border-left: 3px solid #777;
   overflow-wrap: anywhere;
 }
-.mc-caption-line.is-current { border-left-color: #ffff55; }
 .mc-caption-speaker { color: #e0e0e0; font-weight: 700; }
-.mc-caption-speaker.ravi { color: #ffff55; }
-.mc-caption-speaker.iris { color: #55ffff; }
-.mc-caption-message { overflow-wrap: anywhere; }
+.mc-caption-speaker { flex-shrink: 0; }
+.mc-caption-message { min-width: 0; }
+@media (max-width: 700px) { .mc-caption-queue { font-size: 11px; } }
 .mc-caption-overflow { color: #d0d0d0; font-size: 12px; text-shadow: 1px 1px #000; }
 
 .system-notice {

@@ -23,6 +23,26 @@ export class UtilityModule {
     this.heaterDrawPerHour = 0;
     // Ritmo (issue #81): fracao do consumo passivo normal (src/mission/pacing.js)
     this.demandFactor = 1;
+    this.rationPrepTimer = 0;
+    this.lastRationCrop = null;
+    this.rationIngredients = [];
+    this.eatenRationCrop = null;
+  }
+
+  // One harvested item becomes one ration. Processing consumes battery power.
+  updateRations(dt, cookPresent) {
+    if (!cookPresent || this.base.food >= this.base.maxFood) { this.rationPrepTimer = 0; return; }
+    const baskets = this.stations.harvestBaskets;
+    if (!baskets || !Object.values(baskets).some(count => count > 0)) { this.rationPrepTimer = 0; return; }
+    this.rationPrepTimer = Math.min(U.RATION_PREP_SECONDS, this.rationPrepTimer + dt);
+    if (this.rationPrepTimer < U.RATION_PREP_SECONDS) return;
+    const type = Object.keys(baskets).find(key => baskets[key] > 0);
+    if (!type || !this.mission.battery.spend(U.RATION_PREP_POWER)) return;
+    baskets[type]--;
+    this.base.food++;
+    this.rationIngredients.push(type);
+    this.lastRationCrop = type;
+    this.rationPrepTimer = 0;
   }
 
   get isNight() {
@@ -121,8 +141,38 @@ export class UtilityModule {
     if (this.base.food < 1) return 'The pantry is empty! Grow food in the greenhouse.';
     if (s.food >= s.maxStat - 0.5) return 'You are not hungry.';
     this.base.food -= 1;
+    this.eatenRationCrop = this.rationIngredients.shift() ?? null;
     s.food = Math.min(s.maxStat, s.food + U.RATION_FOOD);
     return `Ate a packaged ration. ${Math.floor(this.base.food)} left for the whole crew.`;
+  }
+
+  // Retira 1 racao da despensa para o inventario do jogador (entregue pelo cozinheiro)
+  takeRation() {
+    const s = this.survival;
+    if (this.base.food < 1) {
+      return {
+        ok: false,
+        reason: 'empty',
+        message: 'The pantry is empty! Grow and harvest crops in the greenhouse first.',
+      };
+    }
+    if (!s.addBlockToInventory?.(BLOCK_IDS.RATION)) {
+      return {
+        ok: false,
+        reason: 'full',
+        message: 'Your inventory is full! Make room before taking a ration.',
+      };
+    }
+    this.base.food -= 1;
+    const crop = this.rationIngredients.shift() ?? null;
+    this.eatenRationCrop = crop;
+    const remaining = Math.floor(this.base.food);
+    return {
+      ok: true,
+      crop,
+      remaining,
+      message: `Got a Space Ration! (${remaining} left in the pantry)`,
+    };
   }
 
   cookMeal() {

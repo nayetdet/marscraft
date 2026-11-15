@@ -25,6 +25,20 @@ describe('mavProgress', () => {
 });
 
 describe('MissionSystem energy', () => {
+  it('moves shelter water without exceeding the tank or available supply', () => {
+    const mission = createMission();
+    const tank = { baseWater: 12, maxBaseWater: 20 };
+    mission.setShelterWallWater(tank, 30);
+    expect(mission.shelterWaterL).toBe(12);
+    expect(tank.baseWater).toBe(0);
+    mission.setShelterWallWater(tank, 5);
+    expect(mission.shelterWaterL).toBe(5);
+    expect(tank.baseWater).toBe(7);
+    tank.baseWater = 20;
+    mission.setShelterWallWater(tank, 0);
+    expect(mission.shelterWaterL).toBe(5);
+    expect(tank.baseWater).toBe(20);
+  });
   it('charges in daylight and not at night', () => {
     const day = createMission(12);
     day.battery.charge = 10;

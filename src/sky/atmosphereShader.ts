@@ -18,6 +18,29 @@ export const MARTIAN_SKY_FRAGMENT_SHADER = `
   uniform float uDust; // tempestade de poeira (issue #103): 0 = ceu limpo, 1 = poeira no maximo
   uniform float uTime;
 
+  float skyHash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+  }
+
+  float skyNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = skyHash(i);
+    float b = skyHash(i + vec2(1.0, 0.0));
+    float c = skyHash(i + vec2(0.0, 1.0));
+    float d = skyHash(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  }
+
+  float skyFbm(vec2 p) {
+    float v = 0.0;
+    v += skyNoise(p) * 0.55;
+    v += skyNoise(p * 2.13 + vec2(11.3, 4.7)) * 0.30;
+    v += skyNoise(p * 4.41 + vec2(3.1, 19.2)) * 0.15;
+    return v;
+  }
+
   void main() {
     vec3 dir = normalize(vWorldDirection);
     float y = clamp(dir.y, 0.0, 1.0);
@@ -60,6 +83,22 @@ export const MARTIAN_SKY_FRAGMENT_SHADER = `
     float blueMieCone = pow(sunCos, 8.0) * (0.35 + 0.65 * twilightFactor) * smoothstep(-0.18, 0.35, uSunElevation);
     vec3 martianBlueGlow = vec3(0.50, 0.76, 0.96);
     skyColor = mix(skyColor, martianBlueGlow, clamp(blueMieCone * 0.78, 0.0, 0.82));
+
+    // Nuvens finas de gelo e faixas altas de poeira marciana (sutis, deslocadas pelo vento)
+    if (dir.y > 0.01) {
+      vec2 cloudUv = dir.xz / (dir.y + 0.24) * 1.45 + vec2(uTime * 0.0085, -uTime * 0.003);
+      float wisp = skyFbm(cloudUv * vec2(1.0, 2.2));
+      float wispsMask = smoothstep(0.54, 0.82, wisp) * smoothstep(0.02, 0.28, dir.y) * (1.0 - smoothstep(0.55, 0.95, dir.y));
+      vec3 wispCol = mix(vec3(0.98, 0.88, 0.78), vec3(0.96, 0.72, 0.56), twilightFactor);
+      skyColor = mix(skyColor, wispCol, wispsMask * (0.16 + 0.14 * twilightFactor) * dayFactor * (1.0 - 0.85 * uDust));
+
+      // Banda baixa de poeira em suspensao perto do horizonte
+      float band = skyFbm(vec2(atan(dir.z, dir.x) * 3.5 + uTime * 0.02, dir.y * 14.0));
+      float horizonBand = exp(-dir.y * 13.0) * (0.35 + 0.65 * band);
+      vec3 bandCol = mix(vec3(0.24, 0.14, 0.09), vec3(0.88, 0.70, 0.54), dayFactor);
+      bandCol = mix(bandCol, vec3(0.92, 0.58, 0.34), twilightFactor * 0.6);
+      skyColor = mix(skyColor, bandCol, horizonBand * 0.32 * (1.0 - 0.6 * uDust));
+    }
 
     float sunCore = pow(sunCos, 160.0) * smoothstep(-0.12, 0.05, uSunElevation);
     skyColor += vec3(0.98, 0.98, 1.0) * sunCore * 0.9 * (1.0 - 0.85 * uDust);

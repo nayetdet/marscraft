@@ -234,3 +234,11 @@ export function isInsidePressurizedVolume(x, y, z) {
 export function isInsideShelter(x, z) {
   return x > L.SHELTER_X_MIN && x < L.SHELTER_X_MAX && z > L.SHELTER_Z_MIN && z < L.SHELTER_Z_MAX;
 }
+
+const KITCHEN_ROOM = NORTH_WING.ROOMS.find((room) => room.id === 'kitchen');
+
+// Posicao dos olhos do jogador dentro do modulo da cozinha (ala norte).
+export function isInsideKitchen(x, y, z) {
+  if (!KITCHEN_ROOM) return false;
+  return inBox(Math.floor(x), Math.floor(y), Math.floor(z), KITCHEN_ROOM.xMin, KITCHEN_ROOM.xMax, KITCHEN_ROOM.zMin, KITCHEN_ROOM.zMax);
+}

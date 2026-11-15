@@ -162,3 +162,57 @@ export function removeSurfaceRocksSupportedBy(mesh, x, y, z, onRemove = () => {}
   mesh.userData.rocksBySupport.delete(key);
   return indices.length;
 }
+
+const OUTCROP_SEED = 9091;
+const OUTCROP_TRIES = 520;
+const OUTCROP_COLORS = [0x6e4b3c, 0x5c4237, 0x7e5540, 0x8d634a];
+
+// Lajes baixas e afloramentos rochosos esparsos fora das zonas construidas (1 InstancedMesh).
+export function createSurfaceOutcrops(world) {
+  const rand = createSeededRandom(OUTCROP_SEED);
+  const outcrops = [];
+  for (let i = 0; i < OUTCROP_TRIES; i += 1) {
+    const x = (rand() - 0.5) * world.sizeX;
+    const z = (rand() - 0.5) * world.sizeZ;
+    const width = 0.42 + rand() * 0.58;
+    const height = 0.08 + rand() * 0.11;
+    const depth = width * (0.65 + rand() * 0.55);
+    const yaw = rand() * Math.PI * 2;
+    const tilt = (rand() - 0.5) * 0.18;
+    const color = OUTCROP_COLORS[Math.floor(rand() * OUTCROP_COLORS.length)];
+    if (isBuildZone(x, z)) continue;
+    if (Math.hypot(x - TERRAIN_CONFIG.BASE_CENTER.x, z - TERRAIN_CONFIG.BASE_CENTER.z) > MAX_DISTANCE) continue;
+    const top = naturalGroundTop(world, Math.floor(x), Math.floor(z));
+    if (top < 0) continue;
+    outcrops.push({ x, y: top + height * 0.25, z, supportY: top - 1, width, height, depth, yaw, tilt, color });
+  }
+
+  const geometry = new THREE.DodecahedronGeometry(1, 0);
+  const material = new THREE.MeshLambertMaterial({ flatShading: true });
+  const mesh = new THREE.InstancedMesh(geometry, material, outcrops.length);
+  const rocksBySupport = new Map();
+  const dummy = new THREE.Object3D();
+  const color = new THREE.Color();
+
+  outcrops.forEach((slab, i) => {
+    dummy.position.set(slab.x, slab.y, slab.z);
+    dummy.rotation.set(slab.tilt, slab.yaw, slab.tilt * 0.4);
+    dummy.scale.set(slab.width, slab.height, slab.depth);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(i, dummy.matrix);
+    mesh.setColorAt(i, color.setHex(slab.color));
+
+    const supportKey = `${Math.floor(slab.x)},${slab.supportY},${Math.floor(slab.z)}`;
+    const list = rocksBySupport.get(supportKey) ?? [];
+    list.push(i);
+    rocksBySupport.set(supportKey, list);
+  });
+
+  mesh.userData.rocksBySupport = rocksBySupport;
+  mesh.userData.rocks = outcrops;
+  mesh.userData.rockTransform = dummy;
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  mesh.computeBoundingSphere();
+  return mesh;
+}

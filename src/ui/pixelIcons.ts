@@ -269,6 +269,89 @@ ICONS.rock = [
   '.XXXXXX.',
 ];
 
+// Chave inglesa (oficina / impressora 3D)
+ICONS.wrench = [
+  '....XXX.',
+  '...XX..X',
+  '...XX...',
+  '..XXXX..',
+  '.XX.....',
+  'XX......',
+  'XX......',
+  '.X......',
+];
+
+// Osso (densidade ossea na enfermaria)
+ICONS.bone = [
+  '.XX.....',
+  'XXX.....',
+  '.XXX....',
+  '...XX...',
+  '....XXX.',
+  '.....XXX',
+  '.....XX.',
+  '........',
+];
+
+// Panela (cozinha)
+ICONS.pot = [
+  '..X..X..',
+  '.X..X...',
+  '........',
+  'XXXXXXXX',
+  '.XXXXXX.',
+  '.XXXXXX.',
+  '..XXXX..',
+  '........',
+];
+
+// Filtro / reciclagem (agua e CO2)
+ICONS.filter = [
+  '.XXXXXX.',
+  'X......X',
+  '.XXXXXX.',
+  '..XXXX..',
+  '...XX...',
+  '...XX...',
+  '..XXXX..',
+  '........',
+];
+
+// Parede de blocos de agua (abrigo)
+ICONS.tank = [
+  '..XXXX..',
+  '.XXXXXX.',
+  'XX....XX',
+  'XX....XX',
+  'XXXXXXXX',
+  'XXXXXXXX',
+  '.XXXXXX.',
+  '..XXXX..',
+];
+
+ICONS.brick = [
+  'XXXXXXXX',
+  'XX.XX.XX',
+  'XXXXXXXX',
+  '.XX.XX.X',
+  'XXXXXXXX',
+  'XX.XX.XX',
+  'XXXXXXXX',
+  '........',
+];
+
+// Botao info NASA
+ICONS.info = [
+  '...XX...',
+  '...XX...',
+  '........',
+  '..XXX...',
+  '...XX...',
+  '...XX...',
+  '..XXXX..',
+  '........',
+];
+
 // Rover (cards das animacoes de "primeira vez", src/story/firstTimeMoments.ts)
 ICONS.rover = [
   '......X.',

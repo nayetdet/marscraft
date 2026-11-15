@@ -1,14 +1,14 @@
 // @ts-nocheck
 import * as THREE from 'three';
 import { BLOCK_IDS } from '../config/blockTypes.ts';
-import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.ts';
+import { CREW_CONFIG, SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.ts';
 import { airlockProgress } from './airlockProgress.ts';
 import { roverBatteryText } from '../rover/roverText.ts';
 import { getDamageFeedback, getDeathReport } from '../player/deathReport.ts';
 import { getSuitTelemetryView } from '../player/suitTelemetry.ts';
 import { InventorySuitPreview } from './InventorySuitPreview.ts';
 import { DOSE_LIMIT_MSV, dosePercent, doseTone } from '../mission/doseBudget.ts';
-import { getJournalItemIcon, getScopeItemIcon, getShieldRemoteItemIcon } from '../graphics/itemIcons.ts';
+import { getJournalItemIcon, getRationItemIcon, getScopeItemIcon, getShieldRemoteItemIcon } from '../graphics/itemIcons.ts';
 import { getStatIconSvg } from './statIcons.ts';
 
 const ICONS_PER_BAR = 10;
@@ -237,6 +237,7 @@ export class HudManager {
     if (id === BLOCK_IDS.SCOPE) return getScopeItemIcon();
     if (id === BLOCK_IDS.SHIELD_REMOTE) return getShieldRemoteItemIcon();
     if (id === BLOCK_IDS.JOURNAL) return getJournalItemIcon();
+    if (id === BLOCK_IDS.RATION) return getRationItemIcon();
     return this.previews[id];
   }
 
@@ -426,6 +427,8 @@ export class HudManager {
     if (match) {
       const speaker = document.createElement('span');
       speaker.className = `mc-caption-speaker ${match[1].toLowerCase()}`;
+      const crewIndex = CREW_CONFIG.NAMES.indexOf(match[1]);
+      if (crewIndex >= 0) speaker.style.color = `#${CREW_CONFIG.SUIT_COLORS[crewIndex].toString(16).padStart(6, '0')}`;
       speaker.textContent = `${match[1]}:`;
       const message = document.createElement('span');
       message.className = 'mc-caption-message';

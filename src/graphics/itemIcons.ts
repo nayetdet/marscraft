@@ -98,9 +98,41 @@ const JOURNAL_GRID: readonly string[] = [
   '................',
 ];
 
+const RATION_PALETTE: PixelPalette = {
+  k: '#1c222d',
+  s: '#7b8999',
+  m: '#b3c0ce',
+  w: '#edf2f7',
+  b: '#0284c7',
+  c: '#38bdf8',
+  o: '#ea580c',
+  g: '#22c55e',
+  d: '#334155',
+};
+
+const RATION_GRID: readonly string[] = [
+  '.........kkk....',
+  '.........kcbk...',
+  '...kkkkkkkwwk...',
+  '..kssssssssssk..',
+  '..kmmmmmmmmmmsk.',
+  '..kmkbbbbbbkmk..',
+  '..kmkbccccbkmk..',
+  '..kmkooooookmk..',
+  '..kmkwwwwwwkmk..',
+  '..kmkwggwdkkmk..',
+  '..kmkwggwddkmk..',
+  '..kmkdkdkdkkmk..',
+  '..kmkkkkkkkkmk..',
+  '..kssssssssssk..',
+  '...kkkkkkkkkk...',
+  '................',
+];
+
 let cachedScope: string | null = null;
 let cachedShieldRemote: string | null = null;
 let cachedJournal: string | null = null;
+let cachedRation: string | null = null;
 
 export function getScopeItemIcon(): string {
   return (cachedScope ??= pixelGridToSvgDataUrl(SCOPE_GRID, SCOPE_PALETTE));
@@ -112,4 +144,8 @@ export function getShieldRemoteItemIcon(): string {
 
 export function getJournalItemIcon(): string {
   return (cachedJournal ??= pixelGridToSvgDataUrl(JOURNAL_GRID, JOURNAL_PALETTE));
+}
+
+export function getRationItemIcon(): string {
+  return (cachedRation ??= pixelGridToSvgDataUrl(RATION_GRID, RATION_PALETTE));
 }

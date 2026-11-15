@@ -28,9 +28,10 @@ export class MarsSkySystem {
     // Tempestade de poeira do clima (issue #103): 0 = ceu limpo, 1 = poeira no maximo.
     // O GameEngine escreve aqui a cada frame (DustWeather.haze).
     this.dustHaze = 0;
-    // Direcao do Sol e forca do dia (0 a 1) do ultimo update, para o modo Shaders
+    // Direcao do Sol e forca do dia/crepusculo (0 a 1) do ultimo update, para ShaderMode e neblina
     this.sunDirection = new THREE.Vector3(0, 1, 0);
     this.dayStrength = 1;
+    this.twilightStrength = 0;
 
     this.celestialGroup = new THREE.Group();
     this.scene.add(this.celestialGroup);
@@ -112,6 +113,8 @@ export class MarsSkySystem {
     const twilightStrength =
       THREE.MathUtils.smoothstep(sunDir.y, -0.22, 0.05) *
       (1.0 - THREE.MathUtils.smoothstep(sunDir.y, 0.05, 0.35));
+    this.twilightStrength = twilightStrength;
+    if (this.skyUniforms.uTime) this.skyUniforms.uTime.value += dt;
 
     this.sunLight.position.copy(sunDir).multiplyScalar(120).add(playerPos);
     // A noite fica igual a antes; so o dia ganha mais Sol e menos luz ambiente
