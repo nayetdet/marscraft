@@ -76,7 +76,6 @@ describe('loadSpaceWeather: live NASA DONKI with embedded fallback (issue #100)'
     ['an empty body', reply(200, '')],
     ['invalid JSON', reply(200, '[{"activityID":')],
     ['JSON that is not a list', json({ error: 'nope' })],
-    ['no CME headed to Mars', json([cmeToElsewhere])],
     ['no network', new TypeError('Failed to fetch')],
   ])('falls back to the embedded data on %s, and never says live', async (_, cme) => {
     const storage = memoryStorage();

@@ -130,8 +130,9 @@ function getLocalStorage() {
 }
 
 export class GameEngine {
-  constructor(container) {
+  constructor(container, { onTutorialComplete = () => {} } = {}) {
     this.container = container;
+    this.onTutorialComplete = onTutorialComplete;
     this.scene = new THREE.Scene();
     this.isScannerOpen = false;
     this.isThirdPerson = false;
@@ -198,9 +199,9 @@ export class GameEngine {
     this.customColliders = colliders;
 
     // Zonas, placas, posteres e telas vivas da base (as caixas de colisao entram em `colliders`)
-    // Clima espacial: comeca no dado embutido; o ao vivo do DONKI entra em applySpaceWeather (#100)
+    // Clima espacial: comeca no dado embutido; o DONKI ao vivo so entra depois do tutorial (#100)
     this.spaceWeather = EMBEDDED_SPACE_WEATHER;
-    // Ultima resposta ao vivo do polling do DONKI (applyLiveSpaceWeather); null sem rede
+    // Ultima resposta ao vivo do DONKI (applyLiveSpaceWeather); null antes do tutorial ou sem rede
     this._liveSpaceWeather = null;
     this.baseDecor = buildBaseDecor(this.scene, colliders);
     for (const point of this.baseDecor.infoPoints) point.type = 'info';
@@ -234,7 +235,13 @@ export class GameEngine {
     this._saveTimer = 0;
     this._wasSuitEquipped = this.survival.suitEquipped;
     // As tempestades solares so comecam no ato 2 da historia (StoryDirector)
-    this.mission = new MissionSystem({ cmes: this.spaceWeather.cmes, seps: this.spaceWeather.seps, startHours: this._skyHours(), stormsStarted: false });
+    this.mission = new MissionSystem({
+      cmes: this.spaceWeather.cmes,
+      seps: this.spaceWeather.seps,
+      startHours: this._skyHours(),
+      stormsStarted: false,
+      dataSource: this.spaceWeather,
+    });
     // O rover carrega no deposito puxando da bateria da base (issue #111)
     this.roverController.basePower = this.mission.battery;
     // Radio Terra-Marte (issue #56, A2): atraso pela distancia real de hoje e conjuncao solar
@@ -1690,26 +1697,14 @@ export class GameEngine {
     };
   }
 
-  // Clima espacial ao vivo do DONKI (issue #100), carregado em main.js. So vale antes do primeiro
-  // Play e antes de a fila de tempestades comecar: se chegar depois, fica para a proxima partida
-  // (o cache do spaceWeather.js guarda). Nunca e chamado dentro do loop.
-  applySpaceWeather(spaceWeather) {
-    if (!spaceWeather?.live || this.input.hasStarted || this.mission.stormsStarted) return false;
-    this.spaceWeather = spaceWeather;
-    this.mission.cmes = spaceWeather.cmes;
-    this.mission.seps = spaceWeather.seps;
-    this.missionHud.donkiFetched = spaceWeather;
-    const label = donkiLabel(spaceWeather);
-    this.menuScreens.setDonkiSource(label);
-    return true;
-  }
-
-  // Polling do DONKI (pollSpaceWeather, em main.ts): guarda a resposta ao vivo e, se a historia
-  // ja soltou as tempestades, poe na fila as que estao acontecendo agora na vida real.
-  // Nunca e chamado dentro do loop.
+  // Consulta inicial e polling do DONKI comecam depois do tutorial. A tempestade programada
+  // continua com a fonte embutida; apenas eventos ao vivo entram na fila depois dessa resposta.
   applyLiveSpaceWeather(spaceWeather) {
     if (!spaceWeather?.live) return [];
     this._liveSpaceWeather = spaceWeather;
+    this.spaceWeather = spaceWeather;
+    this.missionHud.donkiFetched = spaceWeather;
+    this.menuScreens.setDonkiSource(donkiLabel(spaceWeather));
     return this.mission.queueLiveStorms(spaceWeather);
   }
 
@@ -2218,6 +2213,7 @@ export class GameEngine {
       else if (event.type === 'step-done') this._playGymTone(440, 0.16, 660);
       else if (event.type === 'start-storms') {
         this.mission.startStorms(s.hours);
+        this.onTutorialComplete();
         // Depois da tempestade do tutorial, so as reais: o que o DONKI ja mostrou acontecendo agora entra na fila
         this.mission.queueLiveStorms(this._liveSpaceWeather);
         this.events.start(s.hours); // eventos aleatorios so depois do tutorial (issue #107)

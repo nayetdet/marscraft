@@ -2,10 +2,6 @@
 import { GameEngine } from './core/GameEngine.ts';
 import { loadSpaceWeather, pollSpaceWeather } from './data/spaceWeather.ts';
 
-// Clima espacial ao vivo do NASA DONKI (issue #100): o pedido sai ja no carregamento, em paralelo
-// com a construcao do mundo. Nunca rejeita: sem rede, devolve o dado embutido no jogo.
-const spaceWeatherPromise = loadSpaceWeather();
-
 export async function startGame() {
   const container = document.getElementById('game-container');
   const loadingOverlay = document.getElementById('loading-overlay');
@@ -16,15 +12,22 @@ export async function startGame() {
   requestAnimationFrame(() => {
     setTimeout(() => {
       try {
-        const engine = new GameEngine(container);
+        let engine;
+        let liveWeatherStarted = false;
+        const startLiveWeather = () => {
+          if (liveWeatherStarted) return;
+          liveWeatherStarted = true;
+
+          // A API so e consultada quando o tutorial termina (ou e pulado). A primeira tempestade
+          // ja foi montada a partir do snapshot embutido antes desta consulta.
+          loadSpaceWeather({ forceRefresh: true }).then((spaceWeather) => {
+            engine.applyLiveSpaceWeather(spaceWeather);
+          });
+          pollSpaceWeather((spaceWeather) => engine.applyLiveSpaceWeather(spaceWeather));
+        };
+
+        engine = new GameEngine(container, { onTutorialComplete: startLiveWeather });
         engine.start();
-        // So vale se chegar antes do primeiro Play; depois, fica no cache para a proxima partida
-        spaceWeatherPromise.then((spaceWeather) => {
-          engine.applySpaceWeather(spaceWeather);
-          engine.applyLiveSpaceWeather(spaceWeather);
-        });
-        // Depois do tutorial, tempestade solar so quando o DONKI mostra uma de verdade agora
-        pollSpaceWeather((spaceWeather) => engine.applyLiveSpaceWeather(spaceWeather));
         // So no `npm run dev`: deixa o motor acessivel no console para testar a historia e as animacoes
         if (process.env.NODE_ENV === 'development') window.__marscraft = engine;
         requestAnimationFrame(() => {
