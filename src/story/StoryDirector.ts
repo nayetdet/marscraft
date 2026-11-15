@@ -206,8 +206,6 @@ export class StoryDirector {
     this._events.push({ type: 'start-storms' });
     if (this.training) this._card(CARDS.trainingDone);
     this._card(CARDS.act2);
-    // O passeio completo ja ensinou a luneta no passo `scan`; o tutorial padrao (ato 1) nao
-    if (!this.training) this._card(CARDS.scopeGuide);
     this._setObjective('act2');
   }
 

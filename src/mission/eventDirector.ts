@@ -162,10 +162,13 @@ export class EventDirector {
   }
 
   // Comeca um evento agora (botoes de demo e de admin). Termina o que estiver ativo.
-  trigger(type, hours) {
+  // `params`: troca parte do sorteio (a historia pede um redemoinho que cruza os paineis, #408)
+  trigger(type, hours, params = null) {
     if (!this.config.DURATION_SECONDS[type]) return false;
     if (this.active) this._end(hours);
-    this._manual.push(this._extraEvent(type, hours));
+    const event = this._extraEvent(type, hours);
+    if (params) Object.assign(event.params, params);
+    this._manual.push(event);
     return true;
   }
 

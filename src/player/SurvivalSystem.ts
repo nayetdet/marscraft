@@ -23,6 +23,10 @@ export class SurvivalSystem {
     this.suitO2Warned30 = false;
     this.suitWornWarned = false;
     this.baseOxygen = 100;
+    // Ato 2 (#408): vazamento lento da janela rachada ({ rate: % por segundo, floor: % }) ou null,
+    // e quanto a tempestade de poeira acelera o desgaste do traje (1 = normal)
+    this.slowLeak = null;
+    this.suitWearFactor = 1;
     this.baseBreached = false;
     this.water = this.maxStat;
     this.food = this.maxStat;
@@ -110,6 +114,10 @@ export class SurvivalSystem {
     this.baseBreached = baseBreached;
     if (baseBreached) {
       this.baseOxygen = Math.max(0, this.baseOxygen - SURVIVAL_CONFIG.BASE_OXYGEN_LEAK_RATE * dt);
+    } else if (this.slowLeak) {
+      // Vazamento lento (janela rachada do ato 2, #408): o ar da base cai devagar e para no piso
+      const floor = Math.min(this.baseOxygen, this.slowLeak.floor);
+      this.baseOxygen = Math.max(floor, this.baseOxygen - this.slowLeak.rate * dt);
     } else {
       // Base oxygen recovery consumes the same energy budget as the suit refill.
       const recovered = Math.min(100 - this.baseOxygen, SURVIVAL_CONFIG.BASE_OXYGEN_REFILL_RATE * dt, maxOxygenRefill * 100 / this.maxStat);
@@ -155,7 +163,8 @@ export class SurvivalSystem {
           this.suitScrubber = Math.max(0, this.suitScrubber - SURVIVAL_CONFIG.SUIT_SCRUBBER_DRAIN_PER_SECOND * dt);
 
           const dustWearFactor = 1 + (this.suitDust / 100) * (SURVIVAL_CONFIG.SUIT_WEAR_DUST_MULTIPLIER - 1);
-          const wearRate = SURVIVAL_CONFIG.SUIT_WEAR_PER_SECOND * dustWearFactor;
+          // suitWearFactor: a tempestade de poeira gasta o traje mais rapido la fora (ato 2, #408)
+          const wearRate = SURVIVAL_CONFIG.SUIT_WEAR_PER_SECOND * dustWearFactor * this.suitWearFactor;
           this.suitIntegrity = Math.max(0, this.suitIntegrity - wearRate * dt);
         }
 

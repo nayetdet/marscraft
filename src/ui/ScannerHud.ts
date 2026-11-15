@@ -260,7 +260,8 @@ export class ScannerHud {
   /** Chamado a cada frame com a luneta aberta. state vem do ScannerSystem.update. */
   update(state) {
     const alreadyKnown = Boolean(state.known);
-    const entry = state.targetId ? getScanEntry(state.targetId) : null;
+    // `state.entry`: alvo que nao e ficha do catalogo (janela do ato 2): { title, category, status? }
+    const entry = state.entry ?? (state.targetId ? getScanEntry(state.targetId) : null);
     const mode = !entry ? 'idle' : state.done ? 'locked' : 'scanning';
     if (this._last.mode !== mode) {
       this._last.mode = mode;
@@ -284,7 +285,9 @@ export class ScannerHud {
     const letters = state.done ? entry.title.length : Math.ceil(entry.title.length * Math.min(1, state.progress * 1.35));
     this._setText(this.nameEl, 'name', entry.title.slice(0, letters));
 
-    if (state.done) {
+    if (state.done && entry.status) {
+      this._setText(this.statusEl, 'status', entry.status);
+    } else if (state.done) {
       this._setText(this.statusEl, 'status', alreadyKnown ? 'Scan complete · in journal [J]' : 'Scan complete!');
     } else {
       const pct = Math.floor(state.progress * 100);

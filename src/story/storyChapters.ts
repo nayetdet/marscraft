@@ -51,18 +51,6 @@ export const CARDS = {
       { icon: 'storm', text: 'Storms and Mars events still come' },
     ],
   },
-  // Como usar a luneta. O passo `scan` saiu do ato 1 (#407) e o ato 2 (#408) ainda nao entrega a
-  // luneta por um tripulante: ate la, este card aparece quando a missao comeca, logo depois do
-  // card da rotina, para a ciencia que o foguete pede nao ficar sem explicacao.
-  scopeGuide: {
-    title: 'USE YOUR SCOPE',
-    speaker: SPEAKERS.engineer,
-    lines: [
-      { icon: 'scope', text: 'Pick the SCOPE in your hotbar' },
-      { icon: 'check', text: 'Left-click scans; right-click opens or closes it' },
-      { icon: 'radio', text: 'Scans become science for Earth' },
-    ],
-  },
   // Fim do tutorial guiado: dai em diante o jogo e a rotina de encher o foguete
   trainingDone: {
     title: 'TRAINING COMPLETE',

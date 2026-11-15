@@ -99,14 +99,49 @@ describe('SurvivalSystem', () => {
     expect(survival.slots[index].count).toBe(1);
   });
 
+  it('a slow leak (act 2 cracked window) drains the base air slowly and stops at its floor', () => {
+    const survival = new SurvivalSystem();
+    const inside = { x: 0, y: 11, z: 0 };
+    survival.slowLeak = { rate: 0.15, floor: 30 };
+    survival.update(10, inside);
+    expect(survival.baseOxygen).toBeCloseTo(100 - 1.5);
+    for (let i = 0; i < 100; i++) {
+      survival.water = survival.food = survival.maxStat; // a conta aqui e so do ar
+      survival.update(10, inside);
+    }
+    expect(survival.baseOxygen).toBe(30);
+    expect(survival.isDead).toBe(false);
+    // Consertada a janela, o ar volta a encher
+    survival.slowLeak = null;
+    survival.update(1, inside);
+    expect(survival.baseOxygen).toBeGreaterThan(30);
+  });
+
+  it('wears the suit faster outside while suitWearFactor is up (dust storm, act 2)', () => {
+    const outside = { x: 60, y: 12, z: 60 };
+    const wearAfter = (factor) => {
+      const survival = new SurvivalSystem();
+      survival.suitEquipped = true;
+      survival.suitWearFactor = factor;
+      survival.update(10, outside);
+      return 100 - survival.suitIntegrity;
+    };
+    expect(wearAfter(1)).toBeGreaterThan(0);
+    expect(wearAfter(2)).toBeCloseTo(wearAfter(1) * 2, 5);
+  });
+
   it('keeps the scanner and greenhouse crops as distinct items', () => {
     const ids = [BLOCK_IDS.SCOPE, ...Object.values(CROP_ITEM_IDS)];
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('starts with the equipment before the carrots', () => {
+  it('starts with the equipment before the carrots, and without the scope (the engineer hands it over in act 2)', () => {
     const survival = new SurvivalSystem();
-    expect(survival.slots[0]?.id).toBe(BLOCK_IDS.SCOPE);
+    expect(survival.slots[0]).toBeNull();
+    expect(survival.countItem(BLOCK_IDS.SCOPE)).toBe(0);
+    // A luneta entregue cai no primeiro espaco livre: o primeiro da hotbar
+    expect(survival.addBlockToInventory(BLOCK_IDS.SCOPE)).toBe(true);
+    expect(survival.slots[0]).toMatchObject({ id: BLOCK_IDS.SCOPE, count: 1, equipment: true });
     expect(survival.slots[1]).toMatchObject({ id: BLOCK_IDS.JOURNAL, count: 1, equipment: true });
     expect(survival.slots[2]).toMatchObject({ id: BLOCK_IDS.SHIELD_REMOTE, count: 1, equipment: true });
     expect(survival.slots[3]?.id).toBe(BLOCK_IDS.HYDRO_PLANT);

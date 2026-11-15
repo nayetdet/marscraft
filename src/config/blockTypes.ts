@@ -51,7 +51,8 @@ export const HOTBAR_BLOCKS = [
   {
     id: BLOCK_IDS.SCOPE,
     name: 'Scope Scanner',
-    initialCount: 1,
+    // A crianca nao comeca com a luneta: o engenheiro de voo entrega no ato 2 (#408)
+    initialCount: 0,
     consumable: null,
     equipment: true,
   },

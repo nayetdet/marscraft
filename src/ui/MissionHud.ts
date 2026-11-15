@@ -142,7 +142,8 @@ export class MissionHud {
   }
 
   // `survival` traz a agua da base e `stations` o ar do habitat (CO2, poeira)
-  update(mission, { survival, stations, world } = {}) {
+  // `storyLeak`: vazamento roteirizado do ato 2 ('hidden' | 'found' | null), sem buraco na parede
+  update(mission, { survival, stations, world, storyLeak = null } = {}) {
     const view = missionStatus(mission, this.donkiFetched, {
       water: survival?.baseWater,
       maxWater: survival?.maxBaseWater,
@@ -152,6 +153,7 @@ export class MissionHud {
       baseOxygen: survival?.baseOxygen,
       contaminated: stations?.contaminated,
       brokenWindows: world?.brokenBaseBlocks.size ?? 0,
+      storyLeak,
       suitOxygen: survival?.isSuitProtectingO2 ? (survival.suitOxygen / 100) * survival.maxStat : survival?.oxygen,
       oxygenNeedsPower: survival?.oxygenNeedsPower,
       insideHabitat: survival?.insidePressurizedShip,
