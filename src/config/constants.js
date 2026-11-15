@@ -88,6 +88,26 @@ export const WATER_SYSTEM_CONFIG = {
   WATER_DISPENSER_POS: { x: 10.4, y: 10.0, z: 1.5 },
 };
 
+// Bateria do rover (issue #111). Valores de jogo: a ficha do scanner cita os numeros reais do
+// Curiosity. O rover so carrega estacionado no deposito da base, puxando da bateria da base:
+// buscar gelo custa energia que tambem serve para o O2, a blindagem e a fabrica de combustivel.
+// Uma viagem completa de gelo (ir a cratera, 5 perfuracoes, voltar) gasta cerca de um quarto
+// a um terco da bateria do rover.
+export const ROVER_CONFIG = {
+  START_BATTERY: 100, // %
+  DRIVE_DRAIN_PER_SECOND: 0.5, // % por segundo real acelerando (frente ou re)
+  DRILL_DRAIN: 4, // % por perfuracao
+  // Abaixo disso o rover anda devagar e nao perfura. Ele ainda se arrasta com 0 %, para o
+  // jogador nunca ficar preso longe da base.
+  LOW_BATTERY: 15,
+  LOW_BATTERY_SPEED_FACTOR: 0.35,
+  CHARGE_PER_SECOND: 8, // % da bateria do rover por segundo real, parado no deposito
+  // % da bateria da base por 1 % do rover: uma carga completa do rover custa 10 % da base
+  BASE_COST_PER_ROVER_PERCENT: 0.1,
+  // Mesmo raio da doca onde o rover descarrega o gelo (WATER_SYSTEM_CONFIG.ICE_DEPOT_POS)
+  CHARGE_RADIUS: 5.8,
+};
+
 // Missao: energia, tempestades solares e o MAV (issue #30).
 // Taxas "por hora de jogo": com GAME_HOURS_PER_SECOND = 0.01, 1 hora de jogo = 100 s reais.
 // Fontes dos numeros reais em docs/data/numeros-reais.md.

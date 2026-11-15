@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { RoverController } from './RoverController.js';
+import { ROVER_CONFIG as R, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { Battery } from '../mission/energy.js';
 
 describe('RoverController', () => {
   it('inicializa com valores padrao de telemetria e estado inativo', () => {
@@ -126,5 +128,125 @@ describe('RoverController', () => {
     // Conclui o ciclo de perfuração e recolhimento do braço
     controller.update(1.5, {});
     expect(controller.getTelemetry().waterFillRatio).toBeCloseTo(0.2, 1);
+  });
+});
+
+describe('rover battery (issue #111)', () => {
+  const DEPOT = WATER_SYSTEM_CONFIG.ICE_DEPOT_POS;
+  const CRATER = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER;
+
+  function roverAt(x, z, options = {}) {
+    const roverGroup = new THREE.Group();
+    roverGroup.position.set(x, 9, z);
+    return new RoverController({ roverGroup, wheels: [], ...options });
+  }
+
+  it('starts full and driving drains it, forward or in reverse', () => {
+    const rover = roverAt(0, 0);
+    expect(rover.battery).toBe(R.START_BATTERY);
+    rover.activate();
+    rover.update(2, { KeyW: true });
+    expect(rover.battery).toBeCloseTo(R.START_BATTERY - 2 * R.DRIVE_DRAIN_PER_SECOND);
+    rover.update(2, { KeyS: true });
+    expect(rover.battery).toBeCloseTo(R.START_BATTERY - 4 * R.DRIVE_DRAIN_PER_SECOND);
+    // Parado longe da base nao gasta, e tambem nao recarrega de graca
+    const parked = rover.battery;
+    rover.update(60, {});
+    expect(rover.battery).toBe(parked);
+  });
+
+  it('each drill costs battery, and a low battery refuses to drill', () => {
+    const rover = roverAt(CRATER.x, CRATER.z);
+    expect(rover.collectIce().success).toBe(true);
+    expect(rover.battery).toBe(R.START_BATTERY - R.DRILL_DRAIN);
+
+    rover.battery = R.LOW_BATTERY - 1;
+    const refused = rover.collectIce();
+    expect(refused.success).toBe(false);
+    expect(refused.reason).toMatch(/battery too low/i);
+    expect(rover.iceCargo).toBe(WATER_SYSTEM_CONFIG.ICE_PER_DRILL);
+    expect(rover.battery).toBe(R.LOW_BATTERY - 1);
+    expect(rover.getTelemetry().lowBattery).toBe(true);
+  });
+
+  it('a low battery caps the speed, but the rover still crawls home at 0%', () => {
+    const rover = roverAt(0, 0);
+    rover.activate();
+    rover.battery = R.LOW_BATTERY - 1;
+    for (let i = 0; i < 20; i++) rover.update(0.2, { KeyW: true });
+    expect(rover.speed).toBeCloseTo(rover.maxForwardSpeed * R.LOW_BATTERY_SPEED_FACTOR);
+
+    rover.battery = 0;
+    const z = rover.pos.z;
+    for (let i = 0; i < 10; i++) rover.update(0.2, { KeyW: true });
+    expect(rover.battery).toBe(0);
+    expect(rover.speed).toBeGreaterThan(0);
+    expect(rover.pos.z).toBeLessThan(z);
+    expect(rover.getTelemetry().battery).toBe(0);
+  });
+
+  it('charges while parked at the base depot, and the base battery pays for it', () => {
+    const base = new Battery(80);
+    const rover = roverAt(DEPOT.x, DEPOT.z, { basePower: base });
+    rover.battery = 50;
+
+    rover.update(1, {}); // estacionado (inativo) tambem carrega
+    expect(rover.battery).toBeCloseTo(50 + R.CHARGE_PER_SECOND);
+    expect(base.charge).toBeCloseTo(80 - R.CHARGE_PER_SECOND * R.BASE_COST_PER_ROVER_PERCENT);
+    expect(rover.getTelemetry().isCharging).toBe(true);
+
+    for (let i = 0; i < 100; i++) rover.update(1, {});
+    expect(rover.battery).toBe(100);
+    // 50 % do rover custaram exatamente 50 x BASE_COST_PER_ROVER_PERCENT da base, nem mais
+    expect(base.charge).toBeCloseTo(80 - 50 * R.BASE_COST_PER_ROVER_PERCENT);
+    expect(rover.getTelemetry().isCharging).toBe(false);
+  });
+
+  it('does not charge while driving, away from the depot, or without base power', () => {
+    const base = new Battery(80);
+    const driving = roverAt(DEPOT.x, DEPOT.z, { basePower: base });
+    driving.battery = 50;
+    driving.activate();
+    driving.update(0.1, { KeyW: true });
+    expect(driving.battery).toBeLessThan(50);
+    expect(base.charge).toBe(80);
+
+    const away = roverAt(CRATER.x, CRATER.z, { basePower: base });
+    away.battery = 50;
+    away.update(5, {});
+    expect(away.battery).toBe(50);
+    expect(base.charge).toBe(80);
+
+    const emptyBase = roverAt(DEPOT.x, DEPOT.z, { basePower: new Battery(0) });
+    emptyBase.battery = 50;
+    emptyBase.update(5, {});
+    expect(emptyBase.battery).toBe(50);
+    expect(emptyBase.getTelemetry().isCharging).toBe(false);
+
+    const unplugged = roverAt(DEPOT.x, DEPOT.z);
+    unplugged.battery = 50;
+    unplugged.update(5, {});
+    expect(unplugged.battery).toBe(50);
+  });
+
+  it('a base battery that runs out mid-charge only gives what it has', () => {
+    const base = new Battery(0.2);
+    const rover = roverAt(DEPOT.x, DEPOT.z, { basePower: base });
+    rover.battery = 10;
+    rover.update(1, {});
+    expect(base.charge).toBeCloseTo(0);
+    expect(rover.battery).toBeCloseTo(10 + 0.2 / R.BASE_COST_PER_ROVER_PERCENT);
+  });
+
+  it('a full ice trip (drive out, 5 drills, drive back) costs about a quarter to a third of the battery', () => {
+    const distance = Math.hypot(CRATER.x - DEPOT.x, CRATER.z - DEPOT.z);
+    const rover = roverAt(0, 0);
+    const drivingSeconds = (2 * distance) / rover.maxForwardSpeed;
+    const drills = WATER_SYSTEM_CONFIG.ICE_CARGO_MAX / WATER_SYSTEM_CONFIG.ICE_PER_DRILL;
+    const trip = drivingSeconds * R.DRIVE_DRAIN_PER_SECOND + drills * R.DRILL_DRAIN;
+    expect(trip).toBeGreaterThan(20);
+    expect(trip).toBeLessThan(35);
+    // Sobra carga para voltar: tres viagens cabem numa bateria cheia sem cair na faixa lenta
+    expect(R.START_BATTERY - 3 * trip).toBeGreaterThan(0);
   });
 });
