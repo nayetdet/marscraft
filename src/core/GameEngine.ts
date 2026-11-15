@@ -522,7 +522,7 @@ export class GameEngine {
     const inside = this.survival.isPlayerInsideShip(this.player.pos);
     const insideCore = inside && !(Math.abs(this.player.pos.x - 0.5) < 1.5 && this.player.pos.z >= 6);
     this._updateUtility();
-    const greenhouseLit = this.utility.greenhouseLightsOn && !this.utility.cold;
+    const greenhouseLit = this.utility.greenhouseLightsOn && !this.utility.cold && !this.utility.greenhousePaused;
     this.expedition.greenhousePowered = greenhouseLit && this.expedition.spend(this.utility.greenhouseLightsCost(dt));
     this._maybePlayRationDeliveryCutscene();
     this.stations.update(dt, insideCore, this.survival, !inside);
@@ -544,7 +544,8 @@ export class GameEngine {
     document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
     const tiredWarning = this.sleep.updateWarning();
-    document.getElementById('station-warning').textContent = this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : tiredWarning;
+    // Ato 2 (#415): a maquina de quem saiu para ajudar esta parada
+    document.getElementById('station-warning').textContent = this.act2.stationWarning ?? this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : tiredWarning;
   }
 
   // Avanca o modulo norte no relogio do ceu e repassa o estado para a tripulacao
@@ -1341,6 +1342,8 @@ export class GameEngine {
     if (id === FIRST_ICE_TANK_ID || id === FIRST_ICE_ROCKET_ID) return this._onFirstIceChoice(id);
     const act5Choice = this.act5.onCardChoice(id); // ato 5 (#423): como deixar a base
     if (act5Choice !== null) return act5Choice;
+    const act2Choice = this.act2.onCardChoice(id); // ato 2 (#415): quem traz o vidro
+    if (act2Choice !== null) return act2Choice;
     // Ato 3 (#420): luz da estufa a noite, escolhida no card do por do sol (Act3Controller)
     if (id === LIGHTS_ON_ID || id === LIGHTS_OFF_ID) {
       this.utility.greenhouseLightsOn = id === LIGHTS_ON_ID;

@@ -8,13 +8,15 @@ import { ActController, type StorySnapshot, type Waypoint } from './actTypes.ts'
 import { ACT2_ENGINEER_NAME, ACT2_PLACES } from './act2Steps.ts';
 import { ACT2_CARDS, ACT2_TEXT, JournalLesson, WINDOW_SCAN_ENTRIES } from './act2Text.ts';
 import { SUIT_CHOICE_CARD, shouldShowSuitChoice } from './act2SuitChoice.ts';
+import { CREW_HELP_CARD, CREW_HELPERS, CrewHelp, DEFAULT_HELPER_ID, HELP_BOTANIST_ID, type CrewHelper } from './act2CrewHelp.ts';
 
 // Ato 2 (issue #408): liga os passos de act2Steps.ts ao jogo. Ver actTypes.ts.
 //   clean-panels   comeca a tempestade de poeira roteirizada; no meio dela o redemoinho cruza o
 //                  campo solar e limpa parte dos paineis
 //   get-scope      uma janela racha (vazamento lento e escondido) e o engenheiro entrega a luneta
 //   find-leak      escanear um vidro responde se esta inteiro ou rachado
-//   fix-window     o engenheiro entrega 1 vidro; [F] na janela rachada troca o vidro
+//   fix-window     a crianca escolhe quem traz 1 vidro (act2CrewHelp.ts, #415): a maquina dessa
+//                  pessoa para por um tempo; [F] na janela rachada troca o vidro
 //   scan-three     um alvo de Marte, um do ceu e um da base
 //   journal-lesson 3 vinhetas sobre a tela do diario
 // O GameEngine chama, alem dos metodos de ActController: interactionPrompt/interact (o [F]),
@@ -41,6 +43,7 @@ const STORM_SCRIPT = Object.freeze({
 });
 
 // Chave numerica de um bloco (sem alocar string a cada frame)
+const BOTANIST_INDEX = CREW_HELPERS[HELP_BOTANIST_ID].memberIndex;
 const blockKey = (x: number, y: number, z: number) => ((x + 512) * 1024 + y) * 1024 + (z + 512);
 
 export class Act2Controller extends ActController {
@@ -54,6 +57,7 @@ export class Act2Controller extends ActController {
   // Vazamento, luneta e conserto
   leak: Leak | null = null;
   repairWait = 0; // segundos ate o engenheiro chegar com o vidro
+  crewHelp = new CrewHelp(); // quem traz o vidro e qual maquina para (#415)
   // Tres scans
   scans = { mars: false, sky: false, base: false };
   private scanCountSeen = -1;
@@ -130,7 +134,7 @@ export class Act2Controller extends ActController {
     else if (id === 'get-scope') this.startLeak();
     else if (id === 'fix-window') {
       this.repairWait = C.STORY_REPAIR_FETCH_SECONDS;
-      this.engine.hud?.showCaption(ACT2_TEXT.glassComing, 5000);
+      this.askCrewHelp();
     } else if (id === 'scan-three' && !this.scans.sky && !this.earthIsUp()) {
       this.engine.storyHud?.showCard(ACT2_CARDS.earthHidden);
     }
@@ -157,6 +161,7 @@ export class Act2Controller extends ActController {
       this.engine.hud?.showToast(ACT2_TEXT.scopeAdded, 4000);
     }
     if (this.leak && !this.leak.fixed) this.closeLeak();
+    this.crewHelp.cancel();
     this.lessonHud?.hide();
   }
 
@@ -166,7 +171,14 @@ export class Act2Controller extends ActController {
     // A poeira da tempestade gasta o traje mais rapido la fora (vale para toda tempestade de poeira)
     if (survival && dust) survival.suitWearFactor = dust.phase === 'storm' ? C.STORM_SUIT_WEAR_MULTIPLIER : 1;
     if (dust) this.updateStorm(dust, s);
-    if (running && this.stepId === 'fix-window' && this.repairWait > 0) this.repairWait -= dt;
+    if (running && this.stepId === 'fix-window') {
+      // Sem resposta no card, vem o engenheiro; o vidro so comeca a ser buscado depois da escolha
+      if (this.crewHelp.asking) {
+        if (this.crewHelp.tickChoice(dt)) this.chooseHelper(DEFAULT_HELPER_ID);
+      } else if (this.repairWait > 0) this.repairWait -= dt;
+    }
+    const back = this.crewHelp.update(s.hours ?? 0);
+    if (back) this.resumeStation(back);
     this.updateLesson(dt);
   }
 
@@ -350,6 +362,58 @@ export class Act2Controller extends ActController {
     return null;
   }
 
+  // ---------- Quem sai do posto para ajudar (#415, act2CrewHelp.ts) ----------
+
+  // Aviso do HUD enquanto a maquina de quem ajuda esta parada (GameEngine), ou null
+  get stationWarning(): string | null {
+    return this.crewHelp.warning;
+  }
+
+  // Mostra o card da escolha. Sem um segundo tripulante ou sem o card, vem o engenheiro.
+  private askCrewHelp(): void {
+    const engine = this.engine;
+    if (!engine.storyHud || !engine.crew?.members?.[BOTANIST_INDEX]) {
+      this.chooseHelper(DEFAULT_HELPER_ID);
+      return;
+    }
+    this.crewHelp.ask();
+    engine.storyHud.showCard(CREW_HELP_CARD);
+  }
+
+  // Escolha do card WHO BRINGS THE GLASS? (GameEngine._onCardChoice). Devolve null se a escolha
+  // nao e deste ato e true para fechar o card.
+  onCardChoice(id: string): boolean | null {
+    if (!CREW_HELPERS[id]) return null;
+    if (this.crewHelp.asking) this.chooseHelper(id);
+    return true;
+  }
+
+  private chooseHelper(id: string): void {
+    const helper = this.crewHelp.choose(id);
+    if (!helper) return;
+    this.setStationPaused(helper, true);
+    this.engineerWaypoint.label = helper.waypointLabel;
+    this.engine.hud?.showCaption(helper.coming ?? ACT2_TEXT.glassComing, 5000);
+    this.engine.hud?.showToast(helper.stopped, 7000);
+  }
+
+  private resumeStation(helper: CrewHelper): void {
+    this.setStationPaused(helper, false);
+    this.engine.hud?.showToast(helper.resumed, 6000);
+  }
+
+  private setStationPaused(helper: CrewHelper, paused: boolean): void {
+    const utility = this.engine.utility;
+    if (!utility) return;
+    if (helper.station === 'recycler') utility.recyclerPaused = paused;
+    else utility.greenhousePaused = paused;
+  }
+
+  // Quem entrega o item do passo: no conserto da janela, a pessoa escolhida; senao o engenheiro
+  private get giver() {
+    return this.engine.crew?.members?.[this.stepId === 'fix-window' ? this.crewHelp.memberIndex : 0] ?? null;
+  }
+
   // ---------- [F]: o engenheiro entrega a luneta e o vidro; a janela rachada e trocada ----------
 
   private get engineer() {
@@ -361,7 +425,8 @@ export class Act2Controller extends ActController {
     if (this.stepId === 'get-scope') return member && member === this.engineer ? ACT2_TEXT.promptScope : null;
     if (this.stepId !== 'fix-window' || !this.leak || this.leak.fixed) return null;
     if (this.hasItem(BLOCK_IDS.HAB_GLASS)) return this.nearCrackedWindow() ? ACT2_TEXT.promptRepair : null;
-    return member && member === this.engineer && this.repairWait <= 0 ? ACT2_TEXT.promptGlass : null;
+    if (this.crewHelp.asking || this.repairWait > 0 || !member || member !== this.giver) return null;
+    return this.crewHelp.helper?.promptGlass ?? ACT2_TEXT.promptGlass;
   }
 
   interact(): void {
@@ -369,7 +434,7 @@ export class Act2Controller extends ActController {
       this.handOver(BLOCK_IDS.SCOPE, ACT2_TEXT.scopeGiven);
     } else if (this.stepId === 'fix-window' && this.leak && !this.leak.fixed) {
       if (this.hasItem(BLOCK_IDS.HAB_GLASS)) this.replaceWindow();
-      else this.handOver(BLOCK_IDS.HAB_GLASS, ACT2_TEXT.glassGiven);
+      else this.handOver(BLOCK_IDS.HAB_GLASS, this.crewHelp.helper?.glassGiven ?? ACT2_TEXT.glassGiven);
     }
   }
 
@@ -484,7 +549,7 @@ export class Act2Controller extends ActController {
 
   // Boneco do engenheiro (procurado sem alocar: a seta pergunta por ele a cada frame)
   private engineerAvatar(): any {
-    const engineer = this.engineer;
+    const engineer = this.giver;
     const avatars = this.engine.crewAvatars;
     if (!engineer || !avatars) return null;
     for (let i = 0; i < avatars.length; i++) if (avatars[i].member === engineer) return avatars[i];
