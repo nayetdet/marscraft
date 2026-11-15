@@ -157,23 +157,23 @@ describe('AudioManager', () => {
     expect(place.volume).toBeCloseTo(0.42);
   });
 
-  it('uses one-shot impacts for the matching block material when a block breaks', () => {
+  it('uses a short synthesized regolith impact and a one-shot hull impact', () => {
     const audioInstances = stubAudio();
+    const { oscillators } = stubAudioContext();
     const manager = new AudioManager();
-    const regolithImpact = manager.regolithBreakImpact;
     const hullImpact = manager.shipBlockBreakImpact;
 
     manager.playBlockBreakImpact(true);
     manager.playBlockBreakImpact(false);
 
-    expect(regolithImpact.currentTime).toBe(0);
+    expect(oscillators).toHaveLength(2);
+    expect(oscillators[0].stop).toHaveBeenCalled();
+    expect(oscillators[1].stop).toHaveBeenCalled();
     expect(hullImpact.currentTime).toBe(0);
-    expect(regolithImpact.play).toHaveBeenCalledOnce();
     expect(hullImpact.play).toHaveBeenCalledOnce();
-    expect(regolithImpact.loop).toBe(false);
     expect(hullImpact.loop).toBe(false);
-    expect(audioInstances).toContain(regolithImpact);
     expect(audioInstances).toContain(hullImpact);
+    expect(audioInstances.filter((audio) => audio.src.includes('quebrando_areia.WAV'))).toHaveLength(1);
   });
 
   it('plays a rate-limited error cue when health drops', () => {
@@ -212,6 +212,7 @@ describe('AudioManager', () => {
 
     manager.playRegolithBreak();
     expect(regolith.play).toHaveBeenCalledOnce();
+    expect(regolith.volume).toBeCloseTo(AUDIO_MIX_CONFIG.REGOLITH_BREAK_VOLUME);
     regolith.currentTime = 0.6;
     manager.stopRegolithBreak();
     expect(regolith.pause).toHaveBeenCalledOnce();
