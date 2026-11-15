@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SURVIVAL_CONFIG, TERRAIN_CONFIG } from '../config/constants.js';
+import { SURVIVAL_CONFIG, TERRAIN_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import {
   DUST_STORM_WALL_RADIUS,
   dustStormIntensity,
@@ -32,8 +32,12 @@ describe('dust storm zone', () => {
     expect(dustStormVisualStrength(cx + START - WARNING, cz)).toBe(0);
   });
 
-  it('keeps the dust wall inside the storm ring', () => {
-    expect(DUST_STORM_WALL_RADIUS).toBeGreaterThanOrEqual(START);
-    expect(DUST_STORM_WALL_RADIUS).toBeLessThan(FATAL);
+  it('places the dust wall at the nearest physical map edge', () => {
+    const nearestMapEdge = Math.min(
+      WORLD_CONFIG.SIZE_X / 2 - Math.abs(cx),
+      WORLD_CONFIG.SIZE_Z / 2 - Math.abs(cz)
+    );
+    expect(DUST_STORM_WALL_RADIUS).toBeCloseTo(nearestMapEdge);
+    expect(DUST_STORM_WALL_RADIUS).toBeGreaterThan(FATAL);
   });
 });
