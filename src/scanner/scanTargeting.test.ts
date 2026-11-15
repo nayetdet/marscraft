@@ -35,6 +35,7 @@ describe('resolveScanTarget: terrain', () => {
     [BLOCK_IDS.SANDSTONE, 'sandstone'],
     [BLOCK_IDS.BASALT, 'crater-rock'],
     [BLOCK_IDS.MARS_ICE, 'water-ice'],
+    [BLOCK_IDS.METEOR_ICE, 'water-ice'],
   ])('identifies block %i as %s', (block, id) => {
     const world = createMapWorld();
     world.setBlock(20, 10, 15, block);

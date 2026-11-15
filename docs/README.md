@@ -33,6 +33,8 @@ Ao atualizar `data/`, mantenha a data de coleta em cada amostra.
 
 - Fundo espacial do menu inicial (`src/assets/images/mars-menu-space.webp`): ilustração original gerada com assistência de IA a partir da composição descrita para o projeto, exportada em 1920 × 1080. Não usa imagens ou marcas da NASA.
 
+- Gelo fresco e ejecta da cratera de meteoro (`src/graphics/blockMaterials.ts`, `src/world/impactCrater.ts`): texturas e padrão de voxels procedurais escritos em código com assistência de IA. Não usam imagens nem marcas da NASA.
+
 - [Monocraft](https://github.com/IdreesInc/Monocraft), fonte inspirada na tipografia da interface do Minecraft, usada na interface e nos textos desenhados da base. Licença SIL Open Font License 1.1; cópia incluída em `src/assets/fonts/OFL-1.1.txt`. É uma recriação de fã, não a fonte oficial Mojangles.
 
 - [ISS SSP 57000, Revision R, Appendix O: Instructions for Labels and Decals](https://ntrs.nasa.gov/api/citations/20190001390/downloads/20190001390.pdf), seções O.3.4.5.2.2 e O.3.4.10.1: contraste, uso de cores e fonte das placas de identificação. As placas do jogo são adaptações que identificam os espaços pela função; não usam códigos de módulos fictícios nem alegam reproduzir placas reais específicas.

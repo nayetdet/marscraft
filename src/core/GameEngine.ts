@@ -1186,7 +1186,7 @@ export class GameEngine {
   }
 
   _refreshMavPanel() {
-    this.missionHud.updateMavPanel(this.mission, this.survival.countItem(BLOCK_IDS.MARS_ICE), this.stations.analyzedSamples, this.scienceStatus());
+    this.missionHud.updateMavPanel(this.mission, this.survival.countWaterIce(), this.stations.analyzedSamples, this.scienceStatus());
   }
 
   _toggleShield() {
@@ -1216,10 +1216,10 @@ export class GameEngine {
   }
 
   _loadIceIntoMav(count) {
-    const inBag = this.survival.countItem(BLOCK_IDS.MARS_ICE);
+    const inBag = this.survival.countWaterIce();
     const accepted = this.mission.deliverIce(Math.min(count, inBag));
     if (accepted <= 0) return;
-    this.survival.removeItems(BLOCK_IDS.MARS_ICE, accepted);
+    this.survival.removeWaterIce(accepted);
     this.hud.renderHotbar(this.survival.slots);
     const heldSlot = this.survival.slots[this.hud.selectedSlot];
     this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
@@ -2156,7 +2156,7 @@ export class GameEngine {
     const s = this._storySnapshot;
     s.hours = this._skyHours();
     s.insideHabitat = this.survival.insidePressurizedShip;
-    s.iceCount = this.survival.countItem(BLOCK_IDS.MARS_ICE);
+    s.iceCount = this.survival.countWaterIce();
     s.iceNeeded = this.mission.iceNeeded();
     s.stormPhase = this.mission.storm.phase;
     s.stormsSurvived = this.mission.stormCredit;

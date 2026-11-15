@@ -14,7 +14,7 @@ export function createBlockMaterials() {
 
   const atlasEntries = [];
 
-  // Usa MeshLambertMaterial para visual 100% fosco (matte), claro e muito mais otimizado
+  // MeshLambertMaterial keeps the shared block atlas lightweight; selected materials may glow.
   const register = (id, drawFn, matOptions = {}) => {
     const { texture } = makeCanvasTexture(drawFn);
     materials[id] = new THREE.MeshLambertMaterial({
@@ -95,14 +95,33 @@ export function createBlockMaterials() {
     ctx.fillRect(5, 13, 1, 2);
   });
 
-  // 4. Gelo de Agua Marciano (Azul claro brilhante)
+  // Gelo antigo enterrado: gelo acinzentado com poeira ferrugem presa na superficie.
   register(BLOCK_IDS.MARS_ICE, (ctx) => {
-    fillNoise(ctx, [205, 240, 255], 18, 404);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(2, 2, 4, 1);
-    ctx.fillRect(10, 8, 4, 1);
-    ctx.fillRect(5, 12, 5, 1);
+    fillNoise(ctx, [165, 181, 181], 24, 404);
+    const rand = createSeededRandom(405);
+    for (let i = 0; i < 22; i++) {
+      ctx.fillStyle = rand() > 0.64 ? '#b7c8c8' : '#88796d';
+      ctx.fillRect(Math.floor(rand() * 16), Math.floor(rand() * 16), 1, 1);
+    }
+    ctx.fillStyle = 'rgba(126, 91, 67, 0.55)';
+    ctx.fillRect(2, 4, 3, 1);
+    ctx.fillRect(10, 10, 2, 2);
+    ctx.fillRect(5, 13, 4, 1);
   });
+
+  // Gelo fresco do impacto: branco azulado, com facetas e brilho proprio sutil.
+  register(BLOCK_IDS.METEOR_ICE, (ctx) => {
+    fillNoise(ctx, [239, 249, 255], 12, 414);
+    const rand = createSeededRandom(415);
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = rand() > 0.5 ? '#d9efff' : '#ffffff';
+      ctx.fillRect(Math.floor(rand() * 16), Math.floor(rand() * 16), 2, 1);
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(2, 3, 5, 1);
+    ctx.fillRect(10, 7, 4, 1);
+    ctx.fillRect(5, 12, 6, 1);
+  }, { emissive: new THREE.Color('#d9f3ff'), emissiveIntensity: 0.32 });
 
   // 5. Casco Branco da Base NASA: painel branco levemente frio (compensa a luz alaranjada de Marte). A emenda fica so em duas
   // bordas (embaixo e a direita), entao a parede vira uma grade fina em vez de azulejo.

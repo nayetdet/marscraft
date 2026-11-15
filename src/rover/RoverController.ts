@@ -1,5 +1,6 @@
 // @ts-nocheck
 import * as THREE from 'three';
+import { isWaterIceBlock } from '../config/blockTypes.ts';
 import { ROVER_CONFIG, WORLD_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.ts';
 import { HABITAT_LAYOUT } from '../world/habitatLayout.ts';
 
@@ -276,8 +277,7 @@ export class RoverController {
       Math.floor(this.pos.y) - 1,
       Math.floor(this.pos.z)
     );
-    // Id 4 é MARS_ICE
-    return distToIceCrater <= 10.5 || blockBelow === 4;
+    return distToIceCrater <= 10.5 || isWaterIceBlock(blockBelow);
   }
 
   _distanceToDepot() {

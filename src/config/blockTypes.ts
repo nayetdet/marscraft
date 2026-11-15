@@ -30,7 +30,11 @@ export const BLOCK_IDS = {
   SAMPLE_SULFUR: 24,
   SAMPLE_METEORITE: 25,
   SAMPLE_ICE_CORE: 26,
+  METEOR_ICE: 27,
 };
+
+export const WATER_ICE_BLOCK_IDS = Object.freeze([BLOCK_IDS.MARS_ICE, BLOCK_IDS.METEOR_ICE]);
+export const isWaterIceBlock = (blockId) => WATER_ICE_BLOCK_IDS.includes(blockId);
 
 export const SHIP_BLOCK_IDS = Object.freeze([
   BLOCK_IDS.NASA_HULL,
@@ -116,6 +120,12 @@ export const HOTBAR_BLOCKS = [
   {
     id: BLOCK_IDS.HAB_LIGHT,
     name: 'Solar Lamp',
+    initialCount: 0,
+    consumable: null,
+  },
+  {
+    id: BLOCK_IDS.METEOR_ICE,
+    name: 'Fresh Meteor Ice',
     initialCount: 0,
     consumable: null,
   },

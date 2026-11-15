@@ -25,10 +25,14 @@ describe('findExposedIce', () => {
   it('finds ice touching the air and skips ice buried in rock', () => {
     const world = createMapWorld();
     world.setBlock(3, 5, 3, BLOCK_IDS.MARS_ICE);
+    world.setBlock(4, 5, 3, BLOCK_IDS.METEOR_ICE);
     fillCube(world, -5, 5, -5, BLOCK_IDS.BASALT);
     world.setBlock(-5, 5, -5, BLOCK_IDS.MARS_ICE); // cercado por basalto
 
-    expect(findExposedIce(world, { x: 0, z: 0 }, 10)).toEqual([{ x: 3, y: 5, z: 3 }]);
+    expect(findExposedIce(world, { x: 0, z: 0 }, 10)).toEqual([
+      { x: 3, y: 5, z: 3 },
+      { x: 4, y: 5, z: 3 },
+    ]);
   });
 
   it('only looks inside the radius and respects the block limit', () => {

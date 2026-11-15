@@ -20,6 +20,7 @@ const TERRAIN_BLOCKS = {
   [BLOCK_IDS.SANDSTONE]: 'sandstone',
   [BLOCK_IDS.BASALT]: 'crater-rock',
   [BLOCK_IDS.MARS_ICE]: 'water-ice',
+  [BLOCK_IDS.METEOR_ICE]: 'water-ice',
 };
 
 // Diz a qual módulo da base pertence um bloco estrutural (paredes incluídas), ou null.
