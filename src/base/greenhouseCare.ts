@@ -36,35 +36,49 @@ export function plantsStalled(state) {
 // Fatos "Marte <-> Terra": a mesma tecnologia da estufa ajudando pessoas na Terra. Frases curtas
 // para 7 a 12 anos, sem numeros inventados. Cada fato e a recompensa de uma descoberta do jogador
 // (issue #216): `crop` e a planta cuja PRIMEIRA colheita revela o fato; o fato sem `crop` sai na
-// colheita seguinte a ter colhido os 3 tipos.
+// colheita seguinte a ter colhido os 3 tipos. `side` de cada frase: a base em Marte, a Terra ou a
+// Estacao Espacial (cor do icone no card, EarthFactHud).
 export const EARTH_FACT_TITLE = 'SPACE SCIENCE ON EARTH';
 export const EARTH_CARDS = [
   {
     id: 'lettuce',
     crop: 'lettuce',
     reason: 'First lettuce harvest!',
-    lines: ['Fresh food keeps the crew healthy and happy', 'Astronauts ate space lettuce in 2015'],
+    lines: [
+      { icon: 'heart', side: 'mars', text: 'Fresh food keeps the crew healthy and happy' },
+      { icon: 'plant', side: 'space', text: 'Astronauts ate space lettuce in 2015' },
+    ],
     source: 'NASA Veggie on the Space Station. Plant studies: NASA OSDR',
   },
   {
     id: 'potato',
     crop: 'potato',
     reason: 'First potato harvest!',
-    lines: ['Mars soil has perchlorate salts', 'So we grow plants in water, not soil', 'Earth: city vertical farms do the same'],
+    lines: [
+      { icon: 'plant', side: 'mars', text: 'Mars soil has perchlorate salts' },
+      { icon: 'drop', side: 'mars', text: 'So we grow plants in water, not soil' },
+      { icon: 'home', side: 'earth', text: 'Earth: city vertical farms do the same' },
+    ],
     source: 'Perchlorate found in Mars soil by NASA Phoenix (2008). CSA: Food production toolkit',
   },
   {
     id: 'soy',
     crop: 'soy',
     reason: 'First soy harvest!',
-    lines: ['Our greenhouse reuses its water', 'Earth: closed greenhouses grow food in the Canadian Arctic'],
+    lines: [
+      { icon: 'drop', side: 'mars', text: 'Our greenhouse reuses its water' },
+      { icon: 'home', side: 'earth', text: 'Earth: closed greenhouses grow food in the Canadian Arctic' },
+    ],
     source: 'CSA: Food production on the Moon and in remote areas',
   },
   {
     id: 'bonus',
     crop: null,
     reason: 'You grew every crop!',
-    lines: ['Red and blue LEDs feed the plants', 'Earth: indoor farms use LEDs to save power'],
+    lines: [
+      { icon: 'sun', side: 'mars', text: 'Red and blue LEDs feed the plants' },
+      { icon: 'bolt', side: 'earth', text: 'Earth: indoor farms use LEDs to save power' },
+    ],
     source: 'NASA Veggie uses red and blue LED light. CSA: Food production toolkit',
   },
 ];
@@ -90,11 +104,12 @@ export class EarthFacts {
   }
 }
 
-// O toast de descoberta (ScannerHud.showDiscovery) e a linha do diario de bordo
-export function earthFactLines(card) {
-  return [...card.lines, `Source: ${card.source}`];
+// O que o card de descoberta desenha (EarthFactHud.show)
+export function earthFactView(card) {
+  return { title: EARTH_FACT_TITLE, reason: card.reason, lines: card.lines, source: card.source };
 }
 
+// A linha do diario de bordo [J]
 export function earthFactLogText(card) {
-  return `Space science on Earth: ${card.lines.join('. ')}. (${card.source})`;
+  return `Space science on Earth: ${card.lines.map((line) => line.text).join('. ')}. (${card.source})`;
 }

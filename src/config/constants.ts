@@ -731,7 +731,8 @@ export const MISSION_LOG_CONFIG = {
   MERGE_HOURS: 1,
   SUMMARY_CARD_MS: 9000, // resumo do fim do sol na tela
   STUDY_CARD_MS: 7000, // estudo real da NASA revelado
-  EARTH_FACT_CARD_MS: 9000, // fato "Space science on Earth" ganho na estufa (issue #216)
+  EARTH_FACT_INTRO_MS: 1900, // abertura "DISCOVERY!" no meio da tela, antes do card do fato (issue #216)
+  EARTH_FACT_CARD_MS: 9000, // card do fato "Space science on Earth" ganho na estufa
   EARTH_FACT_GAP_MS: 600, // pausa entre dois fatos ganhos na mesma colheita
 };
 

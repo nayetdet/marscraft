@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { describe, expect, it } from 'vitest';
-import { EARTH_CARDS, EarthFacts, earthFactLines, earthFactLogText, growthChecks, plantsStalled } from './greenhouseCare.ts';
+import { pixelIconSvg } from '../ui/pixelIcons.ts';
+import { EARTH_CARDS, EARTH_FACT_TITLE, EarthFacts, earthFactLogText, earthFactView, growthChecks, plantsStalled } from './greenhouseCare.ts';
 
 const GOOD = { lightsOn: true, powered: true, cold: false, waterL: 40, thirsty: false, recovery: 0.98, contaminated: false };
 
@@ -25,8 +26,13 @@ describe('greenhouse care (issue #89)', () => {
     expect(EARTH_CARDS.map((c) => c.crop)).toEqual(['lettuce', 'potato', 'soy', null]);
     for (const card of EARTH_CARDS) {
       expect(card.source).toBeTruthy();
-      expect(earthFactLines(card).at(-1)).toBe(`Source: ${card.source}`);
-      expect(earthFactLogText(card)).toContain(card.lines[0]);
+      for (const line of card.lines) {
+        expect(pixelIconSvg(line.icon)).toContain('<rect');
+        expect(['mars', 'earth', 'space']).toContain(line.side);
+      }
+      expect(earthFactView(card)).toEqual({ title: EARTH_FACT_TITLE, reason: card.reason, lines: card.lines, source: card.source });
+      expect(earthFactLogText(card)).toContain(card.lines[0].text);
+      expect(earthFactLogText(card)).toContain(card.source);
     }
   });
 });
