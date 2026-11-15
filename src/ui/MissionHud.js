@@ -45,6 +45,7 @@ export class MissionHud {
     };
     this.levelEls = [...$('res-radiation').querySelectorAll('.res-levels i')];
     this.alerts = [this._alert($('mission-alerts')), this._alert($('mission-alerts'))];
+    this.activeAlertWaypoint = null;
 
     this.mavOverlayEl = $('mav-overlay');
     this.mavOverallEl = $('mav-overall');
@@ -124,7 +125,11 @@ export class MissionHud {
       baseOxygen: survival?.baseOxygen,
       contaminated: stations?.contaminated,
       brokenWindows: world?.brokenBaseWindows.size ?? 0,
+      suitOxygen: survival?.oxygen,
+      oxygenNeedsPower: survival?.oxygenNeedsPower,
+      insideHabitat: survival?.insidePressurizedShip,
     });
+    this.activeAlertWaypoint = view.alerts.find((alert) => alert.target)?.target ?? null;
     const { power, water, air, radiation } = this.rows;
 
     setClass(power.root, `res-row ${view.power.tone}`);

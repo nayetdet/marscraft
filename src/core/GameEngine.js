@@ -942,6 +942,8 @@ export class GameEngine {
 
     // Setas do objetivo: uma flutua no mundo e a outra fica na tela (aponta mesmo atraves das paredes)
     this.waypoints = this._buildWaypoints();
+    this._brokenWindowIndex = null;
+    this._brokenWindowWaypoint = { x: 0, y: 0, z: 0, label: 'BROKEN WINDOW' };
     this.waypointBeacon = new WaypointBeacon(this.scene);
     this.waypointHud = new WaypointHud();
 
@@ -968,11 +970,17 @@ export class GameEngine {
     let iceTop = this.world.sizeY - 1;
     while (iceTop > 0 && !this.world.getBlock(ice.x, iceTop, ice.z)) iceTop--;
     const pad = MAV_CONFIG.PAD_POSITION;
+    const shelterX = (HABITAT_LAYOUT.SHELTER_X_MIN + HABITAT_LAYOUT.SHELTER_X_MAX) / 2;
+    const shelterZ = (HABITAT_LAYOUT.SHELTER_Z_MIN + HABITAT_LAYOUT.SHELTER_Z_MAX) / 2;
     return {
       airlock: { x: 0.5, y: ground + 3.2, z: outerDoor.z + 0.5, label: WAYPOINT_LABELS.airlock },
       console: { x: 4, y: ground + 3, z: -9.6, label: WAYPOINT_LABELS.console },
       ice: { x: ice.x + 0.5, y: iceTop + 1.6, z: ice.z + 0.5, label: WAYPOINT_LABELS.ice },
       mav: { x: pad.x, y: ground + 9.2, z: pad.z, label: WAYPOINT_LABELS.mav },
+      shelter: { x: shelterX, y: ground + 2.2, z: shelterZ, label: 'STORM SHELTER' },
+      powerroom: { x: -15.5, y: ground + 2.5, z: -16.5, label: 'POWER & HEAT CONTROL' },
+      lifeSupport: { x: 10.6, y: ground + 2.5, z: -3, label: 'LIFE SUPPORT' },
+      recycler: { x: -16, y: ground + 2.2, z: -38.3, label: 'WATER RECYCLER' },
     };
   }
 
@@ -1095,8 +1103,30 @@ export class GameEngine {
 
     // Seta do objetivo. Dirigindo o rover a camera esta la fora, entao a rota nao passa pelo airlock.
     const inside = s.insideHabitat && !this.roverController.isActive;
-    const place = this._finishedStory() ? null : routeWaypoint(objectiveTarget(this.story.objectiveId, s), inside);
-    const target = place ? this.waypoints[place] : null;
+    const alertPlace = routeWaypoint(this.missionHud.activeAlertWaypoint, inside);
+    const place = alertPlace ?? (this._finishedStory() ? null : routeWaypoint(objectiveTarget(this.story.objectiveId, s), inside));
+    let target = place ? this.waypoints[place] : null;
+    if (place === 'brokenWindow') {
+      const windows = this.world.brokenBaseWindows;
+      if (this._brokenWindowIndex === null || !windows.has(this._brokenWindowIndex)) {
+        this._brokenWindowIndex = null;
+        for (const index of windows) {
+          this._brokenWindowIndex = index;
+          break;
+        }
+      }
+      if (this._brokenWindowIndex !== null) {
+        const size = this.world.sizeX * this.world.sizeZ;
+        const y = Math.floor(this._brokenWindowIndex / size);
+        const inLayer = this._brokenWindowIndex - y * size;
+        const blockZ = Math.floor(inLayer / this.world.sizeX) - this.world.halfZ;
+        const blockX = inLayer % this.world.sizeX - this.world.halfX;
+        this._brokenWindowWaypoint.x = blockX + 0.5;
+        this._brokenWindowWaypoint.y = y + 1.6;
+        this._brokenWindowWaypoint.z = blockZ + 0.5;
+        target = this._brokenWindowWaypoint;
+      }
+    }
     this.waypointBeacon.update(dt, target, this.camera.position);
     this.waypointHud.update(this.camera, target);
   }
