@@ -38,7 +38,7 @@ import { ShaderMode } from '../graphics/shaderMode/ShaderMode.ts';
 import { RoverController } from '../rover/RoverController.ts';
 import { GymEquipmentController } from '../player/GymEquipmentController.ts';
 import { ExpeditionState } from './ExpeditionState.ts';
-import { isGameSimulationRunning } from './gameSimulation.ts';
+import { isGameSimulationRunning, isPlayerPhysicsRunning } from './gameSimulation.ts';
 import { Airlock } from '../world/Airlock.ts';
 import { StationSystem } from './StationSystem.ts';
 import { StationPanel } from '../ui/StationPanel.ts';
@@ -2118,6 +2118,10 @@ export class GameEngine {
       });
       // Modal de trade-off na fila: so abre com o jogo rodando e o mouse no jogo
       if (isGameRunning && this.input.isLocked && !this.hud.isInventoryOpen && !this.scannerHud.isJournalOpen) this.tradeoffHud?.pump();
+      const isPlayerPhysicsRunningNow = isPlayerPhysicsRunning({
+        inventoryOpen: this.hud.isInventoryOpen,
+        journalOpen: this.scannerHud.isJournalOpen,
+      });
       if (this._wasGameRunning && !isGameRunning) this.player.stopJumpMomentum();
       this._wasGameRunning = isGameRunning;
       if (isGameRunning) {
@@ -2139,12 +2143,14 @@ export class GameEngine {
           const outsideTempC = outsideTemperatureC(this._skyHours());
           this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: false, isRoverActive: false, mission: this.mission, airlock: this.airlock, outsideTempC, suitUpgraded: this.stations.upgraded, dirtySuit: this.stations.dirtySuit });
         } else {
-          this.player.update(dt, this.input.keys);
-          clampToPlayArea(this.player.pos); // parede invisivel na borda, sem dano (issue #103)
+          if (isPlayerPhysicsRunningNow) {
+            this.player.update(dt, this.input.keys);
+            clampToPlayArea(this.player.pos); // parede invisivel na borda, sem dano (issue #103)
+          }
           this._updateSurvival(dt);
           this.input.update(dt);
           this.roverController.update(dt, {});
-          this.playerHand.update(dt, this.player.isMoving);
+          this.playerHand.update(dt, isPlayerPhysicsRunningNow && this.player.isMoving);
           this._updateCamera();
           this.sky.update(dt, this.player.pos);
           this._checkAstronautInteractions();
