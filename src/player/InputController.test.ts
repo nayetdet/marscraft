@@ -63,7 +63,7 @@ describe('scope equipment', () => {
     expect(input.onToggleZoom).toHaveBeenCalledWith(true, false);
   });
 
-  it('opens the scope and toggles zoom with right-click without scanning', () => {
+  it('opens the scope with right-click and closes it on the next right-click', () => {
     const input = Object.create(InputController.prototype);
     input.isScannerOpen = false;
     input.isZoomed = false;
@@ -77,7 +77,9 @@ describe('scope equipment', () => {
     expect(input.isScanButtonHeld).toBe(false);
 
     input._handleScopeMouseButton(2);
-    expect(input.onToggleZoom).toHaveBeenLastCalledWith(true, false);
+    expect(input.onToggleZoom).toHaveBeenLastCalledWith(false, false);
+    expect(input.isScannerOpen).toBe(false);
+    expect(input.isZoomed).toBe(false);
     expect(input.isScanButtonHeld).toBe(false);
   });
 });

@@ -307,7 +307,7 @@ export class InputController {
       return true;
     }
     if (button === 2) {
-      this._setScope(true, !this.isZoomed);
+      this._setScope(!this.isScannerOpen, !this.isScannerOpen);
       return true;
     }
     return false;
