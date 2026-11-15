@@ -26,7 +26,3 @@ export function isGameSimulationRunning(state: GameSimulationState): boolean {
     && !state.sleeping
     && !state.tradeoffOpen;
 }
-
-export function isPlayerPhysicsRunning(state: Pick<GameSimulationState, 'inventoryOpen' | 'journalOpen'>): boolean {
-  return !state.inventoryOpen && !state.journalOpen;
-}
