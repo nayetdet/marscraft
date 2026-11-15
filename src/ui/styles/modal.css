@@ -266,7 +266,7 @@ body.pause-menu-open .participants-panel { display: none; }
 .participants-panel h2 {
   margin: 0 0 5px;
   color: #ffffa0;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.2;
   text-align: center;
   text-shadow: 1px 1px #333;
@@ -274,7 +274,7 @@ body.pause-menu-open .participants-panel { display: none; }
 .participants-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 5px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -286,7 +286,7 @@ body.pause-menu-open .participants-panel { display: none; }
   gap: 4px;
   min-width: 0;
   color: #f4eee6;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.15;
   text-align: center;
   overflow-wrap: anywhere;
@@ -302,14 +302,18 @@ body.pause-menu-open .participants-panel { display: none; }
 .participant-link span { text-decoration: underline; text-underline-offset: 2px; }
 .participant-link:hover span { color: #ffffa0; text-decoration: underline; }
 .participant-link:focus-visible { outline: 2px solid #ffffa0; outline-offset: 3px; }
+.participant-name { display: grid; justify-items: center; width: 100%; }
+.participant-name > span:first-child { white-space: nowrap; }
 .participant-card img {
   display: block;
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   max-width: 100%;
   border: 2px solid #d4a16a;
   border-radius: 50%;
   object-fit: cover;
+  image-rendering: auto;
+  object-position: center;
   background: #25201e;
 }
 
@@ -1174,25 +1178,25 @@ body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 
 
 /* Celular em paisagem: preserve a mesma grade e compacte o titulo. */
 @media (max-height: 460px) {
-  .mc-menu { gap: 4px; }
-  .mc-title { font-size: clamp(44px, 8vw, 52px); letter-spacing: -2px; }
-  .mc-title-wrap { margin-bottom: 8px; }
+  .mc-menu { gap: 2px; max-width: 520px; }
+  .mc-title { font-size: clamp(42px, 7vw, 48px); letter-spacing: -2px; }
+  .mc-title-wrap { margin-bottom: 0; }
   .pause-overlay .mc-title { display: none; }
   .pause-overlay .mc-title-wrap { margin-bottom: 4px; }
   .pause-overlay .mc-splash { margin: 0; transform: none; }
   .mc-splash { font-size: 12px; margin-left: 100px; }
-  .mc-menu-card { padding-top: 4px; gap: 5px; }
-  #menu-main { gap: 6px; }
+  .mc-menu-card { padding-top: 2px; gap: 5px; }
+  #menu-main { gap: 4px; }
   .mc-menu-card .mc-btn { min-height: 44px; padding: 8px 10px; font-size: 14px; }
   .mc-menu-card .menu-row .mc-btn { font-size: 11px; padding: 7px 5px; }
   .mc-menu-card .mc-btn:has(.menu-icon) { grid-template-columns: 16px auto; column-gap: 10px; }
   .mc-menu-card .menu-icon { width: 16px; height: 16px; flex-basis: 16px; }
-  .participants-panel { margin-top: 1px; padding: 4px 5px 3px; }
-  .participants-panel h2 { margin-bottom: 3px; font-size: 10px; }
+  .participants-panel { margin-top: 1px; padding: 3px 4px 2px; }
+  .participants-panel h2 { margin-bottom: 2px; font-size: 10px; }
   .participants-grid { gap: 2px; }
-  .participant-card { gap: 2px; font-size: 11px; font-weight: 700; }
+  .participant-card { gap: 2px; font-size: 12px; font-weight: 700; }
   .participant-link { gap: 2px; }
-  .participant-card img { width: 38px; height: 38px; }
+  .participant-card img { width: 48px; height: 48px; }
   .controls-screen.info-screen { max-height: calc(100dvh - 48px); }
 }
 
