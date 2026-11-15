@@ -470,8 +470,19 @@
       </div>
 
       <div class="mav-req">
-        <h3>3. Science data sent: <span id="mav-data">No</span></h3>
-        <p>Send your Mars discoveries to Earth from the command console inside the base: stand next to it and press [G]. The radio uses energy.</p>
+        <h3>3. Science sent to Earth: <span id="mav-data">No</span></h3>
+        <p>Scan things with the scope and analyze regolith samples, then send them from the science &amp; radio terminal inside the base (Send button, or [G] next to it). A bigger package uses more energy.</p>
+        <p id="mav-data-status" class="mav-status"></p>
+      </div>
+
+      <div class="mav-req">
+        <h3>Extra: rock sample tubes on board: <span id="mav-tubes">0</span></h3>
+        <p>Real rovers like Perseverance seal rock samples in tubes so a rocket can one day bring them to Earth. A heavier rocket needs more fuel, so each tube asks for more ice.</p>
+        <p id="mav-tubes-math" class="mav-status"></p>
+        <div class="mav-actions">
+          <button id="mav-tube-load" class="mc-btn">Load 1 sample tube</button>
+          <button id="mav-tube-unload" class="mc-btn">Unload 1 tube</button>
+        </div>
       </div>
 
       <p id="mav-power" class="mav-status"></p>

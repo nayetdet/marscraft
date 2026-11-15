@@ -35,7 +35,7 @@ const TASKS = {
   report: { icon: 'radio', label: 'CALL EARTH' },
   'collect-ice': { icon: 'ice', label: 'GET 1 ICE' },
   'storm-guide': { icon: 'shield', label: 'GET SAFE', key: null },
-  'send-data': { icon: 'radio', label: 'SEND DATA', key: 'G' },
+  'send-data': { icon: 'radio', label: 'SEND SCIENCE' },
   ignite: { icon: 'rocket', label: 'LAUNCH!' },
   done: { icon: 'rocket', label: 'LIFTOFF!' },
   failed: { icon: 'clock', label: 'WINDOW CLOSED' },
@@ -45,10 +45,25 @@ const LOAD_ROCKET = { icon: 'rocket', label: 'LOAD THE ROCKET' };
 const BACK_TO_BASE = { icon: 'home', label: 'BACK TO BASE' };
 const MAKING_FUEL = { icon: 'bolt', label: 'MAKING FUEL' };
 const SURVIVE = { icon: 'storm', label: 'SURVIVE THE STORMS' };
+const ANALYZE_ROCKS = { icon: 'rock', label: 'ANALYZE ROCKS' };
+// Um objeto por quantidade que falta, criado uma vez (o painel roda a cada frame)
+const SCAN_TASKS = new Map();
+function scanTask(left) {
+  if (!SCAN_TASKS.has(left)) SCAN_TASKS.set(left, { icon: 'scope', label: left > 0 ? `SCAN ${left} MORE` : 'SCAN THINGS' });
+  return SCAN_TASKS.get(left);
+}
+
+// O que a ciencia pede agora (issue #105): escanear, analisar amostras ou enviar o pacote.
+// `s.scienceStep` vem de sciencePackage.scienceStep(); sem ele (testes antigos), enviar.
+export function scienceTask(s = {}) {
+  if (s.scienceStep === 'scan') return scanTask(s.scansLeft ?? 0);
+  if (s.scienceStep === 'analyze') return ANALYZE_ROCKS;
+  return TASKS['send-data'];
+}
 
 // Trabalho mais util agora para deixar o foguete pronto (atos 2 e 3):
 // 'ice' (buscar gelo) | 'load' (levar o gelo ao foguete) | 'base' (voltar a base depois da
-// entrega) | 'data' | 'fuel' (fabrica trabalhando) | 'storms'.
+// entrega) | 'data' (ciencia: escanear, analisar ou enviar) | 'fuel' (fabrica trabalhando) | 'storms'.
 // `needsBase` vem do StoryDirector: acabou de entregar gelo e ainda nao voltou a base.
 export function nextRocketJob({ iceCount = 0, iceNeeded = 0, propellantPct = 0, dataSent = false, needsBase = false } = {}) {
   if (iceNeeded > 0) return iceCount > 0 ? 'load' : needsBase ? 'base' : 'ice';
@@ -56,7 +71,7 @@ export function nextRocketJob({ iceCount = 0, iceNeeded = 0, propellantPct = 0, 
   return propellantPct < 100 ? 'fuel' : 'storms';
 }
 
-const JOB_TASKS = { ice: GET_ICE, load: LOAD_ROCKET, base: BACK_TO_BASE, data: TASKS['send-data'], fuel: MAKING_FUEL, storms: SURVIVE };
+const JOB_TASKS = { ice: GET_ICE, load: LOAD_ROCKET, base: BACK_TO_BASE, fuel: MAKING_FUEL, storms: SURVIVE };
 
 const isRocketWork = (objectiveId) => objectiveId === 'act2' || objectiveId === 'fuel';
 
@@ -66,7 +81,8 @@ function stepStates(steps, now) {
 
 // O foguete em degraus: `loaded` blocos de gelo ja entregues e, deles, `fuel` ja viraram combustivel
 function rocketMeter(s) {
-  const total = MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
+  // Tubos de amostra no foguete pedem mais gelo (issue #105)
+  const total = s.iceForFullTank ?? MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
   const fuel = Math.min(total, Math.floor(((s.propellantPct ?? 0) / 100) * total + 1e-6));
   const loaded = Math.max(fuel, total - Math.min(total, s.iceNeeded ?? total));
   return { total, loaded, fuel };
@@ -77,7 +93,9 @@ function rocketMeter(s) {
 export function objectiveView(story, s) {
   const rocketWork = isRocketWork(story.objectiveId);
   const job = rocketWork ? nextRocketJob(s) : null;
-  const task = rocketWork ? JOB_TASKS[job] : TASKS[story.objectiveId] ?? null;
+  const task = job === 'data' || story.objectiveId === 'send-data'
+    ? scienceTask(s)
+    : rocketWork ? JOB_TASKS[job] : TASKS[story.objectiveId] ?? null;
   if (!task) return null;
 
   // Passos: o tutorial no ato 1; depois, a volta de trabalho enquanto o tanque pede gelo

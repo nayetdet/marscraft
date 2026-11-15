@@ -5,6 +5,8 @@ import {
   MISSION_CONFIG,
   STORM_CONFIG,
   RADIATION_CONFIG,
+  SCIENCE_CONFIG,
+  SURVIVAL_CONFIG,
 } from '../config/constants.js';
 import { Battery, solarChargePerHour } from './energy.js';
 import { doseRateMsvPerHour, missionDoseMsvPerHour, radiationDamage } from './radiation.js';
@@ -14,6 +16,7 @@ import { buildStormSchedule, rescheduleStorms, stormStateAt } from './solarStorm
 import { DustWeather } from './dustWeather.js';
 
 const PROPELLANT_PER_ICE = 100 / MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
+import { sciencePackage, scienceMinimumMet } from './sciencePackage.js';
 
 // Converte pontos de O2 do jogo em kg (mora em oxygenPlant.js, junto da conta da agua)
 export { oxygenPointsToKg } from './oxygenPlant.js';
@@ -54,7 +57,14 @@ export class MissionSystem {
     this.factoryOn = true;
     this.iceStock = 0; // blocos de gelo esperando na fabrica
     this.propellant = 0; // %
+    // Ciencia ja enviada para a Terra (issue #105). `dataSent` so vale com o minimo do pacote.
+    this.sentDiscoveries = 0;
+    this.sentSamples = 0;
+    this.uploads = 0;
     this.dataSent = false;
+    // Tubos de amostra carregados no foguete: cada um pede mais gelo para encher o tanque
+    this.sampleTubes = 0;
+    this._spareFuelIce = 0; // combustivel que sobrou ao tirar um tubo com o tanque cheio
     this.launched = false;
 
     this.stormsSurvived = 0;
@@ -230,7 +240,7 @@ export class MissionSystem {
     const workedHours = need > 0 ? wanted * (got / need) : 0;
     const iceUsed = workedHours / MAV_CONFIG.ISRU_HOURS_PER_ICE_BLOCK;
     this.iceStock = Math.max(0, this.iceStock - iceUsed);
-    this.propellant = Math.min(100, this.propellant + iceUsed * PROPELLANT_PER_ICE);
+    this.propellant = Math.min(100, this.propellant + iceUsed * this.propellantPerIce());
     if (this.propellant >= 100 - 1e-6) {
       this.propellant = 100;
       this.iceStock = 0;
@@ -365,9 +375,19 @@ export class MissionSystem {
     return this.factoryOn;
   }
 
+  // Blocos de gelo que enchem o tanque: o foguete vazio mais o peso dos tubos de amostra
+  iceForFullTank() {
+    return MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK + this.sampleTubes * SCIENCE_CONFIG.ICE_PER_SAMPLE_TUBE;
+  }
+
+  // % do tanque que cada bloco de gelo enche
+  propellantPerIce() {
+    return 100 / this.iceForFullTank();
+  }
+
   // Quantos blocos de gelo ainda cabem no tanque (contando os que esperam na fabrica)
   iceNeeded() {
-    const missing = (100 - this.propellant) / PROPELLANT_PER_ICE - this.iceStock;
+    const missing = (100 - this.propellant) / this.propellantPerIce() - this.iceStock;
     return Math.max(0, Math.ceil(missing - 1e-6));
   }
 
@@ -378,11 +398,51 @@ export class MissionSystem {
     return accepted;
   }
 
-  sendData() {
-    if (this.dataSent) return 'already-sent';
-    if (!this.battery.spend(ENERGY_CONFIG.DATA_UPLOAD_COST)) return 'no-energy';
-    this.dataSent = true;
-    return 'sent';
+  // O que o proximo envio leva. `discoveries` e `samples` = total feito nesta partida
+  // (descobertas do scanner nesta missao e amostras de regolito analisadas).
+  sciencePackage({ discoveries = 0, samples = 0 } = {}) {
+    return sciencePackage({ discoveries, samples, sentDiscoveries: this.sentDiscoveries, sentSamples: this.sentSamples });
+  }
+
+  // Envia o que ainda nao foi (ate o limite de uma passagem do orbitador). Pode enviar em partes;
+  // cada parte paga o custo base de novo. Devolve { status: 'sent' | 'empty' | 'no-energy', ... }.
+  sendData(totals = {}) {
+    const pkg = this.sciencePackage(totals);
+    const result = { status: 'sent', discoveries: pkg.uploadDiscoveries, samples: pkg.uploadSamples, cost: pkg.cost, leftAfter: pkg.leftAfter, dataSent: this.dataSent };
+    if (pkg.items === 0) return { ...result, status: 'empty' };
+    if (!this.battery.spend(pkg.cost)) return { ...result, status: 'no-energy' };
+    this.sentDiscoveries += pkg.uploadDiscoveries;
+    this.sentSamples += pkg.uploadSamples;
+    this.uploads++;
+    this.dataSent = scienceMinimumMet(this.sentDiscoveries, this.sentSamples);
+    result.dataSent = this.dataSent;
+    return result;
+  }
+
+  // Carrega 1 tubo de amostra no foguete. `analyzedSamples` = amostras analisadas no laboratorio
+  // (so elas viram tubos). O combustivel ja feito vale menos tanque: a mesma massa de combustivel
+  // agora tem que levantar um foguete mais pesado.
+  loadSampleTube(analyzedSamples) {
+    if (this.launched) return 'launched';
+    if (this.sampleTubes >= SCIENCE_CONFIG.MAX_SAMPLE_TUBES) return 'full';
+    if (this.sampleTubes >= analyzedSamples) return 'no-samples';
+    this._rescaleFuel(this.sampleTubes + 1);
+    return 'loaded';
+  }
+
+  unloadSampleTube() {
+    if (this.launched || this.sampleTubes <= 0) return 'empty';
+    this._rescaleFuel(this.sampleTubes - 1);
+    return 'unloaded';
+  }
+
+  // Combustivel medido em blocos de gelo, para tirar um tubo e colocar de novo nao perder nada
+  _rescaleFuel(tubes) {
+    const fuelIce = (this.propellant / 100) * this.iceForFullTank() + this._spareFuelIce;
+    this.sampleTubes = tubes;
+    const full = this.iceForFullTank();
+    this.propellant = Math.min(100, (fuelIce / full) * 100);
+    this._spareFuelIce = Math.max(0, fuelIce - full);
   }
 
   ignite() {

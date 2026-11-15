@@ -169,7 +169,6 @@ export const ENERGY_CONFIG = {
   OXYGEN_COST_PER_POINT: 1.5, // reciclar 1 ponto de O2 no habitat (MOXIE + reciclagem)
   SHIELD_DRAIN_PER_HOUR: 12.5, // blindagem contra radiacao ligada
   ISRU_DRAIN_PER_HOUR: 25, // fabrica de combustivel ligada
-  DATA_UPLOAD_COST: 35, // enviar o pacote de dados cientificos para a Terra
   // Gerador nuclear (issue #85). [Ref] O MMRTG do Curiosity e do Perseverance gera ~110 W de
   // eletricidade de dia e de noite, com calor do plutonio (NASA). Na base ele so paga o suporte
   // de vida minimo (O2 do jogador e da tripulacao, filtro de CO2): fabrica, blindagem, luz da
@@ -395,8 +394,7 @@ export const STATION_CONFIG = {
   EXERCISE_COST: 3, TREATMENT_COST: 5,
   COMMS_COST: 3, COMMS_DELAY: 40, SCIENCE_PER_SAMPLE: 2, UPGRADE_COST: 4,
   FITNESS_DECAY: 0.015, FRESH_FOOD_DURATION: 120,
-  TOOL_UPGRADE_COST: 4, MAV_REQUIRED_SAMPLES: 2,
-  MAV_TRANSMISSION_COST: 5,
+  TOOL_UPGRADE_COST: 4,
   SUIT_RADIATION_DAMAGE_FACTOR: 0.65,
 };
 
@@ -551,4 +549,26 @@ export const WEATHER_CONFIG = {
   WARMEST_HOUR: 14,
   // Hora do relatorio do tempo (nascer do Sol)
   REPORT_HOUR: 6,
+};
+
+// Pacote de ciencia para a Terra e tubos de amostra no foguete (issue #105). Escala de jogo.
+// [Ref] Os rovers mandam quase todo o dado por orbitadores (Mars Relay Network, NASA/JPL), em
+// passagens que carregam um volume limitado: daqui vem o limite de itens por envio.
+// [Ref] O Perseverance guarda amostras em tubos para uma futura missao de retorno, que usaria
+// um foguete de subida (MAV); massa a mais no foguete pede mais combustivel.
+export const SCIENCE_CONFIG = {
+  // Minimo enviado para a vitoria: N descobertas do scanner OU M amostras analisadas
+  MIN_DISCOVERIES: 5,
+  MIN_SAMPLES: 2,
+  // Custo do envio em % de bateria: base (ligar o radio e falar com o orbitador) + por item
+  UPLOAD_BASE_COST: 8,
+  UPLOAD_COST_PER_ITEM: 3,
+  // Itens por envio (uma passagem do orbitador). O resto espera o proximo envio.
+  MAX_ITEMS_PER_UPLOAD: 8,
+  // Analisar 1 amostra de regolito no laboratorio (% de bateria)
+  ANALYZE_POWER_COST: 2,
+  // Cada tubo de amostra no MAV pede mais gelo para encher o tanque. Muito mais do que um tubo de
+  // verdade pesa: regra de jogo, para a escolha "levar mais ciencia x buscar mais gelo" aparecer.
+  ICE_PER_SAMPLE_TUBE: 1,
+  MAX_SAMPLE_TUBES: 4,
 };

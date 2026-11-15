@@ -7,6 +7,7 @@ import { certificateById } from './storyChapters.js';
 export const WAYPOINT_LABELS = {
   airlock: 'AIRLOCK',
   console: 'COMMAND CONSOLE',
+  science: 'SCIENCE TERMINAL',
   ice: 'ICE CRATER',
   mav: 'MAV ROCKET',
   // Estacoes do treino de cadete (issue #88)
@@ -15,21 +16,28 @@ export const WAYPOINT_LABELS = {
 };
 
 // Lugares que ficam dentro da base: de fora, o caminho ate eles passa pelo airlock
-const INDOOR = new Set(['console', 'shelter', 'powerroom', 'lifeSupport', 'recycler', 'brokenWindow', 'greenhouse', 'gym']);
+const INDOOR = new Set(['console', 'science', 'shelter', 'powerroom', 'lifeSupport', 'recycler', 'brokenWindow', 'greenhouse', 'gym']);
 
 // Lugar de cada trabalho do foguete (nextRocketJob); fabrica trabalhando e tempestades nao tem lugar
-const JOB_PLACES = { ice: 'ice', load: 'mav', base: 'airlock', data: 'console' };
+const JOB_PLACES = { ice: 'ice', load: 'mav', base: 'airlock' };
 
-// Lugar que o objetivo pede: 'airlock' | 'console' | 'ice' | 'mav' | null (nenhum lugar).
-// `s` e o retrato do jogo ({ iceCount, iceNeeded, propellantPct, dataSent, needsBase }).
+// Ciencia (issue #105): analisar e enviar acontecem no terminal de ciencia e radio. Escanear vale
+// em qualquer lugar com a luneta, entao a seta some.
+function sciencePlace(s) {
+  return s.scienceStep === 'scan' ? null : 'science';
+}
+
+// Lugar que o objetivo pede: 'airlock' | 'console' | 'science' | 'ice' | 'mav' | null (nenhum lugar).
+// `s` e o retrato do jogo ({ iceCount, iceNeeded, propellantPct, dataSent, needsBase, scienceStep }).
 export function objectiveTarget(objectiveId, s = {}) {
   switch (objectiveId) {
     case 'enter-base':
     case 'storm-guide':
       return 'airlock';
     case 'report':
-    case 'send-data':
       return 'console';
+    case 'send-data':
+      return sciencePlace(s);
     case 'collect-ice':
       return 'ice';
     case 'ignite':
@@ -37,7 +45,7 @@ export function objectiveTarget(objectiveId, s = {}) {
     case 'act2':
     case 'fuel':
       // A seta segue o mesmo trabalho que o painel do objetivo mostra
-      return JOB_PLACES[nextRocketJob(s)] ?? null;
+      return nextRocketJob(s) === 'data' ? sciencePlace(s) : JOB_PLACES[nextRocketJob(s)] ?? null;
     default:
       // Certificados do treino de cadete (issue #88): cada um tem o seu lugar
       return certificateById(objectiveId)?.place ?? null;

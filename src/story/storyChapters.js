@@ -179,7 +179,7 @@ export const OBJECTIVES = {
   act2: 'Get the rocket ready to go home',
   'storm-guide': 'Get safe: storm shelter with water in its wall, or the Shield Remote',
   fuel: 'Fill the rocket with ice',
-  'send-data': 'Send your science data to Earth [G]',
+  'send-data': 'Send your science to Earth from the science & radio terminal',
   ignite: 'Go to the rocket and press IGNITE',
   done: 'Liftoff! You are going home',
   failed: 'The launch window closed',

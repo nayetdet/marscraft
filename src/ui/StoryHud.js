@@ -95,6 +95,7 @@ export class StoryHud {
     for (const node of this.panelEl.querySelectorAll('[data-icon]')) node.innerHTML = pixelIconSvg(node.dataset.icon);
     // Um degrau por bloco de gelo que o tanque pede
     const segs = $('story-rocket-segs');
+    this.segsEl = segs;
     this.segEls = Array.from({ length: MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK }, () => segs.appendChild(el('i')));
     $('story-goal-data').querySelector('.story-tick').innerHTML = pixelIconSvg('check');
     // Uma bolinha por tempestade que a missao pede
@@ -126,6 +127,9 @@ export class StoryHud {
 
     setText(this.goalTitleEl, view.goal);
     const { loaded, fuel, total } = view.rocket;
+    // Tubos de amostra no foguete pedem mais gelo: um degrau a mais por bloco (issue #105)
+    while (this.segEls.length < total) this.segEls.push(this.segsEl.appendChild(el('i')));
+    while (this.segEls.length > total) this.segEls.pop().remove();
     this.segEls.forEach((node, i) => setClass(node, i < fuel ? 'fuel' : i < loaded ? 'ice' : ''));
     setText(this.rocketCountEl, `${loaded}/${total}`);
     setClass(this.rocketEl, fuel >= total ? 'story-rocket done' : 'story-rocket');

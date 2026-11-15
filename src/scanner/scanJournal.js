@@ -30,6 +30,18 @@ export class ScanJournal {
     this.discovered = new Set(
       readStorage(storage, SCAN_JOURNAL_CONFIG.STORAGE_KEY).filter((id) => this.validIds.has(id))
     );
+    // Alvos escaneados nesta partida (issue #105): formam o pacote de ciencia para a Terra.
+    // Nao vai para o storage; o diario permanente acima continua intacto.
+    this.missionScans = new Set();
+  }
+
+  // Descobertas desta missao (alvos diferentes escaneados desde o inicio da partida)
+  get missionCount() {
+    return this.missionScans.size;
+  }
+
+  scannedThisMission(id) {
+    return this.missionScans.has(id);
   }
 
   get total() {
@@ -76,17 +88,23 @@ export class ScanJournal {
 
   /**
    * Registra um scan. Só a primeira vez de cada alvo é descoberta nova.
-   * @returns {{isNew: boolean, count: number, total: number, completedCategory: string|null, completedAll: boolean}}
+   * Toda vez que um alvo e escaneado pela primeira vez NESTA partida, entra no pacote de ciencia
+   * (`missionNew`), mesmo se ja estava no diario permanente.
+   * @returns {{isNew: boolean, missionNew: boolean, missionCount: number, count: number, total: number, completedCategory: string|null, completedAll: boolean}}
    */
   record(id) {
+    const missionNew = this.validIds.has(id) && !this.missionScans.has(id);
+    if (missionNew) this.missionScans.add(id);
     if (!this.validIds.has(id) || this.discovered.has(id)) {
-      return { isNew: false, count: this.count, total: this.total, completedCategory: null, completedAll: false };
+      return { isNew: false, missionNew, missionCount: this.missionCount, count: this.count, total: this.total, completedCategory: null, completedAll: false };
     }
     this.discovered.add(id);
     this._save();
     const entry = this.catalog.find((e) => e.id === id);
     return {
       isNew: true,
+      missionNew,
+      missionCount: this.missionCount,
       count: this.count,
       total: this.total,
       completedCategory: this.isCategoryComplete(entry.category) ? entry.category : null,
