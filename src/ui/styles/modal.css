@@ -21,8 +21,9 @@
   width: 100%;
 }
 
-.mc-menu-card #reset-btn { display: none; }
-body.pause-menu-open .mc-menu-card #reset-btn { display: block; }
+.mc-menu-card #quit-btn { display: none; }
+body.pause-menu-open .mc-menu-card #quit-btn { display: block; }
+body.pause-menu-open .mc-menu-card #reset-world-btn { display: none; }
 body.pause-menu-open .mc-menu-card #demo-btn { display: block; }
 body:not(.pause-menu-open) .mc-menu-card #demo-btn { display: none; }
 body:not(.pause-menu-open) .mc-menu-card #sources-btn { grid-column: 1 / -1; }
@@ -37,7 +38,7 @@ body.pause-menu-open #menu-main > #start-btn,
 body.pause-menu-open #menu-main > #controls-btn,
 body.pause-menu-open #menu-main > .menu-row { grid-column: 1 / -1; }
 body.pause-menu-open #menu-main > #options-btn { grid-column: 1; grid-row: 4; }
-body.pause-menu-open #menu-main > #reset-btn { grid-column: 2; grid-row: 4; }
+body.pause-menu-open #menu-main > #quit-btn { grid-column: 2; grid-row: 4; }
 
 .mc-overlay.hidden,
 .victory-overlay.hidden,
@@ -1072,7 +1073,7 @@ body.pause-menu-open #menu-main > #reset-btn { grid-column: 2; grid-row: 4; }
   #menu-main { display: grid; grid-template-columns: 1fr 1fr; }
   #menu-main.hidden { display: none; }
   #menu-main > #start-btn, #menu-main > #controls-btn, #menu-main > #options-btn,
-  #menu-main > #reset-btn, #menu-main > .menu-row { grid-column: 1 / -1; }
+  #menu-main > #reset-world-btn, #menu-main > #quit-btn, #menu-main > .menu-row { grid-column: 1 / -1; }
   .mc-menu-card .mc-btn { min-height: 44px; padding: 8px 10px; }
   .controls-screen.info-screen { max-height: calc(100dvh - 48px); }
 }

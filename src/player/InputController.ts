@@ -384,7 +384,8 @@ export class InputController {
     const menuCardHome = menuCard.parentElement;
     const pauseMenuCardHost = document.getElementById('pause-menu-card-host');
     const startBtn = document.getElementById('start-btn');
-    const resetBtn = document.getElementById('reset-btn');
+    const resetWorldBtn = document.getElementById('reset-world-btn');
+    const quitBtn = document.getElementById('quit-btn');
     const controlsBtn = document.getElementById('controls-btn');
     const controlsBackBtn = document.getElementById('controls-back-btn');
     const menuMain = document.getElementById('menu-main');
@@ -477,11 +478,12 @@ export class InputController {
       if (!this.isTouchMode) requestRawPointerLock(this.domElement);
     });
 
-    resetBtn.addEventListener('click', () => {
+    resetWorldBtn.addEventListener('click', () => {
       if (!window.confirm('Reset the world? This will erase your saved game.')) return;
       try { window.localStorage.removeItem('marscraft-save-v1'); } catch { /* Ignore unavailable storage. */ }
       window.location.reload();
     });
+    quitBtn.addEventListener('click', () => window.location.reload());
 
     if (respawnBtn) {
       respawnBtn.addEventListener('click', () => {
