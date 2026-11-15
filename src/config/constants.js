@@ -440,3 +440,30 @@ export const CROP_CONFIG = Object.freeze({
   potato: { water: 2, energy: 3, seconds: 7, nutrition: 6, strategy: 'Balanced meal, longer wait' },
   soy: { water: 3, energy: 5, seconds: 9, nutrition: 10, strategy: 'Big harvest, thirsty plants' },
 });
+
+// Dose de radiacao acumulada como orcamento da missao (issue #104). Fontes em
+// docs/data/numeros-reais.md, secao "Dose da missao".
+export const DOSE_CONFIG = {
+  // [Ref] Curiosity RAD medindo dentro da nave a caminho de Marte: 1,8 mSv por dia
+  // (Zeitlin et al., Science 340, 2013; SwRI/NASA). So a ida e a volta: 0,66 +- 0,12 Sv.
+  TRANSIT_MSV_PER_DAY: 1.8,
+  // [Ref] Mars 2020: 30/07/2020 a 18/02/2021 = 203 dias de viagem. 203 x 1,8 = ~365 mSv
+  // antes de pisar em Marte: a barra de dose ja abre em ~61 % do limite de 600 mSv.
+  TRANSIT_DAYS: 203,
+  // Escala de jogo (declarada, nao e medida). A dose normal da superficie usa o relogio das
+  // tempestades (STORM_CONFIG.REAL_HOURS_PER_GAME_HOUR: 1 hora de jogo = 1 dia real), e toda a
+  // dose que entra na barra (calmaria, tempestade, dentro e fora) e multiplicada por GAME_FACTOR.
+  // Resultado: 1 hora de jogo vale ~8 dias reais em Marte, e ~60 horas de jogo (2,5 sols) somam
+  // a dose de uma estadia real de ~500 dias. As proporcoes entre la fora, habitat, escudo e
+  // abrigo sao as mesmas de radiation.js.
+  GAME_FACTOR: 8,
+  // Acima desta fracao do limite de carreira a barra fica amarela e a medica avisa
+  WARN_FRACTION: 0.85,
+  // Traje melhorado (StationSystem.upgrade): a mesma fracao que ele tira do dano la fora
+  SUIT_FACTOR: STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR,
+  // Comandante acima do limite: o rover leva o gelo direto para o MAV. Uma perfuracao do rover
+  // (ICE_PER_DRILL kg) vale um bloco de gelo do tanque do foguete (escala de jogo).
+  ROVER_ICE_KG_PER_MAV_BLOCK: WATER_SYSTEM_CONFIG.ICE_PER_DRILL,
+  // Distancia do rover ao centro da plataforma do MAV para descarregar o gelo (blocos)
+  ROVER_MAV_REACH: 8,
+};

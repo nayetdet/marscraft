@@ -34,6 +34,28 @@ Mecânica: a dose acumulada sobe com a taxa do momento (dose normal ou dose da t
 
 [Ref] Para dar escala: o limite de carreira de astronautas da NASA é **600 mSv** (NASA-STD-3001, 2022).
 
+### Dose da missão: a viagem já gasta a maior parte do limite (issue #104)
+
+| Fato | Valor | Fonte |
+|---|---|---|
+| Dose na viagem até Marte, medida pelo RAD **dentro da nave** do Curiosity (2011–2012) | **1,8 mSv por dia** (1,84 ± 0,33) | [Ref] Zeitlin et al., *Science* 340 (2013); [SwRI/NASA, "SwRI-led team calculates the radiation exposure associated with a trip to Mars"](https://www.swri.org/newsroom/press-releases/swri-led-team-calculates-the-radiation-exposure-associated-trip-mars) |
+| Só o trânsito, ida e volta, com a propulsão atual (~180 dias cada perna) | **0,66 ± 0,12 Sv** (660 mSv, acima do limite de carreira) | mesma fonte |
+| Duração da viagem de ida no jogo | **203 dias** (Mars 2020: 30/07/2020 a 18/02/2021) | tabela de constantes abaixo |
+| Conta que o jogo mostra | 203 × 1,8 = **~365 mSv só para chegar**, ou seja, **~61 %** dos 600 mSv antes de pisar em Marte | `DOSE_CONFIG.TRANSIT_*`; a barra BODY DOSE do HUD abre aí |
+| Superfície de Marte | ~0,64 mSv/dia (metade do espaço profundo, graças ao planeta embaixo e à atmosfera fina) | [Ref] Hassler et al., *Science* 343 (2014); o jogo usa a mediana do RadLab (6,93 µGy/h × 3,05 = ~0,51 mSv/dia) |
+
+**Escala de jogo (declarada, não é medida), `DOSE_CONFIG.GAME_FACTOR = 8`:** a dose normal da superfície entra na barra no relógio das tempestades (1 hora de jogo = 1 dia real, o mesmo de `STORM_CONFIG.REAL_HOURS_PER_GAME_HOUR`), e **toda** dose que entra na barra (calmaria, tempestade, dentro e fora) é multiplicada por 8. Resultado: **1 hora de jogo vale ~8 dias em Marte**, e ~60 horas de jogo (2,5 sols) somam a dose de uma estadia real de ~500 dias. As proporções entre lá fora, habitat (×0,25), escudo (×0,2), parede de água (até ×0,17) e traje melhorado (×0,65, `STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR`) são as mesmas de `radiation.js`. Na barra (mSv de jogo):
+
+| Situação | Soma na barra |
+|---|---|
+| 1 hora de jogo lá fora em dia calmo (100 s reais) | ~4,1 mSv (uma saída de 10 min reais: ~24 mSv, 4 % do limite) |
+| 1 hora de jogo dentro da base em dia calmo | ~1,0 mSv |
+| A maior tempestade (8.100 µGy), lá fora sem proteção | ~198 mSv |
+| A maior tempestade, dentro da base sem abrigo | ~49 mSv |
+| A maior tempestade, no abrigo com a parede cheia | ~8 mSv |
+
+**Ao passar de 600 mSv** a médica de voo proíbe novas saídas do comandante: a porta externa do airlock não abre por dentro (quem está lá fora sempre entra). Não é game over: o rover, parado na plataforma do MAV, descarrega o gelo direto no tanque (10 kg = 1 bloco, escala de jogo), e quando o foguete está pronto a caminhada final até ele é liberada.
+
 ## Clima espacial [API, DONKI]
 
 - **34 CMEs** entre 01/11 e 13/11/2026, com velocidades de **245 a 974 km/s** (mediana em torno de 370 km/s).

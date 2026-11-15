@@ -1,6 +1,7 @@
 import { STORY_CONFIG } from '../config/constants.js';
 import { formatDateDMY } from '../mission/missionText.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
+import { TRANSIT_DOSE_MSV, dosePercent } from '../mission/doseBudget.js';
 
 // Textos da historia (UI em ingles, para criancas de 7 a 12 anos, sem emoji).
 // So dados: quem decide quando cada coisa aparece e o StoryDirector.
@@ -15,6 +16,8 @@ export const CARDS = {
     title: 'WELCOME TO MARS',
     lines: [
       { icon: 'rocket', text: 'Mission: fill the rocket, fly home' },
+      // Issue #104: a viagem de 203 dias ja gastou a maior parte do limite de dose
+      { icon: 'radiation', text: `Trip used ${dosePercent(TRANSIT_DOSE_MSV)}% of radiation limit` },
       { icon: 'air', text: 'First: your suit air is low' },
       { icon: 'door', text: 'Go inside the base' },
     ],
