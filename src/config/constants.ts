@@ -47,6 +47,9 @@ export const CAMERA_CONFIG = {
   NEAR: 0.1,
   FAR: 1200,
   REACH_DISTANCE: 6.5,
+  THIRD_PERSON_DISTANCE: 4.5,
+  THIRD_PERSON_CAMERA_HEIGHT: 0.25,
+  THIRD_PERSON_MIN_DISTANCE: 0.15,
 };
 
 // Modo "Shaders" (src/graphics/shaderMode/): sombra do Sol em tempo real, lampadas da base com

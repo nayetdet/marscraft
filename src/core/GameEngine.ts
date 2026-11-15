@@ -118,6 +118,7 @@ export class GameEngine {
     this.container = container;
     this.scene = new THREE.Scene();
     this.isScannerOpen = false;
+    this.isThirdPerson = false;
     this.scene.fog = new THREE.FogExp2(0x9a4d2e, 0.0015);
     this.isZoomed = false;
 
@@ -255,7 +256,7 @@ export class GameEngine {
       hud: this.hud,
       onPlaySound: (f1, d, f2) => this._playGymTone(f1, d, f2),
       onDismount: () => {
-        this.playerHand.handGroup.visible = !this.isZoomed && !this.roverController.isActive;
+        this.playerHand.handGroup.visible = !this.isZoomed && !this.isThirdPerson && !this.roverController.isActive;
         this.hud.showToast('Stepped off gym equipment');
       },
     });
@@ -325,8 +326,13 @@ export class GameEngine {
         this.isScannerOpen = scannerOpen;
         this.isZoomed = zoomed;
         if (!this.roverController.isActive && !this.gymController.isActive) {
-          this.playerHand.handGroup.visible = !zoomed;
+          this.playerHand.handGroup.visible = !zoomed && !this.isThirdPerson;
         }
+      },
+      onToggleThirdPerson: () => {
+        this.isThirdPerson = !this.isThirdPerson;
+        this.playerHand.handGroup.visible = !this.isThirdPerson && !this.isZoomed;
+        this.playerAvatar.group.visible = this.isThirdPerson;
       },
       getTargetedBlock: () => this._getTargetedBlock(),
       harvestCrop: (plant) => this._harvestCrop(plant),
@@ -366,9 +372,22 @@ export class GameEngine {
     this.sleep = new SleepController(this);
 
     this._lookDir = new THREE.Vector3();
+    this._thirdPersonBack = new THREE.Vector3();
+    this._thirdPersonCameraOffset = new THREE.Vector3();
 
     this.debug = new DebugOverlay(this.renderer);
     this.crewInstances = CrewInstances.for(this.scene);
+    this.playerAvatar = new CrewAvatar(this.scene, {
+      id: 99,
+      name: '',
+      state: 'idle',
+      route: [],
+      distance: 0,
+      routeLength: 0,
+      stationary: true,
+    }, CREW_CONFIG.SUIT_COLORS[0]);
+    this.playerAvatar.label.visible = false;
+    this.playerAvatar.group.visible = false;
 
     // Modo Shaders começa desligado; o botao do menu permite ligar. Criado antes do compile para
     // os shaders com sombra ja sairem prontos quando o jogador escolher ativa-los.
@@ -651,6 +670,7 @@ export class GameEngine {
   mountGym(mode) {
     this.gymController.mount(mode);
     this.playerHand.handGroup.visible = false;
+    this.playerAvatar.group.visible = false;
     this.highlightBox.visible = false;
     this.currentInteraction = null;
     this.hud.setInteractionPrompt(false);
@@ -894,10 +914,33 @@ export class GameEngine {
   }
 
   _updateCamera() {
-    this.camera.position.copy(this.player.pos);
-    this.camera.rotation.order = 'YXZ';
-    this.camera.rotation.y = this.player.yaw;
-    this.camera.rotation.x = this.player.pitch;
+    if (this.isThirdPerson) {
+      this.playerAvatar.group.visible = true;
+      this.playerAvatar.group.position.set(
+        this.player.pos.x,
+        this.player.pos.y - this.player.height,
+        this.player.pos.z
+      );
+      this.playerAvatar.group.rotation.y = this.player.yaw + Math.PI;
+
+      const back = this._thirdPersonBack.set(Math.sin(this.player.yaw), 0, Math.cos(this.player.yaw));
+      const obstruction = this.world.raycast(this.player.pos, back, CAMERA_CONFIG.THIRD_PERSON_DISTANCE);
+      const distance = obstruction.hit
+        ? Math.max(CAMERA_CONFIG.THIRD_PERSON_MIN_DISTANCE, obstruction.distance - 0.2)
+        : CAMERA_CONFIG.THIRD_PERSON_DISTANCE;
+      this.camera.position.copy(this.player.pos)
+        .addScaledVector(back, distance)
+        .add(this._thirdPersonCameraOffset.set(0, CAMERA_CONFIG.THIRD_PERSON_CAMERA_HEIGHT, 0));
+      this.camera.rotation.order = 'YXZ';
+      this.camera.rotation.y = this.player.yaw;
+      this.camera.rotation.x = this.player.pitch;
+    } else {
+      this.playerAvatar.group.visible = false;
+      this.camera.position.copy(this.player.pos);
+      this.camera.rotation.order = 'YXZ';
+      this.camera.rotation.y = this.player.yaw;
+      this.camera.rotation.x = this.player.pitch;
+    }
 
     const targetFov = this.isZoomed ? CAMERA_CONFIG.ZOOM_FOV : CAMERA_CONFIG.BASE_FOV;
     if (Math.abs(this.camera.fov - targetFov) > 0.05) {
@@ -1938,13 +1981,14 @@ export class GameEngine {
     if (this.roverController.isActive) {
       this.roverController.deactivate();
       this.hud.setRoverMode(false);
-      this.playerHand.handGroup.visible = !this.isZoomed;
+      this.playerHand.handGroup.visible = !this.isZoomed && !this.isThirdPerson;
       this.hud.showToast('Disconnected from Rover Remote Terminal');
     } else if (this.currentInteraction === 'rover_terminal') {
       this.roverController.activate();
       this.tutorialCounts.roverDrives++;
       this.hud.setRoverMode(true);
       this.playerHand.handGroup.visible = false;
+      this.playerAvatar.group.visible = false;
       this.highlightBox.visible = false;
       this.hud.showToast('Rover ready. Head to the ice crater to collect water.');
     }
