@@ -2,6 +2,8 @@ const AUDIO_BASE_URL = `${import.meta.env.BASE_URL}audio/`;
 const LOOP_VOLUME = 0.45;
 const ROCKET_VOLUME = 0.7;
 const DOOR_VOLUME = 0.12;
+// Chiado de descompressao do airlock (a "fumaca"): bem baixo, so de fundo
+const DECOMPRESSION_VOLUME = 0.05;
 const ROCKET_FADE_OUT_SECONDS = 1;
 // Manivela do airlock sem energia: o som da porta tocado devagar fica grave e pesado
 const CRANK_PLAYBACK_RATE = 0.45;
@@ -22,6 +24,7 @@ export class AudioManager {
     this.doorCrank = this._createAudio(`${AUDIO_BASE_URL}porta_fechar.wav`);
     this.doorOpen.volume = DOOR_VOLUME;
     this.doorClose.volume = DOOR_VOLUME;
+    this.decompression.volume = DECOMPRESSION_VOLUME;
     this.doorCrank.playbackRate = CRANK_PLAYBACK_RATE;
     this.doorCrank.preservesPitch = false;
     this.doorCrank.volume = DOOR_VOLUME;
