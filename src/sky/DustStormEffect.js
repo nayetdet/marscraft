@@ -226,6 +226,7 @@ export class DustStormEffect {
     this.time += dt;
     const haze = weather.haze;
     const edgeStrength = dustStormVisualStrength(focus.x, focus.z);
+    this.strength = edgeStrength;
     this.haze = haze;
 
     // Cor da poeira a partir da neblina do horario (o ceu acabou de escrever nela)
@@ -245,10 +246,7 @@ export class DustStormEffect {
     this.wallUniforms.uColor.value.copy(_dust);
 
     // Cupula: usada apenas nas tempestades de poeira temporizadas do clima.
-    const domeOpacity = Math.max(
-      W.WEATHER_DOME_OPACITY * haze,
-      V.EDGE_DOME_MAX_OPACITY * edgeStrength
-    );
+    const domeOpacity = Math.max(W.WEATHER_DOME_OPACITY * haze, V.EDGE_DOME_MAX_OPACITY * edgeStrength);
     this.dome.visible = domeOpacity > 0.01;
     if (this.dome.visible) {
       this.dome.position.copy(camera.position);
@@ -256,18 +254,30 @@ export class DustStormEffect {
       this.domeMaterial.opacity = domeOpacity;
     }
 
-    // Particulas: algumas rajadas ja perto da borda, nuvem cheia dentro da tempestade
-    // Dentro da base a poeira do clima fica la fora (so a da borda segue a camera)
+    // A poeira perto da borda acompanha a camera; a tempestade climatica continua global.
+    const edgeParticles = V.EDGE_PARTICLE_OPACITY * edgeStrength;
     const weatherParticles = weather.indoors ? 0 : W.WEATHER_PARTICLE_OPACITY * haze;
-    const particleOpacity = weatherParticles;
+    const particleOpacity = Math.max(edgeParticles, weatherParticles);
     this.particles.visible = particleOpacity > 0.01;
-    if (this.particles.visible) this._updateParticles(dt, particleOpacity);
+    if (this.particles.visible) this._updateParticles(dt, focus, particleOpacity, weatherParticles > edgeParticles);
   }
 
-  _updateParticles(dt, opacity) {
-    _wind.set(W.WEATHER_WIND.x, -0.05, W.WEATHER_WIND.z)
-      .normalize()
-      .multiplyScalar(V.WIND_SPEED * (0.6 + 0.4 * this.haze));
+  _updateParticles(dt, focus, opacity, weatherWind) {
+    if (weatherWind) {
+      _wind.set(W.WEATHER_WIND.x, -0.05, W.WEATHER_WIND.z)
+        .normalize()
+        .multiplyScalar(V.WIND_SPEED * (0.6 + 0.4 * this.haze));
+    } else {
+      const rx = focus.x - DUST_STORM_CENTER.x;
+      const rz = focus.z - DUST_STORM_CENTER.z;
+      const len = Math.hypot(rx, rz) || 1;
+      const outX = rx / len;
+      const outZ = rz / len;
+      const push = V.EDGE_WIND_PUSH;
+      _wind.set(-outZ * (1 - push) - outX * push, -0.08, outX * (1 - push) - outZ * push)
+        .normalize()
+        .multiplyScalar(V.WIND_SPEED * (0.6 + 0.4 * this.strength));
+    }
 
     const box = this.particleUniforms.uBox.value;
     const offset = this.particleUniforms.uOffset.value;
