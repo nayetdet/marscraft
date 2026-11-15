@@ -1,7 +1,6 @@
 // @ts-nocheck
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { CAMERA_CONFIG } from '../config/constants.ts';
 import { createThirdPersonCameraScratch, updateThirdPersonCamera } from './thirdPersonCamera.ts';
 
 function createPlayer(pitch) {
@@ -17,7 +16,7 @@ function createPlayer(pitch) {
 }
 
 describe('third-person camera', () => {
-  it.each([1.2, -1.2])('keeps the screen center on the aim point at pitch %s', (pitch) => {
+  it.each([1.2, -1.2])('orbits vertically with the player at pitch %s', (pitch) => {
     const camera = new THREE.PerspectiveCamera();
     const player = createPlayer(pitch);
     const aimDirection = player.getLookDirection(new THREE.Vector3());
@@ -33,9 +32,40 @@ describe('third-person camera', () => {
     );
 
     const actualDirection = camera.getWorldDirection(new THREE.Vector3());
-    const aimPoint = player.pos.clone().addScaledVector(aimDirection, CAMERA_CONFIG.REACH_DISTANCE);
-    const expectedDirection = aimPoint.sub(camera.position).normalize();
-    expect(actualDirection.dot(expectedDirection)).toBeCloseTo(1);
+    if (pitch > 0) expect(camera.position.y).toBeLessThan(player.pos.y);
+    else expect(camera.position.y).toBeGreaterThan(player.pos.y);
+    expect(camera.position.x).not.toBe(player.pos.x);
+    expect(camera.position.z).not.toBe(player.pos.z);
+    expect(actualDirection.dot(aimDirection)).toBeCloseTo(1);
+  });
+
+  it('orbits horizontally when the player turns', () => {
+    const player = createPlayer(0.2);
+    const camera = new THREE.PerspectiveCamera();
+
+    updateThirdPersonCamera(
+      camera,
+      player,
+      { raycast: () => ({ hit: false }) },
+      new THREE.Group(),
+      new THREE.Group(),
+      false,
+      createThirdPersonCameraScratch()
+    );
+    const firstPosition = camera.position.clone();
+
+    player.yaw += Math.PI / 2;
+    updateThirdPersonCamera(
+      camera,
+      player,
+      { raycast: () => ({ hit: false }) },
+      new THREE.Group(),
+      new THREE.Group(),
+      false,
+      createThirdPersonCameraScratch()
+    );
+
+    expect(camera.position.distanceTo(firstPosition)).toBeGreaterThan(1);
   });
 
   it('falls back to first-person view when there is not enough room behind the astronaut', () => {

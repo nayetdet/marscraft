@@ -18,19 +18,15 @@ export type ThirdPersonCameraWorld = {
 };
 
 export type ThirdPersonCameraScratch = {
-  back: THREE.Vector3;
   offset: THREE.Vector3;
   direction: THREE.Vector3;
-  target: THREE.Vector3;
   lookDirection: THREE.Vector3;
 };
 
 export function createThirdPersonCameraScratch(): ThirdPersonCameraScratch {
   return {
-    back: new THREE.Vector3(),
     offset: new THREE.Vector3(),
     direction: new THREE.Vector3(),
-    target: new THREE.Vector3(),
     lookDirection: new THREE.Vector3(),
   };
 }
@@ -47,9 +43,10 @@ export function updateThirdPersonCamera(
   avatar.position.set(player.pos.x, player.pos.y - player.height, player.pos.z);
   avatar.rotation.y = player.yaw + Math.PI;
 
-  const back = scratch.back.set(Math.sin(player.yaw), 0, Math.cos(player.yaw));
-  const offset = scratch.offset.copy(back).multiplyScalar(CAMERA_CONFIG.THIRD_PERSON_DISTANCE);
-  offset.y += CAMERA_CONFIG.THIRD_PERSON_CAMERA_HEIGHT;
+  // Orbit opposite the player's full look direction, not just behind their horizontal heading.
+  // That keeps both camera position and view moving around the astronaut for yaw and pitch.
+  const lookDirection = player.getLookDirection(scratch.lookDirection);
+  const offset = scratch.offset.copy(lookDirection).multiplyScalar(-CAMERA_CONFIG.THIRD_PERSON_DISTANCE);
   const desiredDistance = offset.length();
   const direction = scratch.direction.copy(offset).normalize();
   const obstruction = world.raycast(player.pos, direction, desiredDistance);
@@ -72,9 +69,5 @@ export function updateThirdPersonCamera(
   hand.visible = false;
   offset.multiplyScalar(safeDistance / desiredDistance);
   camera.position.copy(player.pos).add(offset);
-
-  player.getLookDirection(scratch.lookDirection);
-  const target = scratch.target.copy(player.pos)
-    .addScaledVector(scratch.lookDirection, CAMERA_CONFIG.REACH_DISTANCE);
-  camera.lookAt(target);
+  camera.lookAt(player.pos);
 }
