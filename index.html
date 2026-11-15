@@ -261,9 +261,13 @@
       <div id="toast" class="mc-toast"></div>
       <div id="selected-block-name" class="mc-item-name">Martian Regolith</div>
 
-      <!-- Barras de Status Estilo Minecraft (Oxigenio, Vida, Agua, Comida) -->
+      <!-- Barras de Status Estilo Minecraft (Dose, Oxigenio, Vida, Agua, Comida) -->
       <div class="mc-status-container">
         <div class="mc-status-col left">
+          <div class="mc-bar-row">
+            <span class="mc-bar-label">DOSE</span>
+            <div id="radiation-bar" class="mc-icon-row" role="meter" aria-label="Radiation dose" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0% of the NASA career limit"></div>
+          </div>
           <div class="mc-bar-row">
             <span class="mc-bar-label">OXYGEN</span>
             <div id="oxygen-bar" class="mc-icon-row"></div>

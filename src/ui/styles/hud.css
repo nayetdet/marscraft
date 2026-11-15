@@ -639,6 +639,9 @@
 .mc-stat-icon.water.full { color: #3982df; }
 .mc-stat-icon.food.full { color: #d98738; }
 .mc-stat-icon.energy.full { color: #f2d43d; }
+#radiation-bar[data-tone="ok"] .mc-stat-icon.radiation:not(.empty) { color: var(--hud-good); }
+#radiation-bar[data-tone="warn"] .mc-stat-icon.radiation:not(.empty) { color: var(--hud-warn); }
+#radiation-bar[data-tone="danger"] .mc-stat-icon.radiation:not(.empty) { color: var(--hud-danger); }
 
 /* Painel da base no canto superior direito (estilo jogos de gestao + tooltip do Minecraft):
    cada recurso = icone, nome, barra, valor e tendencia. Alertas aparecem embaixo so quando
