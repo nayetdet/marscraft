@@ -314,6 +314,62 @@ export class AudioManager {
     this._playSuitTone(ctx, 587.33, 0.85, 0.14, 'sine', 0.035);
   }
 
+  playDrink() {
+    const ctx = this._getSynthContext();
+    if (!ctx || this.masterVolume <= 0) return;
+    const peak = 0.055 * this.masterVolume;
+    // Three soft liquid-gulp sweeps timed with the drinking sips, then a light chime.
+    for (const [offset, startHz, endHz] of [
+      [0.14, 290, 540],
+      [0.39, 340, 620],
+      [0.64, 390, 710],
+    ]) {
+      const t0 = ctx.currentTime + offset;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(startHz, t0);
+      osc.frequency.exponentialRampToValueAtTime(endHz, t0 + 0.11);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.linearRampToValueAtTime(peak, t0 + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.16);
+    }
+    this._playSuitTone(ctx, 784, 0.84, 0.16, 'sine', 0.032, 1046.5);
+  }
+
+  playSampleCollect() {
+    const ctx = this._getSynthContext();
+    if (!ctx || this.masterVolume <= 0) return;
+    // Brief gravel-scoop crunch at pickup, followed by a two-note chime when caught in hand.
+    const sampleCount = Math.floor(ctx.sampleRate * 0.09);
+    if (!this._sampleCrunchBuffer || this._sampleCrunchBuffer.length !== sampleCount) {
+      const buffer = ctx.createBuffer(1, sampleCount, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < sampleCount; i++) data[i] = Math.random() * 2 - 1;
+      this._sampleCrunchBuffer = buffer;
+    }
+    const t0 = ctx.currentTime + 0.03;
+    const src = ctx.createBufferSource();
+    src.buffer = this._sampleCrunchBuffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(920, t0);
+    filter.Q.setValueAtTime(1.1, t0);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(0.05 * this.masterVolume, t0 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
+    src.connect(filter).connect(gain).connect(ctx.destination);
+    src.start(t0);
+    src.stop(t0 + 0.1);
+
+    this._playSuitTone(ctx, 587.33, 0.24, 0.12, 'triangle', 0.04, 659.25);
+    this._playSuitTone(ctx, 880, 0.34, 0.18, 'sine', 0.038, 987.77);
+  }
+
   playRocket({ liftoff = false } = {}) {
     this._rocketFadeElapsed = null;
     const volume = liftoff

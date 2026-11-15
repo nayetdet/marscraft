@@ -337,13 +337,41 @@ export class CrewAvatar {
 
     if (this._playerAction) {
       this._playerActionTime += dt;
-      const duration = this._playerAction === 'eat' ? 0.52 : 0.38;
-      const progress = Math.min(1, this._playerActionTime / duration);
-      const swing = Math.sin(progress * Math.PI);
-      const reach = this._playerAction === 'eat' ? 0.92 : 1.42;
-      this.armR.rotation.x -= swing * reach;
-      this.elbowR.rotation.x -= swing * 0.48;
-      if (progress >= 1) this._playerAction = null;
+      if (this._playerAction === 'drink') {
+        const duration = 1.05;
+        const progress = Math.min(1, this._playerActionTime / duration);
+        const lift = progress < 0.24
+          ? Math.sin((progress / 0.24) * HALF_PI)
+          : progress > 0.78
+            ? Math.sin(((1 - progress) / 0.22) * HALF_PI)
+            : 1;
+        const sip = Math.sin(Math.max(0, Math.min(1, (progress - 0.18) / 0.62)) * Math.PI * 3);
+        this.armR.rotation.x -= lift * (1.08 + 0.14 * sip);
+        this.armR.rotation.z -= lift * 0.24;
+        this.elbowR.rotation.x -= lift * (0.92 + 0.18 * sip);
+        this.headGroup.rotation.x -= lift * (0.18 + 0.08 * Math.max(0, sip));
+        if (progress >= 1) this._playerAction = null;
+      } else if (this._playerAction === 'collect') {
+        const duration = 0.78;
+        const progress = Math.min(1, this._playerActionTime / duration);
+        const dip = progress < 0.44 ? Math.sin((progress / 0.44) * Math.PI) : 0;
+        const lift = progress >= 0.32 ? Math.sin(((progress - 0.32) / 0.68) * Math.PI) : 0;
+        this.upperBody.rotation.x += dip * 0.28;
+        this.kneeL.rotation.x += dip * 0.22;
+        this.kneeR.rotation.x += dip * 0.22;
+        this.armR.rotation.x -= dip * 1.05 + lift * 1.02;
+        this.elbowR.rotation.x -= dip * 0.28 + lift * 0.78;
+        this.headGroup.rotation.x += dip * 0.24 - lift * 0.14;
+        if (progress >= 1) this._playerAction = null;
+      } else {
+        const duration = this._playerAction === 'eat' ? 0.52 : 0.38;
+        const progress = Math.min(1, this._playerActionTime / duration);
+        const swing = Math.sin(progress * Math.PI);
+        const reach = this._playerAction === 'eat' ? 0.92 : 1.42;
+        this.armR.rotation.x -= swing * reach;
+        this.elbowR.rotation.x -= swing * 0.48;
+        if (progress >= 1) this._playerAction = null;
+      }
     }
   }
 

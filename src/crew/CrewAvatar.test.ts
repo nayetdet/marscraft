@@ -27,6 +27,11 @@ describe('CrewAvatar articulated movement', () => {
     const idleArmRotation = avatar.armR.rotation.x;
     avatar.posePlayer(0.05, false);
     expect(avatar.armR.rotation.x).toBeLessThan(idleArmRotation);
+
+    avatar.triggerPlayerAction('collect');
+    avatar.posePlayer(0.15, false);
+    expect(avatar.upperBody.rotation.x).toBeGreaterThan(0.1);
+    expect(avatar.armR.rotation.x).toBeLessThan(-0.3);
     avatar.dispose();
   });
 

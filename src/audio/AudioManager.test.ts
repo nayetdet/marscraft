@@ -304,6 +304,18 @@ describe('AudioManager', () => {
     expect(oscillators[0].stop).toHaveBeenCalledWith(context.currentTime + AUDIO_MIX_CONFIG.GYM_TREADMILL_DURATION_SECONDS + 0.02);
   });
 
+  it('plays three liquid gulp sweeps and a chime when drinking water', () => {
+    stubAudio();
+    const { context, oscillators } = stubAudioContext();
+    const manager = new AudioManager();
+
+    manager.playDrink();
+
+    expect(oscillators).toHaveLength(4);
+    expect(oscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(290, context.currentTime + 0.14);
+    expect(oscillators[3].frequency.setValueAtTime).toHaveBeenCalledWith(784, context.currentTime + 0.84);
+  });
+
   it('uses a slightly stronger engine mix for the MAV liftoff cue', () => {
     stubAudio();
     const manager = new AudioManager();

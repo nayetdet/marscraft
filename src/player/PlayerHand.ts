@@ -1,9 +1,11 @@
 // @ts-nocheck
 import { createCropItemModel } from '../graphics/cropModels.ts';
 import { createSpaceRationModel } from '../graphics/rationModel.ts';
+import { createSampleRockModel } from '../graphics/sampleModels.ts';
 import * as THREE from 'three';
 import { BLOCK_IDS, CROP_TYPES_BY_ID } from '../config/blockTypes.ts';
 import { BLOCK_INTERACTION_CONFIG, DUST_WEATHER_CONFIG } from '../config/constants.ts';
+import { SAMPLE_TYPES } from '../data/sampleTypes.ts';
 import { makeCanvasTexture } from '../graphics/textureGenerator.ts';
 
 export class PlayerHand {
@@ -12,7 +14,10 @@ export class PlayerHand {
     this.materials = materials;
     this.carrotTexture = carrotTexture;
     this.eatTime = 0;
+    this.drinkTime = 0;
     this.cleanTime = 0;
+    this.collectTime = 0;
+    this.collectSampleId = null;
     this.receiveTime = 0;
     this.pendingHeldBlock = null;
     this._currentHeld = { blockId: null, count: 0 };
@@ -39,6 +44,7 @@ export class PlayerHand {
     this._buildShieldRemoteMesh();
     this._buildJournalMesh();
     this._buildBrushMesh();
+    this._buildWaterCupMesh();
 
     this.heldRationMesh = createSpaceRationModel();
     this.heldRationMesh.scale.setScalar(0.36);
@@ -55,6 +61,18 @@ export class PlayerHand {
       model.rotation.set(.2, .4, -.3); model.visible = false;
       model.traverse(node => { node.renderOrder = 999; });
       this.handGroup.add(model); this.heldCrops[id] = model;
+    }
+
+    this.heldSamples = {};
+    for (const sample of SAMPLE_TYPES) {
+      const model = createSampleRockModel(sample.id);
+      model.scale.setScalar(0.46);
+      model.position.set(-0.08, 0.14, -0.22);
+      model.rotation.set(0.22, 0.5, -0.14);
+      model.visible = false;
+      model.traverse((node) => { node.renderOrder = 999; });
+      this.handGroup.add(model);
+      this.heldSamples[sample.itemId] = model;
     }
     this.camera.add(this.handGroup);
   }
@@ -348,6 +366,64 @@ export class PlayerHand {
     this.handGroup.add(brush);
   }
 
+  // Translucent ISS/habitat hydration cup with visible water column and angled straw.
+  _buildWaterCupMesh() {
+    const cup = new THREE.Group();
+    const shellMat = new THREE.MeshLambertMaterial({
+      color: 0xdbeafe,
+      transparent: true,
+      opacity: 0.45,
+      depthWrite: false,
+    });
+    const waterMat = new THREE.MeshLambertMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.35,
+    });
+    const bandMat = new THREE.MeshLambertMaterial({ color: 0x0284c7 });
+    const collarMat = new THREE.MeshLambertMaterial({ color: 0x94a3b8 });
+    const lidMat = new THREE.MeshLambertMaterial({ color: 0x334155 });
+    const strawMat = new THREE.MeshLambertMaterial({ color: 0xf8fafc });
+
+    const waterGeo = new THREE.BoxGeometry(0.105, 0.165, 0.105);
+    waterGeo.translate(0, 0.0825, 0);
+    this.waterFillMesh = new THREE.Mesh(waterGeo, waterMat);
+    this.waterFillMesh.position.set(0, -0.095, 0);
+    this.waterFillMesh.renderOrder = 998;
+    cup.add(this.waterFillMesh);
+
+    const shell = new THREE.Mesh(new THREE.BoxGeometry(0.135, 0.21, 0.135), shellMat);
+    shell.renderOrder = 999;
+    cup.add(shell);
+
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.145, 0.03, 0.145), collarMat);
+    base.position.set(0, -0.105, 0);
+    base.renderOrder = 999;
+    cup.add(base);
+
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.142, 0.035, 0.142), bandMat);
+    band.position.set(0, -0.02, 0);
+    band.renderOrder = 999;
+    cup.add(band);
+
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.035, 0.15), lidMat);
+    lid.position.set(0, 0.115, 0);
+    lid.renderOrder = 999;
+    cup.add(lid);
+
+    const straw = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.09, 0.024), strawMat);
+    straw.position.set(-0.025, 0.165, 0.02);
+    straw.rotation.set(0.22, 0, 0.18);
+    straw.renderOrder = 999;
+    cup.add(straw);
+
+    cup.position.set(-0.07, 0.15, -0.21);
+    cup.rotation.set(0.15, 0.25, -0.08);
+    cup.visible = false;
+    this.heldWaterCupMesh = cup;
+    this.handGroup.add(cup);
+  }
+
   _hideHeldItems() {
     this.heldBlockMesh.visible = false;
     this.heldCarrotMesh.visible = false;
@@ -356,7 +432,9 @@ export class PlayerHand {
     this.heldScopeMesh.visible = false;
     this.heldShieldRemoteMesh.visible = false;
     this.heldBrushMesh.visible = false;
+    this.heldWaterCupMesh.visible = false;
     for (const model of Object.values(this.heldCrops)) model.visible = false;
+    for (const model of Object.values(this.heldSamples)) model.visible = false;
   }
 
   attachThirdPersonHeldItems(handJoint) {
@@ -382,7 +460,9 @@ export class PlayerHand {
     addItem('shield', this.heldShieldRemoteMesh);
     addItem('journal', this.heldJournalMesh);
     addItem('brush', this.heldBrushMesh);
+    addItem('water', this.heldWaterCupMesh);
     for (const [id, crop] of Object.entries(this.heldCrops)) addItem(`crop:${id}`, crop);
+    for (const [id, sample] of Object.entries(this.heldSamples)) addItem(`sample:${id}`, sample);
 
     this._syncThirdPersonHeldItem(this._currentHeld.blockId, this._currentHeld.count);
   }
@@ -390,6 +470,16 @@ export class PlayerHand {
   _syncThirdPersonHeldItem(blockId, count) {
     if (!this.thirdPersonHeldItems) return;
     for (const item of this.thirdPersonHeldItems.values()) item.visible = false;
+    if (this.collectTime > 0 && this.collectSampleId) {
+      const sampleItem = this.thirdPersonHeldItems.get(`sample:${this.collectSampleId}`);
+      if (sampleItem) sampleItem.visible = true;
+      return;
+    }
+    if (this.drinkTime > 0) {
+      const waterItem = this.thirdPersonHeldItems.get('water');
+      if (waterItem) waterItem.visible = true;
+      return;
+    }
     if (this.cleanTime > 0) {
       this.thirdPersonHeldItems.get('brush').visible = true;
       return;
@@ -403,6 +493,7 @@ export class PlayerHand {
     else if (blockId === BLOCK_IDS.SHIELD_REMOTE) key = 'shield';
     else if (blockId === BLOCK_IDS.JOURNAL) key = 'journal';
     else if (this.heldCrops[blockId]) key = `crop:${blockId}`;
+    else if (this.heldSamples?.[blockId]) key = `sample:${blockId}`;
 
     const item = this.thirdPersonHeldItems.get(key);
     if (!item) return;
@@ -429,7 +520,7 @@ export class PlayerHand {
   }
 
   setHeldBlock(blockId, count) {
-    if (this.eatTime > 0 || this.cleanTime > 0) {
+    if (this.eatTime > 0 || this.drinkTime > 0 || this.cleanTime > 0 || this.collectTime > 0) {
       this.pendingHeldBlock = { blockId, count };
       return;
     }
@@ -457,6 +548,11 @@ export class PlayerHand {
     if (this.heldCrops[blockId]) {
       this.heldCrops[blockId].visible = true;
       this.armMesh.position.set(.08, -.06, .08);
+      return;
+    }
+    if (this.heldSamples[blockId]) {
+      this.heldSamples[blockId].visible = true;
+      this.armMesh.position.set(0.08, -0.06, 0.08);
       return;
     }
     if (blockId === BLOCK_IDS.HYDRO_PLANT) {
@@ -503,22 +599,59 @@ export class PlayerHand {
 
   triggerEat() {
     this.cleanTime = 0;
+    this.drinkTime = 0;
+    this.collectTime = 0;
+    this.collectSampleId = null;
     this.heldBrushMesh.visible = false;
+    this.heldWaterCupMesh.visible = false;
     this.eatTime = BLOCK_INTERACTION_CONFIG.EAT_ANIMATION_DURATION;
     this.isSwinging = false;
     this.onThirdPersonAction?.('eat');
+  }
+
+  triggerDrink() {
+    this.pendingHeldBlock ??= { ...this._currentHeld };
+    this.cleanTime = 0;
+    this.eatTime = 0;
+    this.collectTime = 0;
+    this.collectSampleId = null;
+    this.drinkTime = BLOCK_INTERACTION_CONFIG.DRINK_ANIMATION_DURATION;
+    this.isSwinging = false;
+    this._hideHeldItems();
+    this.heldWaterCupMesh.visible = true;
+    if (this.waterFillMesh) this.waterFillMesh.scale.y = 1;
+    this.armMesh.position.set(0.08, -0.06, 0.08);
+    this._syncThirdPersonHeldItem(this._currentHeld.blockId, this._currentHeld.count);
+    this.onThirdPersonAction?.('drink');
   }
 
   triggerCleanSolar() {
     this.pendingHeldBlock ??= { ...this._currentHeld };
     this.cleanTime = DUST_WEATHER_CONFIG.CLEAN_ANIM_DURATION;
     this.eatTime = 0;
+    this.drinkTime = 0;
+    this.collectTime = 0;
+    this.collectSampleId = null;
     this.isSwinging = false;
     this._hideHeldItems();
     this.heldBrushMesh.visible = true;
     this.armMesh.position.set(0.08, -0.06, 0.08);
     this._syncThirdPersonHeldItem(this._currentHeld.blockId, this._currentHeld.count);
     this.onThirdPersonAction?.('clean');
+  }
+
+  triggerCollectSample(itemId) {
+    this.pendingHeldBlock ??= { ...this._currentHeld };
+    this.cleanTime = 0;
+    this.eatTime = 0;
+    this.drinkTime = 0;
+    this.isSwinging = false;
+    this.collectTime = BLOCK_INTERACTION_CONFIG.COLLECT_SAMPLE_ANIMATION_DURATION;
+    this.collectSampleId = itemId;
+    this._hideHeldItems();
+    this.armMesh.position.set(0, 0, 0);
+    this._syncThirdPersonHeldItem(this._currentHeld.blockId, this._currentHeld.count);
+    this.onThirdPersonAction?.('collect');
   }
 
   triggerReceive() {
@@ -580,6 +713,34 @@ export class PlayerHand {
       }
     }
 
+    if (this.drinkTime > 0) {
+      this.drinkTime = Math.max(0, this.drinkTime - dt);
+      const p = 1 - this.drinkTime / BLOCK_INTERACTION_CONFIG.DRINK_ANIMATION_DURATION;
+      const lift = p < 0.24
+        ? Math.sin((p / 0.24) * Math.PI * 0.5)
+        : p > 0.78
+          ? Math.sin(((1 - p) / 0.22) * Math.PI * 0.5)
+          : 1;
+      const sipWindow = Math.max(0, Math.min(1, (p - 0.18) / 0.62));
+      const sipEnv = Math.sin(sipWindow * Math.PI);
+      const gulp = (0.5 + 0.5 * Math.sin(sipWindow * Math.PI * 5 - Math.PI * 0.5)) * sipEnv;
+      swingOffsetX += -0.26 * lift;
+      swingOffsetY += 0.24 * lift + 0.04 * gulp;
+      swingOffsetZ += 0.14 * lift - 0.025 * gulp;
+      swingRotX += -0.2 * lift - 0.22 * gulp;
+      swingRotY += 0.34 * lift;
+      swingRotZ += 0.44 * lift + 0.16 * gulp;
+      if (this.waterFillMesh) {
+        this.waterFillMesh.scale.y = Math.max(0.12, 1 - 0.88 * sipWindow);
+      }
+      if (this.drinkTime === 0) {
+        this.heldWaterCupMesh.visible = false;
+        const next = this.pendingHeldBlock ?? this._currentHeld;
+        this.pendingHeldBlock = null;
+        this.setHeldBlock(next.blockId, next.count);
+      }
+    }
+
     if (this.cleanTime > 0) {
       this.cleanTime = Math.max(0, this.cleanTime - dt);
       const p = 1 - this.cleanTime / DUST_WEATHER_CONFIG.CLEAN_ANIM_DURATION;
@@ -593,6 +754,49 @@ export class PlayerHand {
       swingRotZ += 0.25 * sweep;
       if (this.cleanTime === 0) {
         this.heldBrushMesh.visible = false;
+        const next = this.pendingHeldBlock ?? this._currentHeld;
+        this.pendingHeldBlock = null;
+        this.setHeldBlock(next.blockId, next.count);
+      }
+    }
+
+    if (this.collectTime > 0) {
+      const duration = BLOCK_INTERACTION_CONFIG.COLLECT_SAMPLE_ANIMATION_DURATION;
+      this.collectTime = Math.max(0, this.collectTime - dt);
+      const p = 1 - this.collectTime / duration;
+      const reach = p < 0.34
+        ? Math.sin((p / 0.34) * Math.PI * 0.5)
+        : p < 0.54
+          ? Math.cos(((p - 0.34) / 0.2) * Math.PI * 0.5)
+          : 0;
+      const inspect = p < 0.34
+        ? 0
+        : p < 0.64
+          ? Math.sin(((p - 0.34) / 0.3) * Math.PI * 0.5)
+          : p < 0.78
+            ? 1
+            : Math.cos(((p - 0.78) / 0.22) * Math.PI * 0.5);
+      swingOffsetX += -0.12 * reach - 0.2 * inspect;
+      swingOffsetY += -0.22 * reach + 0.18 * inspect;
+      swingOffsetZ += -0.24 * reach + 0.04 * inspect;
+      swingRotX += -0.52 * reach + 0.2 * inspect;
+      swingRotY += 0.42 * inspect;
+      swingRotZ += 0.18 * reach + 0.2 * inspect;
+
+      const sampleMesh = this.collectSampleId ? this.heldSamples[this.collectSampleId] : null;
+      if (sampleMesh) {
+        sampleMesh.visible = p >= 0.34 && this.collectTime > 0;
+        if (sampleMesh.visible) {
+          sampleMesh.rotation.set(0.22 + 0.15 * inspect, 0.5 + 0.7 * inspect, -0.14);
+          this.armMesh.position.set(0.08, -0.06, 0.08);
+        }
+      }
+      if (this.collectTime === 0) {
+        if (sampleMesh) {
+          sampleMesh.rotation.set(0.22, 0.5, -0.14);
+          sampleMesh.visible = false;
+        }
+        this.collectSampleId = null;
         const next = this.pendingHeldBlock ?? this._currentHeld;
         this.pendingHeldBlock = null;
         this.setHeldBlock(next.blockId, next.count);

@@ -514,12 +514,20 @@ export class HudManager {
     for (let i = 0; i < count; i++) {
       const span = document.createElement('span');
       span.className = `mc-stat-icon ${type} empty`;
+      span.style.setProperty('--i', String(i));
       span.setAttribute('aria-hidden', 'true');
       span.innerHTML = getStatIconSvg(type);
       container.appendChild(span);
       icons.push({ span, state: 'empty' });
     }
     return { type, icons };
+  }
+
+  triggerWaterPulse() {
+    if (!this.waterBarEl) return;
+    this.waterBarEl.classList.remove('is-drinking');
+    void this.waterBarEl.offsetWidth;
+    this.waterBarEl.classList.add('is-drinking');
   }
 
   _updateIconBar(bar, currentVal) {
