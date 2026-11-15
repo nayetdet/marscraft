@@ -10,13 +10,13 @@ Argumento opcional (`$ARGUMENTS`): número da issue (`12` ou `#12`). Sem argumen
 
 ## Regra de conta do GitHub (obrigatória)
 
-O repo é **privado** e só a conta pessoal `DerickBessa` tem acesso. **Não** troque a conta ativa da máquina (`gh auth switch` proibido). Todo comando `gh` leva o token pessoal no mesmo comando:
+Use a identidade GitHub configurada no ambiente. Confira `gh auth status` se a autenticação falhar; não busque tokens vinculados a contas específicas nem troque a conta ativa automaticamente.
 
 ```bash
-export GH_TOKEN=$(gh auth token --user DerickBessa) && gh ... -R nayetdet/nasa-space-apps
+gh ... -R nayetdet/nasa-space-apps
 ```
 
-`git fetch/pull/push` já usam a conta pessoal pelo credential helper local do repo.
+`git fetch/pull/push` usam as credenciais configuradas para o repositório.
 
 ## 1. Escolher a issue
 
@@ -25,7 +25,7 @@ export GH_TOKEN=$(gh auth token --user DerickBessa) && gh ... -R nayetdet/nasa-s
 **Sem argumento** → liste as abertas:
 
 ```bash
-export GH_TOKEN=$(gh auth token --user DerickBessa) && gh issue list -R nayetdet/nasa-space-apps --state open --limit 50 --json number,title,labels,assignees,updatedAt
+gh issue list -R nayetdet/nasa-space-apps --state open --limit 50 --json number,title,labels,assignees,updatedAt
 ```
 
 - Mostre uma tabela curta: `#`, título, labels, responsável (marque as que já têm alguém atribuído).
@@ -35,7 +35,7 @@ export GH_TOKEN=$(gh auth token --user DerickBessa) && gh issue list -R nayetdet
 ## 2. Entender a issue
 
 ```bash
-export GH_TOKEN=$(gh auth token --user DerickBessa) && gh issue view N -R nayetdet/nasa-space-apps --comments
+gh issue view N -R nayetdet/nasa-space-apps --comments
 ```
 
 - Leia título, corpo, comentários e critérios de pronto.
@@ -84,9 +84,9 @@ Depois de apresentar o plano, **encerre o turno e espere a resposta do usuário*
    git checkout main && git pull --ff-only && git checkout -b feat/N-<slug>
    ```
    Se houver alterações não commitadas na árvore, pergunte o que fazer com elas antes de trocar de branch.
-2. Atribua a issue à conta pessoal para sinalizar que está em andamento:
+2. Atribua a issue à identidade autenticada para sinalizar que está em andamento:
    ```bash
-   export GH_TOKEN=$(gh auth token --user DerickBessa) && gh issue edit N -R nayetdet/nasa-space-apps --add-assignee @me
+   gh issue edit N -R nayetdet/nasa-space-apps --add-assignee @me
    ```
 3. Implemente seguindo o plano aprovado, sem expandir escopo. Commits pequenos em Conventional Commits (`feat: ...`, `fix: ...`).
 4. Verifique: `npm run build` sem erros; `npm test` se o projeto já tiver Vitest configurado. Se a mudança for visual/jogabilidade, suba `npm run dev` (http://localhost:5173/nasa-space-apps/) e peça para o usuário conferir no navegador o que não dá para validar por teste.

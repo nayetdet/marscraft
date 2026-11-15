@@ -13,7 +13,7 @@
   background: rgba(40, 44, 46, 0.94);
   border: 4px solid #252b2d;
   box-shadow: inset 3px 3px #5d6466, 6px 6px #111;
-  font: 12px/1.35 monospace;
+  font: 12px/1.35 'Monocraft', monospace;
 }
 
 .admin-panel.hidden { display: none; }
@@ -74,5 +74,5 @@
   color: #ffcf64;
   background: rgba(40, 44, 46, 0.85);
   border: 2px solid #ffcf64;
-  font: bold 12px monospace;
+  font: bold 12px 'Monocraft', monospace;
 }
