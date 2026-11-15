@@ -33,7 +33,7 @@ O desafio, em uma frase: um jogo em que **crianças de 7 a 12 anos** administram
 
 ## Stack e comandos
 
-- **TypeScript + [Three.ts](https://threejs.org/) `^0.181` + Next.ts.** O React é somente a camada obrigatória de montagem do Next (`src/app/page.tsx`); HUD e jogo continuam em HTML/CSS/TS puro, no shell `public/game.html` e em `src/ui/`.
+- **TypeScript + [Three.js](https://threejs.org/) `^0.181` + Next.js.** O React é somente a camada obrigatória de montagem do Next (`src/app/page.tsx`); HUD e jogo continuam em HTML/CSS/TS puro, no shell `public/game.html` e em `src/ui/`.
 - `npm install` · `npm run dev` (Next com `--hostname`) · `npm run build` · `npm run start` · `npm run typecheck`
 - **Migração de tipos:** os módulos legados estão em `.ts`, com `@ts-nocheck` até cada módulo receber campos e assinaturas explícitas. Não adicione novos módulos sem tipos; ao alterar um módulo migrado, remova o marcador quando a tipagem puder ser validada.
 - **Painel de admin (testes manuais):** `F8` no `npm run dev`, ou `?admin` na URL (também no Pages, com botão ADMIN para touch). Força tempestade, mexe em bateria, água e tempo, e teleporta para as salas (`src/ui/AdminPanel.ts`).
@@ -94,7 +94,7 @@ docs/                      contexto do desafio, APIs e dados reais
 - **Controles atuais:** joystick virtual à esquerda; RUN acima do joystick; arrasto na metade direita da tela para olhar; ações à direita (pular, minerar/perfurar, usar/colocar, interagir, luneta e inventário); hotbar selecionável por toque.
 - **Rover:** mantenha os controles contextuais touch (joystick para dirigir, arrasto à direita para olhar, DRILL para ação e interação para sair). O sprint não se aplica ao rover; esconda esse botão nesse modo e não reintroduza a antiga troca de câmera `CAM`.
 - **Alvos touch:** mantenha botões confortáveis para toque (mínimo aproximado de 44 px), respeite `safe-area-inset-*` e evite sobrepor joystick, hotbar, HUD ou controles de ação.
-- **Implementação:** reutilize `InputController.ts`, os elementos em `index.html` e os estilos existentes em `src/ui/styles/`. Mantenha teclado/mouse funcionando e pause corretamente durante inventário e orientação retrato.
+- **Implementação:** reutilize `InputController.ts`, os elementos em `public/game.html` e os estilos existentes em `src/ui/styles/`. Mantenha teclado/mouse funcionando e pause corretamente durante inventário e orientação retrato.
 - **Validação visual:** confira ao menos um viewport mobile horizontal (por exemplo, 844×390) e um vertical (390×844, que deve exibir a orientação). Verifique interação real dos botões/gestos; não considere apenas o build como validação de layout.
 
 ### Onde encaixar as mecânicas novas
@@ -103,7 +103,7 @@ docs/                      contexto do desafio, APIs e dados reais
 - **Balanceamento:** só em `src/config/constants.ts`. Não espalhe números mágicos.
 - **Ciclo dia/noite (energia solar):** `MarsSkySystem.timeOfDay` / `solCount` (1 sol = 24 h de jogo ≈ 40 min reais; 1 hora de jogo = 100 s reais, com `MISSION_CONFIG.GAME_HOURS_PER_SECOND = 0.01`).
 - **Dados da NASA embutidos:** crie `src/data/*.tson` (gerados por script, com data de coleta) e um módulo de acesso. Não faça fetch espalhado pelo código.
-- **HUD novo:** adicione o markup em `index.html` e a lógica em `HudManager.update(...)`.
+- **HUD novo:** adicione o markup em `public/game.html` e a lógica em `HudManager.update(...)`.
 
 ## Convenções
 

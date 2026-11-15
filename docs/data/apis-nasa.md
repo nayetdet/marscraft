@@ -9,7 +9,7 @@ O jogo usa Next.js e é publicado na Vercel. Dados que precisam de chave passam 
 
 | API | Chave | CORS (navegador) | Situação | Estratégia recomendada |
 |---|---|---|---|---|
-| `api.nasa.gov/DONKI/*` | sim (`api_key`) | ✅ `*` | CME, SEP e notifications OK. **FLR retorna 404.** Janela máxima de 60 dias. | Rota de servidor `/api/space-weather`, com fallback para JSON embutido (`src/data/spaceWeather.js`) |
+| `api.nasa.gov/DONKI/*` | sim (`api_key`) | ✅ `*` | CME, SEP e notifications OK. **FLR retorna 404.** Janela máxima de 60 dias. | Rota de servidor `/api/space-weather`, com fallback para JSON embutido (`src/data/spaceWeather.ts`) |
 | `api.nasa.gov/insight_weather` | sim | ✅ `*` | OK (feed arquivado, sols 675–681 de out/2020) | Embutir (é estático, não muda) |
 | `api.nasa.gov/planetary/apod` | sim | ✅ `*` | deu 500 e depois 429 | Opcional (imagem do dia na tela inicial) |
 | `api.nasa.gov/mars-photos` | sim | — | ❌ **fora do ar** ("No such app", 404) | Não usar. Use a NASA Image Library. |
@@ -84,7 +84,7 @@ npm run fetch:donki                    # ou: npm run fetch:donki -- 2025-11-14 2
 
 ### Fetch ao vivo no jogo (issue #100)
 
-Único ponto de rede do jogo: `src/data/spaceWeather.js`, chamado uma vez em `src/main.js`, ao abrir a página, em paralelo com a construção do mundo. Nunca dentro do loop.
+Único ponto de rede do jogo: `src/data/spaceWeather.ts`, chamado uma vez em `src/main.ts`, ao abrir a página, em paralelo com a construção do mundo. Nunca dentro do loop.
 
 - **Pedidos** (em paralelo, ~5 s de tempo limite cada, via `AbortController`):
   - `CME` dos últimos 30 dias → normalizado pelo mesmo `summarizeCmes` do script (`src/data/donkiNormalize.ts`), então o formato é igual ao de `donkiCme.json` (`headedToMars`, `marsArrivalTime`, `isGlancingBlow`).
@@ -134,7 +134,7 @@ curl "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&times
 
 > ⚠️ Pedidos grandes demoram e pesam: a série da Orion HERA-HSU1 em 25 dias tem cerca de 35 mil linhas (3 MB). Agregue (média por hora/dia) num script e embuta só o resumo.
 
-**No jogo (issue #106):** `node scripts/fetch-radlab-summary.mjs` refaz as 4 consultas da amostra (mesmas janelas) e grava `src/data/radlabSummary.json` com n, janela, mediana, média, p10, p90, máximo e data de coleta. Falha de rede ou série vazia interrompe o script. `RADIATION_CONFIG.MARS_SURFACE_DOSE_UGY_PER_HOUR` lê a mediana do Curiosity desse JSON (`src/data/radlabSummary.js`). O diário [J] (aba NASA STUDIES) e a enfermaria mostram um gráfico de 4 barras **sem unidade**, só a comparação com a Estação Espacial ("Mars: about 1.5 times the Space Station"), porque a unidade ainda não foi confirmada na documentação do RadLab (o portal de docs responde 500 em 14/11/2026).
+**No jogo (issue #106):** `node scripts/fetch-radlab-summary.mjs` refaz as 4 consultas da amostra (mesmas janelas) e grava `src/data/radlabSummary.tson` com n, janela, mediana, média, p10, p90, máximo e data de coleta. Falha de rede ou série vazia interrompe o script. `RADIATION_CONFIG.MARS_SURFACE_DOSE_UGY_PER_HOUR` lê a mediana do Curiosity desse JSON (`src/data/radlabSummary.ts`). O diário [J] (aba NASA STUDIES) e a enfermaria mostram um gráfico de 4 barras **sem unidade**, só a comparação com a Estação Espacial ("Mars: about 1.5 times the Space Station"), porque a unidade ainda não foi confirmada na documentação do RadLab (o portal de docs responde 500 em 14/11/2026).
 
 ## 3. OSDR: estudos de biologia espacial e saúde
 
@@ -146,7 +146,7 @@ curl "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&times
 - Página de um estudo: `https://osdr.nasa.gov/bio/repo/data/studies/OSD-342`
 - Termos úteis: `bone loss`, `muscle atrophy`, `radiation`, `sleep`, `immune`, `plant growth` (para a estufa), `microgravity`.
 - **Uso no jogo:** "Fato real da NASA" curto e atribuído, ligado a uma mecânica. Ex.: ficar muitos sols sem exercício/gravidade → "Cientistas da NASA viram ossos enfraquecendo em camundongos na Estação Espacial (estudo OSD-342)".
-- **No jogo (issue #106):** `node scripts/fetch-osdr-topics.mjs` busca os 3 primeiros estudos de `bone loss`, `muscle atrophy`, `radiation`, `sleep` e `immune` e grava `src/data/osdrTopics.json` (URL da busca, data de coleta, accession, título, organismo, programa de voo e missão). Sem estudos inventados: falha de rede interrompe o script. A frase para criança de cada estudo fica em `src/data/osdrStudies.js`. Revelação (`src/story/studyReveals.js`): treino na esteira → osso, na bicicleta → músculo, tratamento na enfermaria → radiação (depois imunidade), tempestade sobrevivida → radiação; `reveal('sleep')` fica para o beliche (#109). A aba NASA STUDIES do diário mostra o link e o aviso de honestidade ("Done on the Space Station / in a lab on Earth with mice. It did not measure Mars."). Os resultados de `sleep` não são sobre sono em si (repouso na cama, cérebro de camundongo, missão RR-7 que observou ritmo de sono e vigília); a frase de cada um diz o que o estudo fez.
+- **No jogo (issue #106):** `node scripts/fetch-osdr-topics.mjs` busca os 3 primeiros estudos de `bone loss`, `muscle atrophy`, `radiation`, `sleep` e `immune` e grava `src/data/osdrTopics.tson` (URL da busca, data de coleta, accession, título, organismo, programa de voo e missão). Sem estudos inventados: falha de rede interrompe o script. A frase para criança de cada estudo fica em `src/data/osdrStudies.ts`. Revelação (`src/story/studyReveals.ts`): treino na esteira → osso, na bicicleta → músculo, tratamento na enfermaria → radiação (depois imunidade), tempestade sobrevivida → radiação; `reveal('sleep')` fica para o beliche (#109). A aba NASA STUDIES do diário mostra o link e o aviso de honestidade ("Done on the Space Station / in a lab on Earth with mice. It did not measure Mars."). Os resultados de `sleep` não são sobre sono em si (repouso na cama, cérebro de camundongo, missão RR-7 que observou ritmo de sono e vigília); a frase de cada um diz o que o estudo fez.
 
 ## 4. InSight Mars Weather: clima real na superfície de Marte
 
@@ -154,7 +154,7 @@ curl "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&times
 - **Feed arquivado:** a missão InSight terminou em 2022 e o endpoint devolve sempre os sols 675–681 (19 a 25/10/2020, Elysium Planitia).
 - Campos por sol: `AT` (temperatura do ar, °C), `PRE` (pressão, Pa), `HWS` (vento, m/s). Cada um traz `av`/`mn`/`mx`/`ct`, além de `Season` e `WD` (rosa dos ventos).
 - Amostra limpa: [`samples/insight-weather-sols-675-681.json`](samples/insight-weather-sols-675-681.json)
-- **No jogo (issue #108):** `node scripts/fetch-insight-weather.mjs` lê a chave do `.env` e grava [`src/data/insightWeather.json`](../../src/data/insightWeather.json) (só temperatura, pressão e vento por sol, com data de coleta e a URL sem a chave). Acesso só por `src/data/marsWeather.js`.
+- **No jogo (issue #108):** `node scripts/fetch-insight-weather.mjs` lê a chave do `.env` e grava [`src/data/insightWeather.tson`](../../src/data/insightWeather.tson) (só temperatura, pressão e vento por sol, com data de coleta e a URL sem a chave). Acesso só por `src/data/marsWeather.ts`.
 - **Fonte com mais variação (REMS do Curiosity, MEDA do Perseverance no PDS):** ainda não investigada. Fica como próximo passo; se der certo, baixar por script e embutir como JSON, porque o PDS não serve para chamada do navegador.
 
 ## 5. Mars Trek / Moon Trek: mapas e terreno reais
@@ -168,7 +168,7 @@ curl "https://visualization.osdr.nasa.gov/radlab/api/?spacecraft=Curiosity&times
 - **Busca de locais/bookmarks:** `https://trek.nasa.gov/mars/TrekServices/ws/index/eq/searchItems?bbox=-180,-90,180,90&q=jezero&proj=urn:ogc:def:crs:EPSG::104905&start=0&rows=5` (Solr: `response.docs[]` com `title`, `bbox`, `description`, `mediaURL`, `layers`). Amostra: [`samples/mars-trek-search-jezero.json`](samples/mars-trek-search-jezero.json).
 - **Elevação (testado em 14/11/2026):** os tiles de elevação existem só para Gale (`Gale_DEM_SMG_1m`, PNG até o zoom 14) e são de **8 bits**: a faixa inteira do modelo vira 256 tons, uns 20 m por degrau. Perto do pouso do Curiosity um tile inteiro tem 3 tons, então não serve para terreno na escala de 1 m. Os modelos de Jezero do catálogo não têm tiles (404) e o serviço de elevação bruta (`trek.nasa.gov/mars/arcgis/rest/services/.../ImageServer`) não respondeu. Para elevação real, use o HiRISE DTM (seção 6).
 - **Catálogo:** `searchItems` com `rows=2100` devolve os 2.035 itens (222 produtos, 1.783 nomes oficiais, 12 locais de pouso); o parâmetro `q` não filtrou nos testes, então filtre localmente por `bbox`.
-- **Uso no jogo:** tela de "escolha onde pousar" (Gale, Jezero, polo sul da Lua) com a imagem real; o local escolhido muda os parâmetros (ex.: gelo perto do polo = mais água e mais frio). As texturas `public/textures/moon.jpg` (`LRO_WAC_Mosaic_Global_303ppd_v02`, Moon Trek) e `public/textures/earth.jpg` (`BlueMarble_ShadedRelief_Bathymetry`, NASA Earthdata GIBS) são usadas no sistema Terra–Lua do céu marciano (`src/sky/celestialBodies.js`).
+- **Uso no jogo:** tela de "escolha onde pousar" (Gale, Jezero, polo sul da Lua) com a imagem real; o local escolhido muda os parâmetros (ex.: gelo perto do polo = mais água e mais frio). As texturas `public/textures/moon.jpg` (`LRO_WAC_Mosaic_Global_303ppd_v02`, Moon Trek) e `public/textures/earth.jpg` (`BlueMarble_ShadedRelief_Bathymetry`, NASA Earthdata GIBS) são usadas no sistema Terra–Lua do céu marciano (`src/sky/celestialBodies.ts`).
 
 ## 6. HiRISE DTM: elevação real de Marte a 1 m
 
@@ -179,7 +179,7 @@ O HiRISE é a câmera da sonda Mars Reconnaissance Orbiter (NASA/JPL-Caltech/Uni
 - **Download parcial:** o servidor aceita `Range`. O rótulo PDS3 fica nos primeiros bytes; cada linha da imagem ocupa `RECORD_BYTES` bytes e a imagem começa no registro `^IMAGE`. Um recorte de 224 linhas custa 6,4 MB.
 - **Latitude/longitude → pixel** (projeção equirretangular do rótulo): `linha = LINE_PROJECTION_OFFSET − lat × MAP_RESOLUTION` e `coluna = SAMPLE_PROJECTION_OFFSET + (lon − CENTER_LONGITUDE) × MAP_RESOLUTION × cos(CENTER_LATITUDE)`.
 - Pixel sem dado: `MISSING_CONSTANT` (um float muito negativo).
-- **No jogo:** `node scripts/fetch-mars-terrain.mjs` grava `src/data/marsTerrain.json` (recorte de 224 × 224 em 4,4743°S, 137,4032°E); `src/data/marsTerrain.js` dá a altura de cada coluna do mundo.
+- **No jogo:** `node scripts/fetch-mars-terrain.mjs` grava `src/data/marsTerrain.tson` (recorte de 224 × 224 em 4,4743°S, 137,4032°E); `src/data/marsTerrain.ts` dá a altura de cada coluna do mundo.
 - Alternativa não usada: Jezero, `.../PDS/DTM/ESP/ORB_045900_045999/ESP_045994_1985_ESP_046060_1985/DTEEC_045994_1985_046060_1985_U01.IMG` (381 MB, 1,0097 m por pixel), que cobre o pouso do Perseverance (18,4447°N, 77,4509°E).
 - **Não verificado:** o alinhamento entre este DTM e os mosaicos de foto do Mars Trek (`curiosity_hirise_mosaic`). Não sobreponha foto e terreno sem conferir.
 - Crédito: **NASA/JPL-Caltech/University of Arizona**.
@@ -197,7 +197,7 @@ O HiRISE é a câmera da sonda Mars Reconnaissance Orbiter (NASA/JPL-Caltech/Uni
 
 ## Integração da estufa: estudos OSDR reais
 
-`node scripts/fetch-osdr-plants.mjs` consulta a busca oficial (`plant growth`, `type=cgene`, três resultados) e grava `src/data/osdrPlants.json`, com URL, data de coleta, accession, título, organismo e missão. Falha de rede ou resposta inválida interrompe o script; não gera estudos fictícios. Também aceita um arquivo bruto baixado desse endpoint como argumento, para redes que exigem download separado.
+`node scripts/fetch-osdr-plants.mjs` consulta a busca oficial (`plant growth`, `type=cgene`, três resultados) e grava `src/data/osdrPlants.tson`, com URL, data de coleta, accession, título, organismo e missão. Falha de rede ou resposta inválida interrompe o script; não gera estudos fictícios. Também aceita um arquivo bruto baixado desse endpoint como argumento, para redes que exigem download separado.
 
 O jogo usa o snapshot real embutido porque OSDR não libera CORS para o site. O caderno da estufa revela um registro por colheita e oferece links para OSD-772, OSD-177 e OSD-773 (snapshot de 14/11/2026). Não é consulta ao vivo. Os estudos contextualizam cultivo no espaço, sem extrapolar seus resultados para produção em Marte.
 

@@ -4,18 +4,18 @@
 
 ## O que o jogo já é
 
-Jogo voxel em primeira pessoa **no navegador** (Three.js + Next.js, deploy na Vercel). O jogo permanece em JavaScript puro; a rota de servidor `/api/space-weather` protege a chave da NASA. O jogador sobrevive numa cratera de Marte ao redor de uma base/nave.
+Jogo voxel em primeira pessoa **no navegador** (Three.js + Next.js, deploy na Vercel). O jogo usa TypeScript; a rota de servidor `/api/space-weather` protege a chave da NASA. O jogador sobrevive numa cratera de Marte ao redor de uma base/nave.
 
 | Sistema | Onde | O que faz hoje |
 |---|---|---|
-| Mundo voxel | `src/world/VoxelWorld.js`, `terrainGenerator.js`, `src/data/marsTerrain.js` | Mundo 224×48×224 com chunks e meshing. O relevo é a **elevação real** de uma cratera de ~180 m dentro de Gale (HiRISE, 1 bloco ≈ 1 m); só a área das construções foi nivelada e a cratera de gelo é do jogo. Dá para quebrar e colocar blocos. |
-| Base e nave | `src/world/nasaSpaceshipBuilder.js`, `nasaModelsBuilder.js` | Habitat principal, túnel pressurizado, estufa (domo), painéis solares, antena, rover e console, com colisão nos objetos |
-| Sobrevivência | `src/player/SurvivalSystem.js`, `SURVIVAL_CONFIG` | 4 barras de 0–20: **O2, Vida, Água, Comida**. O O2 cai fora e recarrega dentro da área pressurizada, pago pela bateria. Água e comida caem sempre. Zerar qualquer uma tira vida, e vida zerada mata. |
+| Mundo voxel | `src/world/VoxelWorld.ts`, `terrainGenerator.js`, `src/data/marsTerrain.ts` | Mundo 224×48×224 com chunks e meshing. O relevo é a **elevação real** de uma cratera de ~180 m dentro de Gale (HiRISE, 1 bloco ≈ 1 m); só a área das construções foi nivelada e a cratera de gelo é do jogo. Dá para quebrar e colocar blocos. |
+| Base e nave | `src/world/nasaSpaceshipBuilder.ts`, `nasaModelsBuilder.js` | Habitat principal, túnel pressurizado, estufa (domo), painéis solares, antena, rover e console, com colisão nos objetos |
+| Sobrevivência | `src/player/SurvivalSystem.ts`, `SURVIVAL_CONFIG` | 4 barras de 0–20: **O2, Vida, Água, Comida**. O O2 cai fora e recarrega dentro da área pressurizada, pago pela bateria. Água e comida caem sempre. Zerar qualquer uma tira vida, e vida zerada mata. |
 | Missão | `src/mission/*`, `MISSION_CONFIG`, `ENERGY_CONFIG`, `RADIATION_CONFIG`, `STORM_CONFIG` | Bateria carregada pelos painéis, tempestades solares das CMEs do DONKI, dose de radiação em mSv, rádio com atraso e o MAV. O relógio é um só: 1 hora de jogo = 50 s reais, 1 sol = 20 min reais. |
-| Tripulação e estações | `src/crew/*`, `src/core/StationSystem.js`, `UtilityModule.js` | Tripulantes NPC que consomem ar, água e comida e operam estufa, reciclador, gerador de O2 e enfermaria; módulo norte com energia, cozinha, banheiro e oficina |
-| Consumíveis | `src/config/blockTypes.js` | Martian Ice (+água) e as colheitas da estufa (alface, batata, soja e cenoura: +comida, +vida), usados com o botão direito |
+| Tripulação e estações | `src/crew/*`, `src/core/StationSystem.ts`, `UtilityModule.js` | Tripulantes NPC que consomem ar, água e comida e operam estufa, reciclador, gerador de O2 e enfermaria; módulo norte com energia, cozinha, banheiro e oficina |
+| Consumíveis | `src/config/blockTypes.ts` | Martian Ice (+água) e as colheitas da estufa (alface, batata, soja e cenoura: +comida, +vida), usados com o botão direito |
 | Céu astronômico | `src/sky/*` | Sol, Terra e Lua vistos de Marte, Fobos e Deimos, ciclo dia/noite em "sols", luneta (tecla Z); o tempo passa mais rápido dormindo no beliche do dormitório (issue #109; a tecla T ficou só no painel de admin) |
-| HUD | `src/ui/HudManager.js`, `index.html` | Barras estilo Minecraft, hotbar de 9 slots, inventário (tecla E, 36 slots), toasts, tela de morte e rótulos no céu. **UI em inglês.** |
+| HUD | `src/ui/HudManager.ts`, `public/game.html` | Barras estilo Minecraft, hotbar de 9 slots, inventário (tecla E, 36 slots), toasts, tela de morte e rótulos no céu. **UI em inglês.** |
 
 ## Organização da base (`src/base/`)
 
@@ -27,9 +27,9 @@ A base é dividida em zonas com placa, cor no piso e função: `CMD-1` comando, 
 
 A ala norte (`NORTH_WING` em `habitatLayout.js`) é um corredor central envidraçado que liga quatro módulos separados, cada um com a sua função: energia e aquecimento, cozinha, banheiro e oficina. O campo solar fica a oeste do módulo de energia.
 
-O dormitório é um módulo próprio a leste do habitat (`EAST_WING` em `habitatLayout.js`), com três beliches, armários e mesa. A mobília de cenário de cada seção fica em `src/base/baseFurniture.js`.
+O dormitório é um módulo próprio a leste do habitat (`EAST_WING` em `habitatLayout.js`), com três beliches, armários e mesa. A mobília de cenário de cada seção fica em `src/base/baseFurniture.ts`.
 
-A estufa é a maior estrutura da base: redoma de raio 14 (`DOME_X`, `DOME_RADIUS` em `habitatLayout.js`) com praça central e anel de caminhada. Toda a plantação é plantável: o canteiro do jardim e oito campos, quatro de dentro (A1 a A4) e quatro de fora (B1 a B4), em `GREENHOUSE_PLOTS` (`greenhouseLayout.js`). O monitor de comida mostra a estufa vista de cima (`src/ui/greenhouseMap.js`): o jogador toca num campo e escolhe a cultura. Campo maior custa mais água e energia de uma vez e rende mais refeições (`GREENHOUSE_PLOT_YIELD`). As plantas 3D de cada campo ficam em `src/base/greenhouseFields.js`.
+A estufa é a maior estrutura da base: redoma de raio 14 (`DOME_X`, `DOME_RADIUS` em `habitatLayout.js`) com praça central e anel de caminhada. Toda a plantação é plantável: o canteiro do jardim e oito campos, quatro de dentro (A1 a A4) e quatro de fora (B1 a B4), em `GREENHOUSE_PLOTS` (`greenhouseLayout.js`). O monitor de comida mostra a estufa vista de cima (`src/ui/greenhouseMap.ts`): o jogador toca num campo e escolhe a cultura. Campo maior custa mais água e energia de uma vez e rende mais refeições (`GREENHOUSE_PLOT_YIELD`). As plantas 3D de cada campo ficam em `src/base/greenhouseFields.ts`.
 
 O abrigo de tempestade, o terminal de rádio e o módulo norte são da issue #56 (`nasaModelsBuilder.js`); `baseDecor.js` só acrescenta placa, pôster e medidor a eles.
 
@@ -88,8 +88,8 @@ Extras, se der tempo:
 
 O jogo tinha os sistemas, mas faltava uma direção única e uma rotina que se repete. O que mudou:
 
-- **Animação de chegada com passeio pela base** (`src/story/cutscene/arrivalCutscene.js`): depois do pouso, a câmera mostra a base, os painéis solares, a estufa, a cratera de gelo e o foguete, cada um com o nome e uma frase de até 5 palavras, e depois a rotina de cada viagem. Fecha mostrando a missão ("Fill the rocket. Fly home."): a tripulação anda até o foguete, embarca e ele decola rumo à Terra no céu. É uma prévia; quando a animação acaba, o foguete está de volta na plataforma, vazio. As frases ficam na tela a no máximo 2 palavras por segundo (regra do jogo, coberta por teste).
-- **Meta sempre à vista** (`src/story/objectiveView.js`, `StoryHud`): o painel do objetivo abre com `GOAL: FLY HOME` e o foguete em 10 degraus, um por bloco de gelo. Gelo entregue acende o degrau em azul e ele vira verde quando a fábrica o transforma em combustível. É o único medidor do foguete: a linha `ROCKET` saiu do painel de recursos.
+- **Animação de chegada com passeio pela base** (`src/story/cutscene/arrivalCutscene.ts`): depois do pouso, a câmera mostra a base, os painéis solares, a estufa, a cratera de gelo e o foguete, cada um com o nome e uma frase de até 5 palavras, e depois a rotina de cada viagem. Fecha mostrando a missão ("Fill the rocket. Fly home."): a tripulação anda até o foguete, embarca e ele decola rumo à Terra no céu. É uma prévia; quando a animação acaba, o foguete está de volta na plataforma, vazio. As frases ficam na tela a no máximo 2 palavras por segundo (regra do jogo, coberta por teste).
+- **Meta sempre à vista** (`src/story/objectiveView.ts`, `StoryHud`): o painel do objetivo abre com `GOAL: FLY HOME` e o foguete em 10 degraus, um por bloco de gelo. Gelo entregue acende o degrau em azul e ele vira verde quando a fábrica o transforma em combustível. É o único medidor do foguete: a linha `ROCKET` saiu do painel de recursos.
 - **Rotina de 3 passos** (atos 2 e 3): buscar gelo, carregar o foguete e voltar à base para recarregar o ar. O `StoryDirector` marca `needsBase` depois de cada entrega; o painel e a seta do objetivo seguem a mesma rotina. É um guia, não uma trava: pegar mais gelo antes de voltar pula o passo.
 - **Uma coisa por vez**: o card do ato 2 só explica a rotina (tempestades e envio de dados aparecem na hora deles) e o painel de recursos mostra um aviso por vez, com um segundo só quando os dois são perigo.
 
@@ -107,9 +107,9 @@ O ponto de interação da estufa abre o painel de cultivo. As folhas das portas 
 
 ## Educação e experiência do jogador — 14/11/2026
 
-- **Causa da morte (#83, PRs #141 e #142, `src/player/deathReport.js`):** feita fora desta leva. Com o RTG o CO2 só sobe com o filtro cheio, então a morte por ar ruim aparece como filtro, não como falta de energia.
+- **Causa da morte (#83, PRs #141 e #142, `src/player/deathReport.ts`):** feita fora desta leva. Com o RTG o CO2 só sobe com o filtro cheio, então a morte por ar ruim aparece como filtro, não como falta de energia.
 - **Alertas (#82, PR #144):** feita fora desta leva (prioridade, texto de ação e seta para a estação). Com a bateria vazia o alerta de energia vale também para o modo de espera do RTG.
 - **Noite e RTG (#85):** o RTG (`ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR`) paga só o suporte de vida (O2 e filtro de CO2); com a bateria vazia as máquinas param, mas ninguém morre dentro da base. O painel mostra o fluxo líquido da bateria (`+4/h`) e às 16h30 vem o aviso de pôr do sol. O aquecedor ficou na bateria de propósito, para a escolha de desligá-lo à noite continuar valendo.
 - **Treino de cadete (#88):** depois de chamar a Terra, 4 certificados dentro da base (energia, estufa, academia e parede de água do abrigo, com um pulso de radiação simulado). As tempestades só começam depois do primeiro gelo. "Skip cadet training" fica em Demo Controls. A issue pedia regolito sobre o abrigo e o ARED; o jogo usa a parede de água e a esteira/bicicleta, que já são mecânicas reais dele.
-- **Estufa (#89, `src/base/greenhouseCare.js`):** o monitor mostra luz LED, água reciclada e poeira; as plantas amarelam quando param de crescer; cada colheita mostra um card "Space science on Earth" (4 em rodízio).
-- **Boletim (#90, `src/mission/missionReport.js`):** vitória e janela fechada mostram 4 notas S/A/B/C (radiação, saúde, cultivo e engenharia) e um perfil com o ponto forte e uma dica. A água reciclada não entra na nota: o reciclador da tripulação não roda na partida (a tripulação é só ambiente desde o commit c097929).
+- **Estufa (#89, `src/base/greenhouseCare.ts`):** o monitor mostra luz LED, água reciclada e poeira; as plantas amarelam quando param de crescer; cada colheita mostra um card "Space science on Earth" (4 em rodízio).
+- **Boletim (#90, `src/mission/missionReport.ts`):** vitória e janela fechada mostram 4 notas S/A/B/C (radiação, saúde, cultivo e engenharia) e um perfil com o ponto forte e uma dica. A água reciclada não entra na nota: o reciclador da tripulação não roda na partida (a tripulação é só ambiente desde o commit c097929).
