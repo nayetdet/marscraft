@@ -1,6 +1,7 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { GREENHOUSE_CENTER, PLOT_PLANT_CELLS } from '../world/greenhouseLayout.js';
-import { greenhouseMapSvg, plotMapLabel, plotStatus } from './greenhouseMap.js';
+import { greenhouseMapSvg, plotMapLabel, plotRingDash, plotStatus } from './greenhouseMap.js';
+import { hideModal, showModal } from './modalTransition.js';
 import { COMMS_CONFIG, CROP_CONFIG, ENERGY_CONFIG, RADIATION_CONFIG, SCIENCE_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
 import { doseHistoryText } from '../mission/doseBudget.js';
@@ -19,6 +20,11 @@ import { solarReason } from '../mission/weatherText.js';
 import { tauSolarFactor } from '../mission/dustWeather.js';
 import { radlabChartHtml } from './missionJournalView.js';
 import { getStudy } from '../data/osdrStudies.js';
+
+// Efeito ao plantar (issue #139): particulas verdes no canteiro e flash do que foi gasto
+const PLANT_FX_PARTICLES = 14;
+const PLANT_FX_MS = 750;
+const SPEND_TAG_MS = 900;
 
 const DATA_SOURCES = {
   donki: 'https://ccmc.gsfc.nasa.gov/tools/DONKI/',
@@ -190,7 +196,7 @@ export class StationPanel {
     this.lastHitQuality = 'ready';
     this.lastHitText = this.gymMode === 'bike' ? 'Alternate left and right.' : 'Step in the green zone.';
     this.render();
-    this.element.classList.remove('hidden');
+    showModal(this.element);
     if (this.engine.input?.isTouchMode) this.engine.input.keys = {};
     if (this._isGymStation()) this._startGymLoop();
     if (this._isGreenhouseStation()) this._startGreenhouseLoop();
@@ -202,7 +208,7 @@ export class StationPanel {
     this._cancelGhDrag();
     this._stopGymLoop();
     this._stopGreenhouseLoop();
-    this.element.classList.add('hidden');
+    hideModal(this.element);
     if (!this.engine.input?.isTouchMode) requestRawPointerLock(this.engine.renderer.domElement);
   }
 
@@ -252,6 +258,7 @@ export class StationPanel {
       if (!plot.crop) return;
       const label = root.querySelector(`[data-plot-pct="${i}"]`);
       if (label) label.textContent = plotMapLabel(plot);
+      root.querySelector(`[data-plot-ring="${i}"]`)?.setAttribute('stroke-dasharray', plotRingDash(plot));
     });
     const activePlot = s.plots[s.selectedPlot];
     if (activePlot?.crop) {
@@ -412,6 +419,7 @@ export class StationPanel {
     const { expedition: mission, stations, survival } = this.engine;
     const plot = stations.plots[index];
     if (!plot) return '';
+    const spent = stations.plotCost(cropType, index);
     const message = stations.plant(cropType, survival, index);
     this.engine.updateCropVisuals?.();
     if (!plot.crop) {
@@ -423,7 +431,52 @@ export class StationPanel {
       return 'failed';
     }
     this.ghNotice = '';
+    // Quem chamou redesenha o painel logo em seguida; o efeito vai no quadro seguinte, no DOM novo
+    requestAnimationFrame(() => this._playPlantFx(index, spent));
     return message;
+  }
+
+  _playPlantFx(index, spent) {
+    const root = this.greenhouseContainer;
+    if (!root || !this.isOpen || !this._isGreenhouseStation()) return;
+    const plotEl = root.querySelector(`[data-action="plot:${index}"]`);
+    if (plotEl) {
+      const box = plotEl.getBoundingClientRect();
+      const fx = document.createElement('div');
+      fx.className = 'gh-plant-fx';
+      fx.setAttribute('aria-hidden', 'true');
+      fx.style.left = `${box.left + box.width / 2}px`;
+      fx.style.top = `${box.top + box.height / 2}px`;
+      const spread = Math.max(18, Math.min(box.width, box.height) * 0.6);
+      for (let i = 0; i < PLANT_FX_PARTICLES; i++) {
+        const angle = i * 2.39996; // angulo de ouro: espalha sem sortear
+        const dist = spread * (0.55 + 0.45 * ((i * 7) % 5) / 4);
+        const dot = document.createElement('i');
+        dot.style.setProperty('--dx', `${Math.round(Math.cos(angle) * dist)}px`);
+        dot.style.setProperty('--dy', `${Math.round(Math.sin(angle) * dist - 10)}px`);
+        dot.style.animationDelay = `${(i % 4) * 30}ms`;
+        fx.appendChild(dot);
+      }
+      document.body.appendChild(fx);
+      setTimeout(() => fx.remove(), PLANT_FX_MS);
+    }
+    // A energia sai na hora; a agua a planta bebe do tanque enquanto cresce, entao o aviso diz isso
+    const spends = [['#gh-res-water', spent.water, `${spent.water} L to grow`], ['#gh-res-power', spent.energy, `-${spent.energy}%`]];
+    for (const [selector, amount, text] of spends) {
+      const pill = root.querySelector(selector)?.closest('.gh-res-pill');
+      if (!pill || !(amount > 0)) continue;
+      pill.classList.remove('is-spent');
+      void pill.offsetWidth;
+      pill.classList.add('is-spent');
+      const tag = document.createElement('span');
+      tag.className = 'gh-spend-tag';
+      tag.textContent = text;
+      pill.appendChild(tag);
+      setTimeout(() => {
+        tag.remove();
+        pill.classList.remove('is-spent');
+      }, SPEND_TAG_MS);
+    }
   }
 
   _startGymLoop() {

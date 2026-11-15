@@ -1,6 +1,8 @@
 import { SCAN_CATEGORIES, SCAN_CATALOG, getCategoryLabel, getScanEntry, listCatalogSources } from '../data/scanCatalog.js';
 import { getJournalIcon } from '../graphics/journalIcons.js';
 import { missionLogHtml, realVsGameHtml, studiesHtml } from './missionJournalView.js';
+import { UnseenFinds, journalRank } from './journalProgress.js';
+import { hideModal, showModal } from './modalTransition.js';
 
 const BAR_SEGMENTS = 20; // a barra enche em degraus, como as barras pixeladas do jogo
 const CARD_DURATION_MS = 6000;
@@ -209,6 +211,9 @@ export class ScannerHud {
     this.journalMode = 'discoveries';
     this.missionLog = null; // MissionLog e StudyReveals (attachMissionLog)
     this.studyReveals = null;
+    this.unseen = new UnseenFinds(); // selos NEW! nas abas (issue #139)
+    this._seenWhileOpen = new Set();
+    this._shownRank = null;
 
     this.journalOverlayEl?.addEventListener('click', (event) => {
       const modeBtn = event.target.closest('[data-journal-mode]');
@@ -281,6 +286,7 @@ export class ScannerHud {
   }
 
   showCard(entry, discovery) {
+    if (discovery.isNew) this.unseen.add(entry.id, entry.category);
     const badge = discovery.isNew
       ? `<span class="scan-badge new">NEW ${discovery.count}/${discovery.total}</span>`
       : '<span class="scan-badge">FOUND</span>';
@@ -328,20 +334,53 @@ export class ScannerHud {
 
   openJournal(journal) {
     this.isJournalOpen = true;
+    // Abre direto na aba com descoberta nova, se a aba atual nao tiver nenhuma
+    if (!this.unseen.hasNew(this.activeCategory)) {
+      const withNew = this.unseen.firstCategoryWithNew(SCAN_CATEGORIES.map((c) => c.id));
+      if (withNew) {
+        this.journalMode = 'discoveries';
+        this.activeCategory = withNew;
+        this.selectedEntryId = null;
+      }
+    }
+    this._seenWhileOpen.clear();
     this.renderJournal(journal);
-    this.journalOverlayEl.classList.remove('hidden');
+    showModal(this.journalOverlayEl);
   }
 
   closeJournal() {
     this.isJournalOpen = false;
-    this.journalOverlayEl.classList.add('hidden');
+    // As abas que a crianca abriu deixam de ser novidade; as outras continuam com NEW!
+    this._seenWhileOpen.forEach((category) => this.unseen.markSeen(category));
+    this._seenWhileOpen.clear();
+    hideModal(this.journalOverlayEl);
+  }
+
+  // Barra de patente CADET -> SPECIALIST -> COMMANDER, que enche com as descobertas (issue #139)
+  _renderRank(journal) {
+    const rank = journalRank(journal.count, journal.total);
+    const ticks = rank.thresholds.slice(1)
+      .map((t) => `<i class="journal-rank-tick" style="left:${(t / journal.total) * 100}%"></i>`)
+      .join('');
+    const hint = rank.next ? `${rank.toNext} more finds to ${rank.next}` : rank.complete ? 'Every find in the journal!' : `${rank.toNext} finds left`;
+    this.journalRankEl.innerHTML = `${JOURNAL_ICONS.star} <span class="journal-rank-label">${rank.label}</span>`
+      + `<span class="journal-rank-bar" aria-hidden="true"><span class="journal-rank-fill" style="width:${rank.fill * 100}%"></span>${ticks}</span>`;
+    this.journalRankEl.parentElement?.setAttribute('title', `Astronaut rank: ${rank.label}. ${hint}`);
+    this.journalRankEl.classList.toggle('is-complete', rank.complete);
+    // Subiu de patente desde a ultima vez que o diario foi desenhado: brilho rapido
+    if (this._shownRank !== null && rank.index > this._shownRank) {
+      const pill = this.journalRankEl.parentElement;
+      pill?.classList.remove('is-rank-up');
+      void pill?.offsetWidth;
+      pill?.classList.add('is-rank-up');
+    }
+    this._shownRank = rank.index;
   }
 
   renderJournal(journal) {
     this._lastJournal = journal;
     this.journalProgressEl.innerHTML = `${JOURNAL_ICONS.scope} ${journal.count}/${journal.total}`;
-    this.journalRankEl.innerHTML = `${JOURNAL_ICONS.star} ${journal.isComplete() ? 'ASTRONAUT!' : 'CADET'}`;
-    this.journalRankEl.classList.toggle('is-complete', journal.isComplete());
+    this._renderRank(journal);
 
     const topBarEl = this.journalOverlayEl?.querySelector('.journal-top-bar');
     if (topBarEl && !topBarEl.querySelector('.gym-learn')) {
@@ -365,12 +404,16 @@ export class ScannerHud {
       const isActive = cat.id === this.activeCategory;
       const isDone = found === total;
       const label = TAB_LABELS[cat.id] ?? cat.label.toUpperCase();
-      return `<button type="button" class="gym-tab journal-tab ${isActive ? 'active' : ''} ${isDone ? 'done' : ''}" data-journal-cat="${escapeHtml(cat.id)}" aria-pressed="${isActive}">
+      const hasNew = this.unseen.hasNew(cat.id);
+      const newBadge = hasNew && !isActive ? '<b class="journal-new-badge">NEW!</b>' : '';
+      return `<button type="button" class="gym-tab journal-tab ${isActive ? 'active' : ''} ${isDone ? 'done' : ''} ${hasNew ? 'has-new' : ''}" data-journal-cat="${escapeHtml(cat.id)}" aria-pressed="${isActive}"${hasNew ? ' aria-label="' + escapeHtml(label) + ', new find"' : ''}>
         <span>${escapeHtml(label)}</span>
         <small>${found}/${total}</small>
+        ${newBadge}
       </button>`;
     }).join('');
 
+    if (this.isJournalOpen) this._seenWhileOpen.add(this.activeCategory);
     const entries = SCAN_CATALOG.filter((entry) => entry.category === this.activeCategory);
     const activeEntry = entries.find((e) => e.id === this.selectedEntryId) ?? entries[0] ?? null;
 
@@ -382,8 +425,10 @@ export class ScannerHud {
         stat: entry.facts[0]?.value ?? '',
       };
 
+      const isNew = this.unseen.isNew(entry.id);
       return `
-        <article class="gh-card journal-card ${discovered ? 'ready' : 'locked'} ${isSelected ? 'selected' : ''}" data-journal-entry="${escapeHtml(entry.id)}">
+        <article class="gh-card journal-card ${discovered ? 'ready' : 'locked'} ${isSelected ? 'selected' : ''} ${isNew ? 'is-new' : ''}" data-journal-entry="${escapeHtml(entry.id)}">
+          ${isNew ? '<b class="journal-new-badge">NEW!</b>' : ''}
           <img class="gh-crop-art journal-art ${escapeHtml(entry.category)}" src="${getJournalIcon(entry.id)}" alt="${escapeHtml(entry.title)}" />
           <h3>${escapeHtml(meta.title)}</h3>
           <span class="gh-food-gain">${JOURNAL_ICONS.star} ${escapeHtml(meta.stat)}</span>
@@ -422,7 +467,6 @@ export class ScannerHud {
       const count = mode.id === 'studies' ? `<small>${studies}</small>` : '';
       return `<button type="button" role="tab" class="gym-tab journal-mode ${active ? 'active' : ''}" data-journal-mode="${mode.id}" aria-selected="${active}">${mode.label}${count}</button>`;
     }).join('');
-    topBarEl.classList.toggle('is-discoveries', this.journalMode === 'discoveries');
   }
 
   _renderExtraMode() {

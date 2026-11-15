@@ -420,18 +420,19 @@
     <section class="station-window journal-window" aria-label="Discovery Journal">
       <header>
         <span id="journal-title">SPACE JOURNAL</span>
+        <div class="journal-head-pills">
+          <div class="gh-res-pill water" title="Discovered">
+            <strong id="journal-progress">0 / 24</strong>
+          </div>
+          <div class="gh-res-pill power" title="Astronaut Rank">
+            <strong id="journal-rank">CADET</strong>
+          </div>
+        </div>
         <button id="journal-done" type="button" aria-label="Close journal">X</button>
       </header>
       <div class="station-screen journal-screen">
         <div class="gh-monitor journal-monitor">
-          <div class="gh-top-bar journal-top-bar">
-            <div class="gh-res-pill water" title="Discovered">
-              <strong id="journal-progress">0 / 23</strong>
-            </div>
-            <div class="gh-res-pill power" title="Astronaut Rank">
-              <strong id="journal-rank">CADET</strong>
-            </div>
-          </div>
+          <div class="gh-top-bar journal-top-bar"></div>
           <div id="journal-body" class="journal-body"></div>
         </div>
       </div>
