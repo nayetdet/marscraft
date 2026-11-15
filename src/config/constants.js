@@ -289,7 +289,16 @@ export const STORY_CONFIG = {
 export const CUTSCENE_CONFIG = {
   // Local de pouso da capsula: chao plano, a ~17 blocos da rampa onde o jogador nasce
   LANDING_SITE: { x: -13, z: 23 },
-  ARRIVAL_SECONDS: 14.8,
+  // Passeio pela base depois do pouso: segundos em cada lugar. As frases tem ate 5 palavras e
+  // ficam na tela a no maximo 2 palavras por segundo (regra do jogo, para dar tempo de ler)
+  TOUR_STOP_SECONDS: 3,
+  // Segundos da frase da rotina (gelo, foguete, base), no fim do passeio
+  TOUR_ROUTINE_SECONDS: 4.4,
+  // Segundos da previa da missao: a tripulacao embarca e o foguete parte rumo a Terra
+  TOUR_MISSION_SECONDS: 6.6,
+  // Aceleracao do foguete nessa previa, em blocos/s^2: mais forte que a da decolagem de verdade
+  // (LAUNCH_ACCEL), porque a previa dura poucos segundos
+  PREVIEW_LAUNCH_ACCEL: 7,
   LAUNCH_SECONDS: 15.5,
   // Aceleracao do MAV na decolagem, em blocos/s^2 (escala de jogo)
   LAUNCH_ACCEL: 2.2,

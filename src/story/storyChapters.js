@@ -13,7 +13,8 @@ export const CARDS = {
   welcome: {
     title: 'WELCOME TO MARS',
     lines: [
-      { icon: 'air', text: 'Your suit air is low' },
+      { icon: 'rocket', text: 'Mission: fill the rocket, fly home' },
+      { icon: 'air', text: 'First: your suit air is low' },
       { icon: 'door', text: 'Go inside the base' },
     ],
   },
@@ -25,17 +26,20 @@ export const CARDS = {
       { icon: 'radio', text: 'Now call Earth' },
     ],
   },
+  // A rotina que se repete ate o tanque encher. Tempestades e dados entram depois, cada um na
+  // sua hora (card da primeira tempestade, tarefa SEND DATA), para ensinar uma coisa por vez.
   act2: {
-    title: 'GET READY TO GO HOME',
+    title: 'FILL THE ROCKET',
     lines: [
-      { icon: 'rocket', text: 'Fill the rocket with ice fuel' },
-      { icon: 'storm', text: `Survive ${STORY_CONFIG.STORMS_FOR_WINDOW} solar storms` },
-      { icon: 'radio', text: 'Send your science to Earth' },
-      { icon: 'bolt', text: 'One battery for it all: choose!' },
+      { icon: 'ice', text: 'Get ice at the crater' },
+      { icon: 'rocket', text: 'Load it into the rocket' },
+      { icon: 'home', text: 'Go back to base for air' },
+      { icon: 'bolt', text: 'Air and fuel share one battery' },
     ],
   },
   stormGuide: {
     title: 'SOLAR STORM COMING',
+    lines: [{ icon: 'storm', text: `Survive ${STORY_CONFIG.STORMS_FOR_WINDOW} storms, then you can launch` }],
     choices: [
       { icon: 'home', name: 'HIDE', good: 'Safest spot', bad: 'No work outside' },
       { icon: 'shield', name: 'SHIELD', good: 'Keep working', bad: 'Eats battery' },
@@ -49,13 +53,6 @@ export const CARDS = {
       { icon: 'clock', text: 'Launch before time runs out' },
     ],
   },
-};
-
-// Nome curto de cada ato, ao lado das 3 bolinhas de progresso
-export const ACT_TITLES = {
-  1: 'ARRIVAL',
-  2: 'GET READY',
-  3: 'LAUNCH WINDOW',
 };
 
 // Card do primeiro relatorio pelo radio. A distancia e o atraso vem do CommsLink (o mesmo radio

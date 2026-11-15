@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { makeCanvasTexture } from '../graphics/textureGenerator.js';
-import { HABITAT_LAYOUT } from './habitatLayout.js';
+import { HABITAT_LAYOUT, SOLAR_FIELD } from './habitatLayout.js';
 import { signTexture } from '../base/baseCanvas.js';
 import { SIGNS } from '../base/basePosters.js';
 
@@ -598,9 +598,9 @@ function createExteriorSolarAndDish(mats, x, y, z) {
   const solarArrays = [];
 
   // Campo solar a oeste do modulo de energia: uma fileira de cinco paineis
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < SOLAR_FIELD.count; i++) {
     const array = new THREE.Group();
-    array.position.set(x - 27, y, z - 17 - i * 3);
+    array.position.set(x + SOLAR_FIELD.x, y, z + SOLAR_FIELD.zFirst - i * SOLAR_FIELD.spacing);
     addBox(array, 0.25, 1.4, 0.25, mats.lightGray, 0, 0.7, 0);
     addBox(array, 3.4, 0.1, 2.2, mats.whiteMetal, 0, 1.45, 0, 0.38, 0, 0);
     addBox(array, 3.2, 0.12, 2.0, mats.solarPanel, 0, 1.47, 0, 0.38, 0, 0);

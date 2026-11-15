@@ -11,6 +11,9 @@ const NODE_FACING = {
   quarters: Math.PI,
   medbay: 0,
 };
+// Passo de caminhada: frequencia do ciclo e amplitude do balanco das pernas
+const WALK_RATE = 9;
+const WALK_SWING = 0.58;
 const SUIT_COLOR = new THREE.Color(0xf8fafc);
 const WEAK_COLOR = new THREE.Color(0xb8c0cc);
 
@@ -288,8 +291,8 @@ export class CrewAvatar {
     let bobY = 0;
 
     if (m.state === 'walking') {
-      const phase = this._time * 9;
-      legSwing = Math.sin(phase) * 0.58;
+      const phase = this._time * WALK_RATE;
+      legSwing = Math.sin(phase) * WALK_SWING;
       armSwingL = -legSwing * 0.78;
       armSwingR = legSwing * 0.78;
       bobY = Math.abs(Math.sin(phase)) * 0.035;
@@ -330,6 +333,32 @@ export class CrewAvatar {
     this.suitMat.color.copy(isWeak ? WEAK_COLOR : SUIT_COLOR);
     this.statusLightMat.color.setHex(isWeak ? 0xef4444 : 0x4ade80);
     this.statusLightMat.emissive.setHex(isWeak ? 0xb91c1c : 0x16a34a);
+  }
+
+  // Animacoes: poe o tripulante andando num ponto qualquer do mundo, fora dos trilhos da base.
+  // O proximo update() devolve o avatar ao lugar e a pose do tripulante.
+  poseWalking(x, y, z, heading, dt) {
+    this._time += dt;
+    this.group.visible = true;
+    this.group.position.set(x, y, z);
+    this.group.rotation.y = heading;
+
+    const phase = this._time * WALK_RATE;
+    const legSwing = Math.sin(phase) * WALK_SWING;
+    this.bodyGroup.position.y = Math.abs(Math.sin(phase)) * 0.035;
+    this.legL.rotation.x = legSwing;
+    this.legR.rotation.x = -legSwing;
+    this.armL.rotation.x = -legSwing * 0.78;
+    this.armR.rotation.x = legSwing * 0.78;
+    this.upperBody.rotation.x = 0.05;
+    this.upperBody.rotation.y = Math.sin(phase) * 0.08;
+    this.headGroup.rotation.x = 0;
+    this.headGroup.rotation.y = 0;
+  }
+
+  // Animacoes: o tripulante saiu de cena (entrou no foguete). O proximo update() o traz de volta.
+  hide() {
+    this.group.visible = false;
   }
 
   dispose() {

@@ -80,6 +80,17 @@ Extras, se der tempo:
 - Tenha uma tela de **"Fontes / Dados da NASA"** acessível pelo menu, listando DONKI, RadLab, InSight, OSDR e Mars Trek com links.
 - Não use o logo da NASA em texturas ou na UI geradas.
 
+## Direção e rotina do jogo — 14/11/2026
+
+O jogo tinha os sistemas, mas faltava uma direção única e uma rotina que se repete. O que mudou:
+
+- **Animação de chegada com passeio pela base** (`src/story/cutscene/arrivalCutscene.js`): depois do pouso, a câmera mostra a base, os painéis solares, a estufa, a cratera de gelo e o foguete, cada um com o nome e uma frase de até 5 palavras, e depois a rotina de cada viagem. Fecha mostrando a missão ("Fill the rocket. Fly home."): a tripulação anda até o foguete, embarca e ele decola rumo à Terra no céu. É uma prévia; quando a animação acaba, o foguete está de volta na plataforma, vazio. As frases ficam na tela a no máximo 2 palavras por segundo (regra do jogo, coberta por teste).
+- **Meta sempre à vista** (`src/story/objectiveView.js`, `StoryHud`): o painel do objetivo abre com `GOAL: FLY HOME` e o foguete em 10 degraus, um por bloco de gelo. Gelo entregue acende o degrau em azul e ele vira verde quando a fábrica o transforma em combustível. É o único medidor do foguete: a linha `ROCKET` saiu do painel de recursos.
+- **Rotina de 3 passos** (atos 2 e 3): buscar gelo, carregar o foguete e voltar à base para recarregar o ar. O `StoryDirector` marca `needsBase` depois de cada entrega; o painel e a seta do objetivo seguem a mesma rotina. É um guia, não uma trava: pegar mais gelo antes de voltar pula o passo.
+- **Uma coisa por vez**: o card do ato 2 só explica a rotina (tempestades e envio de dados aparecem na hora deles) e o painel de recursos mostra um aviso por vez, com um segundo só quando os dois são perigo.
+
+Ficou de fora: marcar o pôr do sol como sinal de voltar para dentro e um resumo no fim de cada sol.
+
 ## Atualização da estufa — 14/11/2026
 
 O snapshot e vários gaps acima estão desatualizados: o código já contém estufa plantável, energia, comunicação e fontes NASA. A estufa agora diferencia alface (rápida), batata (equilibrada) e soja (maior custo/rendimento), acompanha as três culturas colhidas e revela registros reais da API OSDR no caderno, com data e links. Veja o procedimento reprodutível em `docs/data/apis-nasa.md`. Tempos e rendimentos são regras do jogo, identificadas assim na tela; os estudos embutidos são históricos.

@@ -42,7 +42,7 @@ import { ScannerSystem, applyDiscoveryReward } from '../scanner/ScannerSystem.js
 import { resolveScanTarget, collectScanBlocks } from '../scanner/scanTargeting.js';
 import { ScanHighlight } from '../scanner/scanHighlight.js';
 import { isInsideShieldZone, SHIELD_ZONE } from '../mission/shieldZone.js';
-import { HABITAT_LAYOUT, isInsideShelter } from '../world/habitatLayout.js';
+import { HABITAT_LAYOUT, SOLAR_FIELD_CENTER, isInsideShelter } from '../world/habitatLayout.js';
 import { ShieldBubble } from '../graphics/shieldBubble.js';
 import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
@@ -943,6 +943,7 @@ export class GameEngine {
     this._storySnapshot = {
       hours: 0, insideHabitat: false, iceCount: 0, iceNeeded: 0, atConsole: false,
       stormPhase: 'calm', stormsSurvived: 0, propellantPct: 0, dataSent: false, launched: false,
+      needsBase: false,
     };
 
     // Setas do objetivo: uma flutua no mundo e a outra fica na tela (aponta mesmo atraves das paredes)
@@ -959,6 +960,9 @@ export class GameEngine {
     this.lander.position.set(CUTSCENE_CONFIG.LANDING_SITE.x, WORLD_CONFIG.GROUND_LEVEL + 150, CUTSCENE_CONFIG.LANDING_SITE.z);
     this.scene.add(this.lander);
     this.engineFlame = new EngineFlame();
+    // Chama do foguete na previa da missao, no fim da animacao de chegada
+    this.previewFlame = new EngineFlame();
+    this._mavHome = new THREE.Vector3();
     this.puffs = new ParticlePuffs(this.scene, { count: 96, color: 0xc98a5a });
   }
 
@@ -987,6 +991,11 @@ export class GameEngine {
     this.engineFlame.setSize(1.3, 6);
     this.engineFlame.group.position.set(0, LANDER_NOZZLE_Y, 0);
     this.lander.add(this.engineFlame.group);
+    // A animacao termina com o foguete decolando; _endArrival o devolve a plataforma
+    this._mavHome.copy(this.mavRocket.position);
+    this.previewFlame.setSize(1.0, 5.5);
+    this.previewFlame.group.position.set(0, MAV_NOZZLE_Y, 0);
+    this.mavRocket.add(this.previewFlame.group);
     this.cutscenes.play(createArrivalCutscene({
       camera: this.camera,
       lander: this.lander,
@@ -995,9 +1004,34 @@ export class GameEngine {
       site,
       groundY: WORLD_CONFIG.GROUND_LEVEL + 1,
       millionKm: Math.round(this.comms.distanceKm / 1e6),
+      places: this._tourPlaces(),
+      rocket: this.mavRocket,
+      rocketFlame: this.previewFlame,
+      crew: this.crewAvatars,
+      earthDir: this._earthDirection(this._mavHome),
       onTouchdown: () => this.audio.fadeOutRocket(),
       onEnd: () => this._endArrival(),
     }));
+  }
+
+  // Direcao unitaria de `from` ate a Terra no ceu, ou null se ela estiver baixa demais no horizonte
+  _earthDirection(from) {
+    const dir = this.sky.getEarthWorldPosition(new THREE.Vector3()).sub(from).normalize();
+    return dir.y > 0.2 ? { x: dir.x, y: dir.y, z: dir.z } : null;
+  }
+
+  // Ponto do mundo de cada lugar que a animacao de chegada apresenta
+  _tourPlaces() {
+    const floor = WORLD_CONFIG.GROUND_LEVEL + 1;
+    const { ice, mav } = this.waypoints;
+    const pad = MAV_CONFIG.PAD_POSITION;
+    return {
+      base: { x: 0, y: floor, z: -2 },
+      solar: { x: SOLAR_FIELD_CENTER.x, y: floor, z: SOLAR_FIELD_CENTER.z },
+      greenhouse: { x: HABITAT_LAYOUT.DOME_X, y: floor, z: HABITAT_LAYOUT.DOME_Z },
+      ice: { x: ice.x, y: ice.y - 1.6, z: ice.z },
+      rocket: { x: pad.x, y: floor, z: pad.z },
+    };
   }
 
   // Fim (ou pulo) da chegada: a capsula fica no chao como objeto solido e a historia comeca
@@ -1011,6 +1045,14 @@ export class GameEngine {
     this.engineFlame.group.visible = false;
     this.puffs.clear();
     this.customColliders.push(landerCollider(site.x, groundY, site.z));
+
+    // A decolagem do fim da animacao era uma previa: o foguete volta vazio para a plataforma
+    // e a tripulacao, para os seus lugares na base
+    this.mavRocket.position.copy(this._mavHome);
+    this.mavRocket.rotation.set(0, 0, 0);
+    this.previewFlame.group.removeFromParent();
+    this.previewFlame.group.visible = false;
+    for (const avatar of this.crewAvatars) avatar.update(0);
 
     this.input.keys = {};
     this.player.yaw = PHYSICS_CONFIG.SPAWN_YAW;
@@ -1140,7 +1182,8 @@ export class GameEngine {
     if (active) this.crew.updateMovement(dt);
 
     this.mission.oxygenCostMultiplier = this.crew.oxygenCostMultiplier();
-    for (const avatar of this.crewAvatars) avatar.update(dt);
+    // Numa animacao quem posiciona a tripulacao e a propria animacao (o embarque no foguete)
+    if (!this.cutscenes.isActive) for (const avatar of this.crewAvatars) avatar.update(dt);
 
     for (const event of this.crew.drainEvents()) {
       const message = crewEventMessage(event);

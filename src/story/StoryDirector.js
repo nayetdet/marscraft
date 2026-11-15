@@ -4,11 +4,14 @@ import { CARDS, OBJECTIVES, commsCard, replyCard } from './storyChapters.js';
 // A historia do jogo em 3 atos: chegada (tutorial), preparar a volta e janela de lancamento.
 // O tutorial tem 3 passos, um por ideia: entrar na base (ar), avisar a Terra (radio com atraso)
 // e buscar gelo. A resposta da Terra chega sozinha, com o jogador ja no passo seguinte.
+// Do ato 2 em diante o jogo tem uma rotina que se repete ate o tanque encher: buscar gelo, levar
+// ao foguete e voltar a base para recarregar o ar (`needsBase` marca esse ultimo passo).
 // Logica pura, sem DOM nem Three.js: o GameEngine entrega um retrato do jogo a cada frame
 // (`update(snapshot)`) e aplica os eventos que saem em `drainEvents()`.
 //
-// snapshot = { hours, insideHabitat, iceCount, atConsole, stormPhase, stormsSurvived,
+// snapshot = { hours, insideHabitat, iceCount, iceNeeded, atConsole, stormPhase, stormsSurvived,
 //              propellantPct, dataSent, launched }
+// O diretor escreve `needsBase` de volta no retrato, para o painel e a seta lerem a mesma rotina.
 export class StoryDirector {
   // `replyDelayHours`: horas de jogo ate a resposta da Terra chegar (ida e volta do sinal).
   // `comms`: { millionKm, oneWayMinutes, dateIso } para o card do radio.
@@ -32,7 +35,10 @@ export class StoryDirector {
     this.windowHoursLeft = null; // so existe no ato 3
     // Segundos reais ate a resposta da Terra chegar; null quando nao ha mensagem a caminho
     this.replySecondsLeft = null;
+    // Rotina de trabalho: true depois de entregar gelo no foguete, ate o jogador voltar a base
+    this.needsBase = false;
 
+    this._lastIceNeeded = null;
     this._replyAt = null;
     this._iceBaseline = 0;
     this._guideShown = false;
@@ -62,6 +68,7 @@ export class StoryDirector {
     }
 
     this._updateReply(s);
+    this._updateRoutine(s);
     if (this.act === 1) this._updateArrival(s);
     else if (this.act === 2) this._updateBuild(s);
     else this._updateWindow(s);
@@ -98,6 +105,19 @@ export class StoryDirector {
       default:
         break;
     }
+  }
+
+  // Rotina de trabalho (atos 2 e 3). Entregar gelo pede a volta a base; entrar nela, ou pegar
+  // mais gelo antes disso, fecha o passo. E so um guia: nada trava se a crianca seguir outra ordem.
+  _updateRoutine(s) {
+    // O tanque pede menos gelo so quando o jogador entrega algum (a fabrica gasta o que ja entrou)
+    const delivered = this._lastIceNeeded !== null && s.iceNeeded < this._lastIceNeeded;
+    this._lastIceNeeded = s.iceNeeded;
+    if (this.act >= 2) {
+      if (s.insideHabitat || s.iceCount > 0) this.needsBase = false;
+      else if (delivered) this.needsBase = true;
+    }
+    s.needsBase = this.needsBase;
   }
 
   // A mensagem viaja enquanto o jogo segue; quando a ida e volta do sinal acaba, a Terra responde

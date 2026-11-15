@@ -39,6 +39,12 @@ describe('nextRocketJob', () => {
     expect(nextRocketJob({ iceCount: 2, iceNeeded: 4 })).toBe('load');
   });
 
+  it('asks for a trip back to base after a delivery, until more ice is picked up', () => {
+    expect(nextRocketJob({ iceCount: 0, iceNeeded: 4, needsBase: true })).toBe('base');
+    expect(nextRocketJob({ iceCount: 1, iceNeeded: 4, needsBase: true })).toBe('load');
+    expect(nextRocketJob({ iceNeeded: 0, needsBase: true })).toBe('data');
+  });
+
   it('sends the data while the factory works, then only the storms are left', () => {
     expect(nextRocketJob({ iceNeeded: 0, propellantPct: 70 })).toBe('data');
     expect(nextRocketJob({ iceNeeded: 0, propellantPct: 70, dataSent: true })).toBe('fuel');
@@ -55,9 +61,12 @@ describe('objectiveView', () => {
     const story = director();
     let view = step(story);
     expect(view.act).toBe(1);
-    expect(view.actName).toBe('ARRIVAL');
     expect(view.task).toMatchObject({ icon: 'door', label: 'ENTER THE BASE' });
     expect(view.steps.map((s) => s.state)).toEqual(['now', 'todo', 'todo']);
+    expect(view.loop).toBe(false);
+    // A meta e o foguete vazio aparecem desde o primeiro passo
+    expect(view.goal).toBe('GOAL: FLY HOME');
+    expect(view.rocket).toEqual({ total: 10, loaded: 0, fuel: 0 });
     expect(view.goals).toBeNull();
     expect(view.timer).toBeNull();
     expect(view.signal).toBeNull();
@@ -91,25 +100,53 @@ describe('objectiveView', () => {
     expect(view.signal).toBeNull();
   });
 
-  it('shows the three rocket goals in act 2 and the most useful job', () => {
+  it('repeats the work loop in act 2: get ice, load the rocket, back to base', () => {
     const story = director();
     step(story, { insideHabitat: true });
     step(story, { insideHabitat: true, atConsole: true });
     let view = step(story, { hours: 16, iceCount: 1 });
     expect(view.act).toBe(2);
-    expect(view.steps).toBeNull();
+    expect(view.loop).toBe(true);
     expect(view.task.label).toBe('LOAD THE ROCKET');
-    expect(view.goals).toEqual({ fuelPct: 0, storms: 0, stormsNeeded: 3, dataSent: false });
+    expect(view.steps).toEqual([
+      { icon: 'ice', state: 'done' },
+      { icon: 'rocket', state: 'now' },
+      { icon: 'home', state: 'todo' },
+    ]);
+    expect(view.goals).toEqual({ storms: 0, stormsNeeded: 3, dataSent: false });
 
-    view = step(story, { hours: 17, iceCount: 0, iceNeeded: 6, propellantPct: 40.6, stormsSurvived: 1 });
+    // Entregou o gelo: o degrau acende e o passo seguinte e voltar a base
+    view = step(story, { hours: 16.2, iceCount: 0, iceNeeded: 9 });
+    expect(view.task).toMatchObject({ icon: 'home', label: 'BACK TO BASE' });
+    expect(view.steps.map((s) => s.state)).toEqual(['done', 'done', 'now']);
+    expect(view.rocket).toEqual({ total: 10, loaded: 1, fuel: 0 });
+
+    // De volta a base, a volta recomeca
+    view = step(story, { hours: 16.4, insideHabitat: true, iceNeeded: 9 });
     expect(view.task.label).toBe('GET ICE');
-    expect(view.goals).toMatchObject({ fuelPct: 40, storms: 1 });
+    expect(view.steps.map((s) => s.state)).toEqual(['now', 'todo', 'todo']);
 
-    view = step(story, { hours: 18, iceNeeded: 0, propellantPct: 90, stormsSurvived: 1 });
+    // Gelo entregue (azul) vai virando combustivel (verde) com a fabrica ligada
+    view = step(story, { hours: 17, iceNeeded: 6, propellantPct: 20.6, stormsSurvived: 1 });
+    expect(view.rocket).toEqual({ total: 10, loaded: 4, fuel: 2 });
+    expect(view.goals).toMatchObject({ storms: 1 });
+  });
+
+  it('leaves the loop when the tank has all its ice', () => {
+    const story = director();
+    step(story, { insideHabitat: true });
+    step(story, { insideHabitat: true, atConsole: true });
+    step(story, { hours: 16, iceCount: 1 });
+
+    let view = step(story, { hours: 18, iceNeeded: 0, propellantPct: 90, stormsSurvived: 1 });
     expect(view.task).toMatchObject({ label: 'SEND DATA', key: 'G' });
+    expect(view.steps).toBeNull();
+    expect(view.loop).toBe(false);
+    expect(view.rocket).toEqual({ total: 10, loaded: 10, fuel: 9 });
 
     view = step(story, { hours: 19, iceNeeded: 0, propellantPct: 100, stormsSurvived: 1, dataSent: true });
     expect(view.task.label).toBe('SURVIVE THE STORMS');
+    expect(view.rocket.fuel).toBe(10);
     expect(view.goals.dataSent).toBe(true);
   });
 
@@ -120,6 +157,7 @@ describe('objectiveView', () => {
     step(story, { hours: 16, iceCount: 1 });
     const view = step(story, { hours: 17, stormPhase: 'warning' });
     expect(view.task).toMatchObject({ icon: 'shield', label: 'GET SAFE', key: null });
+    expect(view.steps).toBeNull();
   });
 
   it('shows the launch window running out in act 3', () => {

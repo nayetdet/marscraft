@@ -1,4 +1,4 @@
-import { STORY_CONFIG } from '../config/constants.js';
+import { MAV_CONFIG, STORY_CONFIG } from '../config/constants.js';
 import { WINDOW_CLOSED } from '../story/storyChapters.js';
 import { pixelIconSvg } from './pixelIcons.js';
 
@@ -48,7 +48,7 @@ function setWidth(node, fraction) {
   }
 }
 
-// UI da historia: o painel do objetivo (icones, passos e medidores), o card de radio
+// UI da historia: o painel do objetivo (meta, foguete em degraus, tarefa e passos), o card de radio
 // (mensagens do Controle da Missao, nao pausa o jogo) e a tela de janela de lancamento fechada.
 export class StoryHud {
   constructor({ cardSeconds = STORY_CONFIG.CARD_SECONDS, stormsNeeded = STORY_CONFIG.STORMS_FOR_WINDOW } = {}) {
@@ -62,17 +62,15 @@ export class StoryHud {
     this.windowOverlayEl = $('window-overlay');
 
     this.panelEl = $('story-objective');
-    this.actEls = [...$('story-acts').children];
-    this.actNameEl = $('story-objective-act');
+    this.goalTitleEl = $('story-goal-title');
+    this.rocketEl = $('story-rocket');
+    this.rocketCountEl = $('story-rocket-count');
     this.taskIconEl = $('story-task-icon');
     this.taskLabelEl = $('story-objective-text');
     this.taskKeyEl = $('story-task-key');
     this.stepsEl = $('story-steps');
     this.stepEls = [...this.stepsEl.querySelectorAll('.story-step')];
     this.goalsEl = $('story-goals');
-    this.fuelFillEl = $('story-goal-fuel').querySelector('.story-bar i');
-    this.fuelValueEl = $('story-goal-fuel').querySelector('b');
-    this.fuelGoalEl = $('story-goal-fuel');
     this.stormsGoalEl = $('story-goal-storms');
     this.dataGoalEl = $('story-goal-data');
     this.timerEl = $('story-timer');
@@ -85,7 +83,10 @@ export class StoryHud {
     this.signalLabelEl = $('story-signal-label');
     this._signal = false;
 
-    for (const node of this.goalsEl.querySelectorAll('[data-icon]')) node.innerHTML = pixelIconSvg(node.dataset.icon);
+    for (const node of this.panelEl.querySelectorAll('[data-icon]')) node.innerHTML = pixelIconSvg(node.dataset.icon);
+    // Um degrau por bloco de gelo que o tanque pede
+    const segs = $('story-rocket-segs');
+    this.segEls = Array.from({ length: MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK }, () => segs.appendChild(el('i')));
     $('story-goal-data').querySelector('.story-tick').innerHTML = pixelIconSvg('check');
     // Uma bolinha por tempestade que a missao pede
     const pips = this.stormsGoalEl.querySelector('.story-pips');
@@ -114,27 +115,30 @@ export class StoryHud {
     this._updateSignal(view?.signal ?? null);
     if (!view) return;
 
-    this.actEls.forEach((node, i) => setClass(node, i + 1 < view.act ? 'done' : i + 1 === view.act ? 'now' : ''));
-    setText(this.actNameEl, view.actName);
+    setText(this.goalTitleEl, view.goal);
+    const { loaded, fuel, total } = view.rocket;
+    this.segEls.forEach((node, i) => setClass(node, i < fuel ? 'fuel' : i < loaded ? 'ice' : ''));
+    setText(this.rocketCountEl, `${loaded}/${total}`);
+    setClass(this.rocketEl, fuel >= total ? 'story-rocket done' : 'story-rocket');
+
     setIcon(this.taskIconEl, view.task.icon);
     setText(this.taskLabelEl, view.task.label);
     setText(this.taskKeyEl, view.task.key ? `[${view.task.key}]` : '');
 
-    setClass(this.stepsEl, view.steps ? 'story-steps' : 'story-steps hidden');
+    setClass(this.stepsEl, !view.steps ? 'story-steps hidden' : view.loop ? 'story-steps is-loop' : 'story-steps');
     if (view.steps) {
       view.steps.forEach((step, i) => {
         const node = this.stepEls[i];
-        setIcon(node, step.state === 'done' ? 'check' : step.icon);
+        // No tutorial o passo feito vira um "certo"; na volta de trabalho o icone fica, porque
+        // o passo volta a valer na proxima volta
+        setIcon(node, step.state === 'done' && !view.loop ? 'check' : step.icon);
         setClass(node, `story-step ${step.state}`);
       });
     }
 
     setClass(this.goalsEl, view.goals ? 'story-goals' : 'story-goals hidden');
     if (view.goals) {
-      const { fuelPct, storms, stormsNeeded, dataSent } = view.goals;
-      setWidth(this.fuelFillEl, fuelPct / 100);
-      setText(this.fuelValueEl, `${fuelPct}%`);
-      setClass(this.fuelGoalEl, fuelPct >= 100 ? 'story-goal done' : 'story-goal');
+      const { storms, stormsNeeded, dataSent } = view.goals;
       this.pipEls.forEach((node, i) => setClass(node, i < storms ? 'on' : ''));
       setClass(this.stormsGoalEl, storms >= stormsNeeded ? 'story-goal done' : 'story-goal');
       setClass(this.dataGoalEl, dataSent ? 'story-goal done' : 'story-goal');

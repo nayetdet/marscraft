@@ -3,6 +3,8 @@ import { formatDateDMY, formatHours } from '../mission/missionText.js';
 // Estado da missao -> o que o painel do canto superior direito mostra.
 // Inspirado em jogos de gestao: painel fixo de recursos com tendencia (Surviving Mars,
 // Frostpunk) + alertas curtos so quando a crianca precisa agir (Oxygen Not Included).
+// Um aviso por vez, para a crianca resolver uma coisa de cada vez. O segundo so aparece quando
+// tambem e perigo (vermelho), porque perigo nao pode ficar escondido atras de outro.
 const MAX_ALERTS = 2;
 const TONE_RANK = { danger: 0, warn: 1, ok: 2 };
 const RADIATION = {
@@ -41,8 +43,9 @@ export function missionStatus(mission, fetchedIso, base = {}) {
   const shielded = mission.shieldOn && mission.insideShield;
   const radTone = radiationTone(mission.doseRate);
 
+  // O foguete nao entra neste painel: a meta e o medidor dele ficam no painel do objetivo
+  // (src/story/objectiveView.js), para a crianca ter um medidor so de "quanto falta".
   const progress = mission.progress;
-  const rocket = Math.floor(progress.overallPct);
 
   const maxWater = base.maxWater ?? 100;
   const waterLiters = base.water ?? maxWater;
@@ -69,7 +72,7 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       title: `SOLAR STORM! ${formatHours(hoursLeft)} left`,
       text: mission.insideShelter
         ? `In the storm shelter: ${Math.round(mission.shelterWaterL ?? 0)} L of water in the wall.`
-        : shielded ? 'The shield is protecting you. Stay in the bubble.' : 'Hide in the storm shelter (water wall) or use the Shield Remote to turn on the shield.',
+        : shielded ? 'The shield is protecting you. Stay in the bubble.' : 'Hide in the storm shelter or turn on the shield with the Shield Remote.',
       fill: clamp01(hoursLeft / Math.max(0.01, storm.end - storm.arrival)),
       source: stormSourceShort(storm, fetchedIso),
     });
@@ -79,7 +82,7 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       icon: 'storm',
       tone: 'warn',
       title: `Solar storm in ${formatHours(hoursUntil)}`,
-      text: 'The Sun threw out fast particles. Fill the shelter water wall and get ready to hide!',
+      text: 'Fast particles from the Sun. Get ready to hide in the storm shelter!',
       fill: clamp01(hoursUntil / Math.max(0.01, storm.arrival - storm.warningStart)),
       source: stormSourceShort(storm, fetchedIso),
     });
@@ -107,7 +110,7 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       icon: 'air',
       tone: airTone,
       title: airTone === 'danger' ? 'Bad air in the base!' : 'Base air is getting bad',
-      text: 'Too much CO2 (the gas we breathe out). Replace the filter at life support.',
+      text: 'CO2 is the gas we breathe out. Change the filter at life support.',
     });
   }
   if (waterTone === 'danger') {
@@ -130,8 +133,10 @@ export function missionStatus(mission, fetchedIso, base = {}) {
       ? { level: 0, word: 'SHIELD', tone: 'shield', icon: 'shield' }
       : { ...RADIATION[radTone], tone: radTone, icon: 'radiation' },
     shieldOn: mission.shieldOn,
-    rocket: { pct: rocket, tone: progress.ready ? 'ok' : 'neutral' },
     // O que machuca agora (vermelho) vem antes dos avisos (amarelo); empate mantem a ordem acima
-    alerts: alerts.sort((a, b) => TONE_RANK[a.tone] - TONE_RANK[b.tone]).slice(0, MAX_ALERTS),
+    alerts: alerts
+      .sort((a, b) => TONE_RANK[a.tone] - TONE_RANK[b.tone])
+      .filter((alert, i) => i === 0 || alert.tone === 'danger')
+      .slice(0, MAX_ALERTS),
   };
 }

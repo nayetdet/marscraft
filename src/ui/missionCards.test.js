@@ -38,7 +38,6 @@ describe('missionStatus', () => {
     const s = missionStatus(fakeMission(), FETCHED);
     expect(s.power).toEqual({ pct: 80, tone: 'ok', trend: 'up' });
     expect(s.radiation).toMatchObject({ level: 1, word: 'LOW', icon: 'radiation' });
-    expect(s.rocket).toEqual({ pct: 12, tone: 'neutral' });
     expect(s.alerts).toEqual([]);
   });
 
@@ -74,7 +73,7 @@ describe('missionStatus', () => {
     expect(s.alerts.map((a) => a.id)).toEqual(['bubble']);
   });
 
-  it('flags an almost empty battery and shows at most two alerts', () => {
+  it('flags an almost empty battery and shows one alert at a time', () => {
     const s = missionStatus(fakeMission({
       battery: { percent: 10 },
       chargeRate: 0,
@@ -83,7 +82,8 @@ describe('missionStatus', () => {
       storm: { phase: 'warning', storm: STORM, hoursUntil: 2 },
     }), FETCHED);
     expect(s.power.tone).toBe('danger');
-    expect(s.alerts.map((a) => a.id)).toEqual(['power', 'storm']);
+    // O aviso de tempestade (amarelo) espera: primeiro o perigo
+    expect(s.alerts.map((a) => a.id)).toEqual(['power']);
   });
 
   it('puts what hurts now (red) before warnings (yellow)', () => {
@@ -93,7 +93,6 @@ describe('missionStatus', () => {
 
   it('celebrates when the rocket is ready', () => {
     const s = missionStatus(fakeMission({ progress: { overallPct: 100, ready: true } }), FETCHED);
-    expect(s.rocket.tone).toBe('ok');
     expect(s.alerts[0]).toMatchObject({ id: 'rocket', tone: 'ok' });
   });
 

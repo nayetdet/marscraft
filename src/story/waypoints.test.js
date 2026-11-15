@@ -11,6 +11,8 @@ describe('objectiveTarget', () => {
   it('sends the player for ice, then to the rocket, while the tank needs ice', () => {
     expect(objectiveTarget('act2', { iceCount: 0, iceNeeded: 6 })).toBe('ice');
     expect(objectiveTarget('act2', { iceCount: 2, iceNeeded: 6 })).toBe('mav');
+    // Depois da entrega, a seta leva de volta a base
+    expect(objectiveTarget('act2', { iceCount: 0, iceNeeded: 5, needsBase: true })).toBe('airlock');
     expect(objectiveTarget('fuel', { iceCount: 0, iceNeeded: 1 })).toBe('ice');
     expect(objectiveTarget('fuel', { iceCount: 1, iceNeeded: 1 })).toBe('mav');
   });

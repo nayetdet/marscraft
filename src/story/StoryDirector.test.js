@@ -145,7 +145,7 @@ describe('StoryDirector', () => {
     expect(director.objectiveId).toBe('act2');
     const events = director.drainEvents();
     expect(events.filter((e) => e.type === 'start-storms')).toHaveLength(1);
-    expect(events.some((e) => e.type === 'card' && /GO HOME/.test(e.card.title))).toBe(true);
+    expect(events.some((e) => e.type === 'card' && /FILL THE ROCKET/.test(e.card.title))).toBe(true);
 
     director.update(snap({ hours: 16.3, iceCount: 1 }));
     expect(director.drainEvents().filter((e) => e.type === 'start-storms')).toHaveLength(0);
@@ -176,6 +176,41 @@ describe('StoryDirector', () => {
     director.update(snap({ hours: 23, stormPhase: 'warning', stormsSurvived: 1 }));
     expect(director.objectiveId).toBe('act2');
     expect(director.drainEvents()).toHaveLength(0);
+  });
+
+  it('asks for a trip back to base after each ice delivery', () => {
+    const director = started();
+    reachAct2(director);
+
+    // Com o gelo na mao (ou sem ter entregue nada), ninguem manda voltar
+    let s = snap({ hours: 16.5, iceCount: 1, iceNeeded: 10 });
+    director.update(s);
+    expect(s.needsBase).toBe(false);
+
+    // Entregou no foguete: o tanque pede um bloco a menos
+    s = snap({ hours: 16.6, iceCount: 0, iceNeeded: 9 });
+    director.update(s);
+    expect(director.needsBase).toBe(true);
+    expect(s.needsBase).toBe(true);
+
+    // Continua valendo ate entrar na base
+    s = snap({ hours: 16.7, iceNeeded: 9 });
+    director.update(s);
+    expect(s.needsBase).toBe(true);
+    s = snap({ hours: 16.8, insideHabitat: true, iceNeeded: 9 });
+    director.update(s);
+    expect(s.needsBase).toBe(false);
+  });
+
+  it('drops the trip back to base when the player picks up more ice first', () => {
+    const director = started();
+    reachAct2(director);
+    director.update(snap({ hours: 16.5, iceCount: 1, iceNeeded: 10 }));
+    director.update(snap({ hours: 16.6, iceCount: 0, iceNeeded: 9 }));
+    expect(director.needsBase).toBe(true);
+
+    director.update(snap({ hours: 16.7, iceCount: 2, iceNeeded: 9 }));
+    expect(director.needsBase).toBe(false);
   });
 
   it('opens the launch window in act 3 and orders the last jobs', () => {
