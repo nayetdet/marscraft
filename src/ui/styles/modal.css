@@ -206,12 +206,12 @@ body.pause-menu-open .crew-picker { display: none; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
+  gap: 15px;
 }
 .menu-icon {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 20px;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
   image-rendering: pixelated;
   filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, .55));
 }
@@ -1100,8 +1100,8 @@ body.pause-menu-open .crew-picker { display: none; }
   #menu-main { gap: 6px; }
   .mc-menu-card .mc-btn { min-height: 44px; padding: 8px 10px; font-size: 14px; }
   .mc-menu-card .menu-row .mc-btn { font-size: 11px; padding: 7px 5px; }
-  .mc-menu-card .mc-btn:has(.menu-icon) { gap: 5px; }
-  .mc-menu-card .menu-icon { width: 16px; height: 16px; flex-basis: 16px; }
+  .mc-menu-card .mc-btn:has(.menu-icon) { gap: 12px; }
+  .mc-menu-card .menu-icon { width: 20px; height: 20px; flex-basis: 20px; }
   .controls-screen.info-screen { max-height: calc(100dvh - 48px); }
 }
 
