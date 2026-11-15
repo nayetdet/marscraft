@@ -656,7 +656,7 @@ export class GameEngine {
       );
     }
     if (discovery.completedAll) lines.push('Every target scanned: you are a Junior Astronaut!');
-    this.scannerHud.showDiscovery(`New Discovery! (${discovery.count}/${discovery.total})`, entry.title, lines);
+    if (lines.length) this.scannerHud.showDiscovery('Discovery reward!', entry.title, lines);
 
     if (reward.inventoryChanged) {
       this.hud.renderHotbar(this.survival.slots);
