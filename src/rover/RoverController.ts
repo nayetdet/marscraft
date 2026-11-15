@@ -3,6 +3,14 @@ import * as THREE from 'three';
 import { ROVER_CONFIG, WORLD_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.ts';
 import { HABITAT_LAYOUT } from '../world/habitatLayout.ts';
 
+function getGroupHeadingYaw(roverGroup) {
+  // Euler y can be zero for a quaternion that still points the rover toward +Z
+  // (for example, the equivalent Euler representation x/z = -PI). Read the
+  // actual world-facing direction so driving and the chase camera match the model.
+  const forward = roverGroup.getWorldDirection(new THREE.Vector3()).negate();
+  return Math.atan2(-forward.x, -forward.z);
+}
+
 export class RoverController {
   // `basePower` = bateria da base ({ drain(amount) -> quanto saiu }): e ela que paga a carga do rover
   constructor({ roverGroup, wheels = [], world, camera, colliders = [], basePower = null }) {
@@ -19,7 +27,7 @@ export class RoverController {
     this.pos = new THREE.Vector3();
     if (this.roverGroup) {
       this.pos.copy(this.roverGroup.position);
-      this.yaw = this.roverGroup.rotation.y || 0;
+      this.yaw = getGroupHeadingYaw(this.roverGroup);
     } else {
       this.pos.set(7.5, 9, 10.5);
       this.yaw = 0;
@@ -56,6 +64,8 @@ export class RoverController {
     this._camTargetPos = new THREE.Vector3();
     this._camLookAt = new THREE.Vector3();
     this._camLookDir = new THREE.Vector3();
+    this._camRay = new THREE.Vector3();
+    this._snapCamera = false;
     this._wheelBase = 2.7; // distância entre eixos dianteiro e traseiro
     this._trackWidth = 2.4; // largura entre rodas
 
@@ -248,6 +258,7 @@ export class RoverController {
     // Enter with the chase camera aligned to the rover, then let mouse look offset it.
     this.cameraYaw = this.yaw;
     this.cameraPitch = -0.22;
+    this._snapCamera = true;
   }
 
   deactivate() {
@@ -641,8 +652,32 @@ export class RoverController {
     this._camLookAt.set(this.pos.x, this.pos.y + 1.0, this.pos.z);
     this._camTargetPos.copy(this._camLookAt).addScaledVector(lookDir, -distBehind);
 
-    // Smooth the camera position to avoid abrupt movement over rough terrain.
-    this.camera.position.lerp(this._camTargetPos, Math.min(1.0, dt * 12));
+    // The rover parks just outside the south wall. Its normal chase-camera offset
+    // lands inside the habitat, so stop the camera at the first solid voxel.
+    if (this.world) {
+      const ray = this._camRay.subVectors(this._camTargetPos, this._camLookAt);
+      const steps = Math.ceil(ray.length() / ROVER_CONFIG.CAMERA_COLLISION_STEP);
+      for (let step = 1; step <= steps; step += 1) {
+        const t = step / steps;
+        const block = this.world.getBlock(
+          Math.floor(this._camLookAt.x + ray.x * t),
+          Math.floor(this._camLookAt.y + ray.y * t),
+          Math.floor(this._camLookAt.z + ray.z * t)
+        );
+        if (block !== 0) {
+          this._camTargetPos.copy(this._camLookAt).addScaledVector(ray, (step - 1) / steps);
+          break;
+        }
+      }
+    }
+
+    // Snap on entry so the camera never sweeps through the habitat wall; smooth later moves.
+    if (this._snapCamera) {
+      this.camera.position.copy(this._camTargetPos);
+      this._snapCamera = false;
+    } else {
+      this.camera.position.lerp(this._camTargetPos, Math.min(1.0, dt * 12));
+    }
     this.camera.lookAt(this._camLookAt);
   }
 }

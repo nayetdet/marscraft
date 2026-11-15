@@ -124,6 +124,8 @@ export class InputController {
   }
 
   _updateTouchActionLabels() {
+    if (typeof document === 'undefined') return;
+
     const mineLabel = document.getElementById('touch-mine-label');
     const useLabel = document.getElementById('touch-use-label');
     if (mineLabel) {

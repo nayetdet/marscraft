@@ -23,7 +23,7 @@ describe('RoverController', () => {
     expect(controller.cameraPitch).toBe(-0.22);
   });
 
-  it('spawns facing away from the base wall so forward movement heads toward -Z', () => {
+  it('spawns facing away from the base wall so forward movement heads toward +Z', () => {
     const roverGroup = new THREE.Group();
     roverGroup.position.set(7.5, 9, 10.5);
     roverGroup.rotation.y = R.SPAWN_YAW;
@@ -32,9 +32,50 @@ describe('RoverController', () => {
     controller.activate();
     controller.update(0.5, { KeyW: true });
 
-    expect(R.SPAWN_YAW).toBe(0);
+    expect(R.SPAWN_YAW).toBe(Math.PI);
     expect(controller.yaw).toBe(R.SPAWN_YAW);
-    expect(controller.pos.z).toBeLessThan(10.5);
+    expect(controller.pos.z).toBeGreaterThan(10.5);
+  });
+
+  it('reads the rover heading from its quaternion when Euler yaw is zero', () => {
+    const roverGroup = new THREE.Group();
+    roverGroup.position.set(7.5, 9, 10.5);
+    // This Euler representation has yaw 0 but the same quaternion as a PI yaw.
+    roverGroup.rotation.set(-Math.PI, 0, -Math.PI, 'XYZ');
+
+    const controller = new RoverController({ roverGroup, wheels: [] });
+
+    expect(roverGroup.rotation.y).toBeCloseTo(0);
+    expect(Math.abs(controller.yaw)).toBeCloseTo(Math.PI);
+    expect(Math.abs(controller.cameraYaw)).toBeCloseTo(Math.PI);
+
+    controller.activate();
+    controller.update(0.5, { KeyW: true });
+
+    expect(controller.pos.z).toBeGreaterThan(10.5);
+  });
+
+  it('keeps the rover chase camera outside the habitat wall when entering', () => {
+    const roverGroup = new THREE.Group();
+    roverGroup.position.set(7.5, 9, 10.5);
+    roverGroup.rotation.y = R.SPAWN_YAW;
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+    const world = {
+      sizeY: 48,
+      getBlock(_x, y, z) {
+        return z === 6 && y >= 9 && y <= 14 ? 1 : 0;
+      },
+    };
+    const controller = new RoverController({ roverGroup, wheels: [], world, camera });
+
+    controller.activate();
+    controller.update(0.05, {});
+
+    expect(camera.position.z).toBeGreaterThan(6);
+    expect(camera.position.z).toBeLessThan(10.5);
+    const cameraForward = new THREE.Vector3();
+    camera.getWorldDirection(cameraForward);
+    expect(cameraForward.z).toBeGreaterThan(0);
   });
 
   it('ativa o rover e permite olhar ao redor sem ultrapassar os limites da câmera', () => {
