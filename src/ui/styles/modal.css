@@ -311,6 +311,42 @@ body.pause-menu-open .crew-picker { display: none; }
 }
 
 .inventory-overlay.hidden { display: none; }
+.inventory-layout {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 12px;
+  max-width: 98vw;
+  max-height: calc(100dvh - 20px);
+}
+.inventory-suit-panel {
+  width: 180px;
+  flex: 0 0 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #777;
+  border: 4px solid;
+  border-color: #aaa #383838 #383838 #aaa;
+  outline: 3px solid rgba(0, 0, 0, .8);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .65);
+  font-family: 'Monocraft', monospace;
+}
+.inv-suit-preview-wrap {
+  display: grid;
+  place-items: center;
+  flex: 1 1 200px;
+  min-height: 150px;
+  background: #373737;
+  border: 3px solid;
+  border-color: #292929 #aaa #aaa #292929;
+  overflow: hidden;
+  cursor: grab;
+}
+.inv-suit-preview-wrap:active { cursor: grabbing; }
+.inv-suit-canvas { display: block; width: 100%; height: 100%; }
+.inv-suit-status { color: #fff; text-align: center; font-size: 12px; text-shadow: 1px 1px #333; }
 .inventory-window {
   width: min(552px, 96vw);
   padding: 16px;
@@ -358,7 +394,22 @@ body.pause-menu-open .crew-picker { display: none; }
 
 @media (max-width: 600px) {
   .mc-splash { margin-left: 100px; }
+  .inventory-layout { flex-direction: column; align-items: center; overflow-y: auto; }
+  .inventory-suit-panel { width: min(552px, 96vw); flex: 0 0 auto; }
+  .inv-suit-preview-wrap { min-height: 120px; }
   .inventory-window { padding: 10px; }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .inventory-overlay { padding: 8px; }
+  .inventory-layout { flex-direction: row; align-items: stretch; gap: 8px; max-height: calc(100dvh - 16px); }
+  .inventory-suit-panel { width: 176px; flex: 0 0 176px; padding: 8px; gap: 5px; overflow-y: auto; }
+  .inv-suit-preview-wrap { min-height: 108px; flex: 1 1 110px; }
+
+  .inventory-window { width: min(450px, 64vw); padding: 9px 10px; max-height: calc(100dvh - 16px); overflow-y: auto; }
+  .inventory-window header { margin-bottom: 6px; }
+  .inventory-window h2 { font-size: 16px; }
+  .inventory-hotbar-label { margin: 7px 0 3px; }
 }
 
 /* Tripulacao (issue #47) */

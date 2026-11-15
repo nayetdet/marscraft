@@ -23,18 +23,20 @@ describe('GymEquipmentController (in-world 3D treadmill & exercise bike)', () =>
     const onPlaySound = vi.fn();
     const onDismount = vi.fn();
 
+    const survival = { suitEquipped: false };
     const controller = new GymEquipmentController({
       scene,
       camera,
       player,
       stations,
       expedition,
+      survival,
       hud,
       onPlaySound,
       onDismount,
     });
 
-    return { controller, stations, expedition, player, camera, hud, onPlaySound, onDismount };
+    return { controller, stations, expedition, survival, player, camera, hud, onPlaySound, onDismount };
   }
 
   it('mounts the exercise bike, positions the 3D astronaut on the saddle, and pedals on [SPACE] until 100%', () => {
@@ -87,5 +89,21 @@ describe('GymEquipmentController (in-world 3D treadmill & exercise bike)', () =>
     expect(controller.avatar.group.visible).toBe(false);
     expect(player.pos.x).toBeCloseTo(-7.6, 2);
     expect(onDismount).toHaveBeenCalledOnce();
+  });
+
+  it('shows the unarmored IVA flight suit when suitEquipped is false and EVA suit when true', () => {
+    const { controller, survival } = createSetup();
+
+    survival.suitEquipped = false;
+    controller.mount('bike');
+    expect(controller.ivaRig.bodyGroup.visible).toBe(true);
+    expect(controller.evaRig.bodyGroup.visible).toBe(false);
+    controller.dismount();
+
+    survival.suitEquipped = true;
+    controller.mount('bike');
+    expect(controller.evaRig.bodyGroup.visible).toBe(true);
+    expect(controller.ivaRig.bodyGroup.visible).toBe(false);
+    controller.dismount();
   });
 });

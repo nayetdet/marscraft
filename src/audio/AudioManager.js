@@ -75,6 +75,48 @@ export class AudioManager {
     this._playOneShot(this.doorCrank);
   }
 
+  _getSynthContext() {
+    if (typeof window === 'undefined') return null;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    this._synthCtx ??= new AudioCtx();
+    if (this._synthCtx.state === 'suspended') this._synthCtx.resume().catch(() => {});
+    return this._synthCtx;
+  }
+
+  _playSuitTone(ctx, freq, startOffset, duration, type = 'triangle', peak = 0.06) {
+    const t0 = ctx.currentTime + startOffset;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(peak, t0 + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.02);
+  }
+
+  playSuitEquip() {
+    const ctx = this._getSynthContext();
+    if (!ctx) return;
+    // Mechanical unlatch click + helmet lock + ascending NASA seal chime
+    this._playSuitTone(ctx, 190, 0.0, 0.08, 'square', 0.035);
+    this._playSuitTone(ctx, 320, 0.34, 0.09, 'triangle', 0.05);
+    this._playSuitTone(ctx, 523.25, 0.68, 0.14, 'sine', 0.06);
+    this._playSuitTone(ctx, 783.99, 0.82, 0.22, 'sine', 0.07);
+  }
+
+  playSuitDock() {
+    const ctx = this._getSynthContext();
+    if (!ctx) return;
+    // Helmet release + clamp lock + descending confirmation chime
+    this._playSuitTone(ctx, 659.25, 0.0, 0.12, 'sine', 0.05);
+    this._playSuitTone(ctx, 440.0, 0.13, 0.16, 'sine', 0.05);
+    this._playSuitTone(ctx, 210, 0.52, 0.1, 'square', 0.03);
+  }
+
   playRocket() {
     this._rocketFadeElapsed = null;
     this.rocket.volume = ROCKET_VOLUME;

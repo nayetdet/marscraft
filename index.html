@@ -48,6 +48,10 @@
     </div>
     <div id="damage-overlay" class="damage-overlay hidden" aria-hidden="true"></div>
     <div id="breach-overlay" class="breach-overlay hidden" aria-hidden="true"></div>
+    <div id="eva-visor-frame" class="eva-visor-frame hidden" aria-hidden="true">
+      <i class="visor-corner tl"></i><i class="visor-corner tr"></i>
+      <i class="visor-corner bl"></i><i class="visor-corner br"></i>
+    </div>
     <div id="dust-storm-warning" class="dust-storm-warning hidden" aria-live="polite">
       <div class="dust-storm-vignette" aria-hidden="true"></div>
       <div class="dust-storm-banner">
@@ -211,6 +215,48 @@
       <div class="airlock-progress-text"></div>
     </div>
 
+    <div id="suit-equip-hud" class="suit-equip-hud hidden" role="status" aria-live="polite">
+      <div class="suit-equip-title"></div>
+      <div class="suit-equip-track"><i></i></div>
+      <div class="suit-equip-text"></div>
+    </div>
+
+    <aside id="suitport-holo" class="suitport-holo hidden" aria-label="EVA Suit Diagnostics">
+      <div class="suitport-holo-head">
+        <span class="suitport-holo-title">EVA SUIT DIAGNOSTICS</span>
+        <span id="suitport-dock-badge" class="suitport-holo-badge">DOCKED</span>
+      </div>
+      <div class="suitport-holo-rows">
+        <div class="suitport-holo-row">
+          <span class="suitport-holo-key">O2 SUPPLY</span>
+          <strong id="suitport-o2-val" class="suitport-holo-val ok">CHARGED 100%</strong>
+        </div>
+        <div class="suitport-holo-row">
+          <span class="suitport-holo-key">THERMAL SHIELD</span>
+          <strong id="suitport-thermal-val" class="suitport-holo-val ok">100% (-60°C NIGHT READY)</strong>
+        </div>
+        <div class="suitport-holo-row">
+          <span class="suitport-holo-key">CO2 SCRUBBER</span>
+          <strong id="suitport-scrubber-val" class="suitport-holo-val ok">100% READY</strong>
+        </div>
+        <div class="suitport-holo-row">
+          <span class="suitport-holo-key">PERCHLORATES</span>
+          <strong id="suitport-dust-val" class="suitport-holo-val ok">CLEAN</strong>
+        </div>
+        <div class="suitport-holo-row">
+          <span class="suitport-holo-key">SUIT INTEGRITY</span>
+          <strong id="suitport-wear-val" class="suitport-holo-val ok">100% (0% WEAR)</strong>
+        </div>
+      </div>
+      <div class="suitport-holo-actions">
+        <button id="suitport-equip-btn" class="suitport-holo-btn primary" type="button">[F] EQUIP SUIT &amp; START EVA</button>
+        <div class="suitport-holo-subactions">
+          <button id="suitport-repair-btn" class="suitport-holo-btn hidden" type="button">[R] REPAIR SUIT</button>
+          <button id="suitport-clean-btn" class="suitport-holo-btn hidden" type="button">[C] CLEAN DUST</button>
+        </div>
+      </div>
+    </aside>
+
     <!-- Mira classica em cruz (+) do Minecraft -->
     <div class="mc-crosshair"></div>
     <div id="interaction-hint" style="position:absolute;top:54%;width:100%;text-align:center;color:white;text-shadow:2px 2px #000;pointer-events:none"></div>
@@ -269,26 +315,29 @@
       <div id="selected-block-name" class="mc-item-name">Martian Regolith</div>
 
       <!-- Barras de Status Estilo Minecraft (Oxigenio, Vida, Agua, Comida) -->
-      <div class="mc-status-container">
-        <div class="mc-status-col left">
-          <div class="mc-bar-row">
-            <span class="mc-bar-label">OXYGEN</span>
-            <div id="oxygen-bar" class="mc-icon-row"></div>
+      <div class="mc-status-band">
+        <div class="mc-status-container">
+          <div class="mc-status-col left">
+            <div id="suit-thermal" class="suit-thermal">SUIT HEAT 100%</div>
+            <div class="mc-bar-row">
+              <span class="mc-bar-label">OXYGEN</span>
+              <div id="oxygen-bar" class="mc-icon-row"></div>
+            </div>
+            <div class="mc-bar-row">
+              <span class="mc-bar-label">HEALTH</span>
+              <div id="health-bar" class="mc-icon-row"></div>
+            </div>
           </div>
-          <div class="mc-bar-row">
-            <span class="mc-bar-label">HEALTH</span>
-            <div id="health-bar" class="mc-icon-row"></div>
-          </div>
-        </div>
 
-        <div class="mc-status-col right">
-          <div class="mc-bar-row right-align">
-            <div id="water-bar" class="mc-icon-row"></div>
-            <span class="mc-bar-label">WATER</span>
-          </div>
-          <div class="mc-bar-row right-align">
-            <div id="food-bar" class="mc-icon-row"></div>
-            <span class="mc-bar-label">FOOD</span>
+          <div class="mc-status-col right">
+            <div class="mc-bar-row right-align">
+              <div id="water-bar" class="mc-icon-row"></div>
+              <span class="mc-bar-label">WATER</span>
+            </div>
+            <div class="mc-bar-row right-align">
+              <div id="food-bar" class="mc-icon-row"></div>
+              <span class="mc-bar-label">FOOD</span>
+            </div>
           </div>
         </div>
       </div>
@@ -408,16 +457,37 @@
   </div>
 
   <div id="inventory-overlay" class="inventory-overlay hidden">
-    <section class="inventory-window" aria-label="Inventory">
-      <header>
-        <h2>Inventory</h2>
-        <span>Choose an item, then a slot. Select the journal twice to open it.</span>
-        <button id="inventory-close-btn" class="inventory-close" type="button" aria-label="Close inventory">Close</button>
-      </header>
-      <div id="inventory-grid" class="inventory-grid"></div>
-      <p class="inventory-hotbar-label">Hotbar</p>
-      <div id="inventory-hotbar" class="inventory-hotbar"></div>
-    </section>
+    <div class="inventory-layout">
+      <aside id="inventory-suit-panel" class="inventory-suit-panel" aria-label="Character and suit telemetry">
+        <div class="inv-suit-preview-wrap">
+          <canvas id="inventory-suit-canvas" class="inv-suit-canvas" width="160" height="190" aria-label="Astronaut character"></canvas>
+        </div>
+        <span id="inv-suit-status" class="inv-suit-status">EVA SUIT</span>
+        <div class="inv-suit-telemetry">
+          <div class="inv-suit-armor-head">
+            <span>INTEGRITY</span>
+            <strong id="inv-suit-armor-val" class="ok">100% (0% WEAR)</strong>
+          </div>
+          <div class="inv-suit-armor-track"><i id="inv-suit-armor-fill"></i></div>
+          <div class="inv-suit-stats">
+            <div class="inv-suit-stat"><span>O2</span><strong id="inv-suit-o2-val" class="ok">100%</strong></div>
+            <div class="inv-suit-stat"><span>HEAT</span><strong id="inv-suit-heat-val" class="ok">100%</strong></div>
+            <div class="inv-suit-stat"><span>CO2</span><strong id="inv-suit-co2-val" class="ok">100%</strong></div>
+            <div class="inv-suit-stat"><span>DUST</span><strong id="inv-suit-dust-val" class="ok">0%</strong></div>
+          </div>
+        </div>
+      </aside>
+      <section class="inventory-window" aria-label="Inventory">
+        <header>
+          <h2>Inventory</h2>
+          <span>Choose an item, then a slot. Select the journal twice to open it.</span>
+          <button id="inventory-close-btn" class="inventory-close" type="button" aria-label="Close inventory">Close</button>
+        </header>
+        <div id="inventory-grid" class="inventory-grid"></div>
+        <p class="inventory-hotbar-label">Hotbar</p>
+        <div id="inventory-hotbar" class="inventory-hotbar"></div>
+      </section>
+    </div>
   </div>
 
   <div id="journal-overlay" class="station-overlay journal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="journal-title">

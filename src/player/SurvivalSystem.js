@@ -13,6 +13,15 @@ export class SurvivalSystem {
   resetStats() {
     this.health = this.maxStat;
     this.oxygen = this.maxStat;
+    this.suitEquipped = true;
+    this.suitThermal = 100;
+    this.suitOxygen = 100;
+    this.suitScrubber = 100;
+    this.suitDust = 0;
+    this.suitIntegrity = 100;
+    this.suitO2DrainRate = SURVIVAL_CONFIG.SUIT_OXYGEN_DRAIN_PER_SECOND;
+    this.suitO2Warned30 = false;
+    this.suitWornWarned = false;
     this.baseOxygen = 100;
     this.baseBreached = false;
     this.water = this.maxStat;
@@ -32,6 +41,14 @@ export class SurvivalSystem {
     this.maxBaseWater = WATER_SYSTEM_CONFIG.MAX_BASE_WATER;
     // Agua usada (bebida, lavada, transpirada pelas plantas) esperando o reciclador da base
     this.graywater = 0;
+  }
+
+  get suitWear() {
+    return Math.max(0, Math.min(100, 100 - this.suitIntegrity));
+  }
+
+  get isSuitProtectingO2() {
+    return Boolean(this.suitEquipped && this.suitIntegrity > 0 && this.suitOxygen > 0);
   }
 
   resetInventory() {
@@ -61,6 +78,21 @@ export class SurvivalSystem {
     return isInsidePressurizedVolume(pos.x, pos.y, pos.z);
   }
 
+  updateSuitThermal(dt, playerPos, outsideC, power) {
+    if (this.isDead || dt <= 0) return;
+    if (!this.suitEquipped) {
+      const charge = Math.min(100 - this.suitThermal, SURVIVAL_CONFIG.SUIT_THERMAL_CHARGE_PER_SECOND * dt,
+        power.energy / SURVIVAL_CONFIG.SUIT_THERMAL_ENERGY_PER_PERCENT);
+      if (charge > 0 && power.spend(charge * SURVIVAL_CONFIG.SUIT_THERMAL_ENERGY_PER_PERCENT)) this.suitThermal += charge;
+    } else if (!this.isPlayerInsideShip(playerPos)) {
+      const cold = Math.max(0, (SURVIVAL_CONFIG.SUIT_THERMAL_COLD_REFERENCE_C - outsideC) / SURVIVAL_CONFIG.SUIT_THERMAL_COLD_RANGE_C);
+      const rate = SURVIVAL_CONFIG.SUIT_THERMAL_DRAIN_PER_SECOND * Math.min(SURVIVAL_CONFIG.SUIT_THERMAL_MAX_COLD_MULTIPLIER, 1 + cold);
+      const unprotected = Math.max(0, dt - this.suitThermal / rate);
+      this.suitThermal = Math.max(0, this.suitThermal - rate * dt);
+      if (unprotected > 0) this.takeDamage(unprotected * SURVIVAL_CONFIG.SUIT_THERMAL_DAMAGE_PER_SECOND, 'BIOLOGICAL_COLLAPSE', 'suit-cold');
+    }
+  }
+
   get isInDanger() {
     return (
       this.health <= SURVIVAL_CONFIG.DANGER_THRESHOLD ||
@@ -71,7 +103,7 @@ export class SurvivalSystem {
   }
 
   // maxOxygenRefill: quanto O2 a bateria da base consegue pagar neste frame (sem energia = 0)
-  update(dt, playerPos, maxOxygenRefill = Infinity, baseBreached = false) {
+  update(dt, playerPos, maxOxygenRefill = Infinity, baseBreached = false, { isMoving = false } = {}) {
     this.lastOxygenRefilled = 0;
     this.damageFeedbackTime = Math.max(0, this.damageFeedbackTime - dt);
     if (this.isDead) return;
@@ -89,21 +121,76 @@ export class SurvivalSystem {
     this.dustStormIntensity = this.insidePressurizedShip ? 0 : dustStormIntensity(playerPos.x, playerPos.z);
     this.dustStormProximity = this.insidePressurizedShip ? 0 : dustStormProximity(playerPos.x, playerPos.z);
 
-    if (this.insidePressurizedShip && !baseBreached) {
-      const suitRefill = Math.max(0, Math.min(
+    const pointsPerPct = this.maxStat / 100;
+    if ((!this.suitEquipped || this.insidePressurizedShip) && !baseBreached) {
+      const personalRefill = Math.max(0, Math.min(
         this.maxStat - this.oxygen,
         SURVIVAL_CONFIG.OXYGEN_REFILL_RATE * dt,
         Math.max(0, maxOxygenRefill - this.lastOxygenRefilled)
       ));
-      this.lastOxygenRefilled += suitRefill;
-      this.oxygen += suitRefill;
-      this.oxygenNeedsPower = this.oxygen < this.maxStat - 0.01 && maxOxygenRefill <= 0;
+      this.lastOxygenRefilled += personalRefill;
+      this.oxygen += personalRefill;
+
+      const suitRefillPct = Math.max(0, Math.min(
+        100 - this.suitOxygen,
+        SURVIVAL_CONFIG.SUIT_OXYGEN_RECHARGE_PER_SECOND * dt,
+        Math.max(0, maxOxygenRefill - this.lastOxygenRefilled) / pointsPerPct
+      ));
+      this.lastOxygenRefilled += suitRefillPct * pointsPerPct;
+      this.suitOxygen += suitRefillPct;
+
+      if (!this.suitEquipped) {
+        this.suitScrubber = Math.min(100, this.suitScrubber + SURVIVAL_CONFIG.SUIT_SCRUBBER_CLEAN_PER_SECOND * dt);
+      }
+      if (this.suitOxygen > SURVIVAL_CONFIG.SUIT_OXYGEN_WARN_THRESHOLD + 5) {
+        this.suitO2Warned30 = false;
+      }
+      this.suitO2DrainRate = SURVIVAL_CONFIG.SUIT_OXYGEN_DRAIN_PER_SECOND;
+      this.oxygenNeedsPower = (this.oxygen < this.maxStat - 0.01 || this.suitOxygen < 99.9) && maxOxygenRefill <= 0;
     } else {
       this.oxygenNeedsPower = false;
-      this.oxygen = Math.max(
-        0,
-        this.oxygen - (this.insidePressurizedShip && baseBreached ? SURVIVAL_CONFIG.BREACH_OXYGEN_DRAIN_RATE : SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE) * dt
-      );
+      if (this.suitEquipped) {
+        if (!this.insidePressurizedShip) {
+          const dustRate = SURVIVAL_CONFIG.SUIT_DUST_ACCUM_PER_SECOND
+            * (isMoving ? SURVIVAL_CONFIG.SUIT_DUST_MOVE_MULTIPLIER : 1)
+            + this.dustStormIntensity * SURVIVAL_CONFIG.SUIT_DUST_STORM_ACCUM_PER_SECOND;
+          this.suitDust = Math.min(100, this.suitDust + dustRate * dt);
+
+          this.suitScrubber = Math.max(0, this.suitScrubber - SURVIVAL_CONFIG.SUIT_SCRUBBER_DRAIN_PER_SECOND * dt);
+
+          const dustWearFactor = 1 + (this.suitDust / 100) * (SURVIVAL_CONFIG.SUIT_WEAR_DUST_MULTIPLIER - 1);
+          const stormWear = this.dustStormIntensity * SURVIVAL_CONFIG.SUIT_WEAR_STORM_PER_SECOND;
+          const wearRate = SURVIVAL_CONFIG.SUIT_WEAR_PER_SECOND * dustWearFactor + stormWear;
+          this.suitIntegrity = Math.max(0, this.suitIntegrity - wearRate * dt);
+        }
+
+        const scrubberLow = SURVIVAL_CONFIG.SUIT_SCRUBBER_LOW_THRESHOLD;
+        const scrubberPenalty = this.suitScrubber < scrubberLow
+          ? 1 + 0.5 * (1 - this.suitScrubber / scrubberLow)
+          : 1;
+        const baseSuitDrain = this.insidePressurizedShip && baseBreached
+          ? SURVIVAL_CONFIG.BREACH_OXYGEN_DRAIN_RATE / pointsPerPct
+          : SURVIVAL_CONFIG.SUIT_OXYGEN_DRAIN_PER_SECOND * scrubberPenalty;
+        this.suitO2DrainRate = baseSuitDrain;
+
+        const suitWasProtecting = this.isSuitProtectingO2;
+        this.suitOxygen = Math.max(0, this.suitOxygen - baseSuitDrain * dt);
+
+        // Minecraft-armor rule: while the EVA suit is intact and has suit O2, personal O2 is protected.
+        // Once the suit wears out (0% integrity) or runs out of suit O2, personal O2 drains.
+        if (!suitWasProtecting || this.suitIntegrity <= 0 || this.suitOxygen <= 0) {
+          const personalDrain = this.insidePressurizedShip && baseBreached
+            ? SURVIVAL_CONFIG.BREACH_OXYGEN_DRAIN_RATE
+            : SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE;
+          this.oxygen = Math.max(0, this.oxygen - personalDrain * dt);
+        }
+      } else {
+        this.suitO2DrainRate = SURVIVAL_CONFIG.SUIT_OXYGEN_DRAIN_PER_SECOND;
+        const personalDrain = this.insidePressurizedShip && baseBreached
+          ? SURVIVAL_CONFIG.BREACH_OXYGEN_DRAIN_RATE
+          : SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE * SURVIVAL_CONFIG.SUIT_NO_SUIT_O2_DRAIN_MULTIPLIER;
+        this.oxygen = Math.max(0, this.oxygen - personalDrain * dt);
+      }
     }
 
     this.water = Math.max(0, this.water - SURVIVAL_CONFIG.WATER_DRAIN_RATE * dt);
@@ -116,7 +203,10 @@ export class SurvivalSystem {
 
     // Apply hazards separately so the one that removes the last health point is recorded.
     const damageSources = [];
-    if (this.oxygen <= 0) {
+    const noBreathableO2 = this.isSuitProtectingO2
+      ? false
+      : (this.insidePressurizedShip && !baseBreached ? this.baseOxygen <= 0 : this.oxygen <= 0);
+    if (noBreathableO2) {
       damageSources.push({
         rate: SURVIVAL_CONFIG.STARVE_DAMAGE_RATE * 1.6,
         cause: this.oxygenNeedsPower ? 'POWER_FAILURE' : 'OXYGEN_DEPLETION',
@@ -137,7 +227,66 @@ export class SurvivalSystem {
 
   // Comida nao substitui ar: sem oxigenio suficiente, nada recupera vida.
   canHeal() {
-    return this.oxygen > SURVIVAL_CONFIG.HEAL_MIN_OXYGEN;
+    if (this.oxygen <= SURVIVAL_CONFIG.HEAL_MIN_OXYGEN) return false;
+    if (this.insidePressurizedShip && !this.baseBreached) {
+      return this.baseOxygen > 0;
+    }
+    if (this.isSuitProtectingO2) {
+      return this.suitOxygen > (SURVIVAL_CONFIG.HEAL_MIN_OXYGEN / this.maxStat) * 100;
+    }
+    return true;
+  }
+
+  hasBreathableOxygen(points) {
+    if (this.isSuitProtectingO2) {
+      const pctCost = (points / this.maxStat) * 100;
+      return this.suitOxygen > pctCost + 5;
+    }
+    return this.oxygen > points + 1;
+  }
+
+  spendBreathableOxygen(points) {
+    if (this.isSuitProtectingO2) {
+      const pctCost = (points / this.maxStat) * 100;
+      this.suitOxygen = Math.max(0, this.suitOxygen - pctCost);
+      return;
+    }
+    this.oxygen = Math.max(0, this.oxygen - points);
+  }
+
+  repairSuit(power = null) {
+    if (this.suitIntegrity >= 99.5) {
+      this.suitIntegrity = 100;
+      this.suitWornWarned = false;
+      return { ok: false, message: 'EVA suit integrity is already at 100%.' };
+    }
+    const cost = SURVIVAL_CONFIG.SUIT_REPAIR_POWER_COST;
+    if (power && power.energy >= cost) {
+      power.spend(cost);
+      this.suitIntegrity = 100;
+      this.suitWornWarned = false;
+      return { ok: true, message: `EVA suit seals & armor repaired to 100% (-${cost}% power).` };
+    }
+    // Emergency patch if battery is too low so the player can never get softlocked inside.
+    if (this.suitIntegrity <= 0) {
+      this.suitIntegrity = 35;
+      this.suitWornWarned = false;
+      return { ok: true, message: 'Low power: applied emergency patch (35% integrity). Restore power for full repair.' };
+    }
+    return { ok: false, message: `Need ${cost}% base power for full suit repair.` };
+  }
+
+  cleanSuitDust(power = null) {
+    if (this.suitDust < 1) {
+      this.suitDust = 0;
+      return { ok: false, message: 'EVA suit is already clean.' };
+    }
+    const cost = SURVIVAL_CONFIG.SUIT_CLEAN_POWER_COST;
+    if (power && !power.spend(cost)) {
+      return { ok: false, message: `Need ${cost}% base power for electrostatic cleaning.` };
+    }
+    this.suitDust = 0;
+    return { ok: true, message: 'Electrostatic perchlorate cleaning complete (0% dust).' };
   }
 
   // Fome e sede gastas fora do relogio real do quadro (horas de jogo dormindo, issue #109)
@@ -149,6 +298,9 @@ export class SurvivalSystem {
 
   takeDamage(amount, cause = 'BIOLOGICAL_COLLAPSE', detail = cause) {
     if (this.isDead || amount <= 0) return;
+    if (this.suitEquipped && !this.insidePressurizedShip && (cause === 'RADIATION_OVERDOSE' || detail === 'suit-cold')) {
+      this.suitIntegrity = Math.max(0, this.suitIntegrity - amount * 1.5);
+    }
     this.health = Math.max(0, this.health - amount);
     this.damageFeedbackCause = cause;
     this.damageFeedbackDetail = detail;

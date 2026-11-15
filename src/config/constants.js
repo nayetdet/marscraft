@@ -77,6 +77,33 @@ export const SURVIVAL_CONFIG = {
   DAMAGE_SHAKE_RATE: 42,
   // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
   HEAL_MIN_OXYGEN: 5,
+  // Game balance, not measured suit specifications. Colder InSight temperatures increase use.
+  SUIT_THERMAL_DRAIN_PER_SECOND: 100 / 720,
+  SUIT_THERMAL_COLD_REFERENCE_C: -60,
+  SUIT_THERMAL_COLD_RANGE_C: 100,
+  SUIT_THERMAL_MAX_COLD_MULTIPLIER: 2,
+  SUIT_THERMAL_CHARGE_PER_SECOND: 5,
+  SUIT_THERMAL_ENERGY_PER_PERCENT: 0.02,
+  SUIT_THERMAL_DAMAGE_PER_SECOND: 0.8,
+  // Suit telemetry, CO2 scrubber, perchlorate dust, and armor-style wear (issue #167).
+  SUIT_OXYGEN_DRAIN_PER_SECOND: 100 / 240, // 4 min full EVA tank -> 94% ~= 3m 45s
+  SUIT_OXYGEN_RECHARGE_PER_SECOND: 15, // % per second while docked or inside pressurized base
+  SUIT_OXYGEN_WARN_THRESHOLD: 30, // % outside warning trigger
+  SUIT_OXYGEN_MIN_READY: 20, // minimum % to start EVA from Suitport
+  SUIT_THERMAL_MIN_READY: 20,
+  SUIT_SCRUBBER_DRAIN_PER_SECOND: 100 / 480, // ~8 min EVA CO2 scrubber capacity
+  SUIT_SCRUBBER_CLEAN_PER_SECOND: 20, // % per second auto-cleaned when docked at Suitport
+  SUIT_SCRUBBER_MIN_READY: 20,
+  SUIT_SCRUBBER_LOW_THRESHOLD: 25, // below this, O2 consumption increases up to 1.5x
+  SUIT_DUST_ACCUM_PER_SECOND: 0.35,
+  SUIT_DUST_MOVE_MULTIPLIER: 2.0,
+  SUIT_DUST_STORM_ACCUM_PER_SECOND: 3.0,
+  SUIT_WEAR_PER_SECOND: 100 / 420, // ~7 min continuous EVA before suit wears out
+  SUIT_WEAR_DUST_MULTIPLIER: 1.75,
+  SUIT_WEAR_STORM_PER_SECOND: 0.6,
+  SUIT_REPAIR_POWER_COST: 4,
+  SUIT_CLEAN_POWER_COST: 2,
+  SUIT_NO_SUIT_O2_DRAIN_MULTIPLIER: 2.0,
   // Borda da area jogavel (parede de poeira), medida a partir de TERRAIN_CONFIG.BASE_CENTER.
   // Issue #103: a borda nao machuca mais. O vento de Marte nao derruba ninguem (o ar e fino
   // demais); quem limita a distancia e o ar do traje. No raio FATAL fica uma parede invisivel.

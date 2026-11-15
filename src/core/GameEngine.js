@@ -27,6 +27,7 @@ import { targetCrop } from '../world/cropInteraction.js';
 import { PlayerPhysics } from '../player/PlayerPhysics.js';
 import { PlayerHand } from '../player/PlayerHand.js';
 import { SurvivalSystem } from '../player/SurvivalSystem.js';
+import { getSuitTelemetryView } from '../player/suitTelemetry.js';
 import { InputController } from '../player/InputController.js';
 import { HudManager } from '../ui/HudManager.js';
 import { DebugOverlay } from '../ui/DebugOverlay.js';
@@ -58,6 +59,7 @@ import { ShieldBubble } from '../graphics/shieldBubble.js';
 import { IceSensorEffect } from '../scanner/iceSensor.js';
 import { ScannerHud } from '../ui/ScannerHud.js';
 import { buildBaseDecor } from '../base/baseDecor.js';
+import { SuitportStation } from '../base/SuitportStation.js';
 import { buildGreenhouseFields } from '../base/greenhouseFields.js';
 import { earthCard, plantsStalled } from '../base/greenhouseCare.js';
 import { MenuScreens } from '../ui/MenuScreens.js';
@@ -151,6 +153,7 @@ export class GameEngine {
     this.spaceWeather = EMBEDDED_SPACE_WEATHER;
     this.baseDecor = buildBaseDecor(this.scene, colliders);
     for (const point of this.baseDecor.infoPoints) point.type = 'info';
+    this.suitport = new SuitportStation(this.scene, colliders);
     this._displayTimer = 1;
 
     this.roverController = new RoverController({
@@ -164,6 +167,7 @@ export class GameEngine {
 
     this.player = new PlayerPhysics(this.world, colliders);
     this.survival = new SurvivalSystem();
+    this._wasSuitEquipped = this.survival.suitEquipped;
     // As tempestades solares so comecam no ato 2 da historia (StoryDirector)
     this.mission = new MissionSystem({ cmes: this.spaceWeather.cmes, seps: this.spaceWeather.seps, startHours: this._skyHours(), stormsStarted: false });
     // O rover carrega no deposito puxando da bateria da base (issue #111)
@@ -181,6 +185,7 @@ export class GameEngine {
     this.stations.plots[0].crop = { type: 'potato', progress: CROP_CONFIG.potato.seconds };
     this.stations.plots[1].crop = { type: 'lettuce', progress: CROP_CONFIG.lettuce.seconds / 2 };
     this.airlock.stations = this.stations;
+    this.airlock.survival = this.survival;
     this.airlock.onEvent = (type) => this._onAirlockEvent(type);
     // Dose acima do limite (issue #104): a medica de voo segura o comandante dentro da base
     this.airlock.exitBlock = () => evaBlockMessage({ grounded: this.mission.grounded, mavReady: this.mission.progress.ready });
@@ -196,11 +201,17 @@ export class GameEngine {
 
     // Maozinha 3D do jogador em primeira pessoa
     this.playerHand = new PlayerHand(this.camera, materials, carrot.texture);
+    this.playerHand.setSuitEquipped(this.survival.suitEquipped);
+    this.suitport.setEquipped(this.survival.suitEquipped, false);
     const firstSlot = this.survival.slots[0];
     this.playerHand.setHeldBlock(firstSlot?.id, firstSlot?.count ?? 0);
 
     this.hud = new HudManager(previews, this.survival.slots, {
       onOpenJournal: () => this.input.openJournal(),
+      getSuitState: () => this._suitContext(),
+      onSuitportEquip: () => this._handleSuitportEquip(),
+      onSuitportRepair: () => this._handleSuitportRepair(),
+      onSuitportClean: () => this._handleSuitportClean(),
       onInventorySwap: (fromIndex, toIndex) => {
         const inventorySlots = this.survival.swapInventorySlots(fromIndex, toIndex);
         this.hud.renderHotbar(this.survival.slots);
@@ -216,6 +227,7 @@ export class GameEngine {
       player: this.player,
       stations: this.stations,
       expedition: this.expedition,
+      survival: this.survival,
       hud: this.hud,
       onPlaySound: (f1, d, f2) => this._playGymTone(f1, d, f2),
       onDismount: () => {
@@ -300,6 +312,7 @@ export class GameEngine {
       onRoverLook: (dx, dy) => this.roverController.look(dx, dy),
       onToggleShield: () => this._toggleShield(),
       onSendData: () => this._sendScienceData(),
+      onSuitportAction: (action) => this._handleSuitportShortcut(action),
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown
         || this.storyHud.isWindowClosedShown,
@@ -333,9 +346,13 @@ export class GameEngine {
     this._updateShelterWater();
     this.updateCropVisuals();
     this.airlock.update(dt, this.player.pos);
+    this._syncSuitVisualState();
     if (this.survival.health <= 0) this.survival.isDead = true;
+    const aimed = this._getInteraction();
+    const showSuitportHolo = aimed?.type === 'suitport' && !this.roverController.isActive && !this.gymController.isActive;
+    this.hud.updateSuitportHolo(showSuitportHolo, this._suitContext());
     const hasPriorityInteraction = ['crew', 'water_dispenser', 'rover_terminal', 'mav', 'greenhouse', 'info'].includes(this.currentInteraction);
-    document.getElementById('interaction-hint').textContent = (hasPriorityInteraction || this.gymController.isActive) ? '' : (this._getInteraction()?.label ?? '');
+    document.getElementById('interaction-hint').textContent = (hasPriorityInteraction || this.gymController.isActive) ? '' : (aimed?.label ?? '');
     document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
     const tiredWarning = this.sleep.updateWarning();
@@ -402,11 +419,114 @@ export class GameEngine {
     return true;
   }
 
+  _suitContext() {
+    return {
+      survival: this.survival,
+      outsideTempC: outsideTemperatureC(this._skyHours()),
+      batteryPercent: this.mission?.battery?.percent ?? 100,
+      suitUpgraded: this.stations.upgraded,
+      dirtySuit: this.stations.dirtySuit,
+      airlockPressurized: this.airlock.pressurized,
+      airlockDoorOpen: Boolean(this.airlock.doors?.[1]?.openness > 0),
+    };
+  }
+
+  _handleSuitportEquip() {
+    if (!this.airlock.pressurized || this.airlock.pending || this.airlock.doors[1].openness > 0) {
+      this.suitport.flashLocked();
+      this.hud.showToast('Close the outer door and pressurize the airlock first.');
+      return;
+    }
+    if (!this.survival.suitEquipped) {
+      const view = getSuitTelemetryView(this.survival, this._suitContext());
+      if (!view.minSystemsReady) {
+        this.suitport.flashLocked();
+        const reason = this.survival.suitIntegrity <= 0
+          ? 'Suit seal integrity is 0%! Press R to repair the EVA suit at the Suitport first.'
+          : `EVA suit below minimum launch levels (${Math.round(this.survival.suitOxygen)}% O2 / ${Math.round(this.survival.suitThermal)}% Heat). Wait for recharge.`;
+        this.hud.showToast(reason, 4500);
+        return;
+      }
+      this._setSuitEquippedAnimated(true);
+      this.hud.showToast('EVA suit equipped. Ready to cycle the outer door.');
+      return;
+    }
+    this._setSuitEquippedAnimated(false);
+    this.hud.showToast('EVA suit docked in Suitport. Recharging O2 & cleaning scrubber.');
+  }
+
+  _handleSuitportRepair() {
+    const result = this.survival.repairSuit(this.expedition);
+    if (result.ok) {
+      this.hud.updateSuitportHolo(true, this._suitContext());
+    } else {
+      this.suitport.flashLocked();
+    }
+    this.hud.showToast(result.message, 4500);
+  }
+
+  _handleSuitportClean() {
+    const hadDirty = this.stations.dirtySuit || this.survival.suitDust >= 1;
+    const result = this.survival.cleanSuitDust(this.expedition);
+    if (result.ok) {
+      this.stations.dirtySuit = false;
+      this.stations.contaminated = false;
+      this.hud.updateSuitportHolo(true, this._suitContext());
+      this.hud.showToast(result.message, 4500);
+    } else if (hadDirty && this.stations.dirtySuit) {
+      this.stations.dirtySuit = false;
+      this.hud.updateSuitportHolo(true, this._suitContext());
+      this.hud.showToast('Electrostatic perchlorate cleaning complete.', 3500);
+    } else {
+      this.suitport.flashLocked();
+      this.hud.showToast(result.message, 4000);
+    }
+  }
+
+  _handleSuitportShortcut(action) {
+    if (this._getInteraction()?.type !== 'suitport') return;
+    if (action === 'repair') this._handleSuitportRepair();
+    else if (action === 'clean') this._handleSuitportClean();
+  }
+
+  _syncSuitVisualState() {
+    this.playerHand.setSuitUpgraded(this.stations.upgraded);
+    const equipped = Boolean(this.survival.suitEquipped);
+    if (equipped === this._wasSuitEquipped) return;
+    this._setSuitEquippedAnimated(equipped);
+  }
+
+  _setSuitEquippedAnimated(equipped) {
+    this.survival.suitEquipped = Boolean(equipped);
+    this._wasSuitEquipped = this.survival.suitEquipped;
+    if (this.survival.suitEquipped) {
+      this.suitport.triggerEquip();
+      this.playerHand.triggerSuitEquip();
+      this.hud.triggerSuitSequence('equip');
+      this.audio.playSuitEquip();
+    } else {
+      this.suitport.triggerDock();
+      this.playerHand.triggerSuitDock();
+      this.hud.triggerSuitSequence('dock');
+      this.audio.playSuitDock();
+    }
+  }
+
   _getInteraction() {
     const dir = this.player.getLookDirection(this._interactionDir);
     let best = null, bestDistance = 4;
     const candidates = [
       ...this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' })),
+      ...(this.player.pos.z > 6.15 && this.player.pos.z < 8.85 && this.player.pos.x > -1 && this.player.pos.x < 2
+        ? [{
+            type: 'suitport',
+            x: -0.68,
+            y: 11.35,
+            z: 7.5,
+            minDot: 0.72,
+            label: this.survival.suitEquipped ? 'Press F: dock EVA suit' : 'Press F: put on EVA suit',
+          }]
+        : []),
       { type: 'power', x: 10.6, y: 11.4, z: -3, label: 'Press F: life support' },
       { type: 'console', x: 8.25, y: 11.5, z: -10.8, label: 'Press F: mission computer' },
       { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth · [G] send science' },
@@ -452,7 +572,13 @@ export class GameEngine {
     if (target.type === 'basket') { this.hud.showToast(this.stations.collectBasket(target.cropType, this.survival)); return; }
     if (target.type === 'bunk') { this.sleep.openChooser(); return; }
     if (target.type === 'door') {
-      this.airlock.request(target.door, this.player.pos);
+      const msg = this.airlock.request(target.door, this.player.pos);
+      if (msg.includes('Suitport')) this.suitport.flashLocked();
+      this.hud.showToast(msg);
+      return;
+    }
+    if (target.type === 'suitport') {
+      this._handleSuitportEquip();
       return;
     }
     else if (target.type === 'treadmill' || target.type === 'bike') {
@@ -593,6 +719,10 @@ export class GameEngine {
     const gymLight = new THREE.PointLight(0xe0f2fe, 1.5, 16);
     gymLight.position.set(-8, 13.0, 10.5);
     this.scene.add(gymLight);
+
+    const airlockLight = new THREE.PointLight(0xe0f2fe, 1.1, 7);
+    airlockLight.position.set(0.5, 12.6, 7.5);
+    this.scene.add(airlockLight);
   }
 
   _initHighlightWireframe() {
@@ -796,9 +926,19 @@ export class GameEngine {
   // Sobrevivencia com o O2 do habitat pago pela bateria
   _updateSurvival(dt) {
     // Gerador de O2 (issue #102): na eletrolise o ar tambem gasta agua do tanque da base
-    this.survival.update(dt, this.player.pos, this.mission.oxygenRefillBudget(this.crewStock), this.world.brokenBaseWindows.size > 0);
+    this.survival.update(
+      dt,
+      this.player.pos,
+      this.mission.oxygenRefillBudget(this.crewStock),
+      this.world.brokenBaseWindows.size > 0,
+      { isMoving: this.player.isMoving }
+    );
     this.survival.oxygenShortage = this.mission.oxygenPlant.limitedBy;
     this.mission.chargeOxygen(this.survival.lastOxygenRefilled, this.crewStock);
+    this.survival.updateSuitThermal(dt, this.player.pos, outsideTemperatureC(this._skyHours()), this.expedition);
+    if (this.survival.suitDust >= 10 && !this.survival.insidePressurizedShip) {
+      this.stations.dirtySuit = true;
+    }
   }
 
   _refreshMavPanel() {
@@ -1025,11 +1165,11 @@ export class GameEngine {
       this.hud.showToast('The solar panels are already clean.');
       return;
     }
-    if (this.survival.oxygen <= cost + 1) {
+    if (!this.survival.hasBreathableOxygen(cost + 1)) {
       this.hud.showToast('Your suit air is too low to keep working. Go back inside!', 4500);
       return;
     }
-    this.survival.oxygen -= cost;
+    this.survival.spendBreathableOxygen(cost);
     const removed = dust.cleanPanels();
     const left = Math.round(dust.panelDust * 100);
     const storm = dust.phase === 'storm' ? ' The storm keeps adding more dust!' : '';
@@ -1827,14 +1967,16 @@ export class GameEngine {
           this.sky.update(dt, this.roverController.pos);
           this._updateSurvival(dt);
           this.highlightBox.visible = false;
-          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: false, isRoverActive: true, roverTelemetry: this.roverController.getTelemetry(), mission: this.mission });
+          const outsideTempC = outsideTemperatureC(this._skyHours());
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: false, isRoverActive: true, roverTelemetry: this.roverController.getTelemetry(), mission: this.mission, airlock: this.airlock, outsideTempC, suitUpgraded: this.stations.upgraded, dirtySuit: this.stations.dirtySuit });
         } else if (this.gymController.isActive) {
           if (this.scanHighlight.mesh) this.scanHighlight.clear();
           this.gymController.update(dt);
           this.sky.update(dt, this.player.pos);
           this._updateSurvival(dt);
           this.highlightBox.visible = false;
-          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: false, isRoverActive: false, mission: this.mission });
+          const outsideTempC = outsideTemperatureC(this._skyHours());
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: false, isRoverActive: false, mission: this.mission, airlock: this.airlock, outsideTempC, suitUpgraded: this.stations.upgraded, dirtySuit: this.stations.dirtySuit });
         } else {
           this.player.update(dt, this.input.keys);
           clampToPlayArea(this.player.pos); // parede invisivel na borda, sem dano (issue #103)
@@ -1861,7 +2003,7 @@ export class GameEngine {
             this.highlightBox.visible = false;
           }
 
-          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: this.isScannerOpen, isRoverActive: false, mission: this.mission, airlock: this.airlock });
+          this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: this.isScannerOpen, isRoverActive: false, mission: this.mission, airlock: this.airlock, outsideTempC: outsideTemperatureC(this._skyHours()), suitUpgraded: this.stations.upgraded, dirtySuit: this.stations.dirtySuit });
           this._updateScanner(dt);
         }
       } else if (cutsceneActive) {
@@ -1907,6 +2049,13 @@ export class GameEngine {
 
       this.iceSensor.update(dt);
       this.shieldBubble.update(dt, { on: this.mission.shieldOn, storm: this.mission.storm.phase === 'active' });
+      this.suitport.update(dt, {
+        suitEquipped: this.survival.suitEquipped,
+        pressurized: this.airlock.pressurized,
+        doorOpen: this.airlock.doors[1].openness > 0,
+        suitUpgraded: this.stations.upgraded,
+        dirtySuit: this.stations.dirtySuit,
+      });
       if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
       this._updateMission(dt);
       this._updateCrew(dt);

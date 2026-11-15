@@ -57,3 +57,35 @@ describe('time skip (issue #109)', () => {
     expect(source).not.toMatch(/'KeyT'/);
   });
 });
+
+describe('closing inventory', () => {
+  it('closes and requests pointer lock on desktop', () => {
+    const input = Object.create(InputController.prototype);
+    input.isTouchMode = false;
+    input.hud = { isInventoryOpen: true, closeInventory: vi.fn() };
+    input.domElement = { requestPointerLock: vi.fn() };
+    input._toggleInventory();
+    expect(input.hud.closeInventory).toHaveBeenCalledOnce();
+    expect(input.domElement.requestPointerLock).toHaveBeenCalledOnce();
+  });
+
+  it('closes without requesting pointer lock on touch', () => {
+    const input = Object.create(InputController.prototype);
+    input.isTouchMode = true;
+    input.hud = { closeInventory: vi.fn() };
+    input.domElement = { requestPointerLock: vi.fn() };
+    input._closeInventory();
+    expect(input.hud.closeInventory).toHaveBeenCalledOnce();
+    expect(input.domElement.requestPointerLock).not.toHaveBeenCalled();
+  });
+
+  it('shows the pause menu if pointer lock is rejected', async () => {
+    const input = Object.create(InputController.prototype);
+    input.isTouchMode = false;
+    input.hud = { closeInventory: vi.fn() };
+    input.domElement = { requestPointerLock: vi.fn().mockRejectedValue(new Error('denied')) };
+    input._showPauseMenu = vi.fn();
+    input._closeInventory();
+    await vi.waitFor(() => expect(input._showPauseMenu).toHaveBeenCalledOnce());
+  });
+});

@@ -5,8 +5,47 @@ import { SurvivalSystem } from './SurvivalSystem.js';
 import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 
 describe('SurvivalSystem', () => {
-  it('leaks base and suit oxygen during a breach, then restores them using power after sealing', () => {
+  it('uses suit heat outside and recharges a docked suit with available base power', () => {
     const survival = new SurvivalSystem();
+    const power = { energy: 0.04, spend(amount) { if (amount > this.energy) return false; this.energy -= amount; return true; } };
+    const outside = { x: 35, y: 11, z: 35 };
+    survival.updateSuitThermal(10, outside, -60, power);
+    expect(survival.suitThermal).toBeCloseTo(100 - 10 * SURVIVAL_CONFIG.SUIT_THERMAL_DRAIN_PER_SECOND);
+    survival.suitThermal = 0;
+    survival.updateSuitThermal(1, outside, -60, power);
+    expect(survival.health).toBeLessThan(survival.maxStat);
+    survival.suitEquipped = false;
+    survival.updateSuitThermal(1, { x: 0, y: 11.7, z: 0 }, -60, power);
+    expect(survival.suitThermal).toBeCloseTo(2);
+    expect(power.energy).toBeCloseTo(0);
+    survival.updateSuitThermal(1, outside, -60, power);
+    expect(survival.suitThermal).toBeCloseTo(2);
+  });
+
+  it('uses more heater charge in colder weather and none while inside', () => {
+    const warm = new SurvivalSystem();
+    const cold = new SurvivalSystem();
+    const power = { energy: 100, spend: () => true };
+    const outside = { x: 35, y: 11, z: 35 };
+    warm.updateSuitThermal(10, outside, -60, power);
+    cold.updateSuitThermal(10, outside, -120, power);
+    expect(cold.suitThermal).toBeLessThan(warm.suitThermal);
+    const before = cold.suitThermal;
+    cold.updateSuitThermal(10, { x: 0, y: 11.7, z: 0 }, -120, power);
+    expect(cold.suitThermal).toBe(before);
+  });
+  it('refills a docked suit while the astronaut breathes base air', () => {
+    const survival = new SurvivalSystem();
+    survival.suitEquipped = false;
+    survival.oxygen = 0;
+    survival.update(1, { x: 0, y: 11.7, z: 0 }, 2);
+    expect(survival.oxygen).toBe(2);
+    expect(survival.health).toBe(survival.maxStat);
+    expect(survival.lastOxygenRefilled).toBe(2);
+  });
+  it('leaks base and personal oxygen during a breach when suit is docked, then restores them using power after sealing', () => {
+    const survival = new SurvivalSystem();
+    survival.suitEquipped = false;
     const inside = { x: 0, y: 11.7, z: 0 };
     survival.update(4, inside, 100, true);
     expect(survival.baseOxygen).toBe(80);
@@ -21,20 +60,33 @@ describe('SurvivalSystem', () => {
     expect(survival.lastOxygenRefilled).toBeCloseTo(4.4);
   });
 
-  it('standing at the map edge or in the dust does not hurt: only the suit air runs out (issue #103)', () => {
+  it('standing at the map edge or in the dust does not hurt: intact suit takes the drain and wears down (issue #103, #167)', () => {
     const survival = new SurvivalSystem();
     const farOut = { x: -4 + SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS, y: 11, z: 0 };
     survival.update(10, farOut, 100, false);
     expect(survival.dustStormIntensity).toBe(1);
     expect(survival.health).toBe(survival.maxStat);
-    expect(survival.oxygen).toBeLessThan(survival.maxStat);
+    expect(survival.oxygen).toBe(survival.maxStat);
+    expect(survival.suitOxygen).toBeLessThan(100);
+    expect(survival.suitIntegrity).toBeLessThan(100);
   });
 
-  it('keeps leaking base oxygen while the astronaut is outside', () => {
+  it('protects personal oxygen while EVA suit is intact and keeps leaking base oxygen during a breach', () => {
     const survival = new SurvivalSystem();
     survival.update(2, { x: 35, y: 11, z: 35 }, 100, true);
     expect(survival.baseOxygen).toBe(90);
-    expect(survival.oxygen).toBeCloseTo(20 - 2 * (20 / 360));
+    expect(survival.oxygen).toBe(survival.maxStat);
+    expect(survival.suitOxygen).toBeCloseTo(100 - 2 * SURVIVAL_CONFIG.SUIT_OXYGEN_DRAIN_PER_SECOND, 3);
+  });
+
+  it('drains personal oxygen once the EVA suit is worn out, like Minecraft armor durability', () => {
+    const survival = new SurvivalSystem();
+    survival.suitIntegrity = 0;
+    survival.update(5, { x: 0, y: 11.7, z: 25 }, 100, false);
+    expect(survival.oxygen).toBeLessThan(survival.maxStat);
+
+    survival.update(2, { x: -18, y: 11.7, z: 0 }, 100, false);
+    expect(survival.oxygen).toBeGreaterThan(survival.maxStat - 5 * SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE);
   });
 
   it('starts with a journal that cannot be placed or consumed', () => {
@@ -75,15 +127,48 @@ describe('SurvivalSystem', () => {
     expect(survival.isPlayerInsideShip({ x: 0, y: 11.7, z: 24 })).toBe(false);
   });
 
-  it('drains oxygen outside and refills oxygen inside the pressurized base', () => {
+  it('drains suit O2 outside while protecting personal O2, and refills suit O2 inside the pressurized base', () => {
     const survival = new SurvivalSystem();
 
     survival.update(5.0, { x: 0, y: 11.7, z: 25 });
-    const afterOutside = survival.oxygen;
-    expect(afterOutside).toBeLessThan(survival.maxStat);
+    const afterOutsideSuitO2 = survival.suitOxygen;
+    expect(survival.oxygen).toBe(survival.maxStat);
+    expect(afterOutsideSuitO2).toBeLessThan(100);
 
+    survival.suitEquipped = false;
     survival.update(2.0, { x: -18, y: 11.7, z: 0 });
-    expect(survival.oxygen).toBeGreaterThan(afterOutside);
+    expect(survival.suitOxygen).toBeGreaterThan(afterOutsideSuitO2);
+  });
+
+  it('auto-cleans CO2 scrubber when docked, accumulates dust outside, and repairs with power or emergency patch', () => {
+    const survival = new SurvivalSystem();
+    const outside = { x: 0, y: 11.7, z: 25 };
+    const inside = { x: 0, y: 11.7, z: 0 };
+
+    survival.update(10, outside, 100, false, { isMoving: true });
+    expect(survival.suitScrubber).toBeLessThan(100);
+    expect(survival.suitDust).toBeGreaterThan(0);
+
+    const scrubberAfterEva = survival.suitScrubber;
+    survival.suitEquipped = false;
+    survival.update(2, inside, 100, false);
+    expect(survival.suitScrubber).toBeGreaterThan(scrubberAfterEva);
+
+    const power = { energy: 50, spend(amount) { if (this.energy < amount) return false; this.energy -= amount; return true; } };
+    const cleaned = survival.cleanSuitDust(power);
+    expect(cleaned.ok).toBe(true);
+    expect(survival.suitDust).toBe(0);
+
+    survival.suitIntegrity = 40;
+    const repaired = survival.repairSuit(power);
+    expect(repaired.ok).toBe(true);
+    expect(survival.suitIntegrity).toBe(100);
+
+    survival.suitIntegrity = 0;
+    const lowPower = { energy: 0, spend: () => false };
+    const patched = survival.repairSuit(lowPower);
+    expect(patched.ok).toBe(true);
+    expect(survival.suitIntegrity).toBe(35);
   });
 
   it('reports danger when health, oxygen, water, or food is critically low', () => {

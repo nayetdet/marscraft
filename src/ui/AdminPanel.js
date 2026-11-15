@@ -157,6 +157,13 @@ export class AdminPanel {
         if (arg === 'refill') {
           survival.isDead = false;
           survival.health = survival.oxygen = survival.water = survival.food = survival.maxStat;
+          survival.suitOxygen = 100;
+          survival.suitScrubber = 100;
+          survival.suitDust = 0;
+          survival.suitIntegrity = 100;
+          survival.suitThermal = 100;
+          survival.suitO2Warned30 = false;
+          survival.suitWornWarned = false;
           return 'Astronaut refilled.';
         }
         if (arg === 'dose') { mission.resetDose(); return 'Radiation dose reset to the trip dose.'; }
@@ -167,10 +174,16 @@ export class AdminPanel {
         survival.health = survival.maxStat * 0.25;
         return 'Health set to 25%.';
       case 'base':
-        if (arg === 'dirtySuit') stations.dirtySuit = true;
-        else if (arg === 'contaminate') stations.contaminated = true;
+        if (arg === 'dirtySuit') {
+          stations.dirtySuit = true;
+          survival.suitDust = Math.max(survival.suitDust, 50);
+        } else if (arg === 'contaminate') stations.contaminated = true;
         else if (arg === 'filter') stations.filter = 0;
-        else { stations.dirtySuit = false; stations.contaminated = false; }
+        else {
+          stations.dirtySuit = false;
+          stations.contaminated = false;
+          survival.suitDust = 0;
+        }
         return 'Base state changed.';
       case 'north': {
         const { utility, crewStock, crew } = this.engine;
@@ -206,6 +219,7 @@ export class AdminPanel {
         player.vel.set(0, 0, 0);
         player.yaw = yaw;
         player.pitch = 0;
+        survival.suitEquipped = !survival.isPlayerInsideShip(player.pos);
         return `Teleported to: ${name}. Close the panel to play.`;
       }
       default:
@@ -240,7 +254,7 @@ export class AdminPanel {
       `Dose rate: ${mission.doseRate.toFixed(3)} mSv/h   Total: ${mission.totalDoseMsv.toFixed(2)} mSv`,
       `Inside habitat: ${survival.insidePressurizedShip ? 'yes' : 'no'}   In shelter: ${mission.insideShelter ? 'yes' : 'no'}   Shield: ${mission.shieldOn ? 'on' : 'off'}`,
       `Battery: ${mission.battery.percent.toFixed(0)}%   Base tank: ${Math.round(survival.baseWater)} L   Wall: ${Math.round(mission.shelterWaterL)} L`,
-      `Health: ${Math.round(survival.health)}/${survival.maxStat}   O2: ${Math.round(survival.oxygen)}`,
+      `Health: ${Math.round(survival.health)}/${survival.maxStat}   O2: ${Math.round(survival.oxygen)}   Suit: O2 ${Math.round(survival.suitOxygen)}% Wear ${Math.round(survival.suitWear)}% CO2 ${Math.round(survival.suitScrubber)}% Dust ${Math.round(survival.suitDust)}%`,
       `Radio: ${this.engine.comms.blackout ? 'SILENT' : 'ok'}   Earth: ${Math.round(this.engine.comms.distanceKm / 1e6)} Mkm, ${this.engine.comms.lightMinutes.toFixed(1)} min one way`,
       `Heater: ${this.engine.utility.heaterOn ? 'on' : 'off'}${this.engine.utility.cold ? ' (FREEZING)' : ''}   Water filter: ${Math.round(this.engine.utility.waterFilter)}%   Pantry: ${Math.floor(this.engine.crewStock.food)}`,
       this._eventsLine(),

@@ -138,7 +138,7 @@ export class MissionHud {
       baseOxygen: survival?.baseOxygen,
       contaminated: stations?.contaminated,
       brokenWindows: world?.brokenBaseWindows.size ?? 0,
-      suitOxygen: survival?.oxygen,
+      suitOxygen: survival?.isSuitProtectingO2 ? (survival.suitOxygen / 100) * survival.maxStat : survival?.oxygen,
       oxygenNeedsPower: survival?.oxygenNeedsPower,
       insideHabitat: survival?.insidePressurizedShip,
     });
