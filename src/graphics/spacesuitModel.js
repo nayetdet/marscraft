@@ -123,6 +123,7 @@ export function buildSpacesuitRig({
   accentColor = 0xea580c,
   suitColor = 0xf8fafc,
   includeUpgradeTrim = false,
+  instanced = false,
 } = {}) {
   const bodyGroup = new THREE.Group();
 
@@ -150,12 +151,25 @@ export function buildSpacesuitRig({
     map: createChestDcmTexture(),
   });
 
+  // instanced: caixas de cor lisa e lampadas nao viram Mesh, e sim nos vazios (a escala guarda o
+  // tamanho da caixa) listados em `parts`, para o CrewInstances desenhar a tripulacao inteira em
+  // dois desenhos. Pecas com textura ou com cor por traje (visor, painel do peito, luz de estado,
+  // placas de upgrade) continuam Mesh.
+  const instancedMats = instanced ? new Set([suitMat, accentMat, darkJoint, bootMat, silver, lampMat]) : null;
+  const parts = [];
   const addPart = (parent, w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-    mesh.position.set(x, y, z);
-    if (rx || ry || rz) mesh.rotation.set(rx, ry, rz);
-    parent.add(mesh);
-    return mesh;
+    let part;
+    if (instancedMats?.has(mat)) {
+      part = new THREE.Object3D();
+      part.scale.set(w, h, d);
+      parts.push({ node: part, material: mat, lamp: mat === lampMat });
+    } else {
+      part = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    }
+    part.position.set(x, y, z);
+    if (rx || ry || rz) part.rotation.set(rx, ry, rz);
+    parent.add(part);
+    return part;
   };
 
   // Pernas articuladas no quadril (y = 0.72) e no joelho (y = -0.32 relativo ao quadril)
@@ -288,6 +302,7 @@ export function buildSpacesuitRig({
     lampMat,
     visorMat,
     upgradeTrimMeshes,
+    parts,
   };
 }
 

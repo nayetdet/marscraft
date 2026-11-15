@@ -15,7 +15,6 @@ export const TERRAIN_CONFIG = {
   BASE_BLEND_RADIUS: 36,
 };
 
-const DUST_STORM_FRONT_OFFSET = 24;
 const DUST_STORM_MAP_EDGE_RADIUS = Math.min(
   WORLD_CONFIG.SIZE_X / 2 - Math.abs(TERRAIN_CONFIG.BASE_CENTER.x),
   WORLD_CONFIG.SIZE_Z / 2 - Math.abs(TERRAIN_CONFIG.BASE_CENTER.z)
@@ -41,6 +40,82 @@ export const CAMERA_CONFIG = {
   REACH_DISTANCE: 6.5,
 };
 
+// Modo "Shaders" (src/graphics/shaderMode/): sombra do Sol em tempo real, lampadas da base com
+// sombra, brilho (bloom), raios de luz e tone mapping (comprime o claro sem mudar as cores). Sao
+// escolhas visuais, nao dados da NASA. Fica desligado em GPU por
+// software e em telas de toque, e se desliga sozinho se o jogo ficar lento.
+export const GRAPHICS_CONFIG = {
+  STORAGE_KEY: 'minemars.shaders',
+  // Sombra do Sol: mapa quadrado que acompanha a camera
+  SHADOW_MAP_SIZE: 2048,
+  // Meio lado (em blocos) da area que recebe sombra
+  SHADOW_EXTENT: 52,
+  // A area de sombra fica adiantada na direcao do olhar (fracao do meio lado)
+  SHADOW_LOOK_AHEAD: 0.45,
+  // Distancia da luz ate o centro da area (so precisa cobrir o relevo inteiro)
+  SHADOW_LIGHT_DISTANCE: 170,
+  // Altura minima da luz (componente y da direcao): evita sombras infinitas no por do sol.
+  // A noite a luz vem espelhada de cima, como um luar fraco.
+  SHADOW_MIN_ELEVATION: 0.2,
+  // O mapa de sombra do Sol e refeito a cada N quadros (a area so anda junto com ele)
+  SUN_SHADOW_FRAMES: 2,
+  // Raio minimo (em blocos) para um objeto fazer sombra. Pecas menores (bracos da tripulacao,
+  // itens das cestas, botoes) custavam centenas de desenhos por quadro e quase nao apareciam.
+  SHADOW_CASTER_MIN_RADIUS: 0.4,
+  SHADOW_BIAS: -0.0004,
+  SHADOW_NORMAL_BIAS: 0.045,
+  // Com sombra de verdade o Sol pode ser mais forte e a luz ambiente mais fraca (mais contraste)
+  SUN_SCALE_DAY: 2.3,
+  SUN_SCALE_NIGHT: 0.6,
+  AMBIENT_SCALE: 0.5,
+  HEMISPHERE_SCALE: 0.7,
+  // Lampadas da base (luz primaria dos interiores): sem o Sol atravessando o teto, elas e que
+  // iluminam os comodos. Fazem sombra propria (moveis, tripulacao) e a luz sai pelas janelas.
+  // DECAY menor que o fisico (2) espalha a luz ate os cantos do comodo.
+  ROOM_LIGHT_SCALE: 3.8,
+  ROOM_LIGHT_DECAY: 1.15,
+  // Alcance maximo de cada lampada com o modo ligado. Cada pixel dentro do alcance paga a conta
+  // da sombra daquela lampada, entao alcance curto (so o comodo) e o que mais alivia a GPU.
+  ROOM_LIGHT_MAX_DISTANCE: 20,
+  ROOM_SHADOW_MAP_SIZE: 512,
+  ROOM_SHADOW_BIAS: -0.003,
+  ROOM_SHADOW_NORMAL_BIAS: 0.03,
+  // Longe de todas as lampadas (a mais de RANGE vezes o alcance da mais proxima), nenhuma sombra
+  // de lampada e refeita
+  ROOM_SHADOW_RANGE: 2,
+  // Dentro da base a luz ambiente cai (as lampadas e o Sol das janelas passam a mandar)
+  INDOOR_AMBIENT_SCALE: 0.5,
+  INDOOR_BLEND_SPEED: 1.8,
+  // Blocos que brilham (luminaria, farol): mais fortes, para passarem do limiar do bloom
+  EMISSIVE_SCALE: 2.4,
+  // Disco do Sol em HDR: precisa ser mais claro que o ceu em volta para o bloom pegar nele
+  SUN_DISC_BOOST: 5,
+  // Exposicao da "camera": abre dentro da base e a noite, fecha no Sol (por segundo, suavizado)
+  EXPOSURE_OUTSIDE: 0.95,
+  EXPOSURE_INSIDE: 1.3,
+  EXPOSURE_NIGHT_BOOST: 1.45,
+  EXPOSURE_SPEED: 1.6,
+  // Acabamento da imagem ja pronta: cor um pouco mais viva, mais contraste e cantos escurecidos
+  GRADE_SATURATION: 1.14,
+  GRADE_CONTRAST: 1.08,
+  GRADE_VIGNETTE: 0.22,
+  BLOOM_STRENGTH: 0.32,
+  BLOOM_RADIUS: 0.55,
+  BLOOM_THRESHOLD: 0.92,
+  // Raios de luz: amostras por pixel (em meia resolucao), alcance, queda e forca
+  GODRAYS_SAMPLES: 40,
+  GODRAYS_DENSITY: 0.92,
+  GODRAYS_DECAY: 0.955,
+  GODRAYS_STRENGTH: 0.3,
+  // Distancia (em blocos) a partir da qual um pixel conta como ceu aberto
+  GODRAYS_SKY_DISTANCE: 300,
+  // Protecao de desempenho (so no modo automatico): media abaixo de MIN_FPS por
+  // GUARD_SECONDS desliga os shaders. Os primeiros segundos sao ignorados (compilacao).
+  GUARD_MIN_FPS: 26,
+  GUARD_SECONDS: 6,
+  GUARD_WARMUP_SECONDS: 4,
+};
+
 export const INPUT_CONFIG = {
   MOUSE_SENSITIVITY: 0.0021, // radianos por pixel
   ZOOM_SENSITIVITY: 0.00055, // mais fina com a luneta (Z)
@@ -52,6 +127,12 @@ export const BLOCK_INTERACTION_CONFIG = {
   BREAK_TIME: 0.6,
   BREAK_PARTICLE_COUNT: 12,
   BREAK_PARTICLE_LIFETIME: 0.45,
+  SURFACE_ROCK_BREAK_PARTICLE_COUNT: 4,
+  SURFACE_ROCK_BREAK_PARTICLE_MIN_SIZE: 0.18,
+  SURFACE_ROCK_BREAK_PARTICLE_SIZE_VARIANCE: 0.1,
+  SURFACE_ROCK_BREAK_PARTICLE_HORIZONTAL_SPEED: 2.4,
+  SURFACE_ROCK_BREAK_PARTICLE_UPWARD_SPEED: 1.8,
+  SURFACE_ROCK_BREAK_PARTICLE_MIN_UPWARD_SPEED: 0.4,
   DROP_GRAVITY: 11,
   DROP_PICKUP_RADIUS: 1.35,
   DROP_SIZE: 0.32,
@@ -97,50 +178,34 @@ export const SURVIVAL_CONFIG = {
   SUIT_SCRUBBER_LOW_THRESHOLD: 25, // below this, O2 consumption increases up to 1.5x
   SUIT_DUST_ACCUM_PER_SECOND: 0.35,
   SUIT_DUST_MOVE_MULTIPLIER: 2.0,
-  SUIT_DUST_STORM_ACCUM_PER_SECOND: 3.0,
   SUIT_WEAR_PER_SECOND: 100 / 420, // ~7 min continuous EVA before suit wears out
   SUIT_WEAR_DUST_MULTIPLIER: 1.75,
-  SUIT_WEAR_STORM_PER_SECOND: 0.6,
   SUIT_REPAIR_POWER_COST: 4,
   SUIT_CLEAN_POWER_COST: 2,
   SUIT_NO_SUIT_O2_DRAIN_MULTIPLIER: 2.0,
   // Borda da area jogavel (parede de poeira), medida a partir de TERRAIN_CONFIG.BASE_CENTER.
   // Issue #103: a borda nao machuca mais. O vento de Marte nao derruba ninguem (o ar e fino
   // demais); quem limita a distancia e o ar do traje. No raio FATAL fica uma parede invisivel.
-  DUST_STORM_START_RADIUS: DUST_STORM_MAP_EDGE_RADIUS - DUST_STORM_FRONT_OFFSET,
   DUST_STORM_FATAL_RADIUS: DUST_STORM_MAP_EDGE_RADIUS,
-  // Intensidade (0..1) a partir da qual o HUD manda voltar ja; antes disso e so aviso
-  DUST_STORM_TURN_BACK_START: 0.55,
-  // Blocos antes do inicio da tempestade em que o HUD ja avisa que a borda esta perto
-  DUST_STORM_WARNING_DISTANCE: 8,
 };
 
-// Visual da tempestade da borda (src/sky/DustStormEffect.js). O dano fica no SURVIVAL_CONFIG.
+// Visual da nevoa na borda do mapa (src/sky/DustStormEffect.js); nao causa dano.
 export const DUST_STORM_VISUAL_CONFIG = {
-  INNER_WALL_OPACITY: 0.38,
-  MIDDLE_WALL_OPACITY: 0.68,
   OUTER_WALL_OPACITY: 1,
-  OVERHEAD_FOG_HEIGHT: 24,
-  OVERHEAD_FOG_VIEW_START: 12,
-  OVERHEAD_FOG_VIEW_END: 36,
-  OVERHEAD_INNER_BAND_OPACITY: 0.14,
-  OVERHEAD_MIDDLE_BAND_OPACITY: 0.24,
-  OVERHEAD_OUTER_BAND_OPACITY: 0.34,
+  EDGE_FOG_LEAD: 24,
+  EDGE_FOG_MAX_DENSITY: 0.11,
+  EDGE_DOME_MAX_OPACITY: 0.93,
+  EDGE_WIND_PUSH: 0.45,
   WALL_BOTTOM_Y: -4,
   WALL_HEIGHT: 44,
   // A parede some perto da camera (entre estas distancias, em blocos) para nao virar um plano duro
   WALL_FADE_NEAR: 1.5,
   WALL_FADE_FAR: 8,
-  // A névoa cresce nas duas faixas entre a frente interna e a borda externa.
-  VISUAL_LEAD: DUST_STORM_FRONT_OFFSET,
   DOME_RADIUS: 26,
-  DOME_MAX_OPACITY: 0.93,
   FOG_BASE_DENSITY: 0.0015,
-  FOG_MAX_DENSITY: 0.11,
   PARTICLE_COUNT: 1400,
   PARTICLE_BOX: { x: 36, y: 16, z: 36 },
   WIND_SPEED: 11, // blocos/s
-  WIND_PUSH: 0.45, // parte do vento que sopra de volta para a base
 };
 
 export const WATER_SYSTEM_CONFIG = {

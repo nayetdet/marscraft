@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SRGB_AUTHORED_OUTPUT } from './srgbOutput.js';
 
 // Bolhas visuais do escudo de radiação ativo (item Shield Remote), uma por bobina (ver mission/shieldZone.js).
 // Um campo magnético de verdade é invisível: a bolha só mostra ONDE ele protege. O desenho segue
@@ -69,6 +70,7 @@ const fragmentShader = /* glsl */ `
     float alpha = 0.05 + 0.32 * fresnel + 0.22 * lines + 0.10 * pulse * lines + 0.85 * spark;
     vec3 color = mix(uColor, vec3(1.0), spark * 0.7 + pulse * lines * 0.25);
     gl_FragColor = vec4(color, clamp(alpha, 0.0, 1.0) * uOpacity * groundFade);
+${SRGB_AUTHORED_OUTPUT}
   }
 `;
 

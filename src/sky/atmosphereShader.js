@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SRGB_AUTHORED_OUTPUT } from '../graphics/srgbOutput.js';
 
 export const MARTIAN_SKY_VERTEX_SHADER = `
   varying vec3 vWorldDirection;
@@ -64,7 +65,7 @@ export const MARTIAN_SKY_FRAGMENT_SHADER = `
     }
 
     gl_FragColor = vec4(skyColor, 1.0);
-  }
+${SRGB_AUTHORED_OUTPUT}  }
 `;
 
 export function createAtmosphereDome() {

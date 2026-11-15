@@ -71,8 +71,12 @@ src/base/                  organizacao visual da base: posteres e placas (basePo
                            telas vivas (baseDisplayText, baseCanvas), mobilia de cenario (baseFurniture) e a decoracao 3D que junta tudo (baseDecor)
 src/sky/                   céu marciano: shader de atmosfera, Sol, Terra+Lua, Fobos/Deimos, ciclo de sols
 src/graphics/              texturas procedurais em canvas e materiais dos blocos
+  shaderMode/              modo "Shaders" do menu: sombra do Sol em tempo real, lampadas da base com sombra, bloom,
+                           raios de luz e tone mapping (ShaderMode, GodRaysPass), luzes secundarias coloridas (accentLights),
+                           a conta da sombra (shadowRig) e a regra de ligar/desligar (shaderSettings)
 src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades, ordens, avisos), estações
-                           (estufa, reciclador de água, gerador de O2, enfermaria), trilhos e avatar voxel
+                           (estufa, reciclador de água, gerador de O2, enfermaria), trilhos, avatar voxel e
+                           crewInstances (desenha as caixas de todos os trajes juntas, com instancing)
 src/story/                 história em 3 atos: StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
                            objectiveView (o que o painel do objetivo desenha), waypoints (para onde a seta aponta) e WaypointBeacon (seta 3D)
   cutscene/                animações de chegada e de decolagem: timeline (keyframes), CutscenePlayer, efeitos, cápsula
@@ -104,5 +108,7 @@ docs/                      contexto do desafio, APIs e dados reais
 - **Idioma:** código, identificadores e **textos da UI em inglês** (a submissão é em inglês). Docs e parte dos comentários estão em pt-BR. Textos da UI sem emoji (estilo pixel atual).
 - **Commits:** Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`).
 - **Fluxo de PR:** skills do projeto em `.claude/skills/`: `/setup-issue` (sessão só para criar issues, com checagem de duplicata e do código), `/start-issue` (pegar uma issue) e `/send-pr` (rebase, checagens e PR vinculado a uma issue). Repo `nayetdet/nasa-space-apps`, branch base `main`. Nunca faça push direto na `main`.
+- **Modo Shaders:** o botão `Shaders: On/Off` do menu liga sombra do Sol, bloom, raios de luz e tone mapping (`src/graphics/shaderMode/`, números em `GRAPHICS_CONFIG`). As `PointLight` da cena são tratadas como lâmpadas de cômodo (luz primária dos interiores) e ganham sombra própria nesse modo; luz colorida de apoio (telas, estufa, porta, plataforma) entra em `accentLights.js`, que só existe na cena com o modo ligado. Por padrão liga só em GPU de verdade e fora de telas de toque, e se desliga sozinho se o FPS cair. Desligado, o jogo desenha direto na tela, como antes. Fragment shader escrito à mão precisa terminar com `#include <colorspace_fragment>` (ou com `SRGB_AUTHORED_OUTPUT`, de `src/graphics/srgbOutput.js`, se as cores foram escolhidas "como aparecem na tela"), senão fica claro demais com os shaders ligados. Mudança visual deve ser conferida nos dois modos.
+- **Draw calls:** o custo de um quadro é quase todo CPU dentro de `renderer.render`, proporcional ao número de `Mesh` desenhados (medido em 15/11/2026: ~8 µs por desenho). Modelo feito de muitas caixinhas não deve virar um `Mesh` por caixa: junte por material (`mergeByMaterial`, em `nasaModelsBuilder.js`) ou, se as peças se mexem, use instancing como `src/crew/crewInstances.js` (a tripulação inteira em 2 desenhos; `sync()` roda uma vez por quadro no loop do `GameEngine`). O painel F3 mostra os draw calls. No modo Shaders, peça com raio menor que `GRAPHICS_CONFIG.SHADOW_CASTER_MIN_RADIUS` não faz sombra; grupo com muitas peças pequenas pode ter uma caixa de sombra (`userData.shadowProxy`, ver `CrewAvatar`).
 - **Performance:** o loop roda a cada frame. Reaproveite `THREE.Vector3`/`Color` (veja os `_sunDir` e as cores constantes em `MarsSkySystem.js`) e evite alocar dentro do `update`.
 - **Créditos e referências:** todo asset, código ou dado externo usado precisa entrar na lista de *References* da submissão. Mantenha-a atualizada nos docs ou no README.

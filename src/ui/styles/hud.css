@@ -84,64 +84,6 @@
   75% { transform: translate(2px, -1px); }
 }
 
-/* Aviso da tempestade da borda. A poeira em si e 3D (src/sky/DustStormEffect.js): aqui so ha
-   uma faixa de texto e uma borda escura que muda por opacity, sem gradiente animado em tela cheia. */
-.dust-storm-warning {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  pointer-events: none;
-}
-
-.dust-storm-warning.hidden { display: none; }
-
-.dust-storm-vignette {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  background: radial-gradient(ellipse at center, rgba(150, 82, 38, 0) 35%, rgba(58, 26, 10, .85) 100%);
-  transition: opacity .4s linear;
-  will-change: opacity;
-}
-
-.dust-storm-banner {
-  position: absolute;
-  top: 12vh;
-  left: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  max-width: calc(100vw - 32px);
-  padding: 8px 16px 6px;
-  color: #ffd36e;
-  background: rgba(37, 20, 9, .72);
-  border: 3px solid #c9803f;
-  font-weight: 700;
-  line-height: 1.2;
-  text-align: center;
-  text-shadow: 2px 2px 0 #251409;
-  transform: translateX(-50%);
-}
-
-.dust-storm-banner strong { font-size: 22px; letter-spacing: 1px; }
-.dust-storm-banner span { font-size: 13px; color: #f5dcb0; }
-
-/* Perto da borda: so um lembrete, menor e mais calmo */
-.dust-storm-warning.near .dust-storm-banner { padding: 5px 12px 4px; border-color: #8a5a2e; }
-.dust-storm-warning.near .dust-storm-banner strong { font-size: 17px; }
-
-.dust-storm-warning.critical .dust-storm-banner {
-  color: #ff8e58;
-  border-color: #ff6a3a;
-  animation: dust-storm-pulse .8s steps(2, end) infinite alternate;
-}
-
-@keyframes dust-storm-pulse {
-  from { opacity: 1; }
-  to { opacity: .7; }
-}
-
 .danger-vignette {
   position: fixed;
   inset: 0;

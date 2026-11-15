@@ -52,13 +52,6 @@
       <i class="visor-corner tl"></i><i class="visor-corner tr"></i>
       <i class="visor-corner bl"></i><i class="visor-corner br"></i>
     </div>
-    <div id="dust-storm-warning" class="dust-storm-warning hidden" aria-live="polite">
-      <div class="dust-storm-vignette" aria-hidden="true"></div>
-      <div class="dust-storm-banner">
-        <strong>Edge of the safe zone</strong>
-        <span>Past the dust wall, home is hard to find</span>
-      </div>
-    </div>
     <!-- Textos antigos do canto superior esquerdo: escondidos via CSS, mas mantidos porque o
          GameEngine e o HudManager ainda escrevem neles -->
     <div id="astronaut-info" class="mc-top-info">
@@ -357,7 +350,10 @@
       <div class="mc-menu-card">
         <div id="menu-main">
           <button id="start-btn" class="mc-btn primary">Play</button>
-          <button id="controls-btn" class="mc-btn secondary">Controls</button>
+          <div class="menu-row">
+            <button id="controls-btn" class="mc-btn secondary">Controls</button>
+            <button id="shaders-btn" class="mc-btn secondary" aria-pressed="false" title="Real-time sun shadows, glow and light rays. Turn off if the game feels slow.">Shaders: Off</button>
+          </div>
           <button id="reset-btn" class="mc-btn secondary">Quit</button>
           <div class="menu-row">
             <button id="sources-btn" class="mc-btn secondary">NASA Data</button>
@@ -494,18 +490,19 @@
     <section class="station-window journal-window" aria-label="Discovery Journal">
       <header>
         <span id="journal-title">SPACE JOURNAL</span>
+        <div class="journal-head-pills">
+          <div class="gh-res-pill water" title="Discovered">
+            <strong id="journal-progress">0 / 24</strong>
+          </div>
+          <div class="gh-res-pill power" title="Astronaut Rank">
+            <strong id="journal-rank">CADET</strong>
+          </div>
+        </div>
         <button id="journal-done" type="button" aria-label="Close journal">X</button>
       </header>
       <div class="station-screen journal-screen">
         <div class="gh-monitor journal-monitor">
-          <div class="gh-top-bar journal-top-bar">
-            <div class="gh-res-pill water" title="Discovered">
-              <strong id="journal-progress">0 / 23</strong>
-            </div>
-            <div class="gh-res-pill power" title="Astronaut Rank">
-              <strong id="journal-rank">CADET</strong>
-            </div>
-          </div>
+          <div class="gh-top-bar journal-top-bar"></div>
           <div id="journal-body" class="journal-body"></div>
         </div>
       </div>

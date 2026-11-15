@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { pointAlong } from './crewRails.js';
 import { buildSpacesuitRig } from '../graphics/spacesuitModel.js';
+import { CrewInstances } from './crewInstances.js';
 
 const FLOOR_Y = 10; // topo do piso da base (nasaModelsBuilder: floorTopY)
 const HALF_PI = Math.PI / 2;
@@ -88,7 +89,7 @@ export class CrewAvatar {
   constructor(scene, member, accentColor) {
     this.member = member;
     this.group = new THREE.Group();
-    const rig = buildSpacesuitRig({ accentColor, suitColor: SUIT_COLOR.clone() });
+    const rig = buildSpacesuitRig({ accentColor, suitColor: SUIT_COLOR.clone(), instanced: true });
     this.bodyGroup = rig.bodyGroup;
     this.suitMat = rig.suitMat;
     this.statusLightMat = rig.statusLightMat;
@@ -108,7 +109,23 @@ export class CrewAvatar {
     this.label.position.y = 2.08;
     this.group.add(this.label);
 
+    // Sombra do modo Shaders: uma caixa do tamanho do corpo faz a sombra no lugar das dezenas de
+    // pecas do traje. Nao aparece na imagem (so escreve no mapa de sombra) e fica desligada
+    // enquanto o modo Shaders estiver desligado (ShaderMode cuida disso).
+    const shadowProxy = new THREE.Mesh(
+      new THREE.BoxGeometry(0.62, 1.78, 0.44),
+      new THREE.MeshLambertMaterial({ colorWrite: false, depthWrite: false })
+    );
+    shadowProxy.position.y = 0.92;
+    shadowProxy.visible = false;
+    shadowProxy.userData.shadowProxy = true;
+    this.group.userData.hasShadowProxy = true;
+    this.group.add(shadowProxy);
+
     scene.add(this.group);
+    this._instances = CrewInstances.for(scene);
+    this._suit = { group: this.group, parts: rig.parts };
+    this._instances.add(this._suit);
     this._time = (member.id * 1.37) % 10;
     this._walkPhase = (member.id * 1.9) % (Math.PI * 2);
     this._tempo = 0.94 + (member.id % 3) * 0.05;
@@ -307,6 +324,7 @@ export class CrewAvatar {
   }
 
   dispose() {
+    this._instances.remove(this._suit);
     this.group.removeFromParent();
     const materials = new Set();
     this.group.traverse((obj) => {

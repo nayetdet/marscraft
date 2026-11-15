@@ -1,7 +1,6 @@
 import { BLOCK_IDS, HOTBAR_BLOCKS, ITEM_DEFINITIONS } from '../config/blockTypes.js';
 import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { isInsidePressurizedVolume } from '../world/habitatLayout.js';
-import { dustStormIntensity, dustStormProximity } from '../world/dustStormZone.js';
 
 export class SurvivalSystem {
   constructor() {
@@ -33,8 +32,6 @@ export class SurvivalSystem {
     this.damageFeedbackDetail = null;
     this.damageFeedbackTime = 0;
     this.insidePressurizedShip = false;
-    this.dustStormIntensity = 0;
-    this.dustStormProximity = 0;
 
     // Sistema de Água Potável e Irrigação da Base
     this.baseWater = WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER;
@@ -118,8 +115,6 @@ export class SurvivalSystem {
       this.baseOxygen += recovered;
       this.lastOxygenRefilled = recovered * this.maxStat / 100;
     }
-    this.dustStormIntensity = this.insidePressurizedShip ? 0 : dustStormIntensity(playerPos.x, playerPos.z);
-    this.dustStormProximity = this.insidePressurizedShip ? 0 : dustStormProximity(playerPos.x, playerPos.z);
 
     const pointsPerPct = this.maxStat / 100;
     if ((!this.suitEquipped || this.insidePressurizedShip) && !baseBreached) {
@@ -152,15 +147,13 @@ export class SurvivalSystem {
       if (this.suitEquipped) {
         if (!this.insidePressurizedShip) {
           const dustRate = SURVIVAL_CONFIG.SUIT_DUST_ACCUM_PER_SECOND
-            * (isMoving ? SURVIVAL_CONFIG.SUIT_DUST_MOVE_MULTIPLIER : 1)
-            + this.dustStormIntensity * SURVIVAL_CONFIG.SUIT_DUST_STORM_ACCUM_PER_SECOND;
+            * (isMoving ? SURVIVAL_CONFIG.SUIT_DUST_MOVE_MULTIPLIER : 1);
           this.suitDust = Math.min(100, this.suitDust + dustRate * dt);
 
           this.suitScrubber = Math.max(0, this.suitScrubber - SURVIVAL_CONFIG.SUIT_SCRUBBER_DRAIN_PER_SECOND * dt);
 
           const dustWearFactor = 1 + (this.suitDust / 100) * (SURVIVAL_CONFIG.SUIT_WEAR_DUST_MULTIPLIER - 1);
-          const stormWear = this.dustStormIntensity * SURVIVAL_CONFIG.SUIT_WEAR_STORM_PER_SECOND;
-          const wearRate = SURVIVAL_CONFIG.SUIT_WEAR_PER_SECOND * dustWearFactor + stormWear;
+          const wearRate = SURVIVAL_CONFIG.SUIT_WEAR_PER_SECOND * dustWearFactor;
           this.suitIntegrity = Math.max(0, this.suitIntegrity - wearRate * dt);
         }
 
