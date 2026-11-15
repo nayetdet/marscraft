@@ -3,6 +3,7 @@ import { GREENHOUSE_CENTER, PLOT_PLANT_CELLS } from '../world/greenhouseLayout.j
 import { greenhouseMapSvg, plotMapLabel, plotStatus } from './greenhouseMap.js';
 import { COMMS_CONFIG, CROP_CONFIG, ENERGY_CONFIG, RADIATION_CONFIG, SLEEP_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
+import { doseHistoryText } from '../mission/doseBudget.js';
 import { bulletinText, donkiLabel, formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
 import plantResearch from '../data/osdrPlants.json';
@@ -11,6 +12,7 @@ import { createCropTexture } from '../graphics/cropTextures.js';
 import { GymWorkout } from './gymWorkout.js';
 import { growthChecks } from '../base/greenhouseCare.js';
 import { MEDBAY_BONE_TEXT } from './stationText.js';
+import { OXYGEN_SOURCES, oxygenPlantButtons, oxygenPlantText } from '../mission/oxygenText.js';
 
 const DATA_SOURCES = {
   donki: 'https://ccmc.gsfc.nasa.gov/tools/DONKI/',
@@ -762,6 +764,12 @@ export class StationPanel {
     if (action === 'filter') return stations.replaceFilter();
     const { utility } = this.engine;
     if (action.startsWith('toggle:')) return utility.toggle(action.slice(7));
+    if (action.startsWith('o2mode:')) return this.engine.mission.oxygenPlant.setMode(action.slice(7));
+    if (action === 'buildSabatier') {
+      const msg = this.engine.mission.oxygenPlant.buildSabatier({ battery: this.engine.mission.battery, inventory: survival });
+      hud.renderHotbar(survival.slots);
+      return msg;
+    }
     if (action === 'eatRation') return utility.eatRation();
     if (action === 'cookMeal') { const msg = utility.cookMeal(); hud.renderHotbar(survival.slots); return msg; }
     if (action === 'washUp') return utility.washUp();
@@ -864,6 +872,7 @@ export class StationPanel {
       `USING ABOUT: -${used.toFixed(1)}%/h (plus your own oxygen)\n` +
       `${utility.demandFactor < 1 ? `EASY START: the base uses ${Math.round(utility.demandFactor * 100)}% of its normal power for now. It will need more each sol.\n` : ''}\n` +
       `WHERE THE POWER GOES:\n${lines.join('\n')}\n\n` +
+      `OXYGEN MACHINE: ${mission.oxygenPlant.info.label.toUpperCase()}${mission.oxygenPlant.usesWater ? ' (uses water, less power)' : ' (no water, more power)'}. Change it in Life Support.\n` +
       `HEATER: ${utility.heaterOn ? 'ON' : 'OFF'}${utility.cold ? '   FREEZING! Pipes and plants stopped.' : ''}\n\n` +
       'Mars nights get down to about -98 C (NASA InSight). At night the panels make nothing and the heater needs more power. ' +
       'Turning systems off saves power, but each one stops doing its job.\n' +
@@ -1120,12 +1129,12 @@ export class StationPanel {
 
     const pages = {
       console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nFILTER: ${Math.round(s.filter)}%   SCIENCE POINTS: ${s.science}\n\n${radiationStatusText(mission)}\n\n${stormStatusText(mission.storm, this.engine.spaceWeather, mission.noStormData)}\n\n${this.engine.spaceWeather.live ? `Storm data: ${donkiLabel(this.engine.spaceWeather)}.` : 'The NASA data is saved inside the game, it is not live.'} Storm length and damage are game rules.`, [['mission', 'Show mission objective'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
-      power: ['LIFE SUPPORT / ECLSS', `BATTERY: ${Math.round(m.energy)}%\nCO2 FILTER: ${Math.round(s.filter)}%\nCO2: ${Math.round(s.co2)}%\n\nThe oxygen system and greenhouse need power. A worn filter lets CO2 build up.`, [['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
+      power: ['LIFE SUPPORT / ECLSS', `BATTERY: ${Math.round(m.energy)}%   BASE WATER TANK: ${v.baseWater.toFixed(1)} L\nCO2 FILTER: ${Math.round(s.filter)}%\nCO2: ${Math.round(s.co2)}%\n\n${oxygenPlantText(mission.oxygenPlant)}\n\nThe oxygen system and greenhouse need power. A worn filter lets CO2 build up.`, [...oxygenPlantButtons(mission.oxygenPlant), ['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
       greenhouse: ['MARS GARDEN / FIELD NOTEBOOK', this.gardenText(s, m, v), [
         ...Object.entries(CROP_CONFIG).map(([type, r]) => ['plant:' + type, type.toUpperCase() + ' | ' + s.plotCost(type).water + ' L water / ' + s.plotCost(type).energy + '% power / ' + r.seconds + 's / +' + r.nutrition + ' food']),
         ['harvest', 'Harvest & discover NASA research'], ['cleanBase', 'Clean habitat'],
       ]],
-      medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\nRADIATION DOSE SO FAR: ${formatDose(mission.totalDoseMsv)}\n\n${MEDBAY_BONE_TEXT}`, [['treat', 'Use medical station']]],
+      medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\n${doseHistoryText(mission.doseBreakdown)}\n\n${MEDBAY_BONE_TEXT}`, [['treat', 'Use medical station']]],
       science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   SAMPLES: ${s.samples}\n\n${this._radioText(s)}`, [['analyze', 'Analyze regolith'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
       mav: ['MAV DATA TERMINAL', `ANALYZED SAMPLES: ${s.analyzedSamples}/${C.MAV_REQUIRED_SAMPLES}\nPACKAGE: ${s.mavSent ? 'RECEIVED' : s.message}\n\nAnalyze samples at the science station, then send the package from the MAV.`, [['sendMav', 'Send MAV science package']]],
       powerroom: ['POWER & HEAT ROOM', this._powerText(), this._powerButtons()],
@@ -1140,6 +1149,8 @@ export class StationPanel {
     this.content.textContent = text;
     const links = this.type === 'console'
       ? [['NASA DONKI: space weather events', DATA_SOURCES.donki], ['NASA RadLab: radiation data', DATA_SOURCES.radlab]]
+      : this.type === 'power'
+        ? [['NASA: Oxygen Generation Assembly (ISS)', OXYGEN_SOURCES.oga], ['NASA ICES 2024: Sabatier and oxygen recovery', OXYGEN_SOURCES.sabatier], ['NASA: MOXIE made oxygen on Mars', OXYGEN_SOURCES.moxie]]
       : this.type === 'shelter'
         ? [['PREDICCS: water shielding (UNH, MSL/RAD data)', SHELTER_SOURCES.prediccs], ['NASA: storm shelters and water walls', SHELTER_SOURCES.nasa]]
         : this.type === 'bunk'

@@ -47,7 +47,8 @@ index.html                 HUD, menus e tela de morte (markup + ids usados pelo 
 src/main.js                bootstrap → new GameEngine(container).start()
 src/core/GameEngine.js     loop principal; instancia e conecta todos os sistemas
 src/mission/               missao: bateria e paineis (energy), tempestades solares do DONKI (solarStorms), radiacao,
-                           radio Terra-Marte (commsLink, earthMars), MAV e textos (MissionSystem, missionText)
+                           radio Terra-Marte (commsLink, earthMars), MAV e textos (MissionSystem, missionText),
+                           gerador de O2 eletrolise x MOXIE (oxygenPlant, oxygenText)
 src/config/
   constants.js             WORLD/PHYSICS/CAMERA/SURVIVAL_CONFIG (todo número de balanceamento mora aqui)
   blockTypes.js            BLOCK_IDS e HOTBAR_BLOCKS (inventário inicial, consumíveis)

@@ -60,6 +60,13 @@ export function commandModel(s) {
   };
 }
 
+// Gerador de O2 (issue #102): modo escolhido e o que falta para ele trabalhar
+function oxygenRow(s) {
+  if (s.batteryPct <= 0 || s.oxygenBlocked === 'power') return { label: 'O2 MAKER', value: 'NO POWER', tone: 'alert' };
+  if (s.oxygenBlocked === 'water') return { label: 'O2 MAKER', value: 'NO WATER', tone: 'alert' };
+  return { label: 'O2 MAKER', value: s.oxygenMode === 'moxie' ? 'FROM MARS AIR' : 'FROM WATER', tone: 'ok' };
+}
+
 export function powerModel(s) {
   let fuel = 'OFF';
   if (s.factoryOn) fuel = s.factoryBusy ? 'MAKING FUEL' : 'WAITING FOR ICE';
@@ -68,7 +75,7 @@ export function powerModel(s) {
     rows: [
       { label: 'SUN IN', value: s.chargeRate > 0 ? `+${s.chargeRate.toFixed(0)}%/h` : 'NIGHT: 0', tone: s.chargeRate > 0 ? 'ok' : 'warn' },
       { label: 'BATTERY', value: `${Math.round(s.batteryPct)}%`, bar: s.batteryPct / 100, tone: s.batteryPct <= 20 ? 'alert' : 'ok' },
-      { label: 'O2 MAKER', value: s.batteryPct > 0 ? 'READY' : 'NO POWER', tone: s.batteryPct > 0 ? 'ok' : 'alert' },
+      oxygenRow(s),
       { label: 'SHIELD', value: s.shieldOn ? 'ON' : 'OFF', tone: s.shieldOn ? 'warn' : 'ok' },
       { label: 'FUEL PLANT', value: fuel, tone: s.factoryBusy ? 'warn' : 'ok' },
       { label: 'GREENHOUSE', value: s.greenhousePowered ? 'LIGHTS ON' : 'NO POWER', tone: s.greenhousePowered ? 'ok' : 'alert' },

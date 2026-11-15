@@ -1,15 +1,16 @@
 import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS, GREENHOUSE_BASKETS } from '../world/greenhouseLayout.js';
 import { createCropPlantModel } from '../graphics/cropModels.js';
 import * as THREE from 'three';
-import { CAMERA_CONFIG, CROP_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG } from '../config/constants.js';
+import { CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 import { separateCrew } from '../crew/separateCrew.js';
 import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
 import { createBaseStock } from '../crew/baseStock.js';
-import { createStations } from '../crew/stations.js';
+import { createStations, problemText } from '../crew/stations.js';
 import { EMBEDDED_SPACE_WEATHER } from '../data/spaceWeather.js';
 import { MissionSystem, oxygenPointsToKg } from '../mission/MissionSystem.js';
 import { NO_STORM_DATA_TEXT, donkiCredit, donkiLabel, formatDateDMY, formatDose, formatHours, stormEventMessage } from '../mission/missionText.js';
+import { doseEventMessage, doseVictoryRows, evaBlockMessage, roverMavBlocks } from '../mission/doseBudget.js';
 import { MissionHud } from '../ui/MissionHud.js';
 import { missionReport } from '../mission/missionReport.js';
 import { renderReportCard } from '../ui/ReportCard.js';
@@ -39,6 +40,7 @@ import { AdminPanel } from '../ui/AdminPanel.js';
 import { UtilityModule } from './UtilityModule.js';
 import { CommsLink } from '../mission/commsLink.js';
 import { passiveDemandFactor } from '../mission/pacing.js';
+import { oxygenModeWarning } from '../mission/oxygenPlant.js';
 import { AudioManager } from '../audio/AudioManager.js';
 import { getCategoryLabel } from '../data/scanCatalog.js';
 import { ScanJournal } from '../scanner/scanJournal.js';
@@ -162,6 +164,8 @@ export class GameEngine {
     this.stations.plots[1].crop = { type: 'lettuce', progress: CROP_CONFIG.lettuce.seconds / 2 };
     this.airlock.stations = this.stations;
     this.airlock.onEvent = (type) => this._onAirlockEvent(type);
+    // Dose acima do limite (issue #104): a medica de voo segura o comandante dentro da base
+    this.airlock.exitBlock = () => evaBlockMessage({ grounded: this.mission.grounded, mavReady: this.mission.progress.ready });
     this.stationPanel = new StationPanel(this);
     this.sleepSystem = new SleepSystem(this);
     this.adminPanel = new AdminPanel(this); // F8 no dev ou ?admin: testes (tempestade, agua, teleporte)
@@ -744,8 +748,10 @@ export class GameEngine {
 
   // Sobrevivencia com o O2 do habitat pago pela bateria
   _updateSurvival(dt) {
-    this.survival.update(dt, this.player.pos, this.mission.oxygenRefillBudget(), this.world.brokenBaseWindows.size > 0);
-    this.mission.chargeOxygen(this.survival.lastOxygenRefilled);
+    // Gerador de O2 (issue #102): na eletrolise o ar tambem gasta agua do tanque da base
+    this.survival.update(dt, this.player.pos, this.mission.oxygenRefillBudget(this.crewStock), this.world.brokenBaseWindows.size > 0);
+    this.survival.oxygenShortage = this.mission.oxygenPlant.limitedBy;
+    this.mission.chargeOxygen(this.survival.lastOxygenRefilled, this.crewStock);
   }
 
   _refreshMavPanel() {
@@ -807,7 +813,7 @@ export class GameEngine {
     const m = this.mission;
     const rows = [
       ['Sols on Mars (1 sol = 1 Mars day)', String(this.sky.solCount)],
-      ['Radiation dose you got', `${formatDose(m.totalDoseMsv)} (NASA career limit: ${RADIATION_CONFIG.CAREER_LIMIT_MSV} mSv)`],
+      ...doseVictoryRows(m.doseBreakdown),
       ['Solar storms survived', String(m.stormsSurvived)],
       ['Oxygen made by the base', `${oxygenPointsToKg(m.oxygenProducedPoints).toFixed(2)} kg`],
       ['Ice turned into rocket fuel', `${m.iceDelivered} blocks`],
@@ -817,6 +823,7 @@ export class GameEngine {
     const sources = `Solar storms: real CMEs that NASA predicted would reach Mars, from NASA DONKI (${donkiLabel(this.spaceWeather)}). ` +
       (this.spaceWeather.seps.length ? 'Fast particle alerts: real SEPs (bursts of super fast particles from the Sun) from NASA DONKI; their strength is a game rule. ' : '') +
       'Radiation: Curiosity RAD on the Mars surface (NASA RadLab); how strong each storm is in the game is a game rule, never above the biggest storm Curiosity measured. ' +
+      'Trip dose: Curiosity RAD inside its spacecraft on the way to Mars, 1.8 mSv per day (Zeitlin et al., Science, 2013), for a 203-day trip like Mars 2020. ' +
       'Sunlight on Mars: 43% of Earth (NASA Mars Fact Sheet). ' +
       'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station. ' +
       'Storm shelter water wall: PREDICCS shielding model (University of New Hampshire, Curiosity RAD data) and NASA storm shelter studies. ' +
@@ -837,7 +844,7 @@ export class GameEngine {
       deaths: this.deathCount,
       stormHours: m.stormHours,
       protectedStormHours: m.protectedStormHours,
-      totalDoseMsv: m.totalDoseMsv,
+      totalDoseMsv: m.realDoseMsv,
       boneDensity: s.boneDensity,
       muscleStrength: s.muscleStrength,
       workoutCount: s.workoutCount,
@@ -858,6 +865,7 @@ export class GameEngine {
       insideShield: isInsideShieldZone(this.player.pos),
       insideShelter: this.survival.insidePressurizedShip && isInsideShelter(this.player.pos.x, this.player.pos.z),
       active,
+      suitUpgraded: this.stations.upgraded,
     });
     if (active) this.survival.takeDamage(
       damage * (this.stations.upgraded && !this.survival.insidePressurizedShip ? STATION_CONFIG.SUIT_RADIATION_DAMAGE_FACTOR : 1),
@@ -874,8 +882,8 @@ export class GameEngine {
     this._wasDead = this.survival.isDead;
 
     for (const event of this.mission.drainEvents()) {
-      const message = stormEventMessage(event, this.spaceWeather);
-      if (message) this.hud.showToast(message, event.type === 'storm-warning' ? 8000 : 4500);
+      const message = stormEventMessage(event, this.spaceWeather) || doseEventMessage(event.type);
+      if (message) this.hud.showToast(message, event.type === 'storm-warning' || event.type.startsWith('dose-') ? 8000 : 4500);
     }
 
     this.missionHud.update(this.mission, { survival: this.survival, stations: this.stations, world: this.world });
@@ -932,6 +940,8 @@ export class GameEngine {
       shieldOn: m.shieldOn,
       factoryOn: m.factoryOn,
       factoryBusy: m.factoryOn && m.iceStock > 0 && m.propellant < 100,
+      oxygenMode: m.oxygenPlant.mode,
+      oxygenBlocked: m.oxygenPlant.limitedBy,
       greenhousePowered: this.expedition.greenhousePowered,
       dusty: this.stations.contaminated,
       storm: {
@@ -1279,6 +1289,7 @@ export class GameEngine {
       && !this.cutscenes.isActive && !this.storyHud.isWindowClosedShown;
 
     if (active) this.crew.updateMovement(dt);
+    if (active) this._warnOxygenMode(dt);
 
     this.mission.oxygenCostMultiplier = 1;
     // Numa animacao quem posiciona a tripulacao e a propria animacao (o embarque no foguete)
@@ -1300,6 +1311,21 @@ export class GameEngine {
     }
   }
 
+  // Issue #102: quem cuida do gerador de O2 avisa quando o modo escolhido gasta o recurso que
+  // esta acabando (agua com eletrolise, bateria com MOXIE). Mesmo intervalo dos avisos da tripulacao.
+  _warnOxygenMode(dt) {
+    this._oxygenWarnTimer = (this._oxygenWarnTimer ?? CREW_CONFIG.ALERT_COOLDOWN_S) + dt;
+    if (this._oxygenWarnTimer < CREW_CONFIG.ALERT_COOLDOWN_S) return;
+    const problem = oxygenModeWarning(this.mission.oxygenPlant, {
+      water: this.survival.baseWater, batteryPct: this.mission.battery.percent,
+    });
+    const station = this.crew.stationFor('oxygen');
+    if (!problem || !station) return;
+    this._oxygenWarnTimer = 0;
+    const speaker = this.crew.members.find((m) => m.task === 'oxygen') ?? this.crew.members[0];
+    this.hud.showToast(`${speaker.name}: ${problemText(station, problem)}`, 6000);
+  }
+
   _onResize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
@@ -1308,6 +1334,7 @@ export class GameEngine {
 
   handleRoverAction() {
     if (!this.roverController.isActive) return;
+    if (this._roverFuelsMav()) return;
 
     if (this.roverController.canUnloadIce()) {
       const res = this.roverController.unloadIce();
@@ -1328,6 +1355,27 @@ export class GameEngine {
         this.hud.showToast(res.reason);
       }
     }
+  }
+
+  // Comandante acima do limite de dose (issue #104): parado na plataforma do MAV, o rover
+  // descarrega o gelo direto no tanque do foguete, para a missao continuar sem saidas a pe.
+  _roverFuelsMav() {
+    const rover = this.roverController;
+    if (!this.mission.grounded || rover.iceCargo <= 0) return false;
+    const { x, z } = MAV_CONFIG.PAD_POSITION;
+    if (Math.hypot(rover.pos.x - x, rover.pos.z - z) > DOSE_CONFIG.ROVER_MAV_REACH) return false;
+    const blocks = roverMavBlocks(rover.iceCargo, this.mission.iceNeeded());
+    if (blocks <= 0) {
+      this.hud.showToast(this.mission.iceNeeded() > 0
+        ? `The rocket takes ice in loads of ${DOSE_CONFIG.ROVER_ICE_KG_PER_MAV_BLOCK} kg. Drill more first.`
+        : 'The rocket does not need more ice.');
+      return true;
+    }
+    const accepted = this.mission.deliverIce(blocks);
+    rover.iceCargo -= accepted * DOSE_CONFIG.ROVER_ICE_KG_PER_MAV_BLOCK;
+    this._playGymTone(520, 0.14, 380);
+    this.hud.showToast(`Rover loaded ${accepted} ice into the rocket. No walk outside needed!`);
+    return true;
   }
 
   _checkAstronautInteractions() {

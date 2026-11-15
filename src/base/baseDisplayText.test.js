@@ -49,6 +49,13 @@ describe('base display text', () => {
     expect(night.mode).toBe('alert');
   });
 
+  it('power map shows the oxygen machine mode and an empty tank (issue #102)', () => {
+    const o2 = (overrides) => powerModel(state(overrides)).rows.find((r) => r.label === 'O2 MAKER');
+    expect(o2({ oxygenMode: 'electrolysis' }).value).toBe('FROM WATER');
+    expect(o2({ oxygenMode: 'moxie' }).value).toBe('FROM MARS AIR');
+    expect(o2({ oxygenMode: 'electrolysis', oxygenBlocked: 'water' })).toMatchObject({ value: 'NO WATER', tone: 'alert' });
+  });
+
   it('shelter meter tells the player where to stand during a storm', () => {
     const storm = { phase: 'active', hoursUntil: 0, hoursLeft: 2, speedKmS: 900, date: '05/11/2026' };
     expect(shelterModel(state({ storm })).rows.at(-1).value).toBe('STAND HERE!');

@@ -222,3 +222,26 @@ it('clips sliding leaves to the opening while leaving the frame intact', () => {
     }
   }
 });
+
+it('a grounded commander cannot open the outer door from inside, but can always come back in (issue #104)', () => {
+  const airlock = new Airlock(new THREE.Scene(), [], new ExpeditionState());
+  const [, outer] = airlock.doors;
+  let grounded = 'Flight doctor: no more walks outside!';
+  airlock.exitBlock = () => grounded;
+  expect(airlock.request(outer, inChamber)).toBe(grounded);
+  expect(airlock.pending).toBe(null);
+  run(airlock, inChamber, C.AIRLOCK_CYCLE + 1);
+  expect(outer.openness).toBe(0);
+
+  // Quem ja esta la fora sempre consegue entrar
+  expect(airlock.request(outer, outside)).not.toBe(grounded);
+  expect(airlock.pending).toBe(outer);
+
+  // Liberado (por exemplo, a caminhada final ate o foguete pronto): a porta volta a abrir
+  grounded = null;
+  const free = new Airlock(new THREE.Scene(), [], new ExpeditionState());
+  free.exitBlock = () => grounded;
+  free.request(free.doors[1], inChamber);
+  run(free, inChamber, C.AIRLOCK_CYCLE + 1);
+  expect(free.doors[1].openness).toBe(1);
+});

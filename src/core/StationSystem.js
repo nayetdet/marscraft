@@ -241,6 +241,6 @@ export class StationSystem {
     if (this.science < C.UPGRADE_COST) return 'Not enough science points.';
     this.science -= C.UPGRADE_COST;
     this.upgraded = true;
-    return 'Suit upgrade installed: outdoor radiation is reduced.';
+    return 'Suit upgrade installed: outside, less radiation hurts you and less dose adds up.';
   }
 }

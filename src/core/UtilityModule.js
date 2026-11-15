@@ -1,5 +1,6 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { CREW_CONFIG, ENERGY_CONFIG, MISSION_CONFIG, STATION_CONFIG, UTILITY_CONFIG as U } from '../config/constants.js';
+import { OXYGEN_MODE_INFO } from '../mission/oxygenPlant.js';
 
 // Regras do modulo norte (issue #56, parte B). Sem DOM nem Three.js, para testar com Vitest.
 // Nenhuma acao e de graca: tudo cobra energia, agua, comida da despensa ou regolito.
@@ -83,8 +84,10 @@ export class UtilityModule {
     const m = this.mission;
     const factoryRunning = m.factoryOn && m.iceStock > 0 && m.propellant < 100;
     const f = this.demandFactor; // o painel mostra o que a base gasta de verdade agora
+    // Modo do gerador de O2 (issue #102): o MOXIE gasta mais energia por tripulante
+    const air = OXYGEN_MODE_INFO[m.oxygenPlant?.mode ?? 'electrolysis'];
     return [
-      ['Crew oxygen', crewSize * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR * f, true],
+      [air.powerLabel, crewSize * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR * air.energyFactor * f, true],
       ['Crew at work', operatingStations * STATION_CONFIG.WORK_ENERGY_PER_HOUR * f, true],
       ['Greenhouse lights', U.GREENHOUSE_LIGHTS_PER_HOUR * f, this.greenhouseLightsOn],
       ['Heater', this.heaterRatePerHour, this.heaterOn],

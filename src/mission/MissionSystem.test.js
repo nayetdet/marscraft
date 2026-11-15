@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { MissionSystem, mavProgress, oxygenPointsToKg } from './MissionSystem.js';
-import { ENERGY_CONFIG, MAV_CONFIG, MISSION_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.js';
+import { DOSE_CONFIG, ENERGY_CONFIG, MAV_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.js';
+import { TRANSIT_DOSE_MSV } from './doseBudget.js';
 
 // CME com impacto direto previsto em Marte 3 dias depois (3 horas de jogo de aviso)
 const cmes = [{
@@ -166,7 +167,7 @@ describe('MissionSystem storms', () => {
     const storm = mission.schedule[0];
     const damage = mission.update(storm.end - 0.1, { active: false });
     expect(damage).toBe(0);
-    expect(mission.totalDoseMsv).toBe(0);
+    expect(mission.totalDoseMsv).toBe(TRANSIT_DOSE_MSV);
     mission.update(storm.end + 0.1, { active: false });
     expect(mission.stormsSurvived).toBe(0);
     expect(mission.drainEvents().map((e) => e.type)).toContain('storm-missed');
@@ -288,5 +289,180 @@ describe('MissionSystem with live SEPs (issue #100)', () => {
     mission.startStorms(12);
     expect(mission.schedule.some((s) => s.sep === seps[0])).toBe(true);
     expect(createMission().schedule.some((s) => s.sep)).toBe(false);
+  });
+});
+
+// Issue #104: dose acumulada como orcamento da missao
+describe('MissionSystem dose budget', () => {
+  // Sem tempestades na fila: so a dose normal de Marte
+  const calmMission = (startHours = 12) => new MissionSystem({ cmes, startHours, stormsStarted: false });
+
+  it('starts with the real trip dose: 203 days x 1.8 mSv = ~365 of 600 mSv', () => {
+    const mission = calmMission();
+    expect(TRANSIT_DOSE_MSV).toBeCloseTo(365.4, 1);
+    expect(mission.totalDoseMsv).toBeCloseTo(365.4, 1);
+    expect(mission.doseBreakdown.fraction).toBeCloseTo(0.609, 3);
+    expect(mission.grounded).toBe(false);
+  });
+
+  it('a long walk outside on a calm day fills the bar visibly, more than staying inside', () => {
+    const outside = calmMission();
+    outside.update(18); // 6 horas de jogo = 10 minutos reais
+    const evaDose = outside.doseBreakdown.eva;
+    expect(evaDose / RADIATION_CONFIG.CAREER_LIMIT_MSV).toBeGreaterThan(0.03);
+
+    const inside = calmMission();
+    inside.update(18, { insideHabitat: true });
+    expect(inside.doseBreakdown.habitat).toBeGreaterThan(0);
+    expect(inside.doseBreakdown.habitat).toBeCloseTo(evaDose * RADIATION_CONFIG.HABITAT_FACTOR, 6);
+  });
+
+  it('the dose never goes down, whatever the player does', () => {
+    const mission = createMission(0);
+    let last = mission.totalDoseMsv;
+    const places = [{}, { insideHabitat: true }, { insideHabitat: true, insideShelter: true }, { active: false }];
+    for (let h = 0.5; h < 30; h += 0.5) {
+      mission.update(h, places[Math.floor(h * 2) % places.length]);
+      expect(mission.totalDoseMsv).toBeGreaterThanOrEqual(last);
+      last = mission.totalDoseMsv;
+    }
+    const b = mission.doseBreakdown;
+    expect(b.transit + b.eva + b.storm + b.habitat).toBeCloseTo(mission.totalDoseMsv, 6);
+    expect(b.storm).toBeGreaterThan(0);
+  });
+
+  it('the water wall shelter cuts the storm dose that adds up', () => {
+    const stormDose = (wallL) => {
+      const mission = createMission(0);
+      mission.shelterWaterL = wallL;
+      const storm = mission.schedule[0];
+      mission.update(storm.arrival, { insideHabitat: true, insideShelter: true });
+      const before = mission.doseBreakdown.storm;
+      mission.update(storm.end - 0.01, { insideHabitat: true, insideShelter: true });
+      return mission.doseBreakdown.storm - before;
+    };
+    const empty = stormDose(0);
+    const full = stormDose(RADIATION_CONFIG.SHELTER_WALL_MAX_L);
+    expect(empty).toBeGreaterThan(0);
+    expect(full).toBeCloseTo(empty * 0.17, 3);
+  });
+
+  it('the suit upgrade cuts the dose that adds up outside', () => {
+    const plain = calmMission();
+    plain.update(16);
+    const upgraded = calmMission();
+    upgraded.update(16, { suitUpgraded: true });
+    expect(upgraded.doseBreakdown.eva).toBeCloseTo(plain.doseBreakdown.eva * DOSE_CONFIG.SUIT_FACTOR, 6);
+  });
+
+  it('passing the limit grounds the commander, warns once, and the mission can still be won', () => {
+    const mission = calmMission();
+    mission.addDose(RADIATION_CONFIG.CAREER_LIMIT_MSV * DOSE_CONFIG.WARN_FRACTION - mission.totalDoseMsv + 0.1);
+    expect(mission.drainEvents().map((e) => e.type)).toEqual(['dose-warning']);
+    mission.addDose(RADIATION_CONFIG.CAREER_LIMIT_MSV);
+    mission.addDose(10);
+    expect(mission.drainEvents().map((e) => e.type)).toEqual(['dose-limit']);
+    expect(mission.grounded).toBe(true);
+    expect(mission.doseBreakdown.grounded).toBe(true);
+
+    // Nao e game over: o rover entrega o gelo, a fabrica enche o tanque e o foguete decola
+    mission.battery.charge = 100;
+    mission.deliverIce(MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK);
+    let hours = 12;
+    while (mission.propellant < 100 && hours < 60) {
+      hours += 1;
+      mission.battery.charge = 100;
+      mission.update(hours, { insideHabitat: true });
+    }
+    expect(mission.propellant).toBe(100);
+    mission.stormsSurvived = MAV_CONFIG.STORMS_TO_SURVIVE;
+    mission.battery.charge = 100;
+    expect(mission.sendData()).toBe('sent');
+    expect(mission.ignite()).toBe(true);
+  });
+
+  it('admin reset goes back to the trip dose only', () => {
+    const mission = calmMission();
+    mission.update(20);
+    mission.resetDose();
+    expect(mission.totalDoseMsv).toBe(TRANSIT_DOSE_MSV);
+    expect(mission.doseBreakdown.eva).toBe(0);
+  });
+});
+
+// Issue #102: o gerador de O2 do habitat tem dois modos com custos opostos
+describe('MissionSystem oxygen modes (issue #102)', () => {
+  // Recarrega `points` de O2 em passos pequenos, como o motor faz a cada frame
+  function breathe(mission, tank, points) {
+    let delivered = 0;
+    while (delivered < points - 1e-9) {
+      const give = Math.min(0.5, points - delivered, mission.oxygenRefillBudget(tank));
+      if (give <= 1e-9) break;
+      mission.chargeOxygen(give, tank);
+      delivered += give;
+    }
+    return delivered;
+  }
+
+  const pointsPerSol = (24 / MISSION_CONFIG.GAME_HOURS_PER_SECOND) * SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE; // pontos de O2 por sol
+
+  it('electrolysis drains the base tank at the real ratio while oxygen refills', () => {
+    const mission = createMission(12);
+    mission.battery.charge = 100;
+    const tank = { water: 20 };
+    // 0,84 kg de O2 (um sol de ar) pedem 0,945 L de agua
+    mission.chargeOxygen(pointsPerSol, tank);
+    expect(20 - tank.water).toBeCloseTo(0.945, 3);
+    expect(mission.oxygenPlant.waterUsedL).toBeCloseTo(0.945, 3);
+  });
+
+  it('with an empty tank electrolysis stops refilling oxygen and says the tank is the reason', () => {
+    const mission = createMission(12);
+    mission.battery.charge = 100;
+    expect(mission.oxygenRefillBudget({ water: 0 })).toBe(0);
+    expect(mission.oxygenPlant.limitedBy).toBe('water');
+  });
+
+  it('MOXIE keeps the tank full but each oxygen point costs more power', () => {
+    const water = createMission(12);
+    const moxie = createMission(12);
+    moxie.oxygenPlant.setMode('moxie');
+    expect(moxie.oxygenEnergyPerPoint()).toBeGreaterThan(water.oxygenEnergyPerPoint());
+    moxie.battery.charge = 100;
+    const tank = { water: 20 };
+    moxie.chargeOxygen(10, tank);
+    expect(tank.water).toBe(20);
+    expect(moxie.battery.charge).toBeCloseTo(100 - 10 * moxie.oxygenEnergyPerPoint());
+    expect(moxie.oxygenRefillBudget({ water: 0 })).toBeGreaterThan(0);
+  });
+
+  it('night with no sun: air from water is the right choice', () => {
+    const run = (mode) => {
+      const mission = createMission(0); // meia-noite: os paineis nao geram
+      mission.oxygenPlant.setMode(mode);
+      mission.battery.charge = 30;
+      mission.update(6);
+      expect(mission.chargeRate).toBe(0);
+      return breathe(mission, { water: 30 }, 15);
+    };
+    expect(run('electrolysis')).toBeCloseTo(15);
+    expect(run('moxie')).toBeLessThan(15);
+  });
+
+  it('tank almost empty: air from Mars air is the right choice', () => {
+    const run = (mode) => {
+      const mission = createMission(12);
+      mission.oxygenPlant.setMode(mode);
+      mission.battery.charge = 100;
+      const tank = { water: 0.05 };
+      const delivered = breathe(mission, tank, 20);
+      return { delivered, water: tank.water };
+    };
+    const water = run('electrolysis');
+    expect(water.delivered).toBeLessThan(20);
+    expect(water.water).toBeCloseTo(0);
+    const moxie = run('moxie');
+    expect(moxie.delivered).toBeCloseTo(20);
+    expect(moxie.water).toBe(0.05);
   });
 });
