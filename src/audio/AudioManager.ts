@@ -28,6 +28,11 @@ export class AudioManager {
     this.doorClose = this._createAudio(`${AUDIO_BASE_URL}porta_fechar.wav`);
     this.decompression = this._createAudio(`${AUDIO_BASE_URL}descompressao.wav`);
     this.doorCrank = this._createAudio(`${AUDIO_BASE_URL}porta_fechar.wav`);
+    this.uiClick = this._createAudio(`${AUDIO_BASE_URL}ui-click-kenney.ogg`);
+    this.uiConfirm = this._createAudio(`${AUDIO_BASE_URL}ui-confirm-kenney.ogg`);
+    this.uiError = this._createAudio(`${AUDIO_BASE_URL}ui-error-kenney.ogg`);
+    this.sciFiDoorOpen = this._createAudio(`${AUDIO_BASE_URL}sci-fi-door-open-kenney.ogg`);
+    this.sciFiDoorClose = this._createAudio(`${AUDIO_BASE_URL}sci-fi-door-close-kenney.ogg`);
     this.doorOpen.volume = DOOR_VOLUME;
     this.doorClose.volume = DOOR_VOLUME;
     this.decompression.volume = DECOMPRESSION_VOLUME;
@@ -122,6 +127,10 @@ export class AudioManager {
     this._playOneShot(this.doorCrank);
   }
 
+  playUiClick() { this._playOneShot(this.uiClick); }
+  playUiConfirm() { this._playOneShot(this.uiConfirm); }
+  playUiError() { this._playOneShot(this.uiError); }
+
   _getSynthContext() {
     if (typeof window === 'undefined') return null;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -147,22 +156,13 @@ export class AudioManager {
   }
 
   playSuitEquip() {
-    const ctx = this._getSynthContext();
-    if (!ctx) return;
-    // Mechanical unlatch click + helmet lock + ascending NASA seal chime
-    this._playSuitTone(ctx, 190, 0.0, 0.08, 'square', 0.035);
-    this._playSuitTone(ctx, 320, 0.34, 0.09, 'triangle', 0.05);
-    this._playSuitTone(ctx, 523.25, 0.68, 0.14, 'sine', 0.06);
-    this._playSuitTone(ctx, 783.99, 0.82, 0.22, 'sine', 0.07);
+    this._playOneShot(this.sciFiDoorOpen);
+    window.setTimeout(() => this.playUiConfirm(), 250);
   }
 
   playSuitDock() {
-    const ctx = this._getSynthContext();
-    if (!ctx) return;
-    // Helmet release + clamp lock + descending confirmation chime
-    this._playSuitTone(ctx, 659.25, 0.0, 0.12, 'sine', 0.05);
-    this._playSuitTone(ctx, 440.0, 0.13, 0.16, 'sine', 0.05);
-    this._playSuitTone(ctx, 210, 0.52, 0.1, 'square', 0.03);
+    this._playOneShot(this.sciFiDoorClose);
+    window.setTimeout(() => this.playUiConfirm(), 250);
   }
 
   playRocket() {

@@ -535,23 +535,8 @@ export class StationPanel {
   }
 
   _playGymSound(freq = 320, duration = 0.07, secondFreq = 0) {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-    this.engine._audioContext ??= new AudioContextClass();
-    const audio = this.engine._audioContext;
-    if (audio.state === 'suspended') audio.resume();
-    const osc = audio.createOscillator();
-    const gain = audio.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(freq, audio.currentTime);
-    if (secondFreq > 0) {
-      osc.frequency.setValueAtTime(secondFreq, audio.currentTime + duration * 0.5);
-    }
-    gain.gain.setValueAtTime(0.03, audio.currentTime);
-    gain.gain.linearRampToValueAtTime(0, audio.currentTime + duration);
-    osc.connect(gain).connect(audio.destination);
-    osc.start();
-    osc.stop(audio.currentTime + duration);
+    if (freq <= 260) this.engine.audio.playUiError();
+    else this.engine.audio.playUiConfirm();
   }
 
   _doGymStep(side) {

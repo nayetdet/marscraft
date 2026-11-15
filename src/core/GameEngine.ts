@@ -662,23 +662,8 @@ export class GameEngine {
   }
 
   _playGymTone(freq = 360, duration = 0.08, secondFreq = null) {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-    this._audioContext ??= new AudioContextClass();
-    const audio = this._audioContext;
-    if (audio.state === 'suspended') audio.resume();
-    const oscillator = audio.createOscillator();
-    const gain = audio.createGain();
-    oscillator.type = 'triangle';
-    oscillator.frequency.setValueAtTime(freq, audio.currentTime);
-    if (secondFreq) {
-      oscillator.frequency.setValueAtTime(secondFreq, audio.currentTime + duration * 0.45);
-    }
-    gain.gain.setValueAtTime(0.03 * this.audio.masterVolume, audio.currentTime);
-    gain.gain.linearRampToValueAtTime(0, audio.currentTime + duration);
-    oscillator.connect(gain).connect(audio.destination);
-    oscillator.start();
-    oscillator.stop(audio.currentTime + duration);
+    if (freq <= 260) this.audio.playUiError();
+    else this.audio.playUiConfirm();
   }
 
   _onAirlockEvent(type) {
