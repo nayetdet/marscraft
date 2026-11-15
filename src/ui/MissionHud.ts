@@ -37,7 +37,7 @@ function setText(el, text, className) {
 }
 
 export class MissionHud {
-  constructor({ donkiFetched, onLoadIce, onLoadSample, onUnloadSample, onToggleFactory, onIgnite, onClose }) {
+  constructor({ donkiFetched, onLoadIce, onLoadSample, onUnloadSample, onToggleFactory, onIgnite, onClose, onContinue }) {
     this.donkiFetched = donkiFetched;
     const $ = (id) => document.getElementById(id);
 
@@ -97,7 +97,8 @@ export class MissionHud {
     this.tubeUnloadBtn.addEventListener('click', () => onUnloadSample?.());
     this.igniteBtn.addEventListener('click', () => onIgnite());
     $('mav-close').addEventListener('click', () => onClose());
-    $('play-again-btn').addEventListener('click', () => window.location.reload());
+    // Continue (ato 5, #411): fecha a tela final e o jogo segue em modo livre (Act5Controller)
+    $('play-again-btn').addEventListener('click', () => onContinue?.());
   }
 
   // Guarda os nos de uma linha do painel e desenha o icone uma vez
@@ -352,5 +353,10 @@ export class MissionHud {
     }
     this.victorySourcesEl.textContent = sourcesText;
     this.victoryOverlayEl.classList.remove('hidden');
+  }
+
+  hideVictory() {
+    this.isVictoryShown = false;
+    this.victoryOverlayEl.classList.add('hidden');
   }
 }

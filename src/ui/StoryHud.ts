@@ -137,7 +137,9 @@ export class StoryHud {
     });
     // Na captura: com um card de escolha na tela, [1] e [2] vao para o card e nao trocam o item da mao
     document.addEventListener('keydown', (e) => this._onChoiceKey(e), true);
-    $('window-play-again-btn').addEventListener('click', () => window.location.reload());
+    // Continue (ato 5, #411): a tripulacao esperou a proxima janela; quem reabre e o Act5Controller
+    this.onContinue = () => {};
+    $('window-play-again-btn').addEventListener('click', () => this.onContinue());
   }
 
   // view: resultado de objectiveView() (src/story/objectiveView.js) ou null para esconder o painel
@@ -322,6 +324,11 @@ export class StoryHud {
     document.getElementById('window-text').textContent = WINDOW_CLOSED.text;
     document.getElementById('window-source').textContent = WINDOW_CLOSED.source;
     this.windowOverlayEl.classList.remove('hidden');
+  }
+
+  hideWindowClosed() {
+    this.isWindowClosedShown = false;
+    this.windowOverlayEl.classList.add('hidden');
   }
 
   _next() {

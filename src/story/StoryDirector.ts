@@ -12,6 +12,10 @@ import { CORE_STEPS, TUTORIAL_STEPS, detourCard, stepCard, stepNumber } from './
 // No ato 2 o jogo tem uma rotina que se repete ate o tanque encher: buscar gelo, levar ao foguete
 // e voltar a base para recarregar o ar (`needsBase` marca esse ultimo passo). A tempestade solar
 // chega no meio da janela: e um obstaculo da missao, nao uma espera antes dela.
+// Historia em 5 atos (#407 a #411): no codigo, `act === 1` vale enquanto ha passos guiados (os
+// atos 1 a 4) e `act === 2` e a corrida final com a janela de lancamento, o ato 5 da historia.
+// Depois da decolagem, Continue leva ao modo livre (`act === FREE_PLAY_ACT`): sem objetivo, sem
+// janela e sem prazo. Com a janela fechada, Continue abre outra (`reopenWindow`).
 // Logica pura, sem DOM nem Three.js: o GameEngine entrega um retrato do jogo a cada frame
 // (`update(snapshot)`) e aplica os eventos que saem em `drainEvents()`.
 //
@@ -27,6 +31,9 @@ import { CORE_STEPS, TUTORIAL_STEPS, detourCard, stepCard, stepNumber } from './
 // avisar a Terra, buscar gelo, carregar o foguete e escanear): e o tutorial padrao do jogo. 4 passos entregam um certificado (issue #88): evento 'certificate' com o
 // selo. `skipTraining()` pula o que falta (menu Demo Tools).
 // O diretor escreve `needsBase` de volta no retrato, para o painel e a seta lerem a mesma rotina.
+// Modo livre (ato 5, #411): depois da decolagem e do Continue. Nao e um ato jogavel: so um estado.
+export const FREE_PLAY_ACT = 6;
+
 export class StoryDirector {
   // `replyDelayHours`: horas de jogo ate a resposta da Terra chegar (ida e volta do sinal).
   // `comms`: { millionKm, oneWayMinutes, dateIso } para o card do radio.
@@ -67,6 +74,9 @@ export class StoryDirector {
     this.replySecondsLeft = null;
     // Rotina de trabalho: true depois de entregar gelo no foguete, ate o jogador voltar a base
     this.needsBase = false;
+    // Janela de lancamento em que a crianca esta: 1 = a primeira; cada Continue na tela de janela
+    // fechada soma 1 (vai para o boletim final)
+    this.launchWindow = 1;
 
     this._lastIceNeeded = null;
     this._replyAt = null;
@@ -209,6 +219,41 @@ export class StoryDirector {
     if (was) this._finishTutorial(this._lastSnapshot);
     else if (this.act === 0) this.steps = CORE_STEPS;
     return was;
+  }
+
+  get freePlay() {
+    return this.act === FREE_PLAY_ACT;
+  }
+
+  // Continue na tela de janela fechada (ato 5, #411): a tripulacao esperou a proxima janela. A
+  // corrida volta com uma janela nova inteira, no mesmo mundo. `hours`: hora de jogo de agora.
+  reopenWindow(hours = this._lastSnapshot.hours ?? 0) {
+    if (this.objectiveId !== 'failed') return false;
+    this._finished = false;
+    this.launchWindow += 1;
+    this._windowClosesAt = hours + this.windowHours;
+    this.windowHoursLeft = this.windowHours;
+    this.needsBase = false;
+    this._card(CARDS.secondWindow);
+    this._setObjective('act2');
+    return true;
+  }
+
+  // Continue na tela de vitoria, ou partida reaberta depois da decolagem (ato 5, #411): modo
+  // livre. A historia para de guiar: sem objetivo, sem janela e sem prazo.
+  enterFreePlay() {
+    if (this.freePlay || (this.act !== 0 && this.objectiveId !== 'done')) return false;
+    this._clearDetour();
+    this.stepIndex = -1;
+    this.act = FREE_PLAY_ACT;
+    this._finished = true;
+    this.windowHoursLeft = null;
+    this.replySecondsLeft = null;
+    this._replyAt = null;
+    this.needsBase = false;
+    this._setObjective(null, '');
+    this._card(CARDS.freePlay);
+    return true;
   }
 
   // Rotina de trabalho (atos 2 e 3). Entregar gelo pede a volta a base; entrar nela, ou pegar

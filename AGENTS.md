@@ -84,12 +84,17 @@ src/graphics/              texturas procedurais em canvas e materiais dos blocos
 src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades, ordens, avisos), estações
                            (estufa, reciclador de água, gerador de O2, enfermaria), trilhos, avatar voxel e
                            crewInstances (desenha as caixas de todos os trajes juntas, com instancing)
-src/story/                 história em 2 atos (tutorial de 5 passos e a missão, com a janela de lançamento já aberta): StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
+src/story/                 história em 5 atos (#407 a #411): os atos 1 a 4 são passos guiados e o ato 5 é a corrida final, a única com a janela de lançamento
+                           e prazo. No código, `StoryDirector.act` é 1 nos passos guiados, 2 na corrida final e `FREE_PLAY_ACT` (6) no modo livre, depois do
+                           Continue da tela de vitória. StoryDirector (objetivos, janela de lançamento, segunda janela, modo livre), textos em storyChapters,
                            tutorialSteps (os passos do tutorial guiado do ato 1, um por vez, em dados),
                            tutorialDetours (o desvio de cada recurso: se falta agua, energia, comida ou bateria do rover para o passo, manda buscar e depois volta, em dados),
                            objectiveView (o que o painel do objetivo desenha), waypoints (para onde a seta aponta) e WaypointBeacon (seta 3D),
                            firstTimeMoments (a animacao e o fato real da primeira vez de cada acao principal, em dados; quem desenha e o FirstTimeHud),
                            tradeoffScenes (o modal animado de trade-off de cada tarefa ou evento, em dados, uma vez por partida; quem desenha e o TradeoffHud)
+  acts/                    atos 2 a 5: os passos guiados dos atos 2, 3 e 4 (act2Steps...) e um controlador por ato (Act2Controller...), que liga o ato
+                           ao motor (formato em actTypes). Act5Controller: o Continue das duas telas finais (modo livre na vitória, janela nova na
+                           janela fechada) e a partida salva que já decolou, que reabre em modo livre
   cutscene/                animações de chegada e de decolagem: timeline (keyframes), CutscenePlayer, efeitos, cápsula
 src/ui/                    HudManager (barras, hotbar, inventário, toasts, rótulos do céu), StoryHud
                            (card de rádio), WaypointHud (seta na tela), CutsceneHud (legendas, pular), FirstTimeHud (abertura e card das animações de primeira vez; desenhos coloridos 12x12 em pixelSprites) + CSS

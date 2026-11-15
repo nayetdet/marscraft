@@ -1112,4 +1112,8 @@ export const ACT4_CONFIG = {
 // Ato 5 (issue #411): a corrida final, a decolagem e o que vem depois (Continue).
 // Tudo aqui e regra de jogo, salvo quando o comentario da linha citar a fonte.
 export const ACT5_CONFIG = {
+  // Meses entre uma janela de lancamento e a seguinte: periodo sinodico de Marte, 779,94 dias
+  // (NASA Mars Fact Sheet; docs/data/numeros-reais.md). Aparece no boletim de quem decolou numa
+  // janela depois da primeira.
+  WINDOW_WAIT_MONTHS: 26,
 };

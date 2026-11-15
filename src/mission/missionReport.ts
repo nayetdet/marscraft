@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { RADIATION_CONFIG } from '../config/constants.ts';
+import { ACT5_CONFIG, RADIATION_CONFIG } from '../config/constants.ts';
 import { BASE_DOSE_MSV_PER_HOUR } from './radiation.ts';
 
 // Boletim do cadete (issue #90): 5 notas (S, A, B, C) calculadas com o que o jogador fez na
@@ -17,6 +17,7 @@ import { BASE_DOSE_MSV_PER_HOUR } from './radiation.ts';
 //   sciencePointsSent, sciencePointsGoal,            // pontos de ciencia enviados / meta do foguete
 //   journalFound, journalTotal, journalRank,         // diario [J]: fichas abertas e patente
 //   topFinds: [{ name, points }],                    // as descobertas que valem mais
+//   launched, launchWindow,                          // decolou? em qual janela (1 = a primeira)
 // }
 
 const clamp01 = (v) => Math.max(0, Math.min(1, Number.isFinite(v) ? v : 0));
@@ -143,6 +144,26 @@ export function explorerSummary(stats) {
   };
 }
 
+const ORDINALS = ['first', 'second', 'third'];
+
+// Em qual janela de lancamento o foguete decolou (ato 5, #411). Quem deixa a janela fechar e
+// aperta Continue decola numa janela depois da primeira: o boletim registra a espera. null se o
+// foguete nao decolou (tela de janela fechada).
+export function launchSummary(stats) {
+  if (!stats.launched) return null;
+  const window = Math.max(1, Math.round(num(stats.launchWindow)) || 1);
+  const waitMonths = (window - 1) * ACT5_CONFIG.WINDOW_WAIT_MONTHS;
+  const name = ORDINALS[window - 1] ? `the ${ORDINALS[window - 1]} launch window` : `launch window ${window}`;
+  return {
+    window,
+    waitMonths,
+    onTime: window === 1,
+    text: window === 1
+      ? `Liftoff in ${name}: right on time`
+      : `Liftoff in ${name}: the crew waited about ${waitMonths} months`,
+  };
+}
+
 export function missionReport(stats) {
   const categories = REPORT_CATEGORIES.map((category) => {
     const score = category.score(stats);
@@ -171,5 +192,5 @@ export function missionReport(stats) {
     ? { title: 'Mission Commander', text: 'You did great at everything. Earth is proud of you!' }
     : { title: top.profile, text: `You ${top.strength}, but next time ${low.tip}!` };
 
-  return { categories, profile, explorer: explorerSummary(stats) };
+  return { categories, profile, explorer: explorerSummary(stats), launch: launchSummary(stats) };
 }

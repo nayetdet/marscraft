@@ -140,3 +140,19 @@ O jogo tinha final, mas a história parava para esperar e várias salas só exis
 - **Terreno:** a área aplainada ao norte acaba logo depois dos dois módulos que restaram.
 
 Ficou de fora: remover os painéis `medical` e `console` de `machineViews.ts` e `StationPanel.ts` (sem uso, mas o `console` é o padrão de várias tabelas do painel).
+
+## Ato 5 da história: corrida final e Continue (15/11/2026, issue #411)
+
+A história passa a ter 5 atos (specs em `docs/superpowers/specs/2026-11-15-act*-story-design.md`). Os atos 1 a 4 são passos guiados; o ato 5 é a corrida final, a única parte com janela de lançamento e prazo. Vale sobre o que este arquivo diz mais acima sobre "2 atos" e "3 atos".
+
+- **No código:** `StoryDirector.act` é 1 enquanto há passos guiados, 2 na corrida final e `FREE_PLAY_ACT` (6) no modo livre. A janela só abre quando os passos guiados acabam (`_finishTutorial`), ou na hora, com "Skip the tutorial" (Demo Tools).
+- **Card da corrida** (`CARDS.act2`): fala só de gelo, foguete e prazo. O que mais o foguete pede (tempestade solar sobrevivida, ciência enviada) aparece no painel do objetivo se ainda faltar.
+- **"Play again" virou "Continue"** nas duas telas finais (`src/story/acts/Act5Controller.ts`):
+  - **Vitória:** fecha a tela e o jogo segue no mesmo mundo, em modo livre: sem objetivo guiado, sem janela e sem prazo. A base, os recursos, as tempestades e os eventos continuam. O foguete sai da plataforma (modelo, colisão e o painel `[F]`).
+  - **Janela fechada:** a tripulação esperou a próxima janela (fato real: cerca de 26 meses, o período sinódico de Marte). O jogo segue no mesmo mundo com uma janela nova de `STORY_CONFIG.WINDOW_HOURS`. O relógio do jogo não pula 26 meses: a espera é contada na história, não simulada (regra de jogo).
+- **Boletim:** ganha a linha da janela em que o foguete decolou (`launchSummary` em `missionReport.ts`): "right on time" na primeira, ou a espera de 26 meses por janela perdida (`ACT5_CONFIG.WINDOW_WAIT_MONTHS`).
+- **Save:** `marscraft-save-v1` guarda `freePlay` assim que o foguete decola. Reabrir o jogo depois disso cai no modo livre, sem tela final e sem partida nova. "Reset World" continua sendo o jeito de recomeçar.
+
+**Limites conhecidos:**
+- O save ainda não guarda o andamento da história nem da missão (passo atual, combustível, janela): reabrir o jogo no meio da partida não retoma o objetivo. Só o modo livre é salvo. A segunda janela também não: recarregar a página no meio dela perde o relógio.
+- Continuar depois da janela fechada não tem custo de recurso; o custo é o registro no boletim.
