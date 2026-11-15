@@ -46,6 +46,7 @@ export class InputController {
     onStopShipBlockBreak = () => {},
     onBlockBroken = () => {},
     onFoodConsumed = () => {},
+    onWaterConsumed = () => {},
   }) {
     this.onToggleShield = onToggleShield;
     this.onToggleThirdPerson = onToggleThirdPerson;
@@ -85,6 +86,7 @@ export class InputController {
     this.onStopShipBlockBreak = onStopShipBlockBreak;
     this.onBlockBroken = onBlockBroken;
     this.onFoodConsumed = onFoodConsumed;
+    this.onWaterConsumed = onWaterConsumed;
 
     this.keys = {};
     this.isLocked = false;
@@ -266,9 +268,14 @@ export class InputController {
     if (slot.consumable) {
       const previousCount = slot.count;
       const msg = this.survival.consumeSlotItem(this.hud.selectedSlot);
-      if (slot.count < previousCount && slot.consumable.type === 'food') {
-        this.playerHand.triggerEat();
-        this.onFoodConsumed?.();
+      if (slot.count < previousCount) {
+        if (slot.consumable.type === 'food') {
+          this.playerHand.triggerEat();
+          this.onFoodConsumed?.();
+        } else if (slot.consumable.type === 'water') {
+          this.playerHand.triggerDrink();
+          this.onWaterConsumed?.();
+        }
       }
       if (msg) {
         this.hud.showToast(msg);

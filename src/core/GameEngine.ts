@@ -2,8 +2,9 @@
 import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS, GREENHOUSE_BASKETS } from '../world/greenhouseLayout.ts';
 import { createCropItemModel, createCropPlantModel } from '../graphics/cropModels.ts';
 import { createSpaceRationModel } from '../graphics/rationModel.ts';
+import { createSampleRockModel } from '../graphics/sampleModels.ts';
 import * as THREE from 'three';
-import { CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
+import { BLOCK_INTERACTION_CONFIG, CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
 import { separateCrew } from '../crew/separateCrew.ts';
 import { CrewManager } from '../crew/CrewManager.ts';
 import { CrewAvatar } from '../crew/CrewAvatar.ts';
@@ -20,7 +21,7 @@ import { placeSampleSites } from '../world/sampleSites.ts';
 import { SampleSiteMarkers } from '../world/SampleSiteMarkers.ts';
 import { naturalGroundTop } from '../world/surfaceRocks.ts';
 import { isBuildZone } from '../world/terrainGenerator.ts';
-import { sampleFactView, sampleLogText, sampleTypeById } from '../data/sampleTypes.ts';
+import { SAMPLE_TYPES, sampleFactView, sampleLogText, sampleTypeById } from '../data/sampleTypes.ts';
 import { journalRank } from '../ui/journalProgress.ts';
 import { MissionHud } from '../ui/MissionHud.ts';
 import { missionReport } from '../mission/missionReport.ts';
@@ -182,6 +183,21 @@ export class GameEngine {
       groundTop: (x, z) => (isBuildZone(x, z) || distanceFromBaseCenter(x, z) > mapEdge ? -1 : naturalGroundTop(this.world, x, z)),
     }));
     this.scene.add(this.sampleSites.group);
+    this._sampleCollectProps = Object.fromEntries(
+      SAMPLE_TYPES.map((type) => {
+        const prop = createSampleRockModel(type.id);
+        prop.scale.setScalar(0.36);
+        prop.visible = false;
+        this.scene.add(prop);
+        return [type.id, prop];
+      })
+    );
+    this._activeSampleCollect = null;
+    this._sampleCollectStart = new THREE.Vector3();
+    this._sampleCollectEnd = new THREE.Vector3();
+    this._sampleCollectForward = new THREE.Vector3();
+    this._sampleCollectRight = new THREE.Vector3();
+    this.sampleCollectPuffs = new ParticlePuffs(this.scene, { count: 36, color: 0xc47e54 });
     // Itens de ciencia desta partida (descobertas + amostras analisadas), refeitos so quando mudam
     this._scienceItems = [];
     this._scienceItemsKey = '';
@@ -419,6 +435,10 @@ export class GameEngine {
       onStopShipBlockBreak: () => this.audio.stopShipBlockBreak(),
       onBlockBroken: (blockId) => this.audio.playBlockBreakImpact(blockId === BLOCK_IDS.REGOLITH),
       onFoodConsumed: () => this.audio.playUiConfirm(),
+      onWaterConsumed: () => {
+        this.audio.playDrink();
+        this.hud.triggerWaterPulse();
+      },
       onSuitportAction: (action) => this._handleSuitportShortcut(action),
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown
@@ -1092,12 +1112,76 @@ export class GameEngine {
       this.hud.showToast('Your bag is full. Make room to carry this sample.');
       return;
     }
+    if (this._activeSampleCollect) {
+      this._activeSampleCollect.prop.visible = false;
+      this._activeSampleCollect = null;
+    }
     this.sampleSites.collect(site.id);
+    const sx = site.x + 0.5;
+    const sy = site.y + 0.16;
+    const sz = site.z + 0.5;
+    this.sampleCollectPuffs.setColor(type.color);
+    for (let i = 0; i < 10; i++) {
+      const angle = (i / 10) * Math.PI * 2 + Math.random() * 0.4;
+      const speed = 0.7 + Math.random() * 1.1;
+      this.sampleCollectPuffs.spawn(
+        sx + Math.cos(angle) * 0.16,
+        sy,
+        sz + Math.sin(angle) * 0.16,
+        Math.cos(angle) * speed,
+        0.9 + Math.random() * 1.2,
+        Math.sin(angle) * speed,
+        0.38 + Math.random() * 0.22,
+        0.09 + Math.random() * 0.06
+      );
+    }
+    const prop = this._sampleCollectProps?.[type.id];
+    if (prop) {
+      this._sampleCollectStart.set(sx, sy + 0.08, sz);
+      prop.position.copy(this._sampleCollectStart);
+      prop.rotation.set(0.15, Math.random() * Math.PI * 2, 0.1);
+      prop.scale.setScalar(0.36);
+      prop.visible = true;
+      this._activeSampleCollect = {
+        prop,
+        elapsed: 0,
+        duration: BLOCK_INTERACTION_CONFIG.COLLECT_SAMPLE_ANIMATION_DURATION * 0.34,
+      };
+    }
+    this.playerHand.triggerCollectSample(type.itemId);
+    this.audio.playSampleCollect();
     this.hud.renderHotbar(this.survival.slots);
     const heldSlot = this.survival.slots[this.hud.selectedSlot];
     this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
     this.missionLog.add({ text: `Collected a sample outside: ${type.name}.`, kind: 'study', hours: this._skyHours() });
     this.hud.showToast(`Sample collected: ${type.name}. Analyze it at the science & radio terminal for +${pointsWord(type.points)}. ${this.sampleSites.remaining} sample spots left on the map.`, 6000);
+  }
+
+  _updateSampleCollect(dt) {
+    this.sampleCollectPuffs?.update(dt);
+    const active = this._activeSampleCollect;
+    if (!active) return;
+    active.elapsed += dt;
+    const t = Math.min(1, active.elapsed / active.duration);
+    const eased = t * t * (3 - 2 * t);
+    this.player.getLookDirection(this._sampleCollectForward);
+    this._sampleCollectRight.set(-this._sampleCollectForward.z, 0, this._sampleCollectForward.x).normalize();
+    this._sampleCollectEnd
+      .copy(this.player.pos)
+      .addScaledVector(this._sampleCollectForward, 0.52)
+      .addScaledVector(this._sampleCollectRight, 0.32);
+    this._sampleCollectEnd.y -= 0.32;
+
+    active.prop.position.lerpVectors(this._sampleCollectStart, this._sampleCollectEnd, eased);
+    active.prop.position.y += Math.sin(t * Math.PI) * 0.3;
+    active.prop.rotation.y += dt * 7.5;
+    active.prop.rotation.x += dt * 3.2;
+    active.prop.scale.setScalar(0.36 - 0.12 * eased);
+
+    if (t >= 1) {
+      active.prop.visible = false;
+      this._activeSampleCollect = null;
+    }
   }
 
   // Uma amostra do mapa acabou de ser analisada (StationPanel): fato real na tela, ficha no
@@ -2550,7 +2634,13 @@ export class GameEngine {
       this.toggleRoverMode();
     } else if (this.currentInteraction === 'water_dispenser') {
       const res = this.survival.drinkFromBaseDispenser();
-      this.audio.playUiFeedback(Boolean(res.success));
+      if (res.success) {
+        this.playerHand.triggerDrink();
+        this.audio.playDrink();
+        this.hud.triggerWaterPulse();
+      } else {
+        this.audio.playUiFeedback(false);
+      }
       this.tutorialCounts.drink++;
       this.hud.showToast(res.message);
     } else if (this.currentInteraction === 'greenhouse') {
@@ -2837,6 +2927,7 @@ export class GameEngine {
       this._updateMission(dt, isGameRunning);
       this._updateCrew(dt);
       this._updateRationHandoff(dt);
+      this._updateSampleCollect(dt);
       this._updateBaseDisplays(dt);
       if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
       if (isGameRunning) {

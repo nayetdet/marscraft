@@ -773,6 +773,17 @@
 .mc-stat-icon.heart.full, .mc-stat-icon.heart.half { color: #dc3540; }
 .mc-stat-icon.oxygen.full, .mc-stat-icon.oxygen.half { color: #43b5dc; }
 .mc-stat-icon.water.full, .mc-stat-icon.water.half { color: #3982df; }
+
+@keyframes mc-water-drink-pulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(56, 189, 248, 0)); }
+  35% { transform: scale(1.2); filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.92)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(56, 189, 248, 0)); }
+}
+
+#water-bar.is-drinking .mc-stat-icon.water:not(.empty) {
+  animation: mc-water-drink-pulse 0.72s ease-out;
+  animation-delay: calc(var(--i, 0) * 28ms);
+}
 .mc-stat-icon.food.full, .mc-stat-icon.food.half { color: #d98738; }
 .mc-stat-icon.energy.full, .mc-stat-icon.energy.half { color: #f2d43d; }
 #radiation-bar[data-tone="ok"] .mc-stat-icon.radiation:not(.empty) { color: var(--hud-good); }
