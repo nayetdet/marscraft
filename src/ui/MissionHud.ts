@@ -318,9 +318,28 @@ export class MissionHud {
     setClass(this.igniteBtn, `mc-btn mc-act-card mav-ignite-btn${progress.ready ? ' is-ready' : ''}`);
   }
 
-  showVictory(rows, sourcesText) {
+  // `farewell`: a ultima mensagem da Terra (storyChapters.earthFarewell), ou null
+  showVictory(rows, sourcesText, farewell = null) {
     this.isVictoryShown = true;
     this.closeMavPanel();
+    const earthEl = document.getElementById('victory-earth');
+    if (earthEl) {
+      earthEl.innerHTML = '';
+      if (farewell) {
+        const title = document.createElement('h2');
+        title.textContent = farewell.title;
+        earthEl.appendChild(title);
+        for (const line of farewell.lines) {
+          const row = document.createElement('p');
+          row.innerHTML = pixelIconSvg(line.icon);
+          row.append(line.text);
+          earthEl.appendChild(row);
+        }
+        const note = document.createElement('small');
+        note.textContent = farewell.note;
+        earthEl.appendChild(note);
+      }
+    }
     this.victorySummaryEl.innerHTML = '';
     for (const [label, value] of rows) {
       const row = document.createElement('div');

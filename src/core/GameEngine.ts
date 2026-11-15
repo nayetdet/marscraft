@@ -99,6 +99,7 @@ import { clampToPlayArea, distanceFromBaseCenter } from '../world/dustStormZone.
 import { WeatherHud } from '../ui/WeatherHud.ts';
 import { LANDER_NOZZLE_Y, createLander, landerCollider } from '../story/cutscene/landerModel.ts';
 import { createArrivalCutscene } from '../story/cutscene/arrivalCutscene.ts';
+import { earthFarewell } from '../story/storyChapters.ts';
 import { MAV_NOZZLE_Y, createLaunchCutscene } from '../story/cutscene/launchCutscene.ts';
 import { createRationDeliveryCutscene } from '../story/cutscene/rationDeliveryCutscene.ts';
 import { EventDirector, inWindow, seedFromSearch } from '../mission/eventDirector.ts';
@@ -649,7 +650,6 @@ export class GameEngine {
       this._suitportInteraction = { type: 'suitport', x: -0.68, y: 11.35, z: 7.5, minDot: 0.72, label: '' };
       this._staticInteractions = [
         { type: 'power', x: 10.6, y: 11.4, z: -3, label: 'Press F: life support' },
-        { type: 'console', x: 8.25, y: 11.5, z: -10.8, label: 'Press F: mission computer' },
         { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth (call Earth) · [G] send science' },
         { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
         { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
@@ -660,7 +660,6 @@ export class GameEngine {
         ...GREENHOUSE_BASKETS.map(basket => ({ ...basket, cropType: basket.type, type: 'basket', minDot: 0.95, label: `Press F or tap: collect ${basket.type}` })),
         { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
         { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
-        { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
         ...BUNK_INTERACTIONS,
       ];
       this._interactionList = [];
@@ -821,8 +820,8 @@ export class GameEngine {
     }));
     this.stationSprout = createSproutModel(); this.stationSprout.visible = false; this.stationCrop.add(this.stationSprout);
     this.stationCrop.position.set(GREENHOUSE_CENTER.x + GARDEN_CROP_BED.dx + 0.5, WORLD_CONFIG.GROUND_LEVEL + 2, GREENHOUSE_CENTER.z + GARDEN_CROP_BED.dz + 0.5); this.stationCrop.visible = false; this.scene.add(this.stationCrop);
-    const colors = { treadmill: 0x38bdf8, bike: 0x4ade80, medical: 0xe76b65 };
-    for (const [type, x, z] of [['treadmill', -9.2, 9.2], ['bike', -5.8, 9.5], ['medical', -7.6, 12.4]]) {
+    const colors = { treadmill: 0x38bdf8, bike: 0x4ade80 };
+    for (const [type, x, z] of [['treadmill', -9.2, 9.2], ['bike', -5.8, 9.5]]) {
       const frame = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.12), dark);
       const screen = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.14), new THREE.MeshLambertMaterial({ color: colors[type], emissive: colors[type], emissiveIntensity: 0.18 }));
       frame.position.set(x, 11.4, z); screen.position.set(x, 11.4, z + 0.04);
@@ -1276,7 +1275,12 @@ export class GameEngine {
       'Science sent through orbiters: NASA Mars Relay Network. Rock sample tubes: NASA Perseverance; science points, upload costs and extra ice per tube are game rules. ' +
       'Map samples: real finds by NASA Curiosity in Gale Crater (dune sand, mudstone, sulfur, iron meteorite) and by NASA Phoenix (buried ice); where they sit on the map is a game rule. ' +
       'Mars events: NASA InSight (marsquakes and the 2021 meteor impact), MRO, Perseverance (Phobos eclipse, aurora), Spirit (dust devils) and Viking 2 (frost); when and how strong they are is a game rule.';
-    this.missionHud.showVictory(rows, sources);
+    this.missionHud.showVictory(rows, sources, earthFarewell({
+      sentPoints: m.sentPoints,
+      discoveries: m.sentDiscoveries,
+      samples: m.sentSamples,
+      oneWayMinutes: Math.round(this.comms.lightMinutes),
+    }));
     renderReportCard(document.getElementById('victory-report'), missionReport(this._reportStats()));
     document.exitPointerLock();
   }

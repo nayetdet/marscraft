@@ -68,7 +68,7 @@ describe('arrival cutscene', () => {
     expect(tour.map((c) => c.text)).toEqual([
       'THE BASE', 'SOLAR PANELS', 'GREENHOUSE', 'ICE CRATER', 'THE ROCKET', 'EVERY TRIP', 'YOUR MISSION',
     ]);
-    expect(caption(def, 'YOUR MISSION').sub).toBe('Fill the rocket. Fly home.');
+    expect(caption(def, 'YOUR MISSION').sub).toBe('Study Mars. Fill the rocket. Fly home.');
     expect(def.captions.at(-1)).toMatchObject({ big: true, text: 'SOL 1' });
     expect(def.captions.at(-1).to).toBeCloseTo(def.duration);
   });

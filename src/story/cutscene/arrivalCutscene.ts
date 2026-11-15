@@ -117,7 +117,7 @@ export function createArrivalCutscene({
   }
   captions.push(
     { from: routineShot.from + 0.1, to: finaleAt - 0.1, place: true, text: 'EVERY TRIP', sub: 'Get ice. Load the rocket. Back to base.' },
-    { from: finaleAt + 0.1, to: finaleEnd, place: true, text: 'YOUR MISSION', sub: 'Fill the rocket. Fly home.' },
+    { from: finaleAt + 0.1, to: finaleEnd, place: true, text: 'YOUR MISSION', sub: 'Study Mars. Fill the rocket. Fly home.' },
     { from: solAt, to: duration, big: true, text: 'SOL 1', sub: '1 sol = 1 Mars day (24 h 39 min)' },
   );
 

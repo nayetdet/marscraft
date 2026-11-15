@@ -530,6 +530,12 @@ body.pause-menu-open .crew-picker { display: none; }
 /* Vitoria */
 .victory-overlay { z-index: 50; }
 .victory-sub { color: #ffffa0; }
+.victory-earth { width: 100%; padding: 10px 12px; border: 2px solid #38bdf8; background: rgba(8, 24, 40, 0.85); text-align: left; }
+.victory-earth:empty { display: none; }
+.victory-earth h2 { margin: 0 0 6px; font-size: 13px; letter-spacing: 2px; color: #7dd3fc; text-shadow: 2px 2px 0 #000; }
+.victory-earth p { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 13px; color: #fff; }
+.victory-earth p svg { width: 18px; height: 18px; flex: none; }
+.victory-earth small { display: block; margin-top: 6px; font-size: 11px; color: #9fb4c8; }
 .victory-summary { text-align: left; }
 .victory-summary div { display: flex; justify-content: space-between; gap: 12px; }
 .victory-sources { font-size: 12px; color: #d0d0d0; line-height: 1.4; }

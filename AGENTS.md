@@ -83,7 +83,7 @@ src/graphics/              texturas procedurais em canvas e materiais dos blocos
 src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades, ordens, avisos), estações
                            (estufa, reciclador de água, gerador de O2, enfermaria), trilhos, avatar voxel e
                            crewInstances (desenha as caixas de todos os trajes juntas, com instancing)
-src/story/                 história em 3 atos: StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
+src/story/                 história em 2 atos (tutorial de 5 passos e a missão, com a janela de lançamento já aberta): StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
                            tutorialSteps (os passos do tutorial guiado do ato 1, um por vez, em dados),
                            tutorialDetours (o desvio de cada recurso: se falta agua, energia, comida ou bateria do rover para o passo, manda buscar e depois volta, em dados),
                            objectiveView (o que o painel do objetivo desenha), waypoints (para onde a seta aponta) e WaypointBeacon (seta 3D),

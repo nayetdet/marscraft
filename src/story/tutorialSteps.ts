@@ -60,7 +60,7 @@ export const TUTORIAL_STEPS = [
     place: 'airlock',
     objective: 'Go inside the base through the airlock',
     lines: [
-      { icon: 'rocket', text: 'Mission: fill the rocket, fly home' },
+      { icon: 'rocket', text: 'Mission: study Mars, then fly home' },
       { icon: 'air', text: 'Your suit air is low' },
       { icon: 'door', text: 'AIRLOCK door: press F' },
     ],

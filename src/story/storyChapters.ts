@@ -44,7 +44,7 @@ export const CARDS = {
     title: 'SOLAR STORM COMING',
     // Radiacao e assunto da medica da tripulacao
     speaker: SPEAKERS.medic,
-    lines: [{ icon: 'storm', text: 'Survive this storm, then you can launch' }],
+    lines: [{ icon: 'storm', text: 'Stay safe: the launch window keeps running' }],
     // Escolha na hora, andando: [1] ou [2] (issue #135). Nenhuma e de graca.
     choices: [
       { id: 'hide', key: '1', icon: 'home', name: 'HIDE', good: 'Shelter with water wall', bad: 'No work outside' },
@@ -141,6 +141,25 @@ export function replyCard({ oneWayMinutes }) {
       { icon: 'radio', text: 'We hear you, Commander!' },
       { icon: 'clock', text: `Real radio trip: ${oneWayMinutes * 2} min there and back` },
     ],
+  };
+}
+
+// Epilogo: a ultima mensagem da Terra, na tela de vitoria. Fecha a historia com o mesmo atraso de
+// radio que a abriu (CALL EARTH) e diz o que a ciencia enviada valeu. `sentPoints`, `discoveries` e
+// `samples` sao a ciencia que chegou a Terra nesta partida; `oneWayMinutes` vem do CommsLink.
+export function earthFarewell({ sentPoints = 0, discoveries = 0, samples = 0, oneWayMinutes = 0 } = {}) {
+  const found = [];
+  if (discoveries > 0) found.push(`${discoveries} ${discoveries === 1 ? 'discovery' : 'discoveries'}`);
+  if (samples > 0) found.push(`${samples} ${samples === 1 ? 'sample' : 'samples'}`);
+  return {
+    title: 'MESSAGE FROM EARTH',
+    lines: [
+      { icon: 'radio', text: 'We saw the liftoff. Well done, Commander!' },
+      { icon: 'scope', text: `Earth got your science: ${sentPoints} points` },
+      ...(found.length > 0 ? [{ icon: 'check', text: found.join(' and ') }] : []),
+      { icon: 'home', text: 'Now the 7-month trip home' },
+    ],
+    note: `This message left Earth ${oneWayMinutes} min before you read it`,
   };
 }
 

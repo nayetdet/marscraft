@@ -190,7 +190,7 @@ export function buildBaseDecor(scene, colliders) {
     },
     {
       x: -2.82, y: F + 0.7, z: 5.4, label: '[F] Look at the medical bay',
-      text: () => 'A crew member on duty at the medical bay heals you while you are inside the base. A radiation dose can never be erased, so avoid it.',
+      text: () => 'First aid for the crew is kept here. Food and rest heal you, but a radiation dose can never be erased, so avoid it.',
     },
     {
       x: -1.57, y: F + 1.2, z: 5.45, label: '[F] Look at the suit locker',

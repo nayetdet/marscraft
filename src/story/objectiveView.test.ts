@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, expect, it } from 'vitest';
 import { StoryDirector } from './StoryDirector.ts';
-import { CARDS, commsCard, replyCard } from './storyChapters.ts';
+import { CARDS, commsCard, earthFarewell, replyCard } from './storyChapters.ts';
 import { nextRocketJob, objectiveView } from './objectiveView.ts';
 import { pixelIconSvg } from '../ui/pixelIcons.ts';
 import { SCIENCE_CONFIG } from '../config/constants.ts';
@@ -190,7 +190,8 @@ describe('objectiveView', () => {
 });
 
 describe('story cards', () => {
-  const all = [...Object.values(CARDS), commsCard({ millionKm: 198, oneWayMinutes: 11, dateIso: '2026-11-14' }), replyCard({ oneWayMinutes: 11 })];
+  const all = [...Object.values(CARDS), commsCard({ millionKm: 198, oneWayMinutes: 11, dateIso: '2026-11-14' }), replyCard({ oneWayMinutes: 11 }),
+    earthFarewell({ sentPoints: 12, discoveries: 3, samples: 2, oneWayMinutes: 11 })];
 
   it('keeps every line short and gives it an icon that exists', () => {
     for (const card of all) {
@@ -201,5 +202,15 @@ describe('story cards', () => {
       }
       for (const choice of card.choices ?? []) expect(() => pixelIconSvg(choice.icon)).not.toThrow();
     }
+  });
+
+  it('closes the story with a message from Earth that names the science sent and the radio delay', () => {
+    const card = earthFarewell({ sentPoints: 12, discoveries: 3, samples: 1, oneWayMinutes: 11 });
+    expect(card.title).toBe('MESSAGE FROM EARTH');
+    expect(card.lines.map((line) => line.text)).toContain('Earth got your science: 12 points');
+    expect(card.lines.map((line) => line.text)).toContain('3 discoveries and 1 sample');
+    expect(card.note).toMatch(/11 min/);
+    // Sem nada contado, a linha das descobertas some
+    expect(earthFarewell({ sentPoints: 10 }).lines).toHaveLength(3);
   });
 });
