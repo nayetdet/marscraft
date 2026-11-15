@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import { CrewAvatar } from './CrewAvatar.ts';
+import { CrewAvatar, lightNameColor, makeNameLabel } from './CrewAvatar.ts';
 import { findRoute, routeLength } from './crewRails.ts';
 
 describe('CrewAvatar articulated movement', () => {
@@ -122,5 +122,56 @@ describe('CrewAvatar articulated movement', () => {
     expect(maxSwayX).toBeGreaterThan(0.01);
     expect(maxBobY - minBobY).toBeGreaterThan(0.02);
     avatar.dispose();
+  });
+
+  it('renders crew name labels in lightened accent color with shadow, Monocraft font, no box/border, and natural casing', () => {
+    const light = lightNameColor(0xf97316);
+    expect(light).toBe('#fcc096');
+
+    const fillTexts = [];
+    const fillRect = vi.fn();
+    const strokeRect = vi.fn();
+    const ctx = {
+      font: '',
+      fillStyle: '',
+      shadowColor: '',
+      shadowBlur: 0,
+      shadowOffsetX: 0,
+      shadowOffsetY: 0,
+      textAlign: '',
+      textBaseline: '',
+      clearRect: vi.fn(),
+      save: vi.fn(),
+      restore: vi.fn(),
+      measureText: (text) => ({ width: text.length * 14 }),
+      fillRect,
+      strokeRect,
+      fillText: (text, x, y) => {
+        fillTexts.push({ text, x, y, fillStyle: ctx.fillStyle, font: ctx.font, shadowBlur: ctx.shadowBlur });
+      },
+    };
+    const fakeCanvas = { width: 0, height: 0, getContext: () => ctx };
+    vi.stubGlobal('document', { createElement: () => fakeCanvas });
+
+    try {
+      const label = makeNameLabel('Ana', 0xf97316);
+
+      expect(fillRect).not.toHaveBeenCalled();
+      expect(strokeRect).not.toHaveBeenCalled();
+      expect(fillTexts).toHaveLength(2);
+      // Shadow pass first, then lightened accent color text on top
+      expect(fillTexts[0].text).toBe('Ana');
+      expect(fillTexts[0].shadowBlur).toBeGreaterThan(0);
+      expect(fillTexts[1].text).toBe('Ana');
+      expect(fillTexts[1].fillStyle).toBe('#fcc096');
+      expect(fillTexts[1].font).toContain('"Monocraft"');
+      expect(label.material.transparent).toBe(true);
+      expect(label.material.depthWrite).toBe(false);
+      expect(label.material.map.colorSpace).toBe(THREE.SRGBColorSpace);
+      label.material.map.dispose();
+      label.material.dispose();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

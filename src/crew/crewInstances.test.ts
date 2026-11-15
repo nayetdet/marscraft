@@ -27,10 +27,10 @@ describe('CrewInstances', () => {
     expect(instances.plain.count).toBeGreaterThan(100);
     expect(instances.lamp.count).toBeGreaterThan(0);
     expect(instances.plain.count % 3).toBe(0);
-    // What is left as a real mesh per suit: visor, chest panel, two status lights and the shadow box
+    // What is left as a real mesh per suit: face, clear visor, chest panel, two status lights and the shadow box
     let meshes = 0;
     avatars[0].group.traverse((obj) => { if (obj.isMesh) meshes++; });
-    expect(meshes).toBeLessThanOrEqual(5);
+    expect(meshes).toBeLessThanOrEqual(6);
   });
 
   it('puts each box where its joint is, with the size of the box', () => {

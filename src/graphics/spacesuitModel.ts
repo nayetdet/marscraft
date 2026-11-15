@@ -1,5 +1,37 @@
 // @ts-nocheck
 import * as THREE from 'three';
+import { DEFAULT_CADET_PROFILE } from '../crew/crewProfiles.ts';
+
+export function createClearVisorTexture() {
+  if (typeof document === 'undefined') return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = 32;
+  canvas.height = 16;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 32, 16);
+
+  // Translucent sky-tinted glass so the crew member's face stays clear behind the visor
+  ctx.fillStyle = 'rgba(186, 230, 253, 0.14)';
+  ctx.fillRect(0, 0, 32, 16);
+
+  // Subtle inner rim reflection
+  ctx.strokeStyle = 'rgba(224, 242, 254, 0.34)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(1, 1, 30, 14);
+
+  // Crisp pixel-art diagonal glass glare in corners
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+  ctx.fillRect(3, 2, 6, 2);
+  ctx.fillRect(2, 4, 3, 1);
+  ctx.fillStyle = 'rgba(224, 242, 254, 0.42)';
+  ctx.fillRect(23, 11, 6, 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  return texture;
+}
 
 export function createVisorTexture() {
   if (typeof document === 'undefined') return null;
@@ -117,14 +149,65 @@ export function createSuitportScreenTexture() {
   return texture;
 }
 
+const HELMET_HAIR_STYLES = {
+  puffs: [
+    { dims: [0.275, 0.036, 0.245], pos: [0, 0.332, 0.005], hi: false },
+    { dims: [0.11, 0.042, 0.06], pos: [-0.085, 0.320, 0.115], hi: true },
+    { dims: [0.11, 0.042, 0.06], pos: [0.085, 0.320, 0.115], hi: false },
+  ],
+  tousled: [
+    { dims: [0.275, 0.036, 0.245], pos: [0, 0.332, 0.005], hi: false },
+    { dims: [0.15, 0.032, 0.045], pos: [-0.035, 0.315, 0.125], rz: 0.10, hi: false },
+    { dims: [0.09, 0.030, 0.05], pos: [0.065, 0.326, 0.11], rz: -0.12, hi: true },
+  ],
+  wavy: [
+    { dims: [0.275, 0.036, 0.245], pos: [0, 0.332, 0.005], hi: false },
+    { dims: [0.17, 0.032, 0.042], pos: [-0.045, 0.312, 0.124], rz: 0.12, hi: false },
+    { dims: [0.08, 0.030, 0.04], pos: [0.09, 0.316, 0.122], rz: -0.14, hi: true },
+  ],
+  fade: [
+    { dims: [0.268, 0.028, 0.242], pos: [0, 0.334, 0.006], hi: false },
+    { dims: [0.24, 0.018, 0.022], pos: [0, 0.326, 0.124], hi: false },
+    { dims: [0.18, 0.016, 0.020], pos: [0, 0.340, 0.09], hi: true },
+  ],
+  bob: [
+    { dims: [0.276, 0.036, 0.245], pos: [0, 0.332, 0.005], hi: false },
+    { dims: [0.12, 0.032, 0.04], pos: [-0.07, 0.312, 0.124], rz: 0.08, hi: false },
+    { dims: [0.12, 0.032, 0.04], pos: [0.07, 0.312, 0.124], rz: -0.08, hi: true },
+  ],
+  parted: [
+    { dims: [0.275, 0.034, 0.245], pos: [0, 0.332, 0.005], hi: false },
+    { dims: [0.11, 0.034, 0.042], pos: [-0.075, 0.312, 0.124], rz: 0.16, hi: false },
+    { dims: [0.11, 0.034, 0.042], pos: [0.075, 0.312, 0.124], rz: -0.16, hi: true },
+  ],
+  bangs: [
+    { dims: [0.276, 0.036, 0.245], pos: [0, 0.332, 0.005], hi: false },
+    { dims: [0.22, 0.030, 0.04], pos: [-0.01, 0.312, 0.124], hi: false },
+    { dims: [0.12, 0.024, 0.04], pos: [0.04, 0.332, 0.105], hi: true },
+  ],
+  sweep: [
+    { dims: [0.275, 0.036, 0.245], pos: [0, 0.332, 0.005], hi: false },
+    { dims: [0.15, 0.034, 0.046], pos: [0.035, 0.318, 0.122], rz: -0.10, hi: false },
+    { dims: [0.10, 0.030, 0.042], pos: [-0.07, 0.316, 0.120], rz: 0.14, hi: true },
+  ],
+  swept: [
+    { dims: [0.275, 0.036, 0.245], pos: [0, 0.332, 0.005], hi: false },
+    { dims: [0.17, 0.034, 0.042], pos: [-0.045, 0.314, 0.124], rz: 0.12, hi: false },
+    { dims: [0.09, 0.030, 0.042], pos: [0.088, 0.318, 0.122], rz: -0.14, hi: true },
+  ],
+};
+
 /**
  * Builds an articulated voxel NASA xEMU spacesuit rig shared by crew avatars and the Suitport dock.
+ * When `crewProfile` is passed, renders an open-window helmet with a translucent glass visor
+ * and a diverse MarsCraft pixel-art face inside.
  */
 export function buildSpacesuitRig({
   accentColor = 0xea580c,
   suitColor = 0xf8fafc,
   includeUpgradeTrim = false,
   instanced = false,
+  crewProfile = null,
 } = {}) {
   const bodyGroup = new THREE.Group();
 
@@ -143,20 +226,36 @@ export function buildSpacesuitRig({
     emissive: 0x16a34a,
     emissiveIntensity: 0.65,
   });
-  const visorMat = new THREE.MeshLambertMaterial({
-    map: createVisorTexture(),
-    emissive: 0x451a03,
-    emissiveIntensity: 0.35,
-  });
+  const visorMat = crewProfile
+    ? new THREE.MeshLambertMaterial({
+        map: createClearVisorTexture(),
+        color: 0xffffff,
+        transparent: true,
+        opacity: typeof document === 'undefined' ? 0.28 : 1,
+        depthWrite: false,
+        emissive: 0x1e3a5f,
+        emissiveIntensity: 0.15,
+      })
+    : new THREE.MeshLambertMaterial({
+        map: createVisorTexture(),
+        emissive: 0x451a03,
+        emissiveIntensity: 0.35,
+      });
   const dcmMat = new THREE.MeshLambertMaterial({
     map: createChestDcmTexture(),
   });
 
+  const skinShadeMat = crewProfile ? new THREE.MeshLambertMaterial({ color: crewProfile.skinShade }) : null;
+  const hairMat = crewProfile ? new THREE.MeshLambertMaterial({ color: crewProfile.hair }) : null;
+  const hairHiMat = crewProfile ? new THREE.MeshLambertMaterial({ color: crewProfile.hairHi }) : null;
+
   // instanced: caixas de cor lisa e lampadas nao viram Mesh, e sim nos vazios (a escala guarda o
   // tamanho da caixa) listados em `parts`, para o CrewInstances desenhar a tripulacao inteira em
-  // dois desenhos. Pecas com textura ou com cor por traje (visor, painel do peito, luz de estado,
+  // dois desenhos. Pecas com textura ou com cor por traje (visor, rosto, painel do peito, luz de estado,
   // placas de upgrade) continuam Mesh.
-  const instancedMats = instanced ? new Set([suitMat, accentMat, darkJoint, bootMat, silver, lampMat]) : null;
+  const instancedMats = instanced
+    ? new Set([suitMat, accentMat, darkJoint, bootMat, silver, lampMat, skinShadeMat, hairMat, hairHiMat].filter(Boolean))
+    : null;
   const parts = [];
   const addPart = (parent, w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
     let part;
@@ -254,11 +353,42 @@ export function buildSpacesuitRig({
   headGroup.position.set(0, 0.64, 0);
   upperBody.add(headGroup);
 
-  addPart(headGroup, 0.44, 0.42, 0.44, suitMat, 0, 0.21, 0);
+  if (crewProfile) {
+    // Casco aberto na frente com janela para o rosto + vidrinho transparente na frente
+    addPart(headGroup, 0.44, 0.42, 0.1, suitMat, 0, 0.21, -0.17);
+    addPart(headGroup, 0.06, 0.42, 0.34, suitMat, -0.19, 0.21, 0.05);
+    addPart(headGroup, 0.06, 0.42, 0.34, suitMat, 0.19, 0.21, 0.05);
+    addPart(headGroup, 0.32, 0.07, 0.34, suitMat, 0, 0.385, 0.05);
+    addPart(headGroup, 0.32, 0.08, 0.34, suitMat, 0, 0.04, 0.05);
+    // Moldura escura ao redor da janela do visor
+    addPart(headGroup, 0.34, 0.024, 0.025, darkJoint, 0, 0.345, 0.215);
+    addPart(headGroup, 0.34, 0.024, 0.025, darkJoint, 0, 0.085, 0.215);
+    addPart(headGroup, 0.024, 0.284, 0.025, darkJoint, -0.162, 0.215, 0.215);
+    addPart(headGroup, 0.024, 0.284, 0.025, darkJoint, 0.162, 0.215, 0.215);
+
+    // Rosto no mesmo padrao voxel/pixel-art do personagem (cabeca + nariz 3D + cabelo em camadas)
+    addPart(headGroup, 0.26, 0.26, 0.24, createCadetHeadMaterials(crewProfile), 0, 0.215, 0.01);
+    addPart(headGroup, 0.034, 0.042, 0.024, skinShadeMat, 0, 0.195, 0.14);
+    const hairPieces = HELMET_HAIR_STYLES[crewProfile.hairStyle] ?? HELMET_HAIR_STYLES.swept;
+    for (const piece of hairPieces) {
+      addPart(
+        headGroup,
+        piece.dims[0], piece.dims[1], piece.dims[2],
+        piece.hi ? hairHiMat : hairMat,
+        piece.pos[0], piece.pos[1], piece.pos[2],
+        0, 0, piece.rz ?? 0
+      );
+    }
+
+    // Vidrinho transparente na abertura do capacete
+    addPart(headGroup, 0.31, 0.24, 0.016, visorMat, 0, 0.215, 0.214);
+  } else {
+    addPart(headGroup, 0.44, 0.42, 0.44, suitMat, 0, 0.21, 0);
+    addPart(headGroup, 0.38, 0.25, 0.05, bootMat, 0, 0.22, 0.21);
+    addPart(headGroup, 0.35, 0.22, 0.06, visorMat, 0, 0.22, 0.22);
+  }
   addPart(headGroup, 0.46, 0.07, 0.46, suitMat, 0, 0.4, 0.01);
   addPart(headGroup, 0.14, 0.05, 0.38, accentMat, 0, 0.435, 0);
-  addPart(headGroup, 0.38, 0.25, 0.05, bootMat, 0, 0.22, 0.21);
-  addPart(headGroup, 0.35, 0.22, 0.06, visorMat, 0, 0.22, 0.22);
   for (const sx of [-0.23, 0.23]) {
     addPart(headGroup, 0.05, 0.16, 0.16, darkJoint, sx, 0.21, 0);
     addPart(headGroup, 0.05, 0.07, 0.1, lampMat, sx, 0.28, 0.12);
@@ -317,22 +447,94 @@ function makePixelFaceMaterial(width, height, drawFn, fallbackColor) {
   const ctx = canvas.getContext('2d');
   drawFn(ctx, width, height);
   const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
   texture.magFilter = THREE.NearestFilter;
   texture.minFilter = THREE.NearestFilter;
   return new THREE.MeshLambertMaterial({ map: texture });
 }
 
-function createCadetHeadMaterials() {
-  const SKIN = '#f2c2a2';
-  const SKIN_SHADE = '#dca07e';
-  const CHEEK = 'rgba(229, 115, 104, 0.3)';
-  const HAIR = '#2d1e17';
-  const HAIR_DARK = '#1f140f';
-  const HAIR_HI = '#462f24';
-  const EYE_DARK = '#1c2541';
-  const EYE_IRIS = '#2b4570';
-  const EYE_GLINT = '#f8fafc';
-  const MOUTH = '#9c4f3d';
+const HAIRLINE_PATTERNS = {
+  swept: [
+    [0, 0, 32, 6],
+    [0, 6, 13, 2],
+    [26, 6, 6, 2],
+    [0, 8, 3, 4],
+    [29, 8, 3, 4],
+  ],
+  puffs: [
+    [0, 0, 32, 5],
+    [0, 5, 8, 3],
+    [24, 5, 8, 3],
+    [0, 8, 3, 5],
+    [29, 8, 3, 5],
+  ],
+  tousled: [
+    [0, 0, 32, 6],
+    [0, 6, 14, 2],
+    [20, 6, 12, 2],
+    [6, 7, 5, 2],
+    [0, 8, 3, 4],
+    [29, 8, 3, 4],
+  ],
+  wavy: [
+    [0, 0, 32, 6],
+    [0, 6, 16, 2],
+    [26, 6, 6, 2],
+    [0, 8, 3, 8],
+    [29, 8, 3, 7],
+  ],
+  fade: [
+    [0, 0, 32, 5],
+    [0, 5, 2, 4],
+    [30, 5, 2, 4],
+  ],
+  bob: [
+    [0, 0, 32, 6],
+    [0, 6, 11, 2],
+    [21, 6, 11, 2],
+    [0, 8, 3, 9],
+    [29, 8, 3, 9],
+  ],
+  parted: [
+    [0, 0, 32, 6],
+    [0, 6, 12, 2],
+    [20, 6, 12, 2],
+    [0, 8, 4, 3],
+    [28, 8, 4, 3],
+  ],
+  bangs: [
+    [0, 0, 32, 6],
+    [0, 6, 14, 2],
+    [17, 6, 15, 2],
+    [0, 8, 3, 8],
+    [29, 8, 3, 8],
+  ],
+  sweep: [
+    [0, 0, 32, 5],
+    [0, 5, 10, 2],
+    [22, 5, 10, 2],
+    [0, 7, 3, 4],
+    [29, 7, 3, 4],
+  ],
+};
+
+function createCadetHeadMaterials(profile = DEFAULT_CADET_PROFILE) {
+  const {
+    skin: SKIN,
+    skinShade: SKIN_SHADE,
+    cheek: CHEEK,
+    hair: HAIR,
+    hairDark: HAIR_DARK,
+    hairHi: HAIR_HI,
+    eyeDark: EYE_DARK,
+    eyeIris: EYE_IRIS,
+    eyeGlint: EYE_GLINT,
+    mouth: MOUTH,
+    hairStyle = 'swept',
+    brows = 'arched',
+    lashes = false,
+    freckles = false,
+  } = profile;
 
   const px = (ctx: CanvasRenderingContext2D, x: number, y: number, color: string, w = 1, h = 1) => {
     ctx.fillStyle = color;
@@ -347,7 +549,7 @@ function createCadetHeadMaterials() {
     px(ctx, 21, 20, HAIR_DARK, 6, 4);
   };
 
-  const paintEye = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+  const paintEye = (ctx: CanvasRenderingContext2D, x: number, y: number, isRight: boolean) => {
     // Tall rounded vertical eye with catchlight (distinct MarsCraft cadet style)
     px(ctx, x, y + 1, EYE_DARK, 4, 5);
     px(ctx, x + 1, y, EYE_DARK, 2, 7);
@@ -355,6 +557,9 @@ function createCadetHeadMaterials() {
     px(ctx, x + 1, y + 5, EYE_IRIS, 2, 2);
     px(ctx, x, y + 1, EYE_GLINT, 2, 2);
     px(ctx, x + 2, y + 4, EYE_GLINT, 1, 1);
+    if (lashes) {
+      px(ctx, isRight ? x + 4 : x - 1, y + 1, EYE_DARK, 1, 2);
+    }
   };
 
   // Three.js BoxGeometry material order: +x, -x, +y, -y, +z (front), -z (back)
@@ -364,7 +569,7 @@ function createCadetHeadMaterials() {
     px(ctx, 18, 10, HAIR, 14, 14);
     px(ctx, 21, 4, HAIR_HI, 6, 3);
     px(ctx, 0, 29, SKIN_SHADE, 32, 3);
-  }, 0x2d1e17);
+  }, HAIR);
 
   const leftSide = makePixelFaceMaterial(32, 32, (ctx) => {
     px(ctx, 0, 0, SKIN, 32, 32);
@@ -372,33 +577,42 @@ function createCadetHeadMaterials() {
     px(ctx, 0, 10, HAIR, 14, 14);
     px(ctx, 5, 4, HAIR_HI, 6, 3);
     px(ctx, 0, 29, SKIN_SHADE, 32, 3);
-  }, 0x2d1e17);
+  }, HAIR);
 
-  const top = makePixelFaceMaterial(32, 32, (ctx) => paintHair(ctx, 32, 32), 0x2d1e17);
-  const bottom = makePixelFaceMaterial(32, 32, (ctx) => px(ctx, 0, 0, SKIN_SHADE, 32, 32), 0xdca07e);
+  const top = makePixelFaceMaterial(32, 32, (ctx) => paintHair(ctx, 32, 32), HAIR);
+  const bottom = makePixelFaceMaterial(32, 32, (ctx) => px(ctx, 0, 0, SKIN_SHADE, 32, 32), SKIN_SHADE);
 
   const front = makePixelFaceMaterial(32, 32, (ctx) => {
     px(ctx, 0, 0, SKIN, 32, 32);
-    // Asymmetric swept hairline under the 3D hair tuft
-    px(ctx, 0, 0, HAIR, 32, 6);
-    px(ctx, 0, 6, HAIR, 13, 2);
-    px(ctx, 26, 6, HAIR, 6, 2);
-    px(ctx, 0, 8, HAIR, 3, 4);
-    px(ctx, 29, 8, HAIR, 3, 4);
+    const hairline = HAIRLINE_PATTERNS[hairStyle] ?? HAIRLINE_PATTERNS.swept;
+    for (const [rx, ry, rw, rh] of hairline) {
+      px(ctx, rx, ry, HAIR, rw, rh);
+    }
 
-    // Arched eyebrows
-    px(ctx, 7, 9, HAIR, 5, 2);
-    px(ctx, 8, 8, HAIR, 3, 1);
-    px(ctx, 20, 9, HAIR, 5, 2);
-    px(ctx, 21, 8, HAIR, 3, 1);
+    // Eyebrows
+    if (brows === 'straight') {
+      px(ctx, 7, 9, HAIR_DARK, 6, 2);
+      px(ctx, 19, 9, HAIR_DARK, 6, 2);
+    } else {
+      px(ctx, 7, 9, HAIR_DARK, 5, 2);
+      px(ctx, 8, 8, HAIR_DARK, 3, 1);
+      px(ctx, 20, 9, HAIR_DARK, 5, 2);
+      px(ctx, 21, 8, HAIR_DARK, 3, 1);
+    }
 
     // Tall expressive eyes
-    paintEye(ctx, 8, 12);
-    paintEye(ctx, 20, 12);
+    paintEye(ctx, 8, 12, false);
+    paintEye(ctx, 20, 12, true);
 
-    // Soft cheek warmth + subtle under-nose shadow
+    // Soft cheek warmth + optional freckles + subtle under-nose shadow
     px(ctx, 5, 19, CHEEK, 4, 2);
     px(ctx, 23, 19, CHEEK, 4, 2);
+    if (freckles) {
+      px(ctx, 6, 19, SKIN_SHADE, 1, 1);
+      px(ctx, 8, 20, SKIN_SHADE, 1, 1);
+      px(ctx, 23, 20, SKIN_SHADE, 1, 1);
+      px(ctx, 25, 19, SKIN_SHADE, 1, 1);
+    }
     px(ctx, 15, 20, SKIN_SHADE, 2, 1);
 
     // Friendly curved smile
@@ -409,12 +623,12 @@ function createCadetHeadMaterials() {
 
     // Subtle chin shading
     px(ctx, 2, 30, SKIN_SHADE, 28, 2);
-  }, 0xf2c2a2);
+  }, SKIN);
 
   const back = makePixelFaceMaterial(32, 32, (ctx) => {
     paintHair(ctx, 32, 32);
     px(ctx, 4, 28, SKIN_SHADE, 24, 4);
-  }, 0x2d1e17);
+  }, HAIR);
 
   return [rightSide, leftSide, top, bottom, front, back];
 }
