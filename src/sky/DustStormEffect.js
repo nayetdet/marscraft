@@ -3,7 +3,6 @@ import { DUST_STORM_VISUAL_CONFIG as V } from '../config/constants.js';
 import {
   DUST_STORM_CENTER,
   DUST_STORM_WALL_RADIUS,
-  dustStormProximity,
   dustStormVisualStrength,
 } from '../world/dustStormZone.js';
 
@@ -221,7 +220,6 @@ export class DustStormEffect {
   update(dt, focus, camera) {
     this.time += dt;
     const strength = dustStormVisualStrength(focus.x, focus.z);
-    const proximity = dustStormProximity(focus.x, focus.z);
     this.strength = strength;
 
     // Cor da poeira a partir da neblina do horario (o ceu acabou de escrever nela)
@@ -234,12 +232,10 @@ export class DustStormEffect {
     // A cor vira poeira logo: passar da parede nunca deixa a vista mais limpa que a propria parede
     fog.color.lerp(_dust, THREE.MathUtils.smoothstep(strength, 0, 0.25));
 
-    // Parede: aparece de longe e se apaga quando o jogador ja esta dentro da tempestade,
-    // para nao esconder o caminho de volta
-    const wallOpacity = 1 - THREE.MathUtils.smoothstep(strength, 0.25, 0.6);
-    this.wall.visible = wallOpacity > 0.01;
+    // A parede marca a borda do mapa; o shader esmaece apenas o trecho muito perto da camera.
+    this.wall.visible = true;
     this.wallUniforms.uTime.value = this.time;
-    this.wallUniforms.uOpacity.value = wallOpacity;
+    this.wallUniforms.uOpacity.value = 1;
     this.wallUniforms.uColor.value.copy(_dust);
 
     // Cupula: mesma cor da neblina, para o chao e o ceu sumirem juntos na poeira
@@ -251,8 +247,8 @@ export class DustStormEffect {
       this.domeMaterial.opacity = domeOpacity;
     }
 
-    // Particulas: algumas rajadas ja perto da borda, nuvem cheia dentro da tempestade
-    const particleOpacity = Math.min(1, THREE.MathUtils.smoothstep(strength, 0, 0.35) + proximity * 0.25);
+    // Particulas aparecem junto com a neblina, apenas na aproximacao da borda do mapa.
+    const particleOpacity = THREE.MathUtils.smoothstep(strength, 0, 0.35);
     this.particles.visible = particleOpacity > 0.01;
     if (this.particles.visible) this._updateParticles(dt, focus, particleOpacity);
   }

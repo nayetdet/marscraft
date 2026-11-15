@@ -54,9 +54,9 @@ describe('north module (issue #56, part B)', () => {
     const loads = utility.loads({ crewSize: 2, operatingStations: 1 });
     const lights = loads.find(([name]) => name === 'Greenhouse lights');
     expect(lights[1]).toBe(U.GREENHOUSE_LIGHTS_PER_HOUR);
-    // O que o motor desconta em 1 hora de jogo (100 s reais) e o que o painel mostra
+    // O que o motor desconta em 1 hora de jogo (50 s reais) e o que o painel mostra
     const secondsPerGameHour = 1 / MISSION_CONFIG.GAME_HOURS_PER_SECOND;
-    expect(secondsPerGameHour).toBe(100);
+    expect(secondsPerGameHour).toBe(50);
     expect(utility.greenhouseLightsCost(secondsPerGameHour)).toBeCloseTo(lights[1]);
     // O total do painel e a soma das linhas ligadas
     const total = loads.reduce((sum, [, rate, on]) => sum + (on ? rate : 0), 0);
@@ -94,7 +94,7 @@ describe('north module (issue #56, part B)', () => {
     expect(loads['Greenhouse lights']).toBeCloseTo(0.6 * U.GREENHOUSE_LIGHTS_PER_HOUR);
     expect(loads['Crew oxygen']).toBeCloseTo(0.6 * 2 * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR);
     expect(loads['Crew at work']).toBeCloseTo(0.6 * 2 * STATION_CONFIG.WORK_ENERGY_PER_HOUR);
-    expect(utility.greenhouseLightsCost(100)).toBeCloseTo(0.6 * U.GREENHOUSE_LIGHTS_PER_HOUR);
+    expect(utility.greenhouseLightsCost(1 / MISSION_CONFIG.GAME_HOURS_PER_SECOND)).toBeCloseTo(0.6 * U.GREENHOUSE_LIGHTS_PER_HOUR);
     // As escolhas do jogador custam o mesmo: so o consumo passivo e mais brando
     expect(loads['Radiation shield']).toBe(12.5);
   });

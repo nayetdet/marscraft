@@ -69,7 +69,8 @@ export const SURVIVAL_CONFIG = {
   DAMAGE_SHAKE_RATE: 42,
   // Abaixo deste O2 o corpo nao se recupera: nem a regeneracao natural nem a comida curam.
   HEAL_MIN_OXYGEN: 5,
-  // Tempestade de poeira na borda da area jogavel, medida a partir de TERRAIN_CONFIG.BASE_CENTER
+  // Raios de exposição à poeira, medidos a partir de TERRAIN_CONFIG.BASE_CENTER.
+  // O efeito visual da parede acompanha separadamente a borda física do mapa.
   DUST_STORM_START_RADIUS: 70,
   DUST_STORM_FATAL_RADIUS: 100,
   DUST_STORM_DAMAGE_RATE: 20,
@@ -81,14 +82,13 @@ export const SURVIVAL_CONFIG = {
 
 // Visual da tempestade da borda (src/sky/DustStormEffect.js). O dano fica no SURVIVAL_CONFIG.
 export const DUST_STORM_VISUAL_CONFIG = {
-  WALL_RADIUS_OFFSET: 2, // a parede de poeira fica 2 blocos depois do inicio da tempestade
   WALL_BOTTOM_Y: -4,
   WALL_HEIGHT: 44,
   // A parede some perto da camera (entre estas distancias, em blocos) para nao virar um plano duro
   WALL_FADE_NEAR: 1.5,
   WALL_FADE_FAR: 8,
-  // A neblina e a cupula de poeira comecam um pouco antes da tempestade, junto com a parede
-  VISUAL_LEAD: 4,
+  // Neblina, cúpula e partículas aparecem nos últimos blocos antes da borda do mapa.
+  VISUAL_LEAD: 12,
   DOME_RADIUS: 26,
   DOME_MAX_OPACITY: 0.93,
   FOG_BASE_DENSITY: 0.0015,
@@ -138,7 +138,7 @@ export const ROVER_CONFIG = {
 };
 
 // Missao: energia, tempestades solares e o MAV (issue #30).
-// Taxas "por hora de jogo": com GAME_HOURS_PER_SECOND = 0.01, 1 hora de jogo = 100 s reais.
+// Taxas "por hora de jogo": com GAME_HOURS_PER_SECOND = 0.02, 1 hora de jogo = 50 s reais.
 // Fontes dos numeros reais em docs/data/numeros-reais.md.
 export const MISSION_CONFIG = {
   AIRLOCK_COST: 1, AIRLOCK_CYCLE: 0.8, DOOR_SPEED: 10,
@@ -150,8 +150,8 @@ export const MISSION_CONFIG = {
   AIRLOCK_MANUAL_EXTRA_SECONDS: 3,
 
   // Hora de jogo por segundo real (igual a MarsSkySystem.autoAdvanceSpeed): 1 hora de jogo
-  // = 100 s reais e 1 sol de 24 h = 40 min reais. Toda taxa "por hora" do jogo usa este relogio.
-  GAME_HOURS_PER_SECOND: 0.01,
+  // = 50 s reais e 1 sol de 24 h = 20 min reais. Toda taxa "por hora" do jogo usa este relogio.
+  GAME_HOURS_PER_SECOND: 0.02,
   // Passo maximo de simulacao, para avancos de tempo grandes (tecla T) nao pularem eventos
   MAX_STEP_HOURS: 0.05,
   // Hora do nascer do sol no relogio do jogo (MarsSkySystem: sol no horizonte as 6h e 18h)
@@ -238,6 +238,24 @@ export const STORM_CONFIG = {
   DEMO_LEAD_HOURS: 0.2,
 };
 
+// Clima espacial ao vivo do NASA DONKI (issue #100). O fetch acontece uma vez, ao abrir o jogo,
+// e cai no JSON embutido (src/data/donkiCme.json) se qualquer coisa der errado.
+export const SPACE_WEATHER_CONFIG = {
+  // Janelas pedidas ao DONKI. A API recusa (HTTP 400) janelas acima de 60 dias.
+  CME_WINDOW_DAYS: 30,
+  SEP_WINDOW_DAYS: 60,
+  BULLETIN_WINDOW_DAYS: 7,
+  // A DEMO_KEY aguenta ~10 pedidos por hora; cada abertura sem cache faz 3
+  CACHE_TTL_MINUTES: 45,
+  FETCH_TIMEOUT_MS: 5000,
+  // SEP (particulas solares energeticas) so entra quando o fetch ao vivo trouxe uma; nunca inventamos.
+  // Regras do jogo: a cada 3 tempestades, a 3a e um pico de SEP. As particulas voam quase na
+  // velocidade da luz, entao o aviso e curto (~25 s reais). O DONKI nao da a forca da SEP em Marte:
+  // o pico usa a menor tempestade que o Curiosity mediu (RADIATION_CONFIG.STORM_DOSE_MIN_UGY).
+  SEP_EVERY_N_STORMS: 3,
+  SEP_WARNING_HOURS: 0.25,
+};
+
 export const MAV_CONFIG = {
   // Plataforma de lancamento, longe da base e da cratera de gelo
   PAD_POSITION: { x: 24, z: 20 },
@@ -284,6 +302,7 @@ export const CREW_CONFIG = {
     { title: 'Communications Officer', specialties: ['oxygen'] },
   ],
   SPECIALIST_EFFORT: 1.5,
+  GREENHOUSE_HARVEST_INTERVAL: 20, // segundos de jogo ativo entre colheitas do tripulante
   SUIT_COLORS: [0xf97316, 0x22c55e, 0x3b82f6, 0xeab308, 0xec4899, 0x06b6d4, 0xa855f7, 0xf43f5e],
   OXYGEN_ENERGY_PER_HOUR: 0.75, // % de bateria por tripulante
   WATER_L_PER_HOUR: 0.3,

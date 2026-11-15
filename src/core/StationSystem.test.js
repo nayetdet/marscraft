@@ -1,6 +1,6 @@
 import { SurvivalSystem } from '../player/SurvivalSystem.js';
 import { CROP_ITEM_IDS } from '../config/blockTypes.js';
-import { CROP_CONFIG, STATION_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
+import { CROP_CONFIG, STATION_CONFIG, WATER_SYSTEM_CONFIG, CREW_CONFIG } from '../config/constants.js';
 import { describe, it, expect } from 'vitest';
 import { ExpeditionState } from './ExpeditionState.js';
 import { StationSystem } from './StationSystem.js';
@@ -57,6 +57,25 @@ describe('base stations', () => {
 });
 
 describe('greenhouse and science progression', () => {
+  it('lets the greenhouse worker harvest ripe plots periodically and keeps uncollected food in baskets', () => {
+    const station = new StationSystem(new ExpeditionState());
+    station.plots[1].crop = { type: 'potato', progress: CROP_CONFIG.potato.seconds };
+    station.plots[2].crop = { type: 'soy', progress: 0 };
+    const interval = CREW_CONFIG.GREENHOUSE_HARVEST_INTERVAL;
+    station.updateCrewHarvest(interval, false);
+    expect(station.plots[1].crop).not.toBeNull();
+    station.updateCrewHarvest(interval - 1, true);
+    expect(station.harvestBaskets.potato).toBe(0);
+    station.updateCrewHarvest(1, true);
+    expect(station.harvestBaskets.potato).toBe(GREENHOUSE_PLOTS[1].yield);
+    expect(station.plots[1].crop).toBeNull();
+    expect(station.plots[2].crop).not.toBeNull();
+    let capacity = 1;
+    const survival = { addBlockToInventory: id => id === CROP_ITEM_IDS.potato && capacity-- > 0 };
+    expect(station.collectBasket('potato', survival)).toMatch(/rest is in the basket/);
+    expect(station.harvestBaskets.potato).toBe(GREENHOUSE_PLOTS[1].yield - 1);
+    expect(station.collectBasket('potato', survival)).toMatch(/full/i);
+  });
   it.each(['potato', 'lettuce', 'soy'])('grows %s with power and harvests fresh food', type => {
     expect(CROP_CONFIG[type].seconds).toBeLessThan(10);
     const mission = new ExpeditionState();

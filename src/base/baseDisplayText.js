@@ -41,9 +41,11 @@ function stormMode(storm) {
 const doseTone = (rate) => (rate >= RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR ? 'alert' : 'ok');
 
 export function commandModel(s) {
+  // `donkiCredit`: "NASA DONKI, real data from DD/MM/AAAA" ou "LIVE from NASA DONKI, fetched HH:MM" (#100)
+  const credit = s.donkiCredit ?? `NASA DONKI, real data from ${s.donkiDate}`;
   const footer = s.storm.phase === 'calm' || !s.storm.speedKmS
-    ? `Storm data: NASA DONKI, real data from ${s.donkiDate}`
-    : `Real CME seen ${s.storm.date}: ${Math.round(s.storm.speedKmS)} km/s (NASA DONKI, real data from ${s.donkiDate})`;
+    ? `Storm data: ${credit}`
+    : `Real CME seen ${s.storm.date}: ${Math.round(s.storm.speedKmS)} km/s (${credit})`;
   return {
     title: 'BASE STATUS',
     rows: [

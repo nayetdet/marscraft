@@ -1,4 +1,4 @@
-import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS } from '../world/greenhouseLayout.js';
+import { GREENHOUSE_CENTER, GARDEN_CROP_BED, GREENHOUSE_MONITOR_POS, GREENHOUSE_BASKETS } from '../world/greenhouseLayout.js';
 import { createCropPlantModel } from '../graphics/cropModels.js';
 import * as THREE from 'three';
 import { CAMERA_CONFIG, CROP_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG } from '../config/constants.js';
@@ -7,9 +7,9 @@ import { CrewManager } from '../crew/CrewManager.js';
 import { CrewAvatar } from '../crew/CrewAvatar.js';
 import { createBaseStock } from '../crew/baseStock.js';
 import { createStations } from '../crew/stations.js';
-import donkiCme from '../data/donkiCme.json';
+import { EMBEDDED_SPACE_WEATHER } from '../data/spaceWeather.js';
 import { MissionSystem, oxygenPointsToKg } from '../mission/MissionSystem.js';
-import { NO_STORM_DATA_TEXT, formatDateDMY, formatDose, formatHours, stormEventMessage } from '../mission/missionText.js';
+import { NO_STORM_DATA_TEXT, donkiCredit, donkiLabel, formatDateDMY, formatDose, formatHours, stormEventMessage } from '../mission/missionText.js';
 import { MissionHud } from '../ui/MissionHud.js';
 import { missionReport } from '../mission/missionReport.js';
 import { renderReportCard } from '../ui/ReportCard.js';
@@ -127,7 +127,9 @@ export class GameEngine {
     this.customColliders = colliders;
 
     // Zonas, placas, posteres e telas vivas da base (as caixas de colisao entram em `colliders`)
-    this.baseDecor = buildBaseDecor(this.scene, colliders, { donkiDate: formatDateDMY(donkiCme.fetched) });
+    // Clima espacial: comeca no dado embutido; o ao vivo do DONKI entra em applySpaceWeather (#100)
+    this.spaceWeather = EMBEDDED_SPACE_WEATHER;
+    this.baseDecor = buildBaseDecor(this.scene, colliders);
     for (const point of this.baseDecor.infoPoints) point.type = 'info';
     this._displayTimer = 1;
 
@@ -143,7 +145,7 @@ export class GameEngine {
     this.player = new PlayerPhysics(this.world, colliders);
     this.survival = new SurvivalSystem();
     // As tempestades solares so comecam no ato 2 da historia (StoryDirector)
-    this.mission = new MissionSystem({ cmes: donkiCme.cmes, startHours: this._skyHours(), stormsStarted: false });
+    this.mission = new MissionSystem({ cmes: this.spaceWeather.cmes, seps: this.spaceWeather.seps, startHours: this._skyHours(), stormsStarted: false });
     // O rover carrega no deposito puxando da bateria da base (issue #111)
     this.roverController.basePower = this.mission.battery;
     // Radio Terra-Marte (issue #56, A2): atraso pela distancia real de hoje e conjuncao solar
@@ -208,7 +210,7 @@ export class GameEngine {
     // Missao: energia, tempestades solares (CMEs reais do DONKI) e o MAV
     this.shieldBubble = new ShieldBubble(this.scene, SHIELD_ZONE);
     this.missionHud = new MissionHud({
-      donkiFetched: donkiCme.fetched,
+      donkiFetched: this.spaceWeather,
       onLoadIce: (count) => this._loadIceIntoMav(count),
       onToggleFactory: () => this.mission.toggleFactory(),
       onIgnite: () => this._launchMav(),
@@ -227,7 +229,7 @@ export class GameEngine {
     this.crewAvatars = [];
     this._buildCrew(CREW_CONFIG.NAMES.length);
     this.menuScreens = new MenuScreens({
-      donkiDate: formatDateDMY(donkiCme.fetched),
+      donkiDate: formatDateDMY(this.spaceWeather.fetchedAt),
       onDemo: (action) => this._runDemo(action),
     });
 
@@ -289,6 +291,7 @@ export class GameEngine {
     const greenhouseLit = this.utility.greenhouseLightsOn && !this.utility.cold;
     this.expedition.greenhousePowered = greenhouseLit && this.expedition.spend(this.utility.greenhouseLightsCost(dt));
     this.stations.update(dt, insideCore, this.survival, !inside);
+    this.stations.updateCrewHarvest(dt, this.crew.members.some(member => member.task === 'greenhouse' && member.stationary && member.canWork));
     this._updateShelterWater();
     this.updateCropVisuals();
     this.airlock.update(dt, this.player.pos);
@@ -375,6 +378,7 @@ export class GameEngine {
       { type: 'hygiene', x: -19.85, y: 11.6, z: -32.5, label: 'Press F: bathroom & water recycler' },
       { type: 'workshop', x: 11.5, y: 11.5, z: -38.1, label: 'Press F: 3D printer workshop' },
       { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
+      ...GREENHOUSE_BASKETS.map(basket => ({ ...basket, cropType: basket.type, type: 'basket', minDot: 0.95, label: `Press F or tap: collect ${basket.type}` })),
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
       { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
@@ -407,6 +411,7 @@ export class GameEngine {
     if (!target) return;
     let message;
     if (target.type === 'info') { this.hud.showToast(target.text(this._baseState()), 8000); return; }
+    if (target.type === 'basket') { this.hud.showToast(this.stations.collectBasket(target.cropType, this.survival)); return; }
     if (target.type === 'door') message = this.airlock.request(target.door, this.player.pos);
     else if (target.type === 'treadmill' || target.type === 'bike') {
       this.mountGym(target.type);
@@ -809,7 +814,8 @@ export class GameEngine {
       ['Solar energy collected', `${(m.solarEnergyCollected / m.battery.capacity).toFixed(1)} full batteries`],
       ['Time left in the launch window', formatHours(this.story.windowHoursLeft ?? 0)],
     ];
-    const sources = `Solar storms: real CMEs that NASA predicted would reach Mars, from NASA DONKI (real data from ${formatDateDMY(donkiCme.fetched)}). ` +
+    const sources = `Solar storms: real CMEs that NASA predicted would reach Mars, from NASA DONKI (${donkiLabel(this.spaceWeather)}). ` +
+      (this.spaceWeather.seps.length ? 'Fast particle alerts: real SEPs (bursts of super fast particles from the Sun) from NASA DONKI; their strength is a game rule. ' : '') +
       'Radiation: Curiosity RAD on the Mars surface (NASA RadLab); how strong each storm is in the game is a game rule, never above the biggest storm Curiosity measured. ' +
       'Sunlight on Mars: 43% of Earth (NASA Mars Fact Sheet). ' +
       'Crew needs: NASA Baseline Values and Assumptions Document. Water recycling: 98%, like the Space Station. ' +
@@ -868,7 +874,7 @@ export class GameEngine {
     this._wasDead = this.survival.isDead;
 
     for (const event of this.mission.drainEvents()) {
-      const message = stormEventMessage(event, donkiCme.fetched);
+      const message = stormEventMessage(event, this.spaceWeather);
       if (message) this.hud.showToast(message, event.type === 'storm-warning' ? 8000 : 4500);
     }
 
@@ -891,6 +897,7 @@ export class GameEngine {
     }
     this.greenhouseFields.update(this.stations.plots, {
       stalled: this.stations.hasGrowingCrops() && plantsStalled(this.greenhouseState()),
+      stock: this.stations.harvestBaskets,
     });
     // Cada colheita mostra um card "Ciencia espacial na Terra" (issue #89)
     const harvests = this.stations.harvestCount;
@@ -931,8 +938,8 @@ export class GameEngine {
         phase: storm.phase,
         hoursUntil: storm.hoursUntil,
         hoursLeft: storm.hoursLeft ?? 0,
-        speedKmS: storm.storm?.cme.speedKmS ?? 0,
-        date: storm.storm ? formatDateDMY(storm.storm.cme.startTime) : '',
+        speedKmS: storm.storm?.cme?.speedKmS ?? 0,
+        date: storm.storm?.cme ? formatDateDMY(storm.storm.cme.startTime) : '',
       },
       doseRate: m.doseRate,
       totalDose: m.totalDoseMsv,
@@ -941,8 +948,23 @@ export class GameEngine {
       fields: { planted: this.stations.plantedPlotCount(), ready: this.stations.readyPlotCount(), total: this.stations.plots.length },
       inShelter: m.insideShelter,
       shelterWaterL: m.shelterWaterL,
-      donkiDate: formatDateDMY(donkiCme.fetched),
+      donkiDate: formatDateDMY(this.spaceWeather.fetchedAt),
+      donkiCredit: donkiCredit(this.spaceWeather),
     };
+  }
+
+  // Clima espacial ao vivo do DONKI (issue #100), carregado em main.js. So vale antes do primeiro
+  // Play e antes de a fila de tempestades comecar: se chegar depois, fica para a proxima partida
+  // (o cache do spaceWeather.js guarda). Nunca e chamado dentro do loop.
+  applySpaceWeather(spaceWeather) {
+    if (!spaceWeather?.live || this.input.hasStarted || this.mission.stormsStarted) return false;
+    this.spaceWeather = spaceWeather;
+    this.mission.cmes = spaceWeather.cmes;
+    this.mission.seps = spaceWeather.seps;
+    this.missionHud.donkiFetched = spaceWeather;
+    const label = donkiLabel(spaceWeather);
+    this.menuScreens.setDonkiSource(label);
+    return true;
   }
 
   _updateBaseDisplays(dt) {

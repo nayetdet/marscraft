@@ -37,11 +37,13 @@ export function mavProgress({ propellant, stormsSurvived, dataSent }) {
 export class MissionSystem {
   // `stormsStarted: false` deixa o clima espacial calmo ate `startStorms()` (a historia so
   // solta as tempestades no ato 2, para nenhuma CME cair no meio do tutorial).
-  constructor({ cmes, startHours, stormsStarted = true }) {
+  // `seps`: SEPs reais do fetch ao vivo do DONKI (issue #100); vazio no dado embutido.
+  constructor({ cmes, seps = [], startHours, stormsStarted = true }) {
     this.battery = new Battery();
     this.cmes = cmes;
+    this.seps = seps;
     this.stormsStarted = stormsStarted;
-    this.schedule = stormsStarted ? buildStormSchedule(cmes, startHours) : [];
+    this.schedule = stormsStarted ? buildStormSchedule(cmes, startHours, undefined, seps) : [];
     this.lastHours = startHours;
 
     this.shieldOn = false;
@@ -160,7 +162,7 @@ export class MissionSystem {
   startStorms(hours) {
     if (this.stormsStarted) return;
     this.stormsStarted = true;
-    this.schedule = buildStormSchedule(this.cmes, hours);
+    this.schedule = buildStormSchedule(this.cmes, hours, undefined, this.seps);
     this.storm = stormStateAt(this.schedule, hours);
     this._phaseKey = this._keyFor(this.storm);
   }

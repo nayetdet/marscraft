@@ -33,6 +33,13 @@ describe('base display text', () => {
     expect(active.rows.at(-1).value).toContain('STORM NOW');
   });
 
+  it('command screen says LIVE only when the storm data was fetched now (issue #100)', () => {
+    const live = commandModel(state({ donkiCredit: 'LIVE from NASA DONKI, fetched 18:40' }));
+    expect(live.footer).toBe('Storm data: LIVE from NASA DONKI, fetched 18:40');
+    const active = commandModel(state({ donkiCredit: 'LIVE from NASA DONKI, fetched 18:40', storm: { phase: 'active', hoursUntil: 0, hoursLeft: 1, speedKmS: 894, date: '01/11/2026' } }));
+    expect(active.footer).toContain('(LIVE from NASA DONKI, fetched 18:40)');
+  });
+
   it('power map shows night, the shield and an empty battery', () => {
     const night = powerModel(state({ chargeRate: 0, batteryPct: 0, greenhousePowered: false, shieldOn: true }));
     const byLabel = Object.fromEntries(night.rows.map((r) => [r.label, r.value]));

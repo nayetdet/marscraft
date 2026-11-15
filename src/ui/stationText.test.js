@@ -27,4 +27,10 @@ describe('NASA Data screen (issue #111)', () => {
     expect(firstNote).toMatch(/saved inside the game/);
     expect(firstNote).toMatch(/not live/);
   });
+
+  it('describes the live space weather and the fallback to the saved data (issue #100)', () => {
+    expect(firstNote).toMatch(/LIVE from NASA DONKI/);
+    expect(firstNote).toMatch(/without internet, the game uses the saved data and never says LIVE/i);
+    expect(screen).toContain('id="sources-donki-date"');
+  });
 });

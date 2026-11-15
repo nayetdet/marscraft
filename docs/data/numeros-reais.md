@@ -96,6 +96,7 @@ Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG
 | Força de cada tempestade (`stormTotalDoseUGy`) | **regra do jogo**: cresce com a velocidade da CME, do mínimo em 300 km/s ao recorde em 1.200 km/s; golpe de raspão em Marte vale 75 % | A velocidade e o "golpe de raspão" vêm do DONKI; o mapeamento para dose não é medida da NASA, e a tela "NASA Data" diz isso |
 | Tempo de aviso da tempestade | chegada prevista em Marte − saída do Sol, da própria CME (`marsArrivalTime − startTime`); 1 dia real de viagem = 1 hora de jogo | [API, DONKI] modelo WSA-ENLIL, `cmeAnalyses[].enlilList[].impactList[]` com `location: "Mars"`. Exemplo: CME de 01/11/2026 19:00Z, chegada em 07/11 06:00Z = 5 dias e 11 h = 5,46 h de jogo |
 | Tempestades usadas | só CMEs reais com **impacto previsto em Marte**; se não houver nenhuma, a fila fica vazia ("No storms headed to Mars in this data") | [API, DONKI] `src/data/donkiCme.json`, gerado por `node scripts/fetch-donki-cme.mjs`. Coleta de 15/11/2026: **153 CMEs para Marte** de 1.651 entre 14/11/2025 e 13/11/2026; velocidades de 255 a 1.960 km/s (mediana 535), avisos de 1,6 a 7,2 horas de jogo (mediana 4,7), 92 de raspão |
+| Pico de SEP (só com dado ao vivo, issue #100; `SPACE_WEATHER_CONFIG`) | a cada 3 tempestades, a 3ª é um pico de SEP: aviso de **0,25 h de jogo** (~25 s reais) e dose total de **665 µGy** (a menor tempestade real do Curiosity). As duas coisas são **regra do jogo** | [API, DONKI] `/DONKI/SEP`: data (`eventTime`) e nave que mediu (`instruments`) são reais. O DONKI não dá a força da SEP em Marte. As partículas viajam perto da velocidade da luz e chegam em minutos a horas, por isso o aviso é curto. Sem SEP na janela ao vivo (caso de 14/11/2026: 0 em 60 dias), o jogo não cria uma |
 | Relevo do mundo (`src/data/marsTerrain.js`) | recorte de **224 × 224 pixels a 1,0118 m por pixel** de uma cratera de ~180 m em Aeolis Palus, cratera Gale (**4,4743°S, 137,4032°E**, ~7 km ao norte do pouso do Curiosity); **12,7 m** de relevo, de −4.448,1 m a −4.435,5 m; 1 bloco ≈ 1 m | [API, HiRISE DTM `DTEEC_010573_1755_010639_1755_U01`](https://www.uahirise.org/dtm/PSP_010573_1755), NASA/JPL-Caltech/University of Arizona; `src/data/marsTerrain.json`, gerado por `node scripts/fetch-mars-terrain.mjs`. Nivelados para as construções: base, alas norte e leste, estufa e plataforma do MAV. Com a cratera de gelo, que é do jogo, só **~5 % das colunas** diferem do dado real depois do arredondamento para blocos. |
 | Limite de carreira exibido na vitória | **600 mSv** | [Ref] NASA-STD-3001 (2022) |
 | O2 em kg no resumo da vitória | 1 sol respirando lá fora = **0,84 kg** | [Ref] NASA BVAD |
@@ -117,13 +118,13 @@ Números usados em `src/config/constants.js` (`ENERGY_CONFIG`, `RADIATION_CONFIG
 | Pôster "Why we exercise" | ossos perdem **~1 %** de densidade por mês no espaço sem exercício; tripulações da ISS treinam **~2 h por dia** | [Ref] [NASA, 01/12/2023](https://www.nasa.gov/missions/station/iss-research/counteracting-bone-and-muscle-loss-in-microgravity/) |
 | Pôsteres "Mars vs Earth" e "Going outside" | gravidade 38 %, sol de 24 h 39 min, luz 43 %, pressão 0,7 %, −62 °C (média) e −97,7 °C (mínima) | tabelas acima (Mars Fact Sheet e InSight) |
 
-Os textos dos pôsteres ficam em `src/base/basePosters.js`; a tela "NASA Data" do menu (`index.html`) lista as mesmas fontes.
+A tela "NASA Data" do menu (`index.html`) lista as fontes.
 
 ### Ritmo do consumo (issue #81, escala de jogo)
 
 No playtest tudo zerava junto. A conta mostrava por quê: com a tripulação padrão (2) e tudo ligado, a base gastava parada **10,5 %/h de dia e 13,5 %/h à noite**, ou seja, **288 % de bateria por sol**, e os painéis geram **~164 % por sol** (pico de 21,5 %/h, zero à noite). A noite de 12 h pedia 162 % de uma bateria de 100 %.
 
-| Consumo passivo (por hora de jogo = 100 s reais) | Antes | Agora | Onde |
+| Consumo passivo (por hora de jogo = 50 s reais) | Antes | Agora | Onde |
 |---|---|---|---|
 | O2 da tripulação, por tripulante | 1,5 % | **0,75 %** | `CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR` |
 | Trabalho em cada estação operada | 2 % | **1 %** | `STATION_CONFIG.WORK_ENERGY_PER_HOUR` |
@@ -153,7 +154,7 @@ Simplificação a explicar: a "blindagem ligada" (tecla R) é um escudo ativo qu
 | Parâmetro no código | Valor atual | Real | Comentário |
 |---|---|---|---|
 | `PHYSICS_CONFIG.MARS_GRAVITY` (`src/config/constants.js`) | `12.0` | 3,71 m/s² | Ajustado para "sensação" de jogo. Se mantiver, explique isso no jogo ou nos créditos; o critério *Validity* olha isso. |
-| Duração de 1 sol (`MISSION_CONFIG.GAME_HOURS_PER_SECOND = 0.01` h/s) | ~40 min reais por dia de 24 h | 24 h 39 min | O relógio usa 24 h. Pode virar 24,65 h para ficar fiel. |
+| Duração de 1 sol (`MISSION_CONFIG.GAME_HOURS_PER_SECOND = 0.02` h/s) | ~20 min reais por dia de 24 h | 24 h 39 min | O relógio usa 24 h. Pode virar 24,65 h para ficar fiel. |
 | Taxas de O2/água/comida (`SURVIVAL_CONFIG`) | arbitrárias | — | Ok ser escala de jogo, mas a **razão** entre elas pode seguir o consumo real de um astronauta (O2 ~0,84 kg/dia, água ~2,5–3,5 kg/dia, comida ~1,8 kg/dia; fonte: NASA ECLSS / BVAD). |
 
 ### Crescimento de plantas na estufa

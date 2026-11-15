@@ -1,17 +1,22 @@
-import { DUST_STORM_VISUAL_CONFIG, SURVIVAL_CONFIG, TERRAIN_CONFIG } from '../config/constants.js';
+import { DUST_STORM_VISUAL_CONFIG, SURVIVAL_CONFIG, TERRAIN_CONFIG, WORLD_CONFIG } from '../config/constants.js';
 
-// Zona da tempestade de poeira que cerca a area jogavel: um anel em volta do centro da base.
-// Logica pura, usada pela sobrevivencia (dano), pelo HUD (aviso) e pelo visual (DustStormEffect).
+// Raios de exposição usados pela sobrevivência e pelo HUD; o visual acompanha a borda física do mapa.
 
 const CENTER = TERRAIN_CONFIG.BASE_CENTER;
 const START = SURVIVAL_CONFIG.DUST_STORM_START_RADIUS;
 const RANGE = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS - START;
 const WARNING = SURVIVAL_CONFIG.DUST_STORM_WARNING_DISTANCE;
-const VISUAL_START = START - DUST_STORM_VISUAL_CONFIG.VISUAL_LEAD;
-const VISUAL_RANGE = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS - VISUAL_START;
+const HALF_MAP_X = WORLD_CONFIG.SIZE_X / 2;
+const HALF_MAP_Z = WORLD_CONFIG.SIZE_Z / 2;
 
 export const DUST_STORM_CENTER = CENTER;
-export const DUST_STORM_WALL_RADIUS = START + DUST_STORM_VISUAL_CONFIG.WALL_RADIUS_OFFSET;
+// Usa o raio do círculo inscrito no mapa para a parede não ultrapassar seus limites.
+export const DUST_STORM_WALL_RADIUS = Math.min(
+  HALF_MAP_X - Math.abs(CENTER.x),
+  HALF_MAP_Z - Math.abs(CENTER.z)
+);
+const VISUAL_START = DUST_STORM_WALL_RADIUS - DUST_STORM_VISUAL_CONFIG.VISUAL_LEAD;
+const VISUAL_RANGE = DUST_STORM_WALL_RADIUS - VISUAL_START;
 
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
@@ -29,7 +34,7 @@ export function dustStormProximity(x, z) {
   return clamp01((distanceFromBaseCenter(x, z) - (START - WARNING)) / WARNING);
 }
 
-// Forca do visual (neblina, cupula, particulas): comeca um pouco antes da tempestade, na parede
+// O visual cresce apenas na aproximação da borda física do mapa.
 export function dustStormVisualStrength(x, z) {
   return clamp01((distanceFromBaseCenter(x, z) - VISUAL_START) / VISUAL_RANGE);
 }

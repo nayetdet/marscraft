@@ -29,6 +29,10 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
+        env:
+          # Fetch ao vivo do NASA DONKI (issue #100). A chave fica visivel no bundle publicado:
+          # use so uma chave gratuita da api.nasa.gov. Sem o secret, o jogo usa a DEMO_KEY.
+          VITE_NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
