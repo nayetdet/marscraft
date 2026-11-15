@@ -11,11 +11,12 @@ export const DOSE_LIMIT_MSV = RADIATION_CONFIG.CAREER_LIMIT_MSV;
 // A frase que explica "dose" para criancas de 7 a 12 anos
 export const DOSE_EXPLAINER = 'Dose is how much radiation your body has collected. It only goes up.';
 
-// De onde veio a dose: viagem, saidas em dia calmo, tempestades (dentro ou fora) e dentro da base
-export const DOSE_SOURCES = ['transit', 'eva', 'storm', 'habitat'];
+// De onde veio a dose: viagem, saidas em dia calmo, tempestades (dentro ou fora), dentro da base
+// e o reator de fissao ligado (regra do jogo, DOSE_CONFIG.REACTOR_MSV_PER_HOUR)
+export const DOSE_SOURCES = ['transit', 'eva', 'storm', 'habitat', 'reactor'];
 
 export function createDoseLedger() {
-  return { transit: TRANSIT_DOSE_MSV, eva: 0, storm: 0, habitat: 0 };
+  return { transit: TRANSIT_DOSE_MSV, eva: 0, storm: 0, habitat: 0, reactor: 0 };
 }
 
 // Onde somar a dose deste trecho de tempo
@@ -26,12 +27,14 @@ export function doseSourceFor({ stormActive, insideHabitat }) {
 
 // Retrato da dose para telas e para o boletim final (#90)
 export function doseBreakdown(ledger) {
-  const total = ledger.transit + ledger.eva + ledger.storm + ledger.habitat;
+  const reactor = ledger.reactor ?? 0;
+  const total = ledger.transit + ledger.eva + ledger.storm + ledger.habitat + reactor;
   return {
     transit: ledger.transit,
     eva: ledger.eva,
     storm: ledger.storm,
     habitat: ledger.habitat,
+    reactor,
     total,
     limit: DOSE_LIMIT_MSV,
     fraction: total / DOSE_LIMIT_MSV,
@@ -82,6 +85,8 @@ export function doseHistoryText(b) {
     `  Walks outside: ${msv(b.eva)}\n` +
     `  Solar storms: ${msv(b.storm)}\n` +
     `  Inside the base: ${msv(b.habitat)}` +
+    (b.reactor > 0 ? `
+  Fission reactor: ${msv(b.reactor)}` : '') +
     (b.grounded ? '\nFLIGHT DOCTOR: no more walks outside for you.' : '');
 }
 
@@ -89,7 +94,7 @@ export function doseHistoryText(b) {
 export function doseVictoryRows(b) {
   return [
     ['Radiation dose you got', `${msv(b.total)}, ${b.grounded ? 'over' : 'under'} the NASA limit of ${msv(b.limit)}`],
-    ['Where your dose came from', `Trip ${Math.round(b.transit)}, outside ${Math.round(b.eva)}, storms ${Math.round(b.storm)}, in base ${msv(b.habitat)}`],
+    ['Where your dose came from', `Trip ${Math.round(b.transit)}, outside ${Math.round(b.eva)}, storms ${Math.round(b.storm)}, in base ${msv(b.habitat)}${b.reactor > 0 ? `, reactor ${msv(b.reactor)}` : ''}`],
   ];
 }
 

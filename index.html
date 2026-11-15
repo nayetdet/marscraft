@@ -380,6 +380,7 @@
             <div class="info-row"><b>Space biology</b><span>Real studies about bones, muscles, radiation, rest and the immune system from the NASA Open Science Data Repository (OSDR), and the radiation comparison from NASA RadLab. They unlock in your journal [J], which shows the date the data was saved.</span></div>
             <div class="info-row"><b>Health</b><span>Career radiation limit of 600 mSv (NASA-STD-3001). Bones lose about 1% of density a month in space without exercise (NASA, 2023).</span></div>
             <div class="info-row"><b>Sleep</b><span>Astronauts on the Space Shuttle and the Space Station slept about 6 hours a night, with 8.5 hours planned (study of 85 astronauts, Barger et al., 2014). How much food and water you use while you sleep is a game rule.</span></div>
+            <div class="info-row"><b>Night power</b><span>The fission reactor in the Power &amp; Heat room is based on Kilopower, a small reactor NASA tested in 2018 (1 to 10 kW, day and night). Its power and the radiation it adds are game rules: real reactors stay far from the crew or behind a heavy shield.</span></div>
           </div>
           <p class="info-note">Game speed, battery size and storm length are scaled so a mission fits in a few minutes. Art, textures and sounds are drawn by code, with no NASA logo. Parts of the code were written with AI assistance.</p>
           <button id="sources-back-btn" class="mc-btn secondary">Back</button>
@@ -447,7 +448,7 @@
   <div id="station-overlay" class="station-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="station-title">
     <section class="station-window">
       <header><span id="station-title"></span><button id="station-close" aria-label="Close station">X</button></header>
-      <div class="station-screen"><pre id="station-content"></pre><div id="gym-interactive" class="gym-interactive hidden"></div><div id="greenhouse-monitor" class="gh-monitor hidden"></div><div id="station-sources" class="station-sources"></div><p id="station-feedback" role="status"></p></div>
+      <div class="station-screen"><div id="station-content" class="station-text"></div><div id="power-monitor" class="power-monitor hidden"></div><div id="gym-interactive" class="gym-interactive hidden"></div><div id="greenhouse-monitor" class="gh-monitor hidden"></div><div id="station-sources" class="station-sources"></div><p id="station-feedback" role="status"></p></div>
       <div id="station-actions"></div>
       <p class="station-footer">MISSION SYSTEMS // SIMULATION PAUSED</p>
     </section>

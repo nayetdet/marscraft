@@ -276,7 +276,9 @@ export const ENERGY_CONFIG = {
   MARS_SUNLIGHT_FRACTION: 0.43,
   // Custos (em % de bateria)
   OXYGEN_COST_PER_POINT: 1.5, // reciclar 1 ponto de O2 no habitat (MOXIE + reciclagem)
-  SHIELD_DRAIN_PER_HOUR: 12.5, // blindagem contra radiacao ligada
+  // Blindagem contra radiacao ligada. Era 12,5 com tempestades de 3 h (37,5 % por tempestade);
+  // com a tempestade de 1 h (STORM_CONFIG.DURATION_HOURS) uma tempestade inteira custa 25 %.
+  SHIELD_DRAIN_PER_HOUR: 25,
   ISRU_DRAIN_PER_HOUR: 25, // fabrica de combustivel ligada
   // Gerador nuclear (issue #85). [Ref] O MMRTG do Curiosity e do Perseverance gera ~110 W de
   // eletricidade de dia e de noite, com calor do plutonio (NASA). Na base ele so paga o suporte
@@ -285,6 +287,12 @@ export const ENERGY_CONFIG = {
   RTG_LIFE_SUPPORT_PER_HOUR: 2,
   // Quanto do RTG fica guardado para o suporte de vida, em horas de producao (sobra e perdida)
   RTG_BUFFER_HOURS: 0.25,
+  // Reator de fissao tipo Kilopower: energia de dia e de noite, para a base toda.
+  // [Ref] NASA Kilopower / KRUSTY (teste em Nevada, nov/2017 a mar/2018): 1 a 10 kW de eletricidade
+  // por pelo menos 10 anos; 4 unidades dariam conta de um posto avancado (NASA, 02/05/2018).
+  // Potencia em escala de jogo: paga o gasto parado da base a noite (~6 %/h), mas nao a fabrica
+  // nem a blindagem. O custo dele e dose de radiacao: DOSE_CONFIG.REACTOR_MSV_PER_HOUR.
+  REACTOR_CHARGE_PER_HOUR: 8,
   // Hora do aviso de por do sol (o Sol se poe as 18h): hora de conferir a bateria
   SUNSET_WARNING_HOUR: 16.5,
   // Abaixo disso (%) a bateria esta vazia: maquinas em espera, so o RTG mantem o ar
@@ -316,9 +324,11 @@ export const RADIATION_CONFIG = {
   // Escala de jogo: dose acima desta taxa (mSv por hora de jogo) machuca. Calibrado para que
   // toda tempestade machuque la fora, as fortes machuquem dentro do habitat sem abrigo, e o
   // abrigo com a parede cheia ou a blindagem dentro do habitat protejam em qualquer tempestade.
-  HARM_THRESHOLD_MSV_PER_HOUR: 0.5,
+  // Anda junto com STORM_CONFIG.DURATION_HOURS: a tempestade entrega a mesma dose total em menos
+  // horas de jogo, entao a taxa por hora sobe na mesma proporcao (era 0,5 com 3 h de tempestade).
+  HARM_THRESHOLD_MSV_PER_HOUR: 1.5,
   // Acima desta taxa o HUD mostra radiacao alta (ainda sem dano)
-  WARN_MSV_PER_HOUR: 0.1,
+  WARN_MSV_PER_HOUR: 0.3, // era 0,1 com 3 h de tempestade
   DAMAGE_PER_EXCESS_MSV: 3, // pontos de vida por mSv acima do limite (escala de jogo)
   // [Ref] limite de carreira de astronautas da NASA: 600 mSv (NASA-STD-3001, 2022)
   CAREER_LIMIT_MSV: 600,
@@ -342,7 +352,10 @@ export const STORM_CONFIG = {
   GAP_BETWEEN_STORMS_HOURS: 2,
   // Horas de jogo de tempestade. Na mesma escala do aviso sao ~3 dias reais; a tempestade de
   // 2017 ficou alta por mais de 2 dias (NASA JPL)
-  DURATION_HOURS: 3,
+  // Teste com jogadores em 15/11/2026: 3 h de jogo (2,5 min reais) parado no abrigo cansava.
+  // Agora 1 h (50 s reais). A dose total da tempestade nao muda, so chega mais rapido: por isso
+  // HARM_THRESHOLD e WARN de RADIATION_CONFIG subiram na mesma proporcao (x3).
+  DURATION_HOURS: 1,
   // Controle de demo (menu "Demo controls"): aviso curto antes da tempestade chegar (~10 s reais)
   DEMO_LEAD_HOURS: 0.2,
 };
@@ -566,6 +579,12 @@ export const DOSE_CONFIG = {
   // a dose de uma estadia real de ~500 dias. As proporcoes entre la fora, habitat, escudo e
   // abrigo sao as mesmas de radiation.js.
   GAME_FACTOR: 8,
+  // Reator de fissao ligado (ENERGY_CONFIG.REACTOR_CHARGE_PER_HOUR): mSv por hora de jogo que
+  // entram na barra, dentro ou fora da base. REGRA DO JOGO, nao e medida: o reator do jogo fica
+  // perto da base para o cabo ser curto. Um reator de verdade fica longe ou atras de um escudo
+  // pesado, e esse e o trade-off real (distancia e massa do escudo x dose da tripulacao).
+  // Uma noite inteira (12 h) com ele ligado soma 24 mSv: ~10 % do que sobra da barra na chegada.
+  REACTOR_MSV_PER_HOUR: 2,
   // Acima desta fracao do limite de carreira a barra fica amarela e a medica avisa
   WARN_FRACTION: 0.85,
   // Traje melhorado (StationSystem.upgrade): a mesma fracao que ele tira do dano la fora

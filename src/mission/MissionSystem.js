@@ -49,6 +49,11 @@ export class MissionSystem {
     this.lastHours = startHours;
 
     this.shieldOn = false;
+    // Reator de fissao (Kilopower): energia de dia e de noite para a base toda. Custa dose de
+    // radiacao enquanto esta ligado (DOSE_CONFIG.REACTOR_MSV_PER_HOUR, regra do jogo).
+    this.reactorOn = false;
+    this.reactorEnergy = 0; // % de bateria que o reator ja entregou (boletim)
+    this.reactorHours = 0;
     // Jogador dentro da bolha do escudo (shieldZone). O escudo só reduz a dose de quem está nela.
     this.insideShield = true;
     // Abrigo de tempestade (issue #56): litros guardados na parede de agua e jogador dentro dele
@@ -154,6 +159,9 @@ export class MissionSystem {
       ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR * h,
       ENERGY_CONFIG.RTG_LIFE_SUPPORT_PER_HOUR * ENERGY_CONFIG.RTG_BUFFER_HOURS,
     );
+    if (this.reactorOn) {
+      this.reactorEnergy += this.battery.add(ENERGY_CONFIG.REACTOR_CHARGE_PER_HOUR * h);
+    }
     const sunset = ENERGY_CONFIG.SUNSET_WARNING_HOUR;
     if (previousTime < sunset && timeOfDay >= sunset) {
       this.events.push({ type: 'sunset-soon', storm: null, hoursUntil: null, batteryPct: this.battery.percent });
@@ -178,8 +186,13 @@ export class MissionSystem {
     this.missionDoseRate = missionDoseMsvPerHour({
       stormDoseUGyPerHour, insideHabitat, shieldOn, shelterWaterL, suitUpgraded: this.suitUpgraded,
     });
+    if (this.reactorOn) this.missionDoseRate += DOSE_CONFIG.REACTOR_MSV_PER_HOUR;
     if (!active) return 0;
 
+    if (this.reactorOn) {
+      this.reactorHours += h;
+      this.addDose(DOSE_CONFIG.REACTOR_MSV_PER_HOUR * h, 'reactor');
+    }
     if (this.standby) this.standbyHours += h;
     if (stormActive) {
       this._playedDuringStorm = true;
@@ -187,7 +200,8 @@ export class MissionSystem {
       if (this.doseRate < RADIATION_CONFIG.HARM_THRESHOLD_MSV_PER_HOUR) this.protectedStormHours += h;
     }
     this.realDoseMsv += this.doseRate * h;
-    this.addDose(this.missionDoseRate * h, doseSourceFor({ stormActive, insideHabitat }));
+    const reactorRate = this.reactorOn ? DOSE_CONFIG.REACTOR_MSV_PER_HOUR : 0;
+    this.addDose((this.missionDoseRate - reactorRate) * h, doseSourceFor({ stormActive, insideHabitat }));
     return radiationDamage(this.doseRate, h);
   }
 
@@ -371,6 +385,12 @@ export class MissionSystem {
     if (!this.shieldOn && this.battery.charge <= 0) return false;
     this.shieldOn = !this.shieldOn;
     return true;
+  }
+
+  // Liga ou desliga o reator de fissao. Funciona com a bateria vazia: e a saida da noite.
+  toggleReactor() {
+    this.reactorOn = !this.reactorOn;
+    return this.reactorOn;
   }
 
   toggleFactory() {

@@ -4,9 +4,11 @@ import { donkiLabel, formatDateDMY, formatHours } from '../mission/missionText.j
 // Estado da missao -> o que o painel do canto superior direito mostra.
 // Inspirado em jogos de gestao: painel fixo de recursos com tendencia (Surviving Mars,
 // Frostpunk) + alertas curtos so quando a crianca precisa agir (Oxygen Not Included).
-// Um aviso por vez, para a crianca resolver uma coisa de cada vez. O segundo so aparece quando
-// tambem e perigo (vermelho), porque perigo nao pode ficar escondido atras de outro.
-const MAX_ALERTS = 2;
+// Um aviso por vez, para a crianca resolver uma coisa de cada vez: o mais urgente (ALERT_PRIORITY).
+// Eram ate 2 quando os dois eram perigo; no teste com jogadores de 15/11/2026 dois cards vermelhos
+// mais o objetivo e a legenda nao deixavam saber o que fazer. O perigo que ficou de fora continua
+// visivel na barra dele (vermelha) no painel de recursos e vira o aviso assim que o primeiro some.
+const MAX_ALERTS = 1;
 const TONE_RANK = { danger: 0, warn: 1, ok: 2 };
 const ALERT_PRIORITY = { breach: 0, oxygen: 0, storm: 1, power: 2, air: 3, radiation: 4, water: 4, bubble: 5, rocket: 6, radio: 7 };
 const RADIATION = {
@@ -75,7 +77,7 @@ export function missionStatus(mission, source, base = {}) {
     alerts.push({
       id: 'oxygen', icon: 'air', tone: 'danger', title: 'SUIT OXYGEN CRITICAL',
       text: base.oxygenNeedsPower
-        ? 'The base battery is empty. Press F at Power & Heat control.'
+        ? 'The base battery is empty. Press F at Power & Heat control and start the reactor.'
         : base.insideHabitat ? 'Stay inside the habitat while your suit refills.' : 'Return through the airlock now.',
       target,
     });
@@ -120,7 +122,11 @@ export function missionStatus(mission, source, base = {}) {
       icon: 'bolt',
       tone: 'danger',
       title: 'Battery almost empty',
-      text: charging ? 'Press F at Power & Heat control and switch off non-essential loads.' : 'Night: no sun. Press F at Power & Heat control to save power until morning.',
+      text: charging
+        ? 'Press F at Power & Heat control and switch off what you do not need.'
+        : mission.reactorOn
+          ? 'Night: no sun. The reactor is on. Press F at Power & Heat control and switch off what you do not need.'
+          : 'Night: no sun. Press F at Power & Heat control: switch things off or start the reactor.',
       target: 'powerroom',
     });
   }

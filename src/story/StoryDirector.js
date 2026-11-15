@@ -218,7 +218,9 @@ export class StoryDirector {
     }
     if (this._guiding && s.stormPhase === 'calm') this._guiding = false;
 
-    this._setObjective(this._guiding ? 'storm-guide' : 'act2');
+    // Com a tempestade em Marte o objetivo e um so: ficar seguro. O gelo espera (teste com
+    // jogadores de 15/11/2026: o painel pedia gelo enquanto o alerta mandava para o abrigo).
+    this._setObjective(this._guiding || s.stormPhase === 'active' ? 'storm-guide' : 'act2');
   }
 
   _updateWindow(s) {
@@ -231,6 +233,10 @@ export class StoryDirector {
       return;
     }
     this.windowHoursLeft = left;
+    if (s.stormPhase === 'active') {
+      this._setObjective('storm-guide');
+      return;
+    }
     this._setObjective(s.propellantPct < 100 ? 'fuel' : !s.dataSent ? 'send-data' : 'ignite');
   }
 
