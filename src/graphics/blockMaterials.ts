@@ -48,6 +48,20 @@ export function createBlockMaterials() {
     }
   });
 
+  // Dark volcanic stone used by the larger block outcrops outside the habitat.
+  register(BLOCK_IDS.DARK_BASALT, (ctx) => {
+    fillNoise(ctx, [69, 75, 82], 20, 220);
+    ctx.fillStyle = '#3f454c';
+    for (let y = 2; y < 16; y += 5) {
+      ctx.fillRect(1, y, 5, 1);
+      ctx.fillRect(9, y + 2, 6, 1);
+    }
+    ctx.fillStyle = '#85878a';
+    ctx.fillRect(3, 5, 1, 1);
+    ctx.fillRect(12, 12, 1, 1);
+    ctx.fillRect(7, 14, 1, 1);
+  });
+
   // 3. Arenito das encostas (um pouco mais claro e amarelado que a areia, com faixas suaves)
   register(BLOCK_IDS.SANDSTONE, (ctx) => {
     fillNoise(ctx, [196, 130, 90], 14, 303);

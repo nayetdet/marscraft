@@ -22,6 +22,7 @@ export const BLOCK_IDS = {
   SCOPE: 17,
   SHIELD_REMOTE: 18, // item de mao, nao e bloco do mundo
   JOURNAL: 19,
+  DARK_BASALT: 20,
 };
 
 export const SHIP_BLOCK_IDS = Object.freeze([
@@ -121,6 +122,7 @@ const BASE_BLOCK_ITEMS = [
   { id: BLOCK_IDS.THRUSTER_METAL, name: 'Metal Floor Plate' },
   { id: BLOCK_IDS.CONSOLE_SCREEN, name: 'Console Block' },
   { id: BLOCK_IDS.RED_BEACON, name: 'Orange Beacon' },
+  { id: BLOCK_IDS.DARK_BASALT, name: 'Dark Basalt' },
 ].map((item) => ({ ...item, initialCount: 0, consumable: null }));
 
 // Item registry is independent of the nine initial hotbar slots.
