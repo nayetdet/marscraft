@@ -123,6 +123,7 @@ export class AdminPanel {
       ${group('Astronaut', [['me:refill', 'Refill astronaut'], ['me:dose', 'Reset radiation dose'], ['me:doseLimit', 'Dose over the limit'], ['me:hurt', 'Health to 25%']])}
       ${group('Base', [['base:dirtySuit', 'Dusty suit'], ['base:contaminate', 'Dust in habitat'], ['base:clean', 'Clean suit + habitat'], ['base:filter', 'CO2 filter 0%']])}
       ${group('North module', [['north:waterFilter', 'Water filter 10%'], ['north:pantry', 'Pantry +10 rations'], ['north:wear', 'Crew stations 30%'], ['north:regolith', '+6 regolith'], ['north:carrot', '+3 carrots']])}
+      ${group('Mars events (issue #107)', [['event:meteor', 'Meteor'], ['event:marsquake', 'Marsquake'], ['event:eclipse', 'Phobos eclipse'], ['event:dustDevil', 'Dust devil'], ['event:frost', 'Frost'], ['event:aurora', 'Aurora']])}
       ${group('Time', [['time:1', '+1 hour [T: +1.5 h]'], ['time:day', 'Skip to 08:00'], ['time:night', 'Skip to 21:00'], ['time:tired', 'Awake 25 h (tired)']])}
       ${group('Teleport', TELEPORTS.map(([name], i) => [`tp:${i}`, name]))}
     `;
@@ -197,6 +198,8 @@ export class AdminPanel {
         sky.advanceTime(delta);
         return `Time moved forward ${delta.toFixed(1)} h.`;
       }
+      case 'event':
+        return this.engine.triggerEvent(arg);
       case 'tp': {
         const [name, x, y, z, yaw] = TELEPORTS[Number(arg)];
         player.pos.set(x, y, z);
@@ -208,6 +211,18 @@ export class AdminPanel {
       default:
         return '';
     }
+  }
+
+  // Semente da partida e agenda dos eventos aleatorios (issue #107)
+  _eventsLine() {
+    const { events } = this.engine;
+    if (!events) return '';
+    const hours = this.engine._skyHours();
+    const next = events.nextEvent;
+    const state = events.active
+      ? `ACTIVE ${events.active.type}`
+      : !events.started ? 'waiting for act 2' : next ? `next ${next.type} in ${(next.hours - hours).toFixed(1)} h` : 'none left';
+    return `Events: seed ${events.seed} (?seed=${events.seed})   ${state}`;
   }
 
   _renderStatus() {
@@ -228,6 +243,7 @@ export class AdminPanel {
       `Health: ${Math.round(survival.health)}/${survival.maxStat}   O2: ${Math.round(survival.oxygen)}`,
       `Radio: ${this.engine.comms.blackout ? 'SILENT' : 'ok'}   Earth: ${Math.round(this.engine.comms.distanceKm / 1e6)} Mkm, ${this.engine.comms.lightMinutes.toFixed(1)} min one way`,
       `Heater: ${this.engine.utility.heaterOn ? 'on' : 'off'}${this.engine.utility.cold ? ' (FREEZING)' : ''}   Water filter: ${Math.round(this.engine.utility.waterFilter)}%   Pantry: ${Math.floor(this.engine.crewStock.food)}`,
+      this._eventsLine(),
       `Position: ${player.pos.x.toFixed(1)}, ${player.pos.y.toFixed(1)}, ${player.pos.z.toFixed(1)}`,
     ].join('\n');
   }

@@ -78,6 +78,12 @@ import { WeatherHud } from '../ui/WeatherHud.js';
 import { LANDER_NOZZLE_Y, createLander, landerCollider } from '../story/cutscene/landerModel.js';
 import { createArrivalCutscene } from '../story/cutscene/arrivalCutscene.js';
 import { MAV_NOZZLE_Y, createLaunchCutscene } from '../story/cutscene/launchCutscene.js';
+import { EventDirector, inWindow, seedFromSearch } from '../mission/eventDirector.js';
+import { DUST_DEVIL_HIT_TOAST, ECLIPSE_END_TOAST, compassDirection, dustDevilPanelsToast, eventCard, eventsSummary, meteorToast, quakeToast } from '../mission/eventText.js';
+import { MarsEventEffects } from '../sky/MarsEventEffects.js';
+import { EventHud } from '../ui/EventHud.js';
+import { carveImpactCrater, findImpactSite, hideRocksNear } from '../world/impactCrater.js';
+import { EVENTS_CONFIG, TERRAIN_CONFIG } from '../config/constants.js';
 
 // Raio angular (rad) em que a mira da luneta "pega" cada astro. A Lua fica a ~0,047 rad da
 // Terra, então os dois raios precisam ser menores que isso para não se sobreporem.
@@ -238,6 +244,7 @@ export class GameEngine {
     this._startHours = this._skyHours();
     this._initStory();
     this._initWeather();
+    this._initEvents();
 
     // Tripulacao NPC (issues #47 e #48): o tamanho e escolhido no menu antes do primeiro Play
     this.crewStock = createBaseStock({ survival: this.survival, mission: this.mission });
@@ -866,6 +873,8 @@ export class GameEngine {
       ['Ice turned into rocket fuel', `${m.iceDelivered} blocks`],
       ['Solar energy collected', `${(m.solarEnergyCollected / m.battery.capacity).toFixed(1)} full batteries`],
       ['Time left in the launch window', formatHours(this.story.windowHoursLeft ?? 0)],
+      ['Mars events you saw', eventsSummary(this.events.history)],
+      ['Mission seed', `${this.events.seed} (replay: ?seed=${this.events.seed})`],
     ];
     const sources = `Solar storms: real CMEs that NASA predicted would reach Mars, from NASA DONKI (${donkiLabel(this.spaceWeather)}). ` +
       (this.spaceWeather.seps.length ? 'Fast particle alerts: real SEPs (bursts of super fast particles from the Sun) from NASA DONKI; their strength is a game rule. ' : '') +
@@ -877,7 +886,8 @@ export class GameEngine {
       'Storm shelter water wall: PREDICCS shielding model (University of New Hampshire, Curiosity RAD data) and NASA storm shelter studies. ' +
       'Radio delay: Earth-Mars distance from NASA/JPL planet orbits; solar conjunction rules from NASA/JPL. ' +
       'Trip time, thin air and launch windows: NASA Mars facts. ' +
-      'Science sent through orbiters: NASA Mars Relay Network. Rock sample tubes: NASA Perseverance; upload costs and extra ice per tube are game rules.';
+      'Science sent through orbiters: NASA Mars Relay Network. Rock sample tubes: NASA Perseverance; upload costs and extra ice per tube are game rules. ' +
+      'Mars events: NASA InSight (marsquakes and the 2021 meteor impact), MRO, Perseverance (Phobos eclipse, aurora), Spirit (dust devils) and Viking 2 (frost); when and how strong they are is a game rule.';
     this.missionHud.showVictory(rows, sources);
     renderReportCard(document.getElementById('victory-report'), missionReport(this._reportStats()));
     document.exitPointerLock();
@@ -931,6 +941,7 @@ export class GameEngine {
     this._wasDead = this.survival.isDead;
 
     for (const event of this.mission.drainEvents()) {
+      if (event.type === 'storm-survived') this.events.requestAurora(this._skyHours());
       const message = stormEventMessage(event, this.spaceWeather) || doseEventMessage(event.type);
       if (message) this.hud.showToast(message, event.type === 'storm-warning' || event.type.startsWith('dose-') ? 8000 : 4500);
       this.missionLogFeed.onMissionEvent(event, this._skyHours());
@@ -1173,6 +1184,7 @@ export class GameEngine {
         ? 'Cadet training is off for this game: after calling Earth you go straight to the ice.'
         : 'Cadet training is already done or skipped.';
     }
+    if (action.startsWith('event:')) return this.triggerEvent(action.slice(6));
     if (action === 'battery') {
       this.mission.battery.charge = Math.min(this.mission.battery.charge, this.mission.battery.capacity * 0.1);
       return 'Battery drained to 10%. Watch what the base has to give up.';
@@ -1372,6 +1384,7 @@ export class GameEngine {
       }
       else if (event.type === 'start-storms') {
         this.mission.startStorms(s.hours);
+        this.events.start(s.hours); // eventos aleatorios so depois do tutorial (issue #107)
         if (this.mission.noStormData) this.hud.showToast(`Space weather is calm. ${NO_STORM_DATA_TEXT}`, 6000);
       }
       else if (event.type === 'window-closed') {
@@ -1677,6 +1690,116 @@ export class GameEngine {
     }
   }
 
+  // ---------- Eventos aleatorios de Marte (issue #107) ----------
+
+  _initEvents() {
+    // ?seed=123 repete a partida; sem ela, a semente e sorteada so aqui (o resto e deterministico)
+    const seed = seedFromSearch(window.location.search) ?? 1 + Math.floor(Math.random() * 999999);
+    this.events = new EventDirector({ seed });
+    this.eventHud = new EventHud();
+    this.eventEffects = new MarsEventEffects(this.scene, this.sky, {
+      onImpact: (site) => this._meteorImpact(site),
+      onDevilReachedTarget: () => this._dustDevilAtTarget(),
+      onDevilHitsPlayer: () => {
+        this.eventHud.blind(EVENTS_CONFIG.DUST_DEVIL_BLIND_SECONDS);
+        this.hud.showToast(DUST_DEVIL_HIT_TOAST, 3500);
+      },
+    }, this.world.atlas?.material);
+    this._eventPlayer = { pos: this.player.pos, insideHabitat: false };
+  }
+
+  // Botoes de demo e de admin: comeca o evento ja. Eclipse, geada e aurora precisam da hora certa
+  // do dia, entao o relogio pula ate ela (como os botoes de dia e noite).
+  triggerEvent(type) {
+    const jump = { eclipse: 11, frost: 5.5, aurora: 21 }[type];
+    if (jump !== undefined && !inWindow(type, this.sky.timeOfDay)) {
+      this.sky.advanceTime((jump - this.sky.timeOfDay + 24) % 24);
+    }
+    if (!this.events.trigger(type, this._skyHours())) return '';
+    return `${eventCard(type).title}: close this screen and play. It starts right away.`;
+  }
+
+  _updateEvents(dt, isGameRunning) {
+    const hours = this._skyHours();
+    if (isGameRunning) {
+      this.events.update(hours, { blocked: this.mission.storm.phase !== 'calm' });
+      for (const e of this.events.drainEvents()) {
+        if (e.type === 'event-start') this._startEvent(e.event);
+        else this._endEvent(e.event);
+      }
+    }
+    const player = this._eventPlayer;
+    player.insideHabitat = this.survival.insidePressurizedShip;
+    // O tremor mexe na camera so a pe: no rover e no aparelho da academia a camera e de outro dono
+    const shakeCamera = isGameRunning && !this.roverController.isActive && !this.gymController.isActive ? this.camera : null;
+    this.eventEffects.update(dt, this.events.progress(hours), shakeCamera, player);
+    this.mission.sunlightFactor = this.eventEffects.sunlightFactor;
+    this.eventHud.update(dt);
+  }
+
+  _startEvent(event) {
+    const { type, params } = event;
+    let info;
+    let cardInfo;
+    if (type === 'meteor') {
+      const site = findImpactSite(this.world, params, [this.player.pos, this.roverController.pos]);
+      if (!site) return; // sem chao livre: o meteoro nao cai (raro)
+      let y = this.world.sizeY - 1;
+      while (y > 0 && this.world.getBlock(site.x, y, site.z) === BLOCK_IDS.AIR) y--;
+      info = { site: { x: site.x, y: y + 1, z: site.z } };
+    } else if (type === 'marsquake') {
+      // O tremor balanca uma estacao da tripulacao (sorteada pela semente)
+      const stations = this.crew?.stations ?? [];
+      const station = stations[Math.min(stations.length - 1, Math.floor(params.pick * stations.length))];
+      if (station) {
+        const before = station.health;
+        station.health = Math.max(0, station.health - EVENTS_CONFIG.QUAKE_STATION_DAMAGE);
+        this.hud.showToast(quakeToast({ stationName: station.name, lostPct: Math.round((before - station.health) * 100) }), 7000);
+      }
+      cardInfo = { stationName: station?.name ?? 'base' };
+    } else if (type === 'dustDevil') {
+      // O redemoinho passa pelo campo solar ou ao lado dele (sorteado pela semente)
+      const side = params.crossesPanels ? 0 : 16;
+      const target = {
+        x: SOLAR_FIELD_CENTER.x - Math.sin(params.angle) * side,
+        z: SOLAR_FIELD_CENTER.z + Math.cos(params.angle) * side,
+      };
+      this._devilCrossesPanels = params.crossesPanels;
+      info = { target, world: this.world };
+    }
+    this.eventEffects.start(event, info);
+    this.storyHud.showCard(eventCard(type, cardInfo));
+  }
+
+  _endEvent(event) {
+    this.eventEffects.stop();
+    if (event.type === 'eclipse') this.hud.showToast(ECLIPSE_END_TOAST, 4000);
+  }
+
+  // O meteoro tocou o chao: cratera nova com gelo exposto, que o sensor de gelo marca
+  _meteorImpact(site) {
+    const x = Math.floor(site.x);
+    const z = Math.floor(site.z);
+    const { iceBlocks, cells } = carveImpactCrater(this.world, { x, z });
+    this.world.rebuildColumns(cells);
+    hideRocksNear(this.world.surfaceRocks, x, z, EVENTS_CONFIG.METEOR_CRATER_RADIUS + 2);
+    this.iceSensor.activate(this.world, { x, z });
+    const me = this.player.pos;
+    this.hud.showToast(meteorToast({
+      iceBlocks,
+      distance: Math.round(Math.hypot(x - me.x, z - me.z)),
+      direction: compassDirection(x - TERRAIN_CONFIG.BASE_CENTER.x, z - TERRAIN_CONFIG.BASE_CENTER.z),
+    }), 8000);
+  }
+
+  // Redemoinho no ponto mais perto do campo solar. Limpar os paineis depende da poeira neles,
+  // que chega com a issue #103: se a missao tiver `cleanPanels(fracao)`, ela e chamada aqui.
+  _dustDevilAtTarget() {
+    if (!this._devilCrossesPanels) return;
+    const cleaned = this.mission.dustWeather?.cleanPanels(EVENTS_CONFIG.DUST_DEVIL_PANEL_CLEAN);
+    this.hud.showToast(dustDevilPanelsToast(typeof cleaned === 'number' ? Math.round(cleaned * 100) : 0), 6000);
+  }
+
   start() {
     const loop = () => {
       requestAnimationFrame(loop);
@@ -1797,6 +1920,7 @@ export class GameEngine {
       if (isGameRunning) this._updateStory(dt);
 
       this.dustStorm.update(dt, this.roverController.isActive ? this.roverController.pos : this.player.pos, this.camera, this._weatherFx);
+      this._updateEvents(dt, isGameRunning);
       this.renderer.render(this.scene, this.camera);
       this.debug.frame(frameMs);
     };

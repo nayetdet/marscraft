@@ -258,7 +258,7 @@ export class StoryHud {
     }
     this.signalEl.classList.add('hidden');
     this.signalEl._cls = undefined;
-    this.timer = this.cardSeconds;
+    this.timer = this.current.seconds ?? this.cardSeconds; // cards com fato real ficam mais tempo
     this.titleEl.textContent = this.current.title;
     this._renderBody(this.current);
     this.sourceEl.textContent = this.current.source ?? '';
@@ -306,5 +306,8 @@ export class StoryHud {
       row.append(iconEl(line.icon, 'story-line-icon'), el('span', '', line.text));
       body.append(row);
     }
+
+    // Fato real dos eventos aleatorios (issue #107): data e fonte vao no rodape do card
+    if (card.fact) body.append(el('p', 'story-fact', card.fact));
   }
 }

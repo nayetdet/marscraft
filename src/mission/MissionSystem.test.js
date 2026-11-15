@@ -50,6 +50,17 @@ describe('MissionSystem energy', () => {
     expect(damage).toBe(0);
   });
 
+  it('a Phobos eclipse (sunlightFactor) cuts the solar charge (issue #107)', () => {
+    const clear = createMission(12);
+    const eclipse = createMission(12);
+    clear.battery.charge = eclipse.battery.charge = 10;
+    eclipse.sunlightFactor = 0.6;
+    clear.update(12.5);
+    eclipse.update(12.5);
+    expect(eclipse.chargeRate).toBeCloseTo(clear.chargeRate * 0.6);
+    expect(eclipse.battery.charge - 10).toBeCloseTo((clear.battery.charge - 10) * 0.6);
+  });
+
   it('worn air filters (crew oxygen generator) make habitat oxygen cost more', () => {
     const mission = createMission(0);
     mission.battery.charge = 6;

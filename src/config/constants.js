@@ -619,3 +619,53 @@ export const SLEEP_CONFIG = {
   ASTRONAUT_SLEEP_HOURS: 6,
   ASTRONAUT_SCHEDULED_SLEEP_HOURS: 8.5,
 };
+
+// Eventos aleatorios de Marte (issue #107): meteoro, tremor, eclipse de Fobos, redemoinho de poeira,
+// geada e aurora. Quando e quanto duram e ESCALA DE JOGO; os fatos reais de cada evento estao em
+// src/mission/eventText.js e docs/data/numeros-reais.md. A agenda sai de uma semente (eventDirector.js).
+export const EVENTS_CONFIG = Object.freeze({
+  // Eventos sorteados (a aurora nao entra: ela vem depois de uma tempestade solar sobrevivida)
+  RANDOM_TYPES: Object.freeze(['meteor', 'marsquake', 'eclipse', 'dustDevil', 'frost']),
+  // Horas de jogo do inicio do ato 2 ate o primeiro evento (1 h de jogo = 100 s reais)
+  FIRST_DELAY_HOURS: Object.freeze([1, 2]),
+  // Horas de jogo entre o fim de um evento e o inicio do proximo, na agenda sorteada
+  GAP_HOURS: Object.freeze([2.5, 5]),
+  // Intervalo minimo garantido entre dois eventos, mesmo depois de adiar um deles
+  MIN_GAP_HOURS: 1.5,
+  // Durante uma tempestade solar nenhum evento comeca: ele espera esta folga depois de checar de novo
+  POSTPONE_HOURS: 0.5,
+  // A agenda cobre este tanto de horas de jogo depois do ato 2 (bem mais que uma partida)
+  HORIZON_HOURS: 240,
+  // Duracao de cada evento em segundos reais. O eclipse usa os ~40 s do eclipse real filmado pelo
+  // Perseverance; os outros sao escala de jogo, so o tempo de ver a animacao.
+  DURATION_SECONDS: Object.freeze({ meteor: 12, marsquake: 8, eclipse: 40, dustDevil: 36, frost: 50, aurora: 60 }),
+  // Janelas da hora do dia em que cada evento pode comecar: [de, ate). O eclipse precisa do Sol
+  // alto; a geada aparece no nascer do Sol (MISSION_CONFIG.SUNRISE_HOUR = 6); a aurora, de noite.
+  WINDOWS: Object.freeze({ eclipse: Object.freeze([9, 15]), frost: Object.freeze([5.4, 6.4]), aurora: Object.freeze([20, 28]) }),
+
+  // Segundos do card do evento na tela (tem um fato real para ler; OK ou Enter fecham antes)
+  CARD_SECONDS: 20,
+
+  // Meteoro: cratera nova num ponto afastado da base, com gelo exposto no fundo
+  METEOR_MIN_DISTANCE: 40, // blocos do centro da base (fora da area construida, raio 36)
+  METEOR_MAX_DISTANCE: 46, // dentro da area segura (antes da tempestade da borda, raio 52)
+  METEOR_MIN_PLAYER_DISTANCE: 14, // nunca cai em cima do jogador nem do rover
+  METEOR_CRATER_RADIUS: 4, // blocos (a cratera real de 2021 tem ~150 m: aqui e escala de jogo)
+  METEOR_CRATER_DEPTH: 3,
+  METEOR_ICE_RADIUS: 2.4, // fundo da cratera que vira gelo exposto
+
+  // Tremor: uma estacao da tripulacao perde saude (conserta com a impressora 3D da oficina)
+  QUAKE_STATION_DAMAGE: 0.35,
+  QUAKE_SHAKE: 0.11, // blocos de balanco da camera no pico
+  METEOR_SHAKE: 0.06,
+
+  // Eclipse de Fobos: fracao da luz do Sol e da carga solar cortada no meio do eclipse.
+  // Escala de jogo: Fobos e menor que o Sol visto de Marte, entao a queda real e parcial.
+  ECLIPSE_SUNLIGHT_DROP: 0.4,
+
+  // Redemoinho: limpa esta fracao da poeira dos paineis se passar pelo campo solar (#103)
+  DUST_DEVIL_PANEL_CLEAN: 0.3,
+  DUST_DEVIL_SPEED: 2.6, // blocos/s
+  DUST_DEVIL_HIT_RADIUS: 3, // perto disso o jogador fica no meio da poeira
+  DUST_DEVIL_BLIND_SECONDS: 3,
+});
