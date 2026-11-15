@@ -13,6 +13,7 @@ export class InputController {
     sky,
     hud,
     onToggleZoom,
+    onToggleThirdPerson = () => {},
     getTargetedBlock,
     harvestCrop,
     isRoverActive = () => false,
@@ -41,6 +42,7 @@ export class InputController {
     onBlockBroken = () => {},
   }) {
     this.onToggleShield = onToggleShield;
+    this.onToggleThirdPerson = onToggleThirdPerson;
     this.onSendData = onSendData;
     this.onSuitportAction = onSuitportAction;
     this.isMissionModalOpen = isMissionModalOpen;
@@ -618,6 +620,11 @@ export class InputController {
         if (e.code === 'KeyF' && !e.repeat) this.onInteract();
         return;
       }
+      if (e.code === 'F5' && this.isLocked && !e.repeat && !this.isRoverActive() && !this.isGymActive?.()) {
+        e.preventDefault();
+        this.onToggleThirdPerson();
+        return;
+      }
       if (this.isGymActive?.()) {
         if (e.code === 'Space' && !e.repeat) {
           e.preventDefault();
@@ -841,8 +848,8 @@ export class InputController {
     if (e.ctrlKey || e.metaKey || e.altKey) return true;
     if (e.shiftKey) return true;
 
-    // Escape remains available to release pointer lock. F3 remains the game's debug overlay.
-    if (e.code.startsWith('F') && e.code !== 'F3') return true;
+    // Escape remains available to release pointer lock. F3/F5 belong to the game.
+    if (e.code.startsWith('F') && e.code !== 'F3' && e.code !== 'F5') return true;
     if (['Tab', 'Space', 'Backspace'].includes(e.code)) return true;
     return false;
   }
