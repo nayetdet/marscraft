@@ -409,3 +409,21 @@ export const CROP_CONFIG = Object.freeze({
   potato: { water: 2, energy: 3, seconds: 7, nutrition: 6, strategy: 'Balanced meal, longer wait' },
   soy: { water: 3, energy: 5, seconds: 9, nutrition: 10, strategy: 'Big harvest, thirsty plants' },
 });
+
+// Sleep at dormitory bunk mechanics (issue: replaces free time-skip with real survival costs)
+export const SLEEP_CONFIG = Object.freeze({
+  NAP_HOURS: 2,
+  SUNRISE_HOUR: 6,
+  FOOD_DRAIN_PER_HOUR: 0.9,      // Food stat drain per game-hour of sleep (maxStat: 20)
+  WATER_DRAIN_PER_HOUR: 0.7,     // Water stat drain per game-hour of sleep (maxStat: 20)
+  FATIGUE_MAX_HOURS: 24,         // 24 game-hours (~1 Martian sol) awake before fatigue sets in
+  FATIGUE_SPEED_PENALTY: 0.75,   // 25% slower mining/work speed when fatigued
+  STEP_HOURS: 0.1,               // Simulation step size while sleeping
+  ANIMATION_DURATION_SEC: 2.2,   // Duration of sleep blackout animation (seconds)
+  NASA_STUDY: {
+    title: 'NASA Astronaut Sleep Study',
+    text: 'In a study of 64 Space Shuttle and 21 ISS astronauts, crew averaged ~6.0 hours of sleep per night despite 8.5 hours scheduled. Circadian misalignment on Mars (24h 39m sol) compounds sleep deficiency, leading to fatigue and critical operational errors.',
+    source: 'Barger et al., The Lancet Neurology 2014 & NASA Human Research Program',
+  },
+});
+

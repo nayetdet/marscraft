@@ -514,9 +514,6 @@ export class InputController {
         } else if (e.code === 'KeyF' && !e.repeat) {
           e.preventDefault();
           this.onInteract?.();
-        } else if (e.code === 'KeyT' && !e.repeat) {
-          this.sky.advanceTime(1.5);
-          this.hud.showToast('Time advanced (+1h 30m on Mars)');
         }
         return;
       }
@@ -574,11 +571,6 @@ export class InputController {
           this._syncHandWithSlot();
         }
         return;
-      }
-
-      if (e.code === 'KeyT') {
-        this.sky.advanceTime(1.5);
-        this.hud.showToast('Time advanced (+1h 30m on Mars)');
       }
 
     });

@@ -1,7 +1,7 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { GREENHOUSE_CENTER, GREENHOUSE_PLOTS, PLOT_PLANT_CELLS } from '../world/greenhouseLayout.js';
 import { greenhouseMapSvg, plotMapLabel, plotStatus } from './greenhouseMap.js';
-import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
+import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, SLEEP_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U, WORLD_CONFIG } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
 import { formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
@@ -564,6 +564,17 @@ export class StationPanel {
     if (action === 'fillWall') return this.engine.mission.fillShelterWall(survival);
     if (action === 'drainWall') return this.engine.mission.drainShelterWall(survival);
     if (action === 'cleanBase') return stations.cleanBase();
+    if (action === 'sleepSunrise') {
+      const hours = this.engine.sleepSystem ? this.engine.sleepSystem.getHoursUntilSunrise() : 8;
+      const started = this.engine.sleepSystem?.startSleep(hours);
+      if (started) this.close();
+      return '';
+    }
+    if (action === 'sleepNap') {
+      const started = this.engine.sleepSystem?.startSleep(SLEEP_CONFIG.NAP_HOURS);
+      if (started) this.close();
+      return '';
+    }
     if (action === 'exercise') return stations.exercise(this.gymMode || 'treadmill');
     if (action === 'exercise:treadmill') {
       this.gymMode = 'treadmill';
@@ -704,6 +715,39 @@ export class StationPanel {
       'A solar storm throws fast particles (protons) at Mars. Water is full of hydrogen, which slows them down. ' +
       'Astronauts in the Orion capsule build a shelter like this with their water and food bags.\n' +
       'Real model: a 10 cm layer of water (10 g/cm2) blocks about 83% of a storm dose. Game-scaled.';
+  }
+
+  _bunkText(v, m) {
+    const sleep = this.engine.sleepSystem;
+    const sky = this.engine.sky;
+    const hoursAwake = sleep ? sleep.getHoursAwake().toFixed(1) : '0';
+    const fatigueText = sleep?.isFatigued ? 'FATIGUED (>24h awake: -25% work speed penalty)' : 'RESTED (100% work speed)';
+    const sunriseHours = sleep ? sleep.getHoursUntilSunrise() : 8;
+    const check = sleep?.canSleep();
+    const alert = check && !check.allowed ? `\n⚠ WARNING: ${check.reason}\n` : '';
+
+    return `MARS TIME: ${sky?.getFormattedTime?.()?.clockText ?? ''}\n` +
+      `REST STATUS: ${fatigueText}\n` +
+      `HOURS AWAKE: ${hoursAwake} h\n` +
+      `HOURS UNTIL SUNRISE: ${sunriseHours} h\n` +
+      `BATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\n` +
+      `FOOD: ${Math.round(v.food)}/${v.maxStat}   WATER: ${Math.round(v.water)}/${v.maxStat}\n` +
+      alert +
+      `\nSleeping advances the sol clock and restores fatigue, but drains food and water.\nBase systems (battery charging/discharge, greenhouse, crew needs) tick forward.\nEmergencies (solar storms, power failure, hull breach) will wake you up.`;
+  }
+
+  _bunkButtons() {
+    const sleep = this.engine.sleepSystem;
+    const sunriseHours = sleep ? sleep.getHoursUntilSunrise() : 8;
+    const foodSunrise = (sunriseHours * SLEEP_CONFIG.FOOD_DRAIN_PER_HOUR).toFixed(1);
+    const waterSunrise = (sunriseHours * SLEEP_CONFIG.WATER_DRAIN_PER_HOUR).toFixed(1);
+    const foodNap = (SLEEP_CONFIG.NAP_HOURS * SLEEP_CONFIG.FOOD_DRAIN_PER_HOUR).toFixed(1);
+    const waterNap = (SLEEP_CONFIG.NAP_HOURS * SLEEP_CONFIG.WATER_DRAIN_PER_HOUR).toFixed(1);
+
+    return [
+      ['sleepSunrise', `Sleep until sunrise (${sunriseHours} h: -${foodSunrise} food, -${waterSunrise} water)`],
+      ['sleepNap', `Nap (${SLEEP_CONFIG.NAP_HOURS} h: -${foodNap} food, -${waterNap} water)`],
+    ];
   }
 
   gardenText(s, m, v) {
@@ -859,6 +903,7 @@ export class StationPanel {
       hygiene: ['BATHROOM & WATER RECYCLER', this._hygieneText(v), [['washUp', `Wash up (${U.WASH_WATER_L} L of water)`], ['serviceFilter', `Clean water filter (${U.FILTER_SERVICE_POWER}% power)`]]],
       workshop: ['WORKSHOP & 3D PRINTER', this._workshopText(v), [['printPart', `Print spare part (${U.PRINT_REGOLITH} regolith, ${U.PRINT_POWER}% power)`]]],
       shelter: ['STORM SHELTER', this._shelterText(mission, v), [['fillWall', `Fill wall (+${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`], ['drainWall', `Drain wall (-${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`]]],
+      bunk: ['CREW QUARTERS // DORMITORY BUNK', this._bunkText(v, m), this._bunkButtons()],
     };
     const [title, text, buttons] = pages[this.type];
     this.title.textContent = title;
@@ -867,7 +912,9 @@ export class StationPanel {
       ? [['NASA DONKI: space weather events', DATA_SOURCES.donki], ['NASA RadLab: radiation data', DATA_SOURCES.radlab]]
       : this.type === 'shelter'
         ? [['PREDICCS: water shielding (UNH, MSL/RAD data)', SHELTER_SOURCES.prediccs], ['NASA: storm shelters and water walls', SHELTER_SOURCES.nasa]]
-        : this.type === 'greenhouse' ? [['CSA: food production', 'https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/'], ...plantResearch.studies.map(study => [study.id + ': NASA study', study.url])] : [];
+        : this.type === 'bunk'
+          ? [['NASA: Sleep and Circadian Biology Research', 'https://www.nasa.gov/hrp/elements/behavior/']]
+          : this.type === 'greenhouse' ? [['CSA: food production', 'https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/'], ...plantResearch.studies.map(study => [study.id + ': NASA study', study.url])] : [];
     this.sources.replaceChildren(...links.map(([label, url]) => {
       const link = document.createElement('a');
       link.textContent = label;

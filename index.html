@@ -424,6 +424,33 @@
     </div>
   </div>
 
+  <!-- Sleep overlay (animation + wake-up summary) -->
+  <div id="sleep-overlay" class="mc-overlay sleep-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="sleep-summary-title">
+    <div id="sleep-animation-view" class="sleep-anim-view">
+      <div class="sleep-icon-moon"></div>
+      <h2 id="sleep-status-text">Resting...</h2>
+      <div id="sleep-clock-display" class="sleep-clock">Sol 1 — 22:00</div>
+      <div class="sleep-track"><div id="sleep-progress-fill" class="sleep-progress-bar"></div></div>
+    </div>
+    <div id="sleep-summary-card" class="mc-menu sleep-summary-card hidden">
+      <h1 id="sleep-summary-title" class="mc-death-title">AWAKE</h1>
+      <p id="sleep-summary-time" class="mc-death-sub"></p>
+      <div id="sleep-interrupt-alert" class="sleep-alert hidden"></div>
+      <div class="sleep-stats-grid">
+        <div class="sleep-stat-row"><span>Time Slept:</span><b id="sleep-stat-hours"></b></div>
+        <div class="sleep-stat-row"><span>Food Used:</span><b id="sleep-stat-food"></b></div>
+        <div class="sleep-stat-row"><span>Water Used:</span><b id="sleep-stat-water"></b></div>
+        <div class="sleep-stat-row"><span>Base Power:</span><b id="sleep-stat-battery"></b></div>
+        <div class="sleep-stat-row"><span>Rest Status:</span><b id="sleep-stat-fatigue"></b></div>
+      </div>
+      <div id="sleep-nasa-fact" class="sleep-nasa-fact hidden">
+        <strong>NASA SLEEP STUDY</strong>
+        <p id="sleep-nasa-fact-text"></p>
+      </div>
+      <button id="sleep-wake-btn" class="mc-btn primary">Get up [F]</button>
+    </div>
+  </div>
+
   <!-- Painel do MAV (Mars Ascent Vehicle): o foguete que leva a tripulacao de volta -->
   <div id="mav-overlay" class="inventory-overlay hidden">
     <section class="inventory-window mav-window" aria-label="Mars Ascent Vehicle">

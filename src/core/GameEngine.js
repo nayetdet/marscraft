@@ -27,6 +27,7 @@ import { HudManager } from '../ui/HudManager.js';
 import { DebugOverlay } from '../ui/DebugOverlay.js';
 import { RoverController } from '../rover/RoverController.js';
 import { GymEquipmentController } from '../player/GymEquipmentController.js';
+import { SleepSystem } from '../player/SleepSystem.js';
 import { ExpeditionState } from './ExpeditionState.js';
 import { Airlock } from '../world/Airlock.js';
 import { StationSystem } from './StationSystem.js';
@@ -156,6 +157,7 @@ export class GameEngine {
     this.airlock.stations = this.stations;
     this.airlock.onEvent = (type) => this._onAirlockEvent(type);
     this.stationPanel = new StationPanel(this);
+    this.sleepSystem = new SleepSystem(this);
     this.adminPanel = new AdminPanel(this); // F8 no dev ou ?admin: testes (tempestade, agua, teleporte)
     this._buildStationMarkers();
     this._interactionDir = new THREE.Vector3();
@@ -257,10 +259,10 @@ export class GameEngine {
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown
         || this.storyHud.isWindowClosedShown,
-      isInputBlocked: () => this.cutscenes.isActive,
+      isInputBlocked: () => this.cutscenes.isActive || this.sleepSystem.isSleeping,
       getInteraction: () => this._getInteraction(),
-      isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen,
-      getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || !this.stations.freshFood ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
+      isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen || this.sleepSystem.isWakeSummaryOpen,
+      getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || !this.stations.freshFood ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1) * (this.sleepSystem ? this.sleepSystem.getWorkSpeedMultiplier() : 1),
     });
 
     this._lookDir = new THREE.Vector3();
@@ -289,7 +291,7 @@ export class GameEngine {
     document.getElementById('interaction-hint').textContent = (hasPriorityInteraction || this.gymController.isActive) ? '' : (this._getInteraction()?.label ?? '');
     document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
-    document.getElementById('station-warning').textContent = this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : '';
+    document.getElementById('station-warning').textContent = this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : this.sleepSystem?.isFatigued ? 'Fatigued (>1 sol awake): work is slower. Sleep in the dormitory!' : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : '';
   }
 
   // Avanca o modulo norte no relogio do ceu e repassa o estado para a tripulacao
@@ -370,6 +372,9 @@ export class GameEngine {
       { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
       { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
       { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
+      { type: 'bunk', x: 21.0, y: 11.4, z: -2.8, label: 'Press F: bunk (rest & advance time)' },
+      { type: 'bunk', x: 24.0, y: 11.4, z: -2.8, label: 'Press F: bunk (rest & advance time)' },
+      { type: 'bunk', x: 27.0, y: 11.4, z: -2.8, label: 'Press F: bunk (rest & advance time)' },
     ];
     for (const candidate of candidates) {
       this._interactionPoint.set(candidate.x, candidate.y, candidate.z);
@@ -1331,7 +1336,9 @@ export class GameEngine {
         && !this.stationPanel.isOpen
         && !this.missionHud.isVictoryShown
         && !cutsceneActive
-        && !this.storyHud.isWindowClosedShown;
+        && !this.storyHud.isWindowClosedShown
+        && !this.sleepSystem?.isSleeping
+        && !this.sleepSystem?.isWakeSummaryOpen;
       if (isGameRunning) {
         if (this.roverController.isActive) {
           if (this.scanHighlight.mesh) this.scanHighlight.clear();
@@ -1375,6 +1382,9 @@ export class GameEngine {
           this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: this.isScannerOpen, isRoverActive: false, mission: this.mission, airlock: this.airlock });
           this._updateScanner(dt);
         }
+      } else if (this.sleepSystem?.isSleeping) {
+        this.sleepSystem.update(dt);
+        this._updateCamera();
       } else if (cutsceneActive) {
         // A animacao comanda a camera. Ela espera se o mouse soltar ou o aparelho for para retrato.
         if (!this.input.isPortraitRequired && (this.input.isLocked || this.cutscenes.runsUnlocked)) {
