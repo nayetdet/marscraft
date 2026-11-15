@@ -28,7 +28,7 @@ import { noTubeSampleText, pickTubeSample, tubeLoadedText, tubeableCount } from 
 import { SampleSiteMarkers } from '../world/SampleSiteMarkers.ts';
 import { naturalGroundTop } from '../world/surfaceRocks.ts';
 import { isBuildZone } from '../world/terrainGenerator.ts';
-import { SAMPLE_TYPES, sampleFactView, sampleLogText, sampleTypeById } from '../data/sampleTypes.ts';
+import { SAMPLE_TYPES, sampleLogText, sampleTypeById } from '../data/sampleTypes.ts';
 import { journalRank } from '../ui/journalProgress.ts';
 import { MissionHud } from '../ui/MissionHud.ts';
 import { missionReport } from '../mission/missionReport.ts';
@@ -1227,7 +1227,9 @@ export class GameEngine {
     const found = this.scanJournal.record(type.id, { mission: false });
     if (found.isNew) this.scannerHud.unseen.add(type.id, SAMPLE_CATEGORY);
     this.missionLog.add({ text: sampleLogText(type), kind: 'study', hours: this._skyHours() });
-    this._momentQueue.push(sampleFactView(type));
+    // Station screens pause the game loop. Update the story here so it can observe the analyzed
+    // science before the player sends it without closing the terminal.
+    this._updateStory(0);
   }
 
   // Tudo o que a crianca achou nesta partida, como itens de ciencia com pontos (issue #269):
@@ -1265,7 +1267,9 @@ export class GameEngine {
   // Envia a ciencia para a Terra (issues #105 e #269). Devolve a frase para o painel ou o aviso.
   sendSciencePackage() {
     if (this.comms.blackout) return 'Radio silent: the Sun is between Mars and Earth. Send your science after the solar conjunction.';
-    return uploadResultText(this.mission.sendData(this.scienceItems()));
+    const result = this.mission.sendData(this.scienceItems());
+    if (result.status === 'sent') this._updateStory(0);
+    return uploadResultText(result);
   }
 
   // Melhorias do laboratorio: gastam pontos que ainda nao foram enviados. Devolve os pontos gastos.
