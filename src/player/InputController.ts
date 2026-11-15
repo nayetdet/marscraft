@@ -119,12 +119,25 @@ export class InputController {
       button.classList.remove('is-active');
       if (button.dataset.touchAction === 'sprint') button.setAttribute('aria-pressed', 'false');
     });
+    this._setTouchMoreActionsOpen(false);
     this._setJoystick(0, 0);
     if (this.player) this.player.isMoving = false;
   }
 
+  _setTouchMoreActionsOpen(isOpen) {
+    const menu = document.getElementById('mobile-more-actions');
+    const button = document.querySelector('[data-touch-action="more"]');
+    if (!menu || !button) return;
+
+    const open = Boolean(isOpen) && !this.isRoverActive();
+    menu.hidden = !open;
+    button.setAttribute('aria-expanded', String(open));
+    button.classList.toggle('is-active', open);
+  }
+
   _updateTouchActionLabels() {
     if (typeof document === 'undefined') return;
+    if (this.isRoverActive()) this._setTouchMoreActionsOpen(false);
 
     const mineLabel = document.getElementById('touch-mine-label');
     const useLabel = document.getElementById('touch-use-label');
@@ -321,6 +334,9 @@ export class InputController {
       } else this._useSelectedItem();
     } else if (action === 'interact') {
       this.onInteract();
+    } else if (action === 'more') {
+      const menu = document.getElementById('mobile-more-actions');
+      this._setTouchMoreActionsOpen(Boolean(menu?.hidden));
     } else if (action === 'sprint') {
       if (!this.isRoverActive()) {
         this.keys.Sprint = !this.keys.Sprint;
@@ -864,6 +880,7 @@ export class InputController {
     window.addEventListener('pointercancel', (e) => this._releaseTouchPointer(e.pointerId));
 
     this.domElement.addEventListener('pointerdown', (e) => {
+      this._setTouchMoreActionsOpen(false);
       if (!this.isTouchMode || e.pointerType === 'mouse' || e.clientX < window.innerWidth * 0.4) return;
       if (this.isPortraitRequired || this.survival.isDead || this.hud.isInventoryOpen || this.isInputBlocked() || this.isMissionModalOpen?.()) return;
       e.preventDefault();
@@ -876,6 +893,7 @@ export class InputController {
     document.querySelectorAll('[data-touch-action]').forEach((button) => {
       button.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+        if (button.dataset.touchAction !== 'more') this._setTouchMoreActionsOpen(false);
         this._updateTouchActionLabels();
         this._handleTouchAction(button.dataset.touchAction, button, e.pointerId);
       });
@@ -883,6 +901,7 @@ export class InputController {
 
     document.getElementById('hotbar').addEventListener('click', (e) => {
       if (!this.isTouchMode || this.isPortraitRequired || !this.isLocked) return;
+      this._setTouchMoreActionsOpen(false);
       const slot = e.target.closest('.mc-slot');
       if (!slot) return;
       this.hud.selectSlot(Number(slot.dataset.slotIndex), this.survival.slots);

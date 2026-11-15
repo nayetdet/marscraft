@@ -1558,14 +1558,15 @@
 
 .mobile-pause-button {
   position: absolute;
-  top: calc(50% + 8px);
-  right: calc(max(14px, env(safe-area-inset-right)) + 162px);
+  top: auto;
+  right: calc(max(14px, env(safe-area-inset-right)) + 123px);
   left: auto;
+  bottom: calc(124px + env(safe-area-inset-bottom) + 114px);
   width: 48px;
   min-width: 48px;
   min-height: 44px;
   padding: 0;
-  transform: translateY(-50%);
+  transform: none;
   font-size: 16px;
   pointer-events: auto;
 }
@@ -1577,13 +1578,12 @@
 
 .touch-mode.rover-active [data-touch-action="jump"],
 .touch-mode.rover-active [data-touch-action="use"],
+.touch-mode.rover-active [data-touch-action="sprint"],
+.touch-mode.rover-active [data-touch-action="more"],
 .touch-mode.rover-active [data-touch-action="view"],
 .touch-mode.rover-active [data-touch-action="drop"],
-.touch-mode.rover-active [data-touch-action="send"] {
-  display: none;
-}
-
-.touch-mode.rover-active .mobile-sprint-button {
+.touch-mode.rover-active [data-touch-action="send"],
+.touch-mode.rover-active .mobile-more-actions {
   display: none;
 }
 
@@ -1628,14 +1628,6 @@
   text-shadow: 1px 1px #000;
 }
 
-.mobile-sprint-button {
-  position: absolute;
-  left: max(14px, env(safe-area-inset-left));
-  bottom: calc(270px + env(safe-area-inset-bottom));
-  width: 54px;
-  pointer-events: auto;
-}
-
 .mobile-action-buttons {
   position: absolute;
   right: max(14px, env(safe-area-inset-right));
@@ -1645,6 +1637,22 @@
   gap: 7px;
   pointer-events: auto;
 }
+
+.mobile-more-actions {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  display: grid;
+  grid-template-columns: repeat(2, 54px);
+  gap: 7px;
+  padding: 7px;
+  background: rgba(14, 22, 27, .94);
+  border: 2px solid #777;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .55);
+  pointer-events: auto;
+}
+
+.mobile-more-actions[hidden] { display: none; }
 
 .touch-button {
   min-width: 54px;
@@ -1742,10 +1750,9 @@
     gap: 5px;
   }
 
-  .touch-mode .mobile-sprint-button {
-    left: max(14px, env(safe-area-inset-left));
-    bottom: calc(134px + env(safe-area-inset-bottom));
-    width: 48px;
+  .touch-mode .mobile-pause-button {
+    right: calc(max(14px, env(safe-area-inset-right)) + 162px);
+    bottom: calc(10px + env(safe-area-inset-bottom) + 98px);
   }
 
   .touch-mode .touch-button {
@@ -1780,10 +1787,11 @@
     gap: 5px;
   }
 
-  .touch-mode .mobile-sprint-button {
-    left: calc(max(14px, env(safe-area-inset-left)) + 104px);
-    bottom: calc(160px + env(safe-area-inset-bottom));
+  .touch-mode .mobile-pause-button {
+    right: calc(max(14px, env(safe-area-inset-right)) + 109px);
+    bottom: calc(10px + env(safe-area-inset-bottom) + 98px);
   }
+
 }
 
 
