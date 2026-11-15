@@ -148,7 +148,6 @@ export class SleepController {
     stations.update(seconds, true, survival, false);
     const cost = sleepNeedsCost(h);
     survival.spendNeeds(cost.food, cost.water);
-    if (survival.health <= 0) survival.isDead = true;
     if (survival.isDead) return 'dead';
 
     const events = [];
