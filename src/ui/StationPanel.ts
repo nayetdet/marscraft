@@ -18,6 +18,7 @@ import plantResearch from '../data/osdrPlants.json';
 import { plantDiscovery } from '../data/plantDiscoveries.ts';
 import { createCropTexture } from '../graphics/cropTextures.ts';
 import { GymWorkout } from './gymWorkout.ts';
+import { WORKOUT_COST_TEXT, workoutBlocker } from '../story/acts/act3Gym.ts';
 import { growthChecks } from '../base/greenhouseCare.ts';
 import { MEDBAY_BONE_TEXT } from './stationText.ts';
 import { OXYGEN_SOURCES, oxygenPlantButtons } from '../mission/oxygenText.ts';
@@ -616,6 +617,14 @@ export class StationPanel {
       this._updateGymLiveDom();
       return;
     }
+    const gymBlocked = workoutBlocker(this.engine.survival);
+    if (gymBlocked) {
+      this.lastHitQuality = 'warn';
+      this.lastHitText = gymBlocked;
+      this.engine.audio.playUiError();
+      this._updateGymLiveDom();
+      return;
+    }
     const result = this.workout.step(side, this.rhythmPos, performance.now());
     this.workoutProgress = this.workout.progress;
     this.lastHitText = result.message;
@@ -879,7 +888,7 @@ export class StationPanel {
       <div class="gym-controls-row">${isBike
         ? `<button type="button" class="mc-btn gym-step-btn ${this.workout.nextSide === 'left' ? 'next' : ''}" data-gym-step="left">[A] Left pedal</button><button type="button" class="mc-btn gym-step-btn ${this.workout.nextSide === 'right' ? 'next' : ''}" data-gym-step="right">[D] Right pedal</button>`
         : '<button type="button" class="mc-btn gym-step-btn next" data-gym-step="step">[SPACE] Step</button>'}</div>
-      <div class="gym-cost">−${C.EXERCISE_COST}% power per completed set</div>
+      <div class="gym-cost">${WORKOUT_COST_TEXT}</div>
     `;
   }
 

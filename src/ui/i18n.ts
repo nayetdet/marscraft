@@ -1,3 +1,4 @@
+import { GYM_ES, GYM_PT_BR } from '../story/acts/act3Gym.ts';
 import {
   CUTSCENE_ES, CUTSCENE_PT_BR, STORY_ES, STORY_MORE_ES, STORY_MORE_PT_BR, STORY_PT_BR,
 } from './i18nStory.ts';
@@ -17,6 +18,7 @@ export const LANGUAGE_LABELS: Record<Language, string> = {
 // both catalogs; checkTranslationCoverage() makes missing language entries testable.
 const PT_BR: Record<string, string> = {
   ...STORY_PT_BR,
+  ...GYM_PT_BR,
   ...STORY_MORE_PT_BR,
   ...CUTSCENE_PT_BR,
   'Loading terrain...': 'Carregando terreno...',
@@ -167,6 +169,7 @@ const PT_BR: Record<string, string> = {
 
 const ES: Record<string, string> = {
   ...STORY_ES,
+  ...GYM_ES,
   ...STORY_MORE_ES,
   ...CUTSCENE_ES,
   'Loading terrain...': 'Cargando terreno...',

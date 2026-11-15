@@ -274,6 +274,9 @@ export class GameEngine {
     this.expedition = new ExpeditionState(this.mission.battery);
     this.airlock = new Airlock(this.scene, colliders, this.expedition);
     this.stations = new StationSystem(this.expedition);
+    // Treino com custo em comida, agua e horas (issue #421)
+    this.stations.body = this.survival;
+    this.stations.passHours = (hours) => this.sky.advanceTime(hours);
     // Campos da estufa: plantas 3D por campo. O jardim ja comeca com uma batata pronta para colher
     // e um campo de dentro com alface crescendo.
     this.greenhouseFields = buildGreenhouseFields(this.scene);

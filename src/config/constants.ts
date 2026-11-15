@@ -1147,6 +1147,11 @@ export const ACT3_CONFIG = {
   // Trade-off da luz da estufa a noite (issue #420): segundos do card LIGHTS ON x LIGHTS OFF na
   // tela. Sem resposta, a luz fica como estava.
   NIGHT_LIGHTS_CARD_SECONDS: 20,
+  // Trade-off da academia (issue #421): alem da bateria (STATION_CONFIG.EXERCISE_COST), cada
+  // treino gasta comida e agua da crianca (% da barra) e horas do relogio de Marte. Regra de jogo.
+  WORKOUT_FOOD_PCT: 10,
+  WORKOUT_WATER_PCT: 15,
+  WORKOUT_HOURS: 2,
 };
 
 // Ato 4 (issue #410): traje, 3 amostras de cada tipo, analise e envio.
