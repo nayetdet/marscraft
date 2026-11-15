@@ -1,20 +1,29 @@
 {
-  "name": "nasa-space-apps-mine",
+  "name": "marscraft",
   "version": "1.0.0",
   "description": "Minecraft-inspired Mars voxel survival game with a NASA habitat and astronomical sky",
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
-    "build": "vite build",
-    "preview": "vite preview --host",
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
+    "preview": "next start --hostname 0.0.0.0",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "fetch:donki": "node scripts/fetch-donki-cme.mjs"
+    "fetch:donki": "tsx scripts/fetch-donki-cme.ts"
   },
   "dependencies": {
+    "next": "^15.5.29",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "three": "^0.181.1"
   },
   "devDependencies": {
-    "vite": "^6.2.0",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
     "vitest": "^5.1.0"
   }
 }

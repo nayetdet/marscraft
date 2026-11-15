@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy to Vercel
 
 on:
   push:
@@ -7,44 +7,42 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: vercel-production
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Build
-        run: npm run build
+      - name: Run tests
+        run: npm test
+      - name: Check TypeScript
+        run: npm run typecheck
+      - name: Pull Vercel environment
+        run: npx vercel@latest pull --yes --environment=production --token="${VERCEL_TOKEN}"
         env:
-          # Fetch ao vivo do NASA DONKI (issue #100). A chave fica visivel no bundle publicado:
-          # use so uma chave gratuita da api.nasa.gov. Sem o secret, o jogo usa a DEMO_KEY.
-          VITE_NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Build Vercel output
+        run: npx vercel@latest build --prod --token="${VERCEL_TOKEN}"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+      - name: Deploy production
+        run: npx vercel@latest deploy --prebuilt --prod --token="${VERCEL_TOKEN}" --env NASA_API_KEY="${NASA_API_KEY}"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
