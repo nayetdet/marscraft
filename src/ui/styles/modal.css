@@ -558,7 +558,7 @@ body.pause-menu-open .crew-picker { display: none; }
 
 /* Monitor visual de alimentos da estufa (7-12 anos: pixel art, pouco texto, claro) */
 .station-overlay.is-greenhouse .station-window {
-  width: min(800px, 96vw);
+  width: min(760px, 96vw);
 }
 .station-overlay.is-greenhouse .station-footer,
 .station-overlay.is-greenhouse #station-sources,
@@ -583,27 +583,45 @@ body.pause-menu-open .crew-picker { display: none; }
 .gh-mini-icon.water { color: #38bdf8; }
 .gh-mini-icon.power { color: #facc15; }
 .gh-mini-icon.food { color: #fb923c; }
+.gh-mini-icon.sprout { color: #4ade80; }
 
 .gh-top-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .gh-res-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 5px 10px;
   background: #0e2227;
   border: 2px solid #35565b;
 }
 .gh-res-pill strong {
   color: #ffffff;
-  font-size: 16px;
+  font-size: 15px;
 }
 .gh-res-pill.water { border-color: #0284c7; }
 .gh-res-pill.power { border-color: #ca8a04; }
+.gh-res-pill.beds { border-color: #2e7d5b; }
+
+.gh-alert-pill {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.4px;
+  border: 2px solid #ef4444;
+  background: #451414;
+  color: #fecaca;
+}
+.gh-alert-pill.is-warn {
+  border-color: #f59e0b;
+  background: #422b0b;
+  color: #fde68a;
+}
 
 .gh-clean-btn {
   width: auto;
@@ -613,9 +631,6 @@ body.pause-menu-open .crew-picker { display: none; }
   background: #b91c1c;
   border-color: #fca5a5 #7f1d1d #7f1d1d #fca5a5;
 }
-
-.gh-time-note { color: #d4e8cf; font-size: 12px; line-height: 1.35; margin: 4px 0; }
-.gh-time-note.gh-dry { color: #fecaca; border-left: 3px solid #ef4444; padding-left: 8px; }
 
 .gh-cards {
   display: grid;
@@ -805,20 +820,38 @@ body.pause-menu-open .crew-picker { display: none; }
   .controls-screen.info-screen { max-height: calc(100dvh - 48px); }
 }
 
-/* Monitor de comida: mapa da estufa visto de cima, com um campo clicavel por setor */
-.gh-body { display: flex; gap: 12px; align-items: flex-start; }
-.gh-map-wrap { flex: 0 0 236px; }
-.gh-map { display: block; width: 100%; height: auto; background: #0e2227; border: 2px solid #35565b; }
-.gh-map-dome { fill: #13292e; stroke: #4c7a80; stroke-width: 2; }
-.gh-map-plaza { fill: #1c3a40; }
-.gh-map-you { fill: #facc15; stroke: #06181c; stroke-width: 1; }
-.gh-map-note { fill: #9fc7c0; font: bold 8px 'Monocraft', monospace; text-anchor: middle; }
+/* Monitor de comida: previsualizacao pixelada em blocos da estufa + arrastar cultura */
+.gh-body { display: flex; gap: 14px; align-items: center; }
+.gh-map-wrap { flex: 1 1 360px; min-width: 240px; }
+.gh-map { display: block; width: 100%; height: auto; background: #0c181d; border: 3px solid #35565b; image-rendering: pixelated; }
+.gh-map-you { fill: #facc15; stroke: #06181c; stroke-width: 1.5; }
+.gh-map-you-label { fill: #fde047; font: bold 7px 'Courier New', monospace; text-anchor: middle; paint-order: stroke; stroke: #06181c; stroke-width: 2px; pointer-events: none; }
+.gh-map-note { fill: #cbd5e1; font: bold 9px 'Courier New', monospace; text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #06181c; stroke-width: 2px; }
+
 .gh-plot { cursor: pointer; outline: none; }
-.gh-plot path, .gh-plot rect { fill: #24393f; stroke: #4c7a80; stroke-width: 1.5; }
-.gh-plot:hover path, .gh-plot:hover rect, .gh-plot:focus-visible path, .gh-plot:focus-visible rect { stroke: #ffffa0; }
-.gh-plot.is-growing path, .gh-plot.is-growing rect { fill: var(--crop); fill-opacity: 0.5; }
-.gh-plot.is-ready path, .gh-plot.is-ready rect { fill: var(--crop); animation: gh-ready-blink 0.9s steps(2) infinite; }
-.gh-plot.is-selected path, .gh-plot.is-selected rect { stroke: #ffffff; stroke-width: 3.5; }
+.gh-plot .gh-bed-tile { fill: #5e3f2a; }
+.gh-plot .gh-bed-furrow { fill: #452c1c; pointer-events: none; }
+.gh-plot .gh-bed-edge { stroke: #8c6244; stroke-width: 1.5; pointer-events: none; }
+.gh-plot.is-empty:hover .gh-bed-tile,
+.gh-plot.is-empty:focus-visible .gh-bed-tile { fill: #6e4b32; }
+.gh-plot.is-empty:hover .gh-bed-edge,
+.gh-plot.is-empty:focus-visible .gh-bed-edge { stroke: #4ade80; stroke-width: 2; }
+.gh-plot.is-empty.is-locked .gh-bed-tile { fill: #33393b; }
+.gh-plot.is-empty.is-locked .gh-bed-furrow { fill: #252a2c; }
+.gh-plot.is-empty.is-locked .gh-bed-edge { stroke: #4b5563; }
+.gh-plot.is-empty.is-locked:hover .gh-bed-edge { stroke: #f87171; }
+.gh-plot.is-growing .gh-bed-tile { fill: #4a3525; }
+.gh-plot.is-growing .gh-bed-edge { stroke: var(--crop, #4ade80); stroke-width: 2; }
+.gh-plot.is-ready .gh-bed-tile { fill: #244f35; animation: gh-ready-blink 0.85s steps(2) infinite; }
+.gh-plot.is-ready .gh-bed-edge { stroke: #fde047; stroke-width: 2.5; }
+.gh-plot.is-growing.is-selected .gh-bed-edge { stroke: #ffffff; stroke-width: 2.5; }
+.gh-plot.is-drop-ok .gh-bed-tile { fill: #286441; }
+.gh-plot.is-drop-ok .gh-bed-edge { stroke: #86efac; stroke-width: 3; }
+.gh-plot.is-drop-bad .gh-bed-tile { fill: #4b2323; }
+.gh-plot.is-drop-bad .gh-bed-edge { stroke: #f87171; stroke-width: 3; }
+
+.gh-badge-bg { fill: #071418; fill-opacity: 0.78; stroke: #2c4c52; stroke-width: 1; pointer-events: none; }
+.gh-badge-bg.is-empty { fill-opacity: 0.65; }
 .gh-plot text {
   fill: #ffffff;
   font: bold 9px 'Monocraft', monospace;
@@ -828,33 +861,152 @@ body.pause-menu-open .crew-picker { display: none; }
   stroke: #06181c;
   stroke-width: 2.5px;
 }
-.gh-plot .gh-plot-pct { font-size: 8px; fill: #ffffa0; }
-@keyframes gh-ready-blink { 50% { fill-opacity: 0.6; } }
-.gh-map-hint { margin: 6px 0 0; font-size: 11px; line-height: 1.3; color: #9fc7c0; }
-.gh-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.gh-plot-title { font-size: 13px; font-weight: bold; color: #ffffa0; }
-.gh-plot-title small { display: block; margin-top: 2px; font-size: 11px; font-weight: normal; color: #cfe7e2; }
-.gh-cost { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #cfe7e2; }
+.gh-plot .gh-plot-plus { font-size: 11px; fill: #bbf7d0; }
+.gh-plot.is-locked .gh-plot-plus { fill: #9ca3af; }
+.gh-plot .gh-plot-yield { font-size: 8px; fill: #e2e8f0; }
+.gh-plot .gh-plot-pct { font-size: 8px; fill: #fde047; }
+.gh-plot.is-ready .gh-plot-pct { fill: #86efac; font-size: 7.5px; }
+.gh-map-crop { pointer-events: none; }
+@keyframes gh-ready-blink { 50% { fill: #2f6c47; } }
+
+.gh-side { flex: 0 0 272px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.gh-step-bar {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  color: #a7f3d0;
+  text-align: center;
+  padding: 4px 6px;
+  background: #0d2025;
+  border: 1px solid #2b4d52;
+}
+.gh-seed-list { display: flex; flex-direction: column; gap: 8px; }
+.gh-seed-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 58px;
+  padding: 8px 10px;
+  background: #0e2329;
+  border: 3px solid #35565b;
+  box-shadow: inset 0 0 0 2px #09171b;
+  color: #edf8f4;
+  font: inherit;
+  text-align: left;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.gh-seed-card:active { cursor: grabbing; }
+.gh-seed-card:hover { background: #14323a; border-color: #6ee7b7; }
+.gh-seed-card.is-active {
+  background: #133829;
+  border-color: #fde047;
+  box-shadow: inset 0 0 0 2px #1e563f;
+}
+.gh-seed-card.is-low:not(.is-active) { opacity: 0.72; }
+.gh-seed-card .gh-crop-art { width: 44px; height: 44px; padding: 4px; flex-shrink: 0; pointer-events: none; }
+.gh-seed-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; pointer-events: none; }
+.gh-seed-main strong { font-size: 14px; color: #ffffff; letter-spacing: 0.4px; }
+.gh-seed-main .gh-food-gain { font-size: 13px; }
+.gh-seed-cost {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 12px;
+  color: #cfe7e2;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.gh-seed-cost span { display: inline-flex; align-items: center; gap: 4px; }
+.gh-seed-time { color: #9fc7c0; font-size: 11px; }
+
+.gh-drag-ghost {
+  position: fixed;
+  z-index: 999;
+  transform: translate(-50%, -65%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+}
+.gh-drag-ghost img {
+  width: 48px;
+  height: 48px;
+  padding: 4px;
+  background: rgba(14, 35, 41, 0.92);
+  border: 3px solid #fde047;
+  image-rendering: pixelated;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.65);
+}
+.gh-drag-tag {
+  padding: 2px 6px;
+  font: bold 11px monospace;
+  background: #0b1c22;
+  border: 2px solid #4c7a80;
+  color: #ffffff;
+  white-space: nowrap;
+}
+.gh-drag-tag.ok { border-color: #4ade80; color: #bbf7d0; background: #0d2b1e; }
+.gh-drag-tag.bad { border-color: #f87171; color: #fecaca; background: #2d1212; }
+
+.gh-harvest-all-btn {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 14px;
+  background: #16a34a;
+  border-color: #86efac #14532d #14532d #86efac;
+  color: #ffffa0;
+}
+.gh-harvest-all-btn:hover { background: #22c55e; color: #ffffff; }
+
+.gh-notice {
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  background: #0d2025;
+  border: 2px solid #35565b;
+  color: #a7f3d0;
+}
+.gh-notice.is-warn { border-color: #ef4444; background: #2d1414; color: #fecaca; }
+.gh-notice.is-growing { border-color: #38bdf8; color: #bae6fd; }
 
 /* Celular em paisagem: tudo precisa caber em ~390 px de altura, sem rolar */
 @media (max-height: 480px) {
-  .gh-map-wrap { flex-basis: 178px; }
-  .gh-map-hint { display: none; }
-  .gh-monitor { gap: 8px; }
-  .gh-side { gap: 6px; }
-  .gh-plot-title { font-size: 12px; }
-  .gh-plot-title small { font-size: 10px; }
-  .gh-card { padding: 6px; gap: 4px; }
-  .gh-card .gh-can-buy { display: none; }
-  .gh-card .gh-crop-art { width: 40px; height: 40px; }
-  .gh-card .mc-btn { min-height: 40px; padding: 6px; }
+  .station-overlay.is-greenhouse { padding: 8px; }
+  .station-overlay.is-greenhouse .station-window { padding: 8px 10px; max-height: 96dvh; }
+  .station-overlay.is-greenhouse .station-window header { padding: 4px 6px; font-size: 16px; }
+  .station-overlay.is-greenhouse .station-screen { padding: 8px 10px; }
+  .gh-monitor { gap: 6px; }
+  .gh-res-pill { padding: 3px 8px; }
+  .gh-res-pill strong { font-size: 13px; }
+  .gh-body { gap: 10px; }
+  .gh-map-wrap { flex: 0 0 245px; min-width: 0; }
+  .gh-side { flex: 1; gap: 5px; }
+  .gh-step-bar { font-size: 11px; padding: 3px 4px; }
+  .gh-seed-list { gap: 5px; }
+  .gh-seed-card { min-height: 46px; padding: 4px 8px; gap: 8px; }
+  .gh-seed-card .gh-crop-art { width: 34px; height: 34px; padding: 3px; }
+  .gh-seed-main strong { font-size: 12px; }
+  .gh-seed-main .gh-food-gain { font-size: 12px; }
+  .gh-seed-cost { font-size: 11px; flex-direction: row; gap: 8px; }
+  .gh-harvest-all-btn { min-height: 40px; padding: 6px; font-size: 13px; }
 }
-@media (max-width: 620px) {
+@media (max-width: 560px) {
   .gh-body { flex-direction: column; align-items: stretch; }
-  .gh-map-wrap { flex-basis: auto; width: 200px; align-self: center; }
+  .gh-map-wrap { flex: none; width: min(270px, 100%); align-self: center; }
+  .gh-side { flex: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .gh-plot.is-ready path, .gh-plot.is-ready rect { animation: none; }
+  .gh-plot.is-ready .gh-bed-tile { animation: none; }
 }
 
 /* Monitor visual do Journal (mesmo padrão visual de cards da estufa, tamanho 100% fixo) */

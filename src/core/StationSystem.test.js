@@ -6,7 +6,7 @@ import { ExpeditionState } from './ExpeditionState.js';
 import { StationSystem } from './StationSystem.js';
 import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.js';
 
-const player = () => ({ health: 20, maxStat: 20 });
+const player = () => ({ health: 20, maxStat: 20, takeDamage(amount) { this.health = Math.max(0, this.health - amount); } });
 describe('base stations', () => {
   it('requires cleaning after an EVA and does not dirty a cleaned suit inside the airlock', () => {
     const station = new StationSystem(new ExpeditionState());

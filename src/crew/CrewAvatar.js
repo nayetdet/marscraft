@@ -11,11 +11,41 @@ const NODE_FACING = {
   quarters: Math.PI,
   medbay: 0,
 };
-// Passo de caminhada: frequencia do ciclo e amplitude do balanco das pernas
-const WALK_RATE = 9;
-const WALK_SWING = 0.58;
+// Cadencia da passada: sincronizada com CREW_CONFIG.WALK_SPEED (~2.2 blocos/s) para nao patinar no piso
+const WALK_RATE = 6.8;
+const WALK_SWING = 0.54;
 const SUIT_COLOR = new THREE.Color(0xf8fafc);
 const WEAK_COLOR = new THREE.Color(0xb8c0cc);
+
+function shortestAngleDiff(from, to) {
+  let diff = to - from;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  return diff;
+}
+
+function dampAlpha(rate, dt) {
+  return dt > 0 ? 1 - Math.exp(-rate * dt) : 1;
+}
+
+// Suaviza curvas em rotas com varios trechos usando media de 3 pontos ao redor da distancia atual.
+// Em trechos retos e nas pontas (inicio/fim) retorna exatamente a posicao do trilho.
+function sampleSmoothRoute(route, distance, routeLen) {
+  const center = pointAlong(route, distance);
+  if (!route || route.length <= 2 || routeLen <= 0.1) return center;
+
+  const w = Math.min(0.45, distance, routeLen - distance);
+  if (w <= 0.04) return center;
+
+  const behind = pointAlong(route, distance - w);
+  const ahead = pointAlong(route, distance + w);
+  const x = (behind.x + center.x + ahead.x) / 3;
+  const z = (behind.z + center.z + ahead.z) / 3;
+  const dx = ahead.x - behind.x;
+  const dz = ahead.z - behind.z;
+  const heading = Math.hypot(dx, dz) > 1e-4 ? Math.atan2(dx, dz) : center.heading;
+  return { x, z, heading };
+}
 
 function createVisorTexture() {
   if (typeof document === 'undefined') return null;
@@ -121,8 +151,7 @@ function makeNameLabel(text, accentColor) {
   return sprite;
 }
 
-// Astronauta 3D detalhado em estilo voxel NASA xEMU (capacete com visor dourado reflexivo,
-// modulo peitoral DCM, mochila PLSS com cilindros de O2, juntas articuladas, luvas e botas EVA)
+// Astronauta 3D detalhado em estilo voxel NASA xEMU com joelhos, cotovelos, cintura e cabeca articulados.
 export class CrewAvatar {
   constructor(scene, member, accentColor) {
     this.member = member;
@@ -162,50 +191,52 @@ export class CrewAvatar {
       return mesh;
     };
 
-    // Pernas articuladas no quadril (y = 0.72) com joelheira e bota espacial EVA
+    // Pernas articuladas no quadril (y = 0.72) e no joelho (y = -0.32 relativo ao quadril)
     const createLeg = (x) => {
-      const pivot = new THREE.Group();
-      pivot.position.set(x, 0.72, 0);
-      // Coxa do traje pressurizado
-      addPart(pivot, 0.21, 0.3, 0.22, this.suitMat, 0, -0.15, 0);
-      // Anel articular do joelho + faixa da cor do tripulante
-      addPart(pivot, 0.22, 0.07, 0.23, darkJoint, 0, -0.33, 0.005);
-      addPart(pivot, 0.225, 0.04, 0.235, accent, 0, -0.27, 0);
-      // Canela
-      addPart(pivot, 0.2, 0.22, 0.21, this.suitMat, 0, -0.47, 0);
-      // Bota EVA blindada (avanca levemente em +Z para formar o bico da bota)
-      addPart(pivot, 0.21, 0.09, 0.27, silver, 0, -0.62, 0.025);
-      addPart(pivot, 0.22, 0.06, 0.29, charcoal, 0, -0.69, 0.03);
-      this.bodyGroup.add(pivot);
-      return pivot;
+      const hip = new THREE.Group();
+      hip.position.set(x, 0.72, 0);
+      addPart(hip, 0.21, 0.3, 0.22, this.suitMat, 0, -0.15, 0);
+      addPart(hip, 0.225, 0.04, 0.235, accent, 0, -0.27, 0);
+
+      const knee = new THREE.Group();
+      knee.position.set(0, -0.32, 0);
+      hip.add(knee);
+
+      addPart(knee, 0.22, 0.07, 0.23, darkJoint, 0, -0.01, 0.005);
+      addPart(knee, 0.2, 0.22, 0.21, this.suitMat, 0, -0.15, 0);
+      addPart(knee, 0.21, 0.09, 0.27, silver, 0, -0.30, 0.025);
+      addPart(knee, 0.22, 0.06, 0.29, charcoal, 0, -0.37, 0.03);
+
+      this.bodyGroup.add(hip);
+      return { hip, knee };
     };
 
-    this.legL = createLeg(-0.13);
-    this.legR = createLeg(0.13);
+    const leftLeg = createLeg(-0.13);
+    const rightLeg = createLeg(0.13);
+    this.legL = leftLeg.hip;
+    this.legR = rightLeg.hip;
+    this.kneeL = leftLeg.knee;
+    this.kneeR = rightLeg.knee;
 
     // Tronco superior articulado na cintura (y = 0.72)
     this.upperBody = new THREE.Group();
     this.upperBody.position.set(0, 0.72, 0);
     this.bodyGroup.add(this.upperBody);
 
-    // Cintura pressurizada e cinto de ferramentas
     addPart(this.upperBody, 0.5, 0.09, 0.3, darkJoint, 0, 0.045, 0);
     addPart(this.upperBody, 0.14, 0.07, 0.32, silver, 0, 0.045, 0);
-    // Torso principal rigido (HUT - Hard Upper Torso)
     addPart(this.upperBody, 0.52, 0.52, 0.3, this.suitMat, 0, 0.34, 0);
-    // Ombreiras anatomicas e faixas de identificacao da missao
     addPart(this.upperBody, 0.58, 0.1, 0.32, this.suitMat, 0, 0.55, 0);
     addPart(this.upperBody, 0.54, 0.08, 0.315, accent, 0, 0.44, 0);
     addPart(this.upperBody, 0.12, 0.5, 0.31, accent, -0.18, 0.34, 0);
     addPart(this.upperBody, 0.12, 0.5, 0.31, accent, 0.18, 0.34, 0);
-    // Anel metalico de acoplamento do pescoco
     addPart(this.upperBody, 0.34, 0.05, 0.34, darkJoint, 0, 0.62, 0);
 
     // Modulo Peitoral de Controle e Display (DCM) na frente (+Z)
     addPart(this.upperBody, 0.28, 0.25, 0.08, dcmMat, 0, 0.34, 0.18);
     addPart(this.upperBody, 0.06, 0.06, 0.03, this.statusLightMat, 0, 0.43, 0.225);
 
-    // Mochila de Suporte de Vida (PLSS) detalhada nas costas (-Z)
+    // Mochila de Suporte de Vida (PLSS) nas costas (-Z)
     addPart(this.upperBody, 0.44, 0.54, 0.18, this.suitMat, 0, 0.35, -0.23);
     addPart(this.upperBody, 0.4, 0.1, 0.2, accent, 0, 0.56, -0.23);
     addPart(this.upperBody, 0.14, 0.42, 0.08, silver, -0.11, 0.33, -0.32);
@@ -213,45 +244,47 @@ export class CrewAvatar {
     addPart(this.upperBody, 0.42, 0.1, 0.2, darkJoint, 0, 0.12, -0.23);
     addPart(this.upperBody, 0.08, 0.05, 0.06, this.statusLightMat, 0, 0.63, -0.23);
 
-    // Bracos articulados no ombro com cotoveleira, computador de pulso e luvas EVA
+    // Bracos articulados no ombro e no cotovelo (y = -0.23 relativo ao ombro)
     const createArm = (x, isLeft) => {
-      const pivot = new THREE.Group();
-      pivot.position.set(x, 0.54, 0);
-      // Ombro e braçadeira na cor do tripulante
-      addPart(pivot, 0.17, 0.22, 0.19, this.suitMat, 0, -0.1, 0);
-      addPart(pivot, 0.18, 0.06, 0.2, accent, 0, -0.12, 0);
-      // Junta do cotovelo
-      addPart(pivot, 0.16, 0.06, 0.18, darkJoint, 0, -0.24, 0);
-      // Antebraco
-      addPart(pivot, 0.16, 0.19, 0.18, this.suitMat, 0, -0.36, 0);
+      const shoulder = new THREE.Group();
+      shoulder.position.set(x, 0.54, 0);
+      addPart(shoulder, 0.17, 0.22, 0.19, this.suitMat, 0, -0.1, 0);
+      addPart(shoulder, 0.18, 0.06, 0.2, accent, 0, -0.12, 0);
+
+      const elbow = new THREE.Group();
+      elbow.position.set(0, -0.23, 0);
+      shoulder.add(elbow);
+
+      addPart(elbow, 0.16, 0.06, 0.18, darkJoint, 0, -0.01, 0);
+      addPart(elbow, 0.16, 0.19, 0.18, this.suitMat, 0, -0.13, 0);
       if (isLeft) {
-        // Mini-display de telemetria no pulso esquerdo
-        addPart(pivot, 0.04, 0.09, 0.1, lampMat, -0.085, -0.37, 0.02);
+        addPart(elbow, 0.04, 0.09, 0.1, lampMat, -0.085, -0.14, 0.02);
       }
-      // Anel de punho e luva pressurizada com polegar
-      addPart(pivot, 0.165, 0.04, 0.185, darkJoint, 0, -0.47, 0);
-      addPart(pivot, 0.16, 0.13, 0.19, silver, 0, -0.55, 0.01);
-      addPart(pivot, 0.05, 0.07, 0.07, charcoal, isLeft ? 0.07 : -0.07, -0.54, 0.06);
-      this.upperBody.add(pivot);
-      return pivot;
+      addPart(elbow, 0.165, 0.04, 0.185, darkJoint, 0, -0.24, 0);
+      addPart(elbow, 0.16, 0.13, 0.19, silver, 0, -0.32, 0.01);
+      addPart(elbow, 0.05, 0.07, 0.07, charcoal, isLeft ? 0.07 : -0.07, -0.31, 0.06);
+
+      this.upperBody.add(shoulder);
+      return { shoulder, elbow };
     };
 
-    this.armL = createArm(-0.35, true);
-    this.armR = createArm(0.35, false);
+    const leftArm = createArm(-0.35, true);
+    const rightArm = createArm(0.35, false);
+    this.armL = leftArm.shoulder;
+    this.armR = rightArm.shoulder;
+    this.elbowL = leftArm.elbow;
+    this.elbowR = rightArm.elbow;
 
     // Capacete articulado no pescoco (y = 0.64 relativo a cintura)
     this.headGroup = new THREE.Group();
     this.headGroup.position.set(0, 0.64, 0);
     this.upperBody.add(this.headGroup);
 
-    // Casco branco do capacete + aba superior de protecao solar
     addPart(this.headGroup, 0.44, 0.42, 0.44, this.suitMat, 0, 0.21, 0);
     addPart(this.headGroup, 0.46, 0.07, 0.46, this.suitMat, 0, 0.4, 0.01);
     addPart(this.headGroup, 0.14, 0.05, 0.38, accent, 0, 0.435, 0);
-    // Visor panoramico dourado reflexivo + moldura lateral
     addPart(this.headGroup, 0.38, 0.25, 0.05, charcoal, 0, 0.22, 0.21);
     addPart(this.headGroup, 0.35, 0.22, 0.06, visorMat, 0, 0.22, 0.22);
-    // Modulos auriculares, lanternas LED laterais e antena de radio
     for (const sx of [-0.23, 0.23]) {
       addPart(this.headGroup, 0.05, 0.16, 0.16, darkJoint, sx, 0.21, 0);
       addPart(this.headGroup, 0.05, 0.07, 0.1, lampMat, sx, 0.28, 0.12);
@@ -264,77 +297,176 @@ export class CrewAvatar {
     this.group.add(this.label);
 
     scene.add(this.group);
-    this._time = Math.random() * 10;
+    this._time = (member.id * 1.37) % 10;
+    this._walkPhase = (member.id * 1.9) % (Math.PI * 2);
+    this._tempo = 0.94 + (member.id % 3) * 0.05;
+    this._walkBlend = member.state === 'walking' ? 1 : 0;
+    this._heading = null;
+    this._pose = {
+      bobY: 0, legL: 0, legR: 0, kneeL: 0, kneeR: 0,
+      armL: 0, armR: 0, elbowL: 0, elbowR: 0, armSplay: 0.06,
+      torsoLean: 0, torsoTwist: 0, torsoRoll: 0, headPitch: 0, headYaw: 0,
+    };
   }
 
   get position() {
     return this.group.position;
   }
 
+  _setWalkPose(out, phase, weight, turnBank = 0) {
+    const s = Math.sin(phase);
+    const hipL = s * WALK_SWING * weight;
+    const hipR = -hipL;
+
+    // Joelho dobra somente para tras (> 0) durante o avanco da passada e na impulsionada do pe
+    const kneeL = (0.08 + 0.64 * Math.max(0, -Math.cos(phase - 0.35))) * weight;
+    const kneeR = (0.08 + 0.64 * Math.max(0, -Math.cos(phase + Math.PI - 0.35))) * weight;
+
+    // Bracos balancam opostos as pernas com cotovelo flexionado para frente (< 0)
+    const armL = -hipL * 0.74;
+    const armR = -hipR * 0.74;
+    const elbowL = (-0.34 - s * 0.22) * weight;
+    const elbowR = (-0.34 + s * 0.22) * weight;
+
+    out.bobY = Math.abs(s) * 0.044 * weight;
+    out.legL = hipL;
+    out.legR = hipR;
+    out.kneeL = kneeL;
+    out.kneeR = kneeR;
+    out.armL = armL;
+    out.armR = armR;
+    out.elbowL = elbowL;
+    out.elbowR = elbowR;
+    out.armSplay = 0.06 * weight;
+    out.torsoLean = 0.085 * weight;
+    out.torsoTwist = -s * 0.11 * weight;
+    out.torsoRoll = (s * 0.032 + turnBank) * weight;
+    out.headPitch = -0.03 * weight;
+    out.headYaw = s * 0.055 * weight;
+  }
+
+  _addIdlePose(out, state, idleW) {
+    if (idleW <= 1e-4) return;
+    if (state === 'working') {
+      const workT = this._time * 3.6;
+      out.bobY += Math.sin(this._time * 2.2) * 0.008 * idleW;
+      out.legL += 0.03 * idleW;
+      out.legR += -0.03 * idleW;
+      out.kneeL += 0.06 * idleW;
+      out.kneeR += 0.06 * idleW;
+      out.armL += (-0.48 + Math.sin(workT) * 0.14) * idleW;
+      out.armR += (-0.48 + Math.cos(workT * 1.1) * 0.14) * idleW;
+      out.elbowL += (-0.78 + Math.cos(workT) * 0.18) * idleW;
+      out.elbowR += (-0.78 + Math.sin(workT * 1.1) * 0.18) * idleW;
+      out.armSplay += 0.08 * idleW;
+      out.torsoLean += 0.09 * idleW;
+      out.torsoTwist += Math.sin(this._time * 1.5) * 0.07 * idleW;
+      out.torsoRoll += Math.sin(this._time * 1.1) * 0.02 * idleW;
+      out.headPitch += (0.12 + Math.sin(this._time * 2.4) * 0.04) * idleW;
+      out.headYaw += Math.sin(this._time * 1.4) * 0.18 * idleW;
+    } else if (state === 'weak') {
+      out.bobY += (-0.025 + Math.sin(this._time * 1.8) * 0.006) * idleW;
+      out.legL += -0.04 * idleW;
+      out.legR += 0.04 * idleW;
+      out.kneeL += 0.14 * idleW;
+      out.kneeR += 0.14 * idleW;
+      out.armL += -0.18 * idleW;
+      out.armR += -0.18 * idleW;
+      out.elbowL += -0.25 * idleW;
+      out.elbowR += -0.25 * idleW;
+      out.armSplay += 0.05 * idleW;
+      out.torsoLean += 0.28 * idleW;
+      out.torsoRoll += Math.sin(this._time * 1.2) * 0.02 * idleW;
+      out.headPitch += 0.22 * idleW;
+      out.headYaw += Math.sin(this._time * 0.9) * 0.08 * idleW;
+    } else if (state === 'bedridden') {
+      out.bobY += (-0.05 + Math.sin(this._time * 1.2) * 0.008) * idleW;
+      out.legL += -0.06 * idleW;
+      out.legR += -0.06 * idleW;
+      out.kneeL += 0.18 * idleW;
+      out.kneeR += 0.18 * idleW;
+      out.armL += -0.35 * idleW;
+      out.armR += -0.35 * idleW;
+      out.elbowL += -0.35 * idleW;
+      out.elbowR += -0.35 * idleW;
+      out.armSplay += 0.05 * idleW;
+      out.torsoLean += 0.55 * idleW;
+      out.headPitch += 0.4 * idleW;
+    } else {
+      // Descansando: respiracao natural, leve balanco de peso e checagem ocasional do visor de pulso
+      const wristCycle = Math.max(0, Math.sin(this._time * 0.7 - 0.6));
+      const wristPeek = Math.pow(wristCycle, 6);
+      out.bobY += Math.sin(this._time * 2.1) * 0.011 * idleW;
+      out.legL += 0.02 * idleW;
+      out.legR += -0.02 * idleW;
+      out.kneeL += 0.05 * idleW;
+      out.kneeR += 0.05 * idleW;
+      out.armL += (-0.04 - wristPeek * 0.62 + Math.sin(this._time * 1.4) * 0.03) * idleW;
+      out.armR += (0.04 - Math.sin(this._time * 1.4) * 0.03) * idleW;
+      out.elbowL += (-0.22 - wristPeek * 0.85) * idleW;
+      out.elbowR += -0.22 * idleW;
+      out.armSplay += 0.07 * idleW;
+      out.torsoLean += (0.02 + wristPeek * 0.05) * idleW;
+      out.torsoTwist += (Math.sin(this._time * 0.8) * 0.04 - wristPeek * 0.12) * idleW;
+      out.torsoRoll += Math.sin(this._time * 0.9) * 0.025 * idleW;
+      out.headPitch += (wristPeek * 0.26 + Math.sin(this._time * 1.2) * 0.03) * idleW;
+      out.headYaw += (Math.sin(this._time * 0.95) * 0.22 + wristPeek * 0.22) * idleW;
+    }
+  }
+
+  _applyJoints(p) {
+    this.bodyGroup.position.y = p.bobY;
+    this.legL.rotation.x = p.legL;
+    this.legR.rotation.x = p.legR;
+    this.kneeL.rotation.x = p.kneeL;
+    this.kneeR.rotation.x = p.kneeR;
+
+    this.armL.rotation.x = p.armL;
+    this.armR.rotation.x = p.armR;
+    this.armL.rotation.z = -p.armSplay;
+    this.armR.rotation.z = p.armSplay;
+    this.elbowL.rotation.x = p.elbowL;
+    this.elbowR.rotation.x = p.elbowR;
+
+    this.upperBody.rotation.x = p.torsoLean;
+    this.upperBody.rotation.y = p.torsoTwist;
+    this.upperBody.rotation.z = p.torsoRoll;
+    this.headGroup.rotation.x = p.headPitch;
+    this.headGroup.rotation.y = p.headYaw;
+  }
+
   update(dt) {
     const m = this.member;
-
     this._time += dt;
-    const p = pointAlong(m.route, m.distance);
+
+    const p = sampleSmoothRoute(m.route, m.distance, m.routeLength);
     // Keep ambient walkers in separate lanes so they do not overlap at shared rail nodes.
     const lane = m.stationary ? 0 : (m.id % 2 === 0 ? -0.22 : 0.22);
     this.group.position.set(p.x + Math.cos(p.heading) * lane, FLOOR_Y, p.z - Math.sin(p.heading) * lane);
-    this.group.rotation.y = m.state === 'walking' ? p.heading : (NODE_FACING[m.node] ?? p.heading);
 
-    let legSwing = 0;
-    let armSwingL = 0;
-    let armSwingR = 0;
-    let torsoLean = 0;
-    let torsoTwist = 0;
-    let headPitch = 0;
-    let headYaw = 0;
-    let bobY = 0;
+    const targetHeading = m.state === 'walking' ? p.heading : (NODE_FACING[m.node] ?? p.heading);
+    if (this._heading === null || dt <= 0) {
+      this._heading = targetHeading;
+    }
+    const angleDiff = shortestAngleDiff(this._heading, targetHeading);
+    this._heading += angleDiff * dampAlpha(7.5, dt);
+    this.group.rotation.y = this._heading;
 
-    if (m.state === 'walking') {
-      const phase = this._time * WALK_RATE;
-      legSwing = Math.sin(phase) * WALK_SWING;
-      armSwingL = -legSwing * 0.78;
-      armSwingR = legSwing * 0.78;
-      bobY = Math.abs(Math.sin(phase)) * 0.035;
-      torsoTwist = Math.sin(phase) * 0.08;
-      torsoLean = 0.05;
-      headYaw = Math.sin(this._time * 2.2) * 0.1;
-    } else if (m.state === 'working') {
-      armSwingL = -0.85 + Math.sin(this._time * 5.2) * 0.22;
-      armSwingR = -0.85 + Math.cos(this._time * 5.2) * 0.22;
-      torsoLean = 0.08;
-      headPitch = 0.14 + Math.sin(this._time * 3) * 0.05;
-      headYaw = Math.sin(this._time * 1.8) * 0.14;
-    } else if (m.state === 'weak') {
-      torsoLean = 0.3;
-      headPitch = 0.22;
-      armSwingL = -0.25;
-      armSwingR = -0.25;
-      bobY = -0.02;
-    } else if (m.state === 'bedridden') {
-      // De repouso na enfermaria: bem curvado, cabeca baixa, respiracao lenta
-      torsoLean = 0.55;
-      headPitch = 0.4;
-      armSwingL = -0.45;
-      armSwingR = -0.45;
-      bobY = -0.05 + Math.sin(this._time * 1.2) * 0.008;
-    } else {
-      // Descansando / em espera: respiracao sutil e olhar calmo ao redor
-      bobY = Math.sin(this._time * 2.4) * 0.012;
-      armSwingL = Math.sin(this._time * 1.8) * 0.04;
-      armSwingR = -armSwingL;
-      headYaw = Math.sin(this._time * 1.1) * 0.18;
+    // Transicao suave entre caminhar e parar (evita estalo brusco das pernas)
+    const targetWalk = m.state === 'walking' ? 1 : 0;
+    this._walkBlend += (targetWalk - this._walkBlend) * dampAlpha(10, dt);
+    if (this._walkBlend > 0.01) {
+      this._walkPhase += dt * WALK_RATE * this._tempo;
     }
 
-    this.bodyGroup.position.y = bobY;
-    this.legL.rotation.x = legSwing;
-    this.legR.rotation.x = -legSwing;
-    this.armL.rotation.x = armSwingL;
-    this.armR.rotation.x = armSwingR;
-    this.upperBody.rotation.x = torsoLean;
-    this.upperBody.rotation.y = torsoTwist;
-    this.headGroup.rotation.x = headPitch;
-    this.headGroup.rotation.y = headYaw;
+    const turnBank = THREE.MathUtils.clamp(angleDiff * 0.16, -0.09, 0.09);
+    const pose = this._pose;
+    this._setWalkPose(pose, this._walkPhase, this._walkBlend, turnBank);
+    this._addIdlePose(pose, m.state, 1 - this._walkBlend);
+    if (this._walkBlend > 0.02) {
+      pose.headYaw += Math.sin(this._time * 1.9) * 0.08 * this._walkBlend;
+    }
+    this._applyJoints(pose);
 
     const isWeak = m.state === 'weak' || m.state === 'bedridden';
     this.suitMat.color.copy(isWeak ? WEAK_COLOR : SUIT_COLOR);
@@ -346,21 +478,15 @@ export class CrewAvatar {
   // O proximo update() devolve o avatar ao lugar e a pose do tripulante.
   poseWalking(x, y, z, heading, dt) {
     this._time += dt;
+    this._walkPhase += dt * WALK_RATE * this._tempo;
+    this._walkBlend = 1;
+    this._heading = heading;
     this.group.visible = true;
     this.group.position.set(x, y, z);
     this.group.rotation.y = heading;
 
-    const phase = this._time * WALK_RATE;
-    const legSwing = Math.sin(phase) * WALK_SWING;
-    this.bodyGroup.position.y = Math.abs(Math.sin(phase)) * 0.035;
-    this.legL.rotation.x = legSwing;
-    this.legR.rotation.x = -legSwing;
-    this.armL.rotation.x = -legSwing * 0.78;
-    this.armR.rotation.x = legSwing * 0.78;
-    this.upperBody.rotation.x = 0.05;
-    this.upperBody.rotation.y = Math.sin(phase) * 0.08;
-    this.headGroup.rotation.x = 0;
-    this.headGroup.rotation.y = 0;
+    this._setWalkPose(this._pose, this._walkPhase, 1, 0);
+    this._applyJoints(this._pose);
   }
 
   // Animacoes: o tripulante saiu de cena (entrou no foguete). O proximo update() o traz de volta.
