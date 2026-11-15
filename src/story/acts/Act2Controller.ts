@@ -272,7 +272,7 @@ export class Act2Controller extends ActController {
   // mira esta num vidro durante a busca do vazamento; senao null (o scanner normal segue).
   scanWindow(dt: number, target: { hit?: { x: number; y: number; z: number } | null } | null, isScanning: boolean) {
     const leak = this.leak;
-    const hit = target?.hit;
+    const hit = target?.hit ?? this.glassBehindObject(target);
     const state = this.windowState;
     const aim = this.windowAim;
     // Achada a rachadura, a resposta fica na luneta enquanto a mira nao sair da janela
@@ -319,6 +319,28 @@ export class Act2Controller extends ActController {
       this.engine.hud?.showToast(WINDOW_SCAN_ENTRIES.ok.status, 4000);
     }
     return state;
+  }
+
+  // A mira pode parar numa caixa de cenario encostada na parede (o alvo vem sem bloco): procura
+  // um vidro logo atras do ponto atingido, na direcao do olhar.
+  private glassHit = { x: 0, y: 0, z: 0 };
+  private glassBehindObject(target: any): { x: number; y: number; z: number } | null {
+    const engine = this.engine;
+    const distance = target?.distance;
+    if (!Number.isFinite(distance) || !engine.camera || !engine.player?.getLookDirection || !engine.world) return null;
+    const origin = engine.camera.position;
+    const dir = engine.player.getLookDirection(this.look);
+    for (let extra = 0.05; extra <= 2; extra += 0.25) {
+      const x = Math.floor(origin.x + dir.x * (distance + extra));
+      const y = Math.floor(origin.y + dir.y * (distance + extra));
+      const z = Math.floor(origin.z + dir.z * (distance + extra));
+      if (engine.world.getBlock(x, y, z) !== BLOCK_IDS.HAB_GLASS) continue;
+      this.glassHit.x = x;
+      this.glassHit.y = y;
+      this.glassHit.z = z;
+      return this.glassHit;
+    }
+    return null;
   }
 
   // ---------- [F]: o engenheiro entrega a luneta e o vidro; a janela rachada e trocada ----------
