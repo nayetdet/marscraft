@@ -103,4 +103,23 @@ describe('AudioManager rocket sound', () => {
     expect(doorClose.loop).toBe(false);
     expect(decompression.loop).toBe(false);
   });
+
+  it('plays a slow, heavy door sound when the airlock is cranked open by hand (issue #79)', () => {
+    const audioInstances = stubAudio();
+    const manager = new AudioManager();
+    const doorSounds = audioInstances.filter((audio) => audio.src.includes('porta_fechar.wav'));
+    expect(doorSounds).toHaveLength(2);
+    const crank = manager.doorCrank;
+    expect(doorSounds).toContain(crank);
+    expect(crank).not.toBe(manager.doorClose);
+    expect(crank.playbackRate).toBeLessThan(1);
+    expect(crank.preservesPitch).toBe(false);
+    expect(crank.loop).toBe(false);
+
+    crank.currentTime = 1;
+    manager.playManualCrank();
+    expect(crank.currentTime).toBe(0);
+    expect(crank.play).toHaveBeenCalledOnce();
+    expect(manager.doorClose.play).not.toHaveBeenCalled();
+  });
 });

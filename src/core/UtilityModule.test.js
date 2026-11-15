@@ -67,6 +67,24 @@ describe('north module (issue #56, part B)', () => {
     );
   });
 
+  it('the power room still works with a dead battery, so the player can shed load and recover (issue #79)', () => {
+    const { utility, mission } = setup({ night: true, charge: 0 });
+    utility.update(1);
+    expect(utility.cold).toBe(true); // sem energia o aquecedor nao aquece
+    // Cortar carga nao gasta energia: os interruptores respondem mesmo com 0 %
+    expect(utility.toggle('heater')).toMatch(/Heater OFF/);
+    expect(utility.toggle('lights')).toMatch(/lights OFF/);
+    expect(utility.toggle('factory')).toMatch(/factory OFF/);
+    expect(utility.heaterOn).toBe(false);
+    expect(utility.greenhouseLightsOn).toBe(false);
+    expect(mission.factoryOn).toBe(false);
+    const used = utility.loads().reduce((sum, [, rate, on]) => sum + (on ? rate : 0), 0);
+    expect(used).toBe(0);
+    // O Sol volta e a bateria carrega de novo; os sistemas podem ser religados
+    mission.battery.add(30);
+    expect(utility.toggle('heater')).toMatch(/Heater ON/);
+  });
+
   it('the 3D printer spends regolith and power to fix the most worn station', () => {
     const { utility, mission, items } = setup();
     const stations = [{ name: 'greenhouse', health: 0.9 }, { name: 'water recycler', health: 0.2 }];

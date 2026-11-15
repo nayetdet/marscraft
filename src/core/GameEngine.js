@@ -456,6 +456,8 @@ export class GameEngine {
       this.audio.playDoorClose();
     } else if (type === 'depressurize') {
       this.audio.playDecompression();
+    } else if (type === 'manual-open') {
+      this.audio.playManualCrank();
     } else if (type === 'clean-skipped') {
       this.hud.showToast('No power to clean your suit: Mars dust came inside with you!', 4500);
     } else if (type === 'suit-cleaned' && !this._dustFactShown) {

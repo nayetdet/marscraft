@@ -17,4 +17,9 @@ describe('airlockProgress', () => {
     expect(airlockProgress(status({ step: 'clean', stepIndex: 2, cleanNeeded: true })).tone).toBe('clean');
     expect(airlockProgress(status({ step: 'clean', stepIndex: 2, cleanNeeded: true, cleanPossible: false })).tone).toBe('warn');
   });
+
+  it('says the door is being opened by hand when there is no power (issue #79)', () => {
+    const view = airlockProgress(status({ step: 'manual', stepIndex: 2, stepCount: 3, manual: true }));
+    expect(view).toEqual({ title: 'AIRLOCK 3/3', fill: 0.5, tone: 'warn', text: 'No power: cranking the door open by hand...' });
+  });
 });

@@ -8,11 +8,14 @@ export class Airlock {
     // Ciclo como na vida real (ver docs/data/airlock-e-poeira.md): a porta so abre depois que o
     // airlock chega a pressao certa. Para sair, o ar e bombeado para fora; para entrar, o airlock
     // enche de ar e, se o traje estiver sujo, a poeira e limpa (eletrostatica, gasta energia).
+    // Sem energia a porta nunca tranca: o ciclo roda no modo manual, com uma etapa a mais
+    // (girar a manivela), e o traje sujo entra sem limpeza (issue #79).
     this.pending = null; // porta que vai abrir no fim do ciclo
     this.steps = [];
     this.stepIndex = 0;
     this.stepTime = 0;
     this.pressurized = true; // o airlock comeca com ar, do lado da base
+    this.manual = false; // ciclo atual (ou o ultimo) aberto na manivela, sem energia
     this.cleanNeeded = false;
     this.cleanPossible = true;
     this.stations = null; // StationSystem, ligado pelo GameEngine (traje sujo e limpeza)
@@ -75,7 +78,8 @@ export class Airlock {
     }
     const other = this.doors.find(d => d !== door);
     if (other.openness > 0 && Math.abs(player.z - other.z) < 0.8 && player.x > -1.4 && player.x < 2.4) return 'Move clear of the other door.';
-    if (!this.mission.spend(C.AIRLOCK_COST)) return 'Not enough energy for the airlock.';
+    // Bateria vazia: o ciclo nao e pago, e a porta abre na manivela (mais devagar)
+    this.manual = !this.mission.spend(C.AIRLOCK_COST);
     if (other.target !== 0) this.onEvent?.('door-close');
     other.target = 0;
     this.pending = door;
@@ -87,7 +91,9 @@ export class Airlock {
     if (toInside && !this.pressurized) this.steps.push('pressurize');
     if (!toInside && this.pressurized) this.steps.push('depressurize');
     if (toInside && inChamber) this.steps.push('clean');
+    if (this.manual) this.steps.push('manual');
     this._startStep();
+    if (this.manual) return 'No power: opening the airlock by hand. It takes longer.';
     return toInside ? 'Opening airlock: filling it with air first.' : 'Opening airlock: pumping the air out first.';
   }
 
@@ -104,11 +110,13 @@ export class Airlock {
       fill: (this.stepIndex + stepFill) / this.steps.length,
       cleanNeeded: this.cleanNeeded,
       cleanPossible: this.cleanPossible,
+      manual: this.manual,
     };
   }
 
   _stepDuration(step) {
     if (step === 'pressurize' || step === 'depressurize') return C.AIRLOCK_CYCLE;
+    if (step === 'manual') return C.AIRLOCK_MANUAL_EXTRA_SECONDS;
     if (step === 'clean') {
       if (!this.cleanNeeded) return 0;
       return this.cleanPossible ? C.SUIT_CLEAN_TIME : C.SUIT_CLEAN_SKIP_TIME;
@@ -119,6 +127,7 @@ export class Airlock {
   _startStep() {
     const step = this.steps[this.stepIndex];
     if (step === 'depressurize') this.onEvent?.('depressurize');
+    if (step === 'manual') this.onEvent?.('manual-open');
     if (step !== 'clean') return;
     this.cleanNeeded = Boolean(this.stations?.dirtySuit);
     this.cleanPossible = this.mission.energy >= STATION_CONFIG.DECONTAMINATION_COST;
