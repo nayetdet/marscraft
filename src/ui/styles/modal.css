@@ -274,7 +274,8 @@ body.pause-menu-open .participants-panel { display: none; }
 .participants-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
+  column-gap: 10px;
+  row-gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -306,8 +307,8 @@ body.pause-menu-open .participants-panel { display: none; }
 .participant-name > span:first-child { white-space: nowrap; }
 .participant-card img {
   display: block;
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   max-width: 100%;
   border: 2px solid #d4a16a;
   border-radius: 50%;
@@ -1193,10 +1194,10 @@ body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 
   .mc-menu-card .menu-icon { width: 16px; height: 16px; flex-basis: 16px; }
   .participants-panel { margin-top: 1px; padding: 3px 4px 2px; }
   .participants-panel h2 { margin-bottom: 2px; font-size: 10px; }
-  .participants-grid { gap: 2px; }
+  .participants-grid { column-gap: 12px; row-gap: 2px; }
   .participant-card { gap: 2px; font-size: 12px; font-weight: 700; }
   .participant-link { gap: 2px; }
-  .participant-card img { width: 48px; height: 48px; }
+  .participant-card img { width: 44px; height: 44px; }
   .controls-screen.info-screen { max-height: calc(100dvh - 48px); }
 }
 
