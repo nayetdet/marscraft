@@ -1,6 +1,6 @@
 // @ts-nocheck
 // Estufa didatica (issue #89): os 3 cuidados que a crianca equilibra para as plantas crescerem e
-// os cards "Ciencia espacial na Terra" que aparecem depois de cada colheita. Logica pura.
+// os fatos "Ciencia espacial na Terra", recompensa de descoberta na estufa (issue #216). Logica pura.
 //
 // Base: pacote educacional da CSA "Food production on the Moon and in remote areas" (agricultura
 // em ambiente controlado: luz, agua reciclada e um lugar fechado e limpo).
@@ -33,45 +33,88 @@ export function plantsStalled(state) {
   return growthChecks(state).some((check) => !check.ok);
 }
 
-// Cards "Marte <-> Terra": a mesma tecnologia da estufa ajudando pessoas na Terra. Um por
-// colheita, em rodizio. Frases curtas para 7 a 12 anos, sem numeros inventados.
+// Fatos "Marte <-> Terra": a mesma tecnologia da estufa ajudando pessoas na Terra. Frases curtas
+// para 7 a 12 anos, sem numeros inventados. Cada fato e a recompensa de uma descoberta do jogador
+// (issue #216): `crop` e a planta cuja PRIMEIRA colheita revela o fato; o fato sem `crop` sai na
+// colheita seguinte a ter colhido os 3 tipos. `tone` de cada frase: a base em Marte, a Terra ou a
+// Estacao Espacial (cor do icone no card, FirstTimeHud).
+export const EARTH_FACT_TITLE = 'SPACE SCIENCE ON EARTH';
 export const EARTH_CARDS = [
   {
-    title: 'SPACE SCIENCE ON EARTH',
+    id: 'lettuce',
+    crop: 'lettuce',
+    reason: 'First lettuce harvest!',
     lines: [
-      { icon: 'drop', text: 'Our greenhouse reuses its water' },
-      { icon: 'home', text: 'Earth: closed greenhouses grow food in the Canadian Arctic' },
-    ],
-    source: 'CSA: Food production on the Moon and in remote areas',
-  },
-  {
-    title: 'SPACE SCIENCE ON EARTH',
-    lines: [
-      { icon: 'plant', text: 'Mars soil has perchlorate salts' },
-      { icon: 'drop', text: 'So we grow plants in water, not soil' },
-      { icon: 'home', text: 'Earth: city vertical farms do the same' },
-    ],
-    source: 'Perchlorate found in Mars soil by NASA Phoenix (2008). CSA: Food production toolkit',
-  },
-  {
-    title: 'SPACE SCIENCE ON EARTH',
-    lines: [
-      { icon: 'heart', text: 'Fresh food keeps the crew healthy and happy' },
-      { icon: 'plant', text: 'Astronauts ate space lettuce in 2015' },
+      { icon: 'heart', tone: 'mars', text: 'Fresh food keeps the crew healthy and happy' },
+      { icon: 'plant', tone: 'space', text: 'Astronauts ate space lettuce in 2015' },
     ],
     source: 'NASA Veggie on the Space Station. Plant studies: NASA OSDR',
   },
   {
-    title: 'SPACE SCIENCE ON EARTH',
+    id: 'potato',
+    crop: 'potato',
+    reason: 'First potato harvest!',
     lines: [
-      { icon: 'sun', text: 'Red and blue LEDs feed the plants' },
-      { icon: 'bolt', text: 'Earth: indoor farms use LEDs to save power' },
+      { icon: 'plant', tone: 'mars', text: 'Mars soil has perchlorate salts' },
+      { icon: 'drop', tone: 'mars', text: 'So we grow plants in water, not soil' },
+      { icon: 'home', tone: 'earth', text: 'Earth: city vertical farms do the same' },
+    ],
+    source: 'Perchlorate found in Mars soil by NASA Phoenix (2008). CSA: Food production toolkit',
+  },
+  {
+    id: 'soy',
+    crop: 'soy',
+    reason: 'First soy harvest!',
+    lines: [
+      { icon: 'drop', tone: 'mars', text: 'Our greenhouse reuses its water' },
+      { icon: 'home', tone: 'earth', text: 'Earth: closed greenhouses grow food in the Canadian Arctic' },
+    ],
+    source: 'CSA: Food production on the Moon and in remote areas',
+  },
+  {
+    id: 'bonus',
+    crop: null,
+    reason: 'You grew every crop!',
+    lines: [
+      { icon: 'sun', tone: 'mars', text: 'Red and blue LEDs feed the plants' },
+      { icon: 'bolt', tone: 'earth', text: 'Earth: indoor farms use LEDs to save power' },
     ],
     source: 'NASA Veggie uses red and blue LED light. CSA: Food production toolkit',
   },
 ];
 
-export function earthCard(harvestNumber) {
-  const index = ((harvestNumber - 1) % EARTH_CARDS.length + EARTH_CARDS.length) % EARTH_CARDS.length;
-  return EARTH_CARDS[index];
+// Quais fatos a crianca ja ganhou nesta partida. Cada fato aparece uma vez so; a colheita
+// automatica da tripulacao nao passa por aqui, entao nunca mostra nada.
+export class EarthFacts {
+  constructor() {
+    this.seen = new Set(); // ids de EARTH_CARDS
+    this._crops = new Set(); // tipos que o jogador ja colheu
+  }
+
+  // Chamado quando o JOGADOR colhe `type`. Devolve o fato novo, ou null se nao ha recompensa.
+  onPlayerHarvest(type) {
+    const first = !this._crops.has(type);
+    this._crops.add(type);
+    const card = first
+      ? EARTH_CARDS.find((c) => c.crop === type)
+      : EARTH_CARDS.find((c) => !c.crop && EARTH_CARDS.every((other) => !other.crop || this._crops.has(other.crop)));
+    if (!card || this.seen.has(card.id)) return null;
+    this.seen.add(card.id);
+    return card;
+  }
+}
+
+// O que a animacao de descoberta desenha (FirstTimeHud.show): o sinal indo de Marte para a Terra
+export const EARTH_FACT_SCENE = { from: 'mars', to: 'earth', motion: 'beam' };
+export const EARTH_FACT_ACCENT = '#ffe45c';
+export function earthFactView(card) {
+  return {
+    stamp: 'DISCOVERY!', title: EARTH_FACT_TITLE, reason: card.reason, lines: card.lines, source: card.source,
+    scene: EARTH_FACT_SCENE, accent: EARTH_FACT_ACCENT,
+  };
+}
+
+// A linha do diario de bordo [J]
+export function earthFactLogText(card) {
+  return `Space science on Earth: ${card.lines.map((line) => line.text).join('. ')}. (${card.source})`;
 }

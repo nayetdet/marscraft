@@ -1,22 +1,26 @@
 // @ts-nocheck
 import { MISSION_CONFIG, STORY_CONFIG } from '../config/constants.ts';
-import { CARDS, CERTIFICATE_IDS, OBJECTIVES, certificateBadge, certificateById, commsCard, replyCard } from './storyChapters.ts';
+import { CARDS, OBJECTIVES, certificateBadge, certificateById, commsCard, replyCard } from './storyChapters.ts';
+import { CORE_STEPS, TUTORIAL_STEPS, stepCard } from './tutorialSteps.ts';
 
 // A historia do jogo em 3 atos: chegada (tutorial), preparar a volta e janela de lancamento.
-// O tutorial tem 3 passos, um por ideia: entrar na base (ar), avisar a Terra (radio com atraso)
-// e buscar gelo. A resposta da Terra chega sozinha, com o jogador ja no passo seguinte.
+// O ato 1 e o tutorial guiado (src/story/tutorialSteps.ts): um passo por vez, cada um com um
+// balao proprio, do basico (entrar, beber, comer, avisar a Terra) ao avancado (rover, gelo,
+// foguete, luneta). A resposta da Terra chega sozinha, com o jogador ja no passo seguinte.
 // Do ato 2 em diante o jogo tem uma rotina que se repete ate o tanque encher: buscar gelo, levar
 // ao foguete e voltar a base para recarregar o ar (`needsBase` marca esse ultimo passo).
 // Logica pura, sem DOM nem Three.js: o GameEngine entrega um retrato do jogo a cada frame
 // (`update(snapshot)`) e aplica os eventos que saem em `drainEvents()`.
 //
-// snapshot = { hours, insideHabitat, iceCount, iceNeeded, atConsole, stormPhase, stormsSurvived,
+// snapshot = { hours, insideHabitat, iceCount, iceNeeded, stormPhase, stormsSurvived,
 //              propellantPct, dataSent, launched,
-//              powerChecks, harvestCount, workoutCount, shelterWaterL }  (os 4 ultimos: treino #88)
+//              drinkCount, mealCount, earthCalls, powerChecks, plantCount, harvestCount,
+//              workoutCount, washCount, shelterWaterL, roverDrives, roverIceKg, scanCount }
+//              (a segunda parte so e lida pelos passos do tutorial)
 //
-// Treino de cadete (issue #88, `training: true`): entre avisar a Terra e buscar o gelo, 4
-// certificados curtos dentro da base (energia, estufa, academia e abrigo). Cada um solta um
-// evento 'certificate' com o selo. `skipTraining()` pula o que falta (menu Demo Tools).
+// `training: true` = tutorial completo. Sem ele sobram os 3 passos centrais (entrar, avisar a
+// Terra, buscar gelo). 4 passos entregam um certificado (issue #88): evento 'certificate' com o
+// selo. `skipTraining()` pula o que falta (menu Demo Tools).
 // O diretor escreve `needsBase` de volta no retrato, para o painel e a seta lerem a mesma rotina.
 export class StoryDirector {
   // `replyDelayHours`: horas de jogo ate a resposta da Terra chegar (ida e volta do sinal).
@@ -31,9 +35,13 @@ export class StoryDirector {
     training = false,
   } = {}) {
     this.training = training;
+    // Passos do tutorial desta partida e onde a crianca esta neles (-1 = fora do tutorial)
+    this.steps = training ? TUTORIAL_STEPS : CORE_STEPS;
+    this.stepIndex = -1;
     // Certificados ja ganhos (ids de CERTIFICATES), na ordem
     this.certificates = [];
-    this._trainingBaseline = null;
+    // Copia do retrato tirada quando o passo atual comecou
+    this._stepBaseline = {};
     this.replyDelayHours = replyDelayHours;
     this.comms = comms;
     this.gameHoursPerSecond = gameHoursPerSecond;
@@ -51,7 +59,6 @@ export class StoryDirector {
 
     this._lastIceNeeded = null;
     this._replyAt = null;
-    this._iceBaseline = 0;
     this._guideShown = false;
     this._guiding = false;
     this._windowClosesAt = 0;
@@ -59,11 +66,11 @@ export class StoryDirector {
     this._events = [];
   }
 
-  start() {
+  // `s`: retrato do jogo na hora em que a historia comeca (para o primeiro passo comparar)
+  start(s = {}) {
     if (this.act !== 0) return;
     this.act = 1;
-    this._setObjective('enter-base');
-    this._card(CARDS.welcome);
+    this._startStep(0, s);
   }
 
   update(s) {
@@ -85,94 +92,61 @@ export class StoryDirector {
     else this._updateWindow(s);
   }
 
-  _updateArrival(s) {
-    switch (this.objectiveId) {
-      case 'enter-base':
-        if (s.insideHabitat) {
-          this._setObjective('report');
-          this._card(CARDS.inside);
-        }
-        break;
-      case 'report':
-        if (s.atConsole) {
-          this._replyAt = s.hours + this.replyDelayHours;
-          this._updateReply(s);
-          this._card(commsCard(this.comms, { training: this.training }));
-          if (this.training) {
-            // O que o cadete fizer daqui em diante conta para os certificados
-            this._trainingBaseline = {
-              powerChecks: s.powerChecks ?? 0,
-              harvestCount: s.harvestCount ?? 0,
-              workoutCount: s.workoutCount ?? 0,
-              shelterWaterL: s.shelterWaterL ?? 0,
-            };
-            this._card(CARDS.training);
-            this._setObjective(CERTIFICATE_IDS[0]);
-          } else {
-            this._startIce(s);
-          }
-        }
-        break;
-      case 'cert-power':
-      case 'cert-greenhouse':
-      case 'cert-gym':
-      case 'cert-shelter':
-        if (this._certificateDone(this.objectiveId, s)) this._award(this.objectiveId, s);
-        break;
-      case 'collect-ice':
-        // Gelo gasto baixa a base de comparacao: o que vale e pegar gelo novo depois do pedido
-        if (s.iceCount < this._iceBaseline) this._iceBaseline = s.iceCount;
-        if (s.iceCount > this._iceBaseline) {
-          // O gelo vai direto para o foguete, que fica la fora: nada de voltar pelo airlock antes
-          this.act = 2;
-          this._events.push({ type: 'start-storms' });
-          this._card(CARDS.act2);
-          this._setObjective('act2');
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
-  _startIce(s) {
-    this._iceBaseline = s.iceCount;
-    this._setObjective('collect-ice');
-  }
-
-  // O cadete fez a tarefa do certificado depois de o treino comecar?
-  _certificateDone(id, s) {
-    const b = this._trainingBaseline;
-    switch (id) {
-      case 'cert-power': return (s.powerChecks ?? 0) > b.powerChecks;
-      case 'cert-greenhouse': return (s.harvestCount ?? 0) > b.harvestCount;
-      case 'cert-gym': return (s.workoutCount ?? 0) > b.workoutCount;
-      case 'cert-shelter': return (s.shelterWaterL ?? 0) > b.shelterWaterL + 1e-6;
-      default: return false;
-    }
-  }
-
-  _award(id, s) {
-    this.certificates.push(id);
-    this._events.push({ type: 'certificate', badge: certificateBadge(certificateById(id), s) });
-    const next = CERTIFICATE_IDS[CERTIFICATE_IDS.indexOf(id) + 1];
-    if (next) {
-      this._setObjective(next);
-      return;
-    }
-    this._card(CARDS.trainingDone);
-    this._startIce(s);
+  // Passo atual do tutorial, ou null fora dele
+  get step() {
+    return this.steps[this.stepIndex] ?? null;
   }
 
   get inTraining() {
-    return CERTIFICATE_IDS.includes(this.objectiveId);
+    return this.act === 1 && this.step !== null;
   }
 
-  // Menu Demo Tools: pula o treino (para demonstracoes rapidas). No meio dele, vai direto ao gelo.
-  skipTraining(s = { iceCount: 0 }) {
+  // Ato 1: um passo por vez. Um passo por frame, para cada balao ter a sua vez.
+  _updateArrival(s) {
+    const step = this.step;
+    if (!step || !step.done(s, this._stepBaseline)) return;
+
+    if (step.id === 'report') {
+      this._replyAt = s.hours + this.replyDelayHours;
+      this._updateReply(s);
+      this._card(commsCard(this.comms));
+    }
+    if (step.certificate) {
+      this.certificates.push(step.certificate);
+      this._events.push({ type: 'certificate', badge: certificateBadge(certificateById(step.certificate), s) });
+    } else {
+      this._events.push({ type: 'step-done', id: step.id });
+    }
+
+    if (this.stepIndex + 1 < this.steps.length) this._startStep(this.stepIndex + 1, s);
+    else this._finishTutorial();
+  }
+
+  _startStep(index, s) {
+    this.stepIndex = index;
+    this._stepBaseline = { ...s };
+    const step = this.steps[index];
+    this._setObjective(step.id, step.objective);
+    this._card(stepCard(step, index, this.steps.length));
+  }
+
+  // Fim do tutorial: comeca o ato 2, com as tempestades e a rotina de encher o foguete
+  _finishTutorial() {
+    this.stepIndex = -1;
+    this.act = 2;
+    this._events.push({ type: 'start-storms' });
+    if (this.training) this._card(CARDS.trainingDone);
+    this._card(CARDS.act2);
+    this._setObjective('act2');
+  }
+
+  // Menu Demo Tools: pula o tutorial (para demonstracoes rapidas). Antes de a historia comecar,
+  // sobram os 3 passos centrais; no meio dele, o jogo vai direto para o ato 2.
+  skipTraining() {
     const was = this.inTraining;
     this.training = false;
-    if (was) this._startIce(s);
+    if (was) this._finishTutorial();
+    else if (this.act === 0) this.steps = CORE_STEPS;
     return was;
   }
 
@@ -241,9 +215,9 @@ export class StoryDirector {
     this._setObjective(s.propellantPct < 100 ? 'fuel' : !s.dataSent ? 'send-data' : 'ignite');
   }
 
-  _setObjective(id) {
+  _setObjective(id, text = OBJECTIVES[id]) {
     this.objectiveId = id;
-    this.objectiveText = OBJECTIVES[id];
+    this.objectiveText = text;
   }
 
   _card(card) {

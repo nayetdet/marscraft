@@ -1,36 +1,71 @@
 // @ts-nocheck
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { CROP_CONFIG, WORLD_CONFIG } from '../config/constants.ts';
+import { CROP_CONFIG, CROP_LOOK_CONFIG, WORLD_CONFIG } from '../config/constants.ts';
 import { HABITAT_LAYOUT } from '../world/habitatLayout.ts';
 import { GREENHOUSE_PLOTS, PLOT_PLANT_CELLS, GREENHOUSE_BASKETS, plotIndexAt } from '../world/greenhouseLayout.ts';
 import { createCropItemModel } from '../graphics/cropModels.ts';
 import { labelTexture } from './baseCanvas.ts';
 
-// Plantas 3D dos campos da estufa. Cada campo (GREENHOUSE_PLOTS, menos o canteiro do jardim) tem
-// uma malha pronta por tipo de cultura; so a da cultura plantada aparece, crescendo com o
-// progresso. Cada planta vira um item na colheita: o campo mostra uma planta por item
-// (PLOT_PLANT_CELLS), nas bandejas de terra que cobrem o campo todo.
+// Plantas 3D dos campos da estufa (GREENHOUSE_PLOTS, menos o canteiro do jardim). Cada planta vira
+// um item na colheita: o campo mostra uma planta por item (PLOT_PLANT_CELLS), nas bandejas de terra
+// que cobrem o campo todo. Para a crianca ver que plantou: a terra do campo plantado inteiro fica
+// escura e molhada, cada planta nasce como um broto visivel e cresce por inteiro, e um marcador
+// colorido gira sobre o campo pronto para colher. Cada tipo de planta e um InstancedMesh (um
+// desenho para todos os campos).
 
-// Formato de cada cultura numa bandeja: [largura, altura, profundidade, cor, x, y, z]
+// Terra das bandejas: seca no campo vazio, escura e molhada no campo plantado
+const SOIL_TOP = 0.07;
+const SOIL = [0.78, SOIL_TOP, 0.78, 0x5b4636, 0, SOIL_TOP / 2, 0];
+const SOIL_PLANTED = 0x34241a;
+
+// Formato de cada cultura numa bandeja: [largura, altura, profundidade, cor, x, y, z]. O y conta a
+// partir do topo da terra, para a planta nascer em cima dela e nao enterrada.
+const onSoil = (parts) => parts.map(([w, h, d, hex, x, y, z]) => [w, h, d, hex, x, y + SOIL_TOP, z]);
 const CROP_SHAPES = {
-  lettuce: [
+  lettuce: onSoil([
     [0.62, 0.22, 0.62, 0x86efac, 0, 0.11, 0],
     [0.34, 0.16, 0.34, 0x4ade80, 0, 0.3, 0],
-  ],
-  potato: [
+  ]),
+  potato: onSoil([
     [0.14, 0.48, 0.14, 0x16a34a, 0, 0.24, 0],
     [0.52, 0.22, 0.22, 0x4ade80, 0, 0.36, 0],
     [0.22, 0.22, 0.52, 0x4ade80, 0, 0.42, 0],
     [0.2, 0.14, 0.2, 0xd97706, 0.16, 0.07, 0.14],
-  ],
-  soy: [
+  ]),
+  soy: onSoil([
     [0.5, 0.62, 0.5, 0x15803d, 0, 0.31, 0],
     [0.12, 0.22, 0.12, 0xa3e635, 0.2, 0.34, 0.2],
     [0.12, 0.22, 0.12, 0xa3e635, -0.2, 0.22, -0.18],
-  ],
+  ]),
 };
-const SOIL = [0.78, 0.07, 0.78, 0x5b4636, 0, 0.035, 0];
+// Broto recem-plantado (igual para as 3 culturas): montinho de terra, caule e duas folhas verde-claro,
+// que contrastam com a terra escura
+const SPROUT_SHAPE = onSoil([
+  [0.34, 0.06, 0.34, 0x4a3324, 0, 0.03, 0],
+  [0.08, 0.42, 0.08, 0x65a30d, 0, 0.21, 0],
+  [0.32, 0.08, 0.18, 0x84cc16, -0.17, 0.36, 0],
+  [0.32, 0.08, 0.18, 0xbef264, 0.17, 0.42, 0],
+]);
+
+// Etapa visual de uma planta: broto logo apos plantar, depois a planta da cultura crescendo, e pronta.
+// `scale` e uniforme (largura e altura), para a planta jovem parecer pequena, nao achatada.
+export function cropGrowthLook(progress, seconds) {
+  const p = Math.max(0, Math.min(1, progress / seconds));
+  const L = CROP_LOOK_CONFIG;
+  if (p >= 1) return { stage: 'ready', scale: 1 };
+  if (p < L.SPROUT_UNTIL) return { stage: 'sprout', scale: L.SPROUT_MIN_SCALE + (1 - L.SPROUT_MIN_SCALE) * (p / L.SPROUT_UNTIL) };
+  return { stage: 'growing', scale: L.PLANT_MIN_SCALE + (1 - L.PLANT_MIN_SCALE) * ((p - L.SPROUT_UNTIL) / (1 - L.SPROUT_UNTIL)) };
+}
+
+// Broto avulso para o canteiro do jardim (o GameEngine desenha a planta do campo 0)
+export function createSproutModel() {
+  const color = new THREE.Color();
+  const mesh = mergedMesh(SPROUT_SHAPE.map((part) => coloredBox(part, 0, 0, color)), new THREE.MeshLambertMaterial({ vertexColors: true }));
+  mesh.matrixAutoUpdate = true;
+  mesh.name = 'garden-sprout';
+  return mesh;
+}
 
 const BASKET_COLORS = {
   darkWood: 0x704523,
@@ -156,16 +191,40 @@ function coloredBox([w, h, d, hex, x, y, z], px, pz, color) {
   return geo;
 }
 
-function mergedMesh(boxes, material) {
+function mergedGeometry(boxes) {
   const geometry = mergeGeometries(boxes, false);
   boxes.forEach((geo) => geo.dispose());
-  const mesh = new THREE.Mesh(geometry, material);
+  return geometry;
+}
+
+function mergedMesh(boxes, material) {
+  const mesh = new THREE.Mesh(mergedGeometry(boxes), material);
   mesh.matrixAutoUpdate = false;
+  return mesh;
+}
+
+// Cores do marcador de "pronto" de cada cultura (as mesmas das placas das cestas)
+const MARKER_COLORS = Object.fromEntries(Object.entries(CROP_BADGES).map(([type, badge]) => [type, new THREE.Color(badge.hex)]));
+const _matrix = new THREE.Matrix4();
+const _pos = new THREE.Vector3();
+const _quat = new THREE.Quaternion();
+const _scale = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0);
+
+function instancedPlants(boxes, material, capacity, name) {
+  const mesh = new THREE.InstancedMesh(mergedGeometry(boxes), material, capacity);
+  mesh.name = name;
+  mesh.count = 0;
+  mesh.visible = false;
+  // As copias mudam de lugar e de tamanho: a esfera de corte calculada uma vez ficaria errada
+  mesh.frustumCulled = false;
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   return mesh;
 }
 
 export function buildGreenhouseFields(scene) {
   const R = HABITAT_LAYOUT.DOME_RADIUS;
+  const L = CROP_LOOK_CONFIG;
   const material = new THREE.MeshLambertMaterial({ vertexColors: true });
   // As plantas tem material proprio: quando param de crescer (sem luz, agua ou com poeira) ele
   // fica amarelado e as folhas parecem murchas, sem mexer na terra das bandejas (issue #89)
@@ -184,24 +243,57 @@ export function buildGreenhouseFields(scene) {
     }
   }
 
-  // Terra das bandejas de todos os campos, jardim incluido (assim ele fica igual ao resto): uma malha so
-  const soil = cells.flatMap((list) => list.map(([px, pz]) => coloredBox(SOIL, px, pz, color)));
-  root.add(mergedMesh(soil, material));
-
-  const fields = PLOT_PLANT_CELLS.map((plantCells, index) => {
-    if (index === 0) return null;
-    const group = new THREE.Group();
-    const meshes = {};
-    for (const [type, shape] of Object.entries(CROP_SHAPES)) {
-      const boxes = plantCells.flatMap(({ dx, dz }) => shape.map((part) => coloredBox(part, dx + 0.5, dz + 0.5, color)));
-      const mesh = mergedMesh(boxes, cropMaterial);
-      mesh.visible = false;
-      group.add(mesh);
-      meshes[type] = mesh;
+  // Terra das bandejas de todos os campos, jardim incluido (assim ele fica igual ao resto): uma malha
+  // so. `soilRanges[i]` = vertices do campo i, para pintar a terra quando ele e plantado ou colhido.
+  const soilBoxes = [];
+  let vertexCount = 0;
+  const soilRanges = cells.map((list) => {
+    const start = vertexCount;
+    for (const [px, pz] of list) {
+      const box = coloredBox(SOIL, px, pz, color);
+      vertexCount += box.attributes.position.count;
+      soilBoxes.push(box);
     }
-    root.add(group);
-    return { group, meshes, shown: null };
+    return { start, end: vertexCount, planted: false };
   });
+  const soilMesh = mergedMesh(soilBoxes, material);
+  soilMesh.name = 'greenhouse-soil';
+  root.add(soilMesh);
+  const soilDry = new THREE.Color(SOIL[3]);
+  const soilWet = new THREE.Color(SOIL_PLANTED);
+  const paintSoil = (range, planted) => {
+    const colors = soilMesh.geometry.attributes.color;
+    const c = planted ? soilWet : soilDry;
+    for (let v = range.start; v < range.end; v++) colors.setXYZ(v, c.r, c.g, c.b);
+    colors.needsUpdate = true;
+    range.planted = planted;
+  };
+
+  // Plantas dos campos 1..n (o jardim e do GameEngine): um InstancedMesh por cultura e um para os brotos
+  const capacity = PLOT_PLANT_CELLS.reduce((sum, list, index) => sum + (index ? list.length : 0), 0);
+  const plantMeshes = Object.fromEntries(Object.entries(CROP_SHAPES).map(([type, shape]) => {
+    const mesh = instancedPlants(shape.map((part) => coloredBox(part, 0, 0, color)), cropMaterial, capacity, `greenhouse-crop-${type}`);
+    root.add(mesh);
+    return [type, mesh];
+  }));
+  const sproutMesh = instancedPlants(SPROUT_SHAPE.map((part) => coloredBox(part, 0, 0, color)), cropMaterial, capacity, 'greenhouse-crop-sprout');
+  root.add(sproutMesh);
+  const allPlantMeshes = [...Object.values(plantMeshes), sproutMesh];
+
+  // Marcador de "pronto para colher": um losango na cor da cultura sobre a planta do meio de cada campo
+  const markers = new THREE.InstancedMesh(
+    new THREE.OctahedronGeometry(0.16),
+    new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x3a3a3a }),
+    GREENHOUSE_PLOTS.length,
+  );
+  markers.name = 'greenhouse-ready-markers';
+  markers.count = 0;
+  markers.visible = false;
+  markers.frustumCulled = false;
+  markers.userData.noShadowCast = true;
+  markers.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  root.add(markers);
+  const markerCells = PLOT_PLANT_CELLS.map((list) => list[Math.floor(list.length / 2)]);
 
   scene.add(root);
   root.updateMatrixWorld(true);
@@ -216,7 +308,7 @@ export function buildGreenhouseFields(scene) {
 
   return {
     cellCounts: cells.map((list) => list.length),
-    // `plots` = StationSystem.plots. Barato: so mexe na escala e na visibilidade.
+    // `plots` = StationSystem.plots. Barato: no maximo ~20 matrizes de planta e 9 marcadores por quadro.
     update(plots, { stock = {}, stalled = false } = {}) {
       for (const basket of baskets) {
         const count = Math.max(0, Math.floor(stock[basket.type] ?? 0));
@@ -230,23 +322,46 @@ export function buildGreenhouseFields(scene) {
         wilted = stalled;
         cropMaterial.color.setHex(stalled ? 0xb59a52 : 0xffffff);
       }
-      for (let i = 1; i < fields.length; i++) {
-        const field = fields[i];
-        if (!field) continue;
-        const crop = plots[i]?.crop ?? null;
-        const type = crop?.type ?? null;
-        if (type !== field.shown) {
-          if (field.shown) field.meshes[field.shown].visible = false;
-          if (type) field.meshes[type].visible = true;
-          field.shown = type;
-        }
-        if (crop) {
-          const scale = 0.15 + 0.85 * Math.min(1, crop.progress / CROP_CONFIG[type].seconds);
-          if (field.group.scale.y !== scale) {
-            field.group.scale.y = scale;
-            field.group.updateMatrixWorld(true);
+
+      for (let i = 0; i < soilRanges.length; i++) {
+        const planted = Boolean(plots[i]?.crop);
+        if (planted !== soilRanges[i].planted) paintSoil(soilRanges[i], planted);
+      }
+
+      for (const mesh of allPlantMeshes) mesh.count = 0;
+      markers.count = 0;
+      const t = performance.now() / 1000;
+      for (let i = 0; i < GREENHOUSE_PLOTS.length; i++) {
+        const crop = plots[i]?.crop;
+        if (!crop || !Object.hasOwn(CROP_CONFIG, crop.type)) continue;
+        const look = cropGrowthLook(crop.progress, CROP_CONFIG[crop.type].seconds);
+        if (i > 0) {
+          const mesh = look.stage === 'sprout' ? sproutMesh : plantMeshes[crop.type];
+          _quat.identity();
+          _scale.setScalar(look.scale);
+          for (const { dx, dz } of PLOT_PLANT_CELLS[i]) {
+            _pos.set(dx + 0.5, 0, dz + 0.5);
+            mesh.setMatrixAt(mesh.count++, _matrix.compose(_pos, _quat, _scale));
           }
         }
+        if (look.stage === 'ready') {
+          const { dx, dz } = markerCells[i];
+          _pos.set(dx + 0.5, L.MARKER_HEIGHT + Math.sin(t * 3 + i) * L.MARKER_BOB, dz + 0.5);
+          _quat.setFromAxisAngle(_up, t * L.MARKER_SPIN + i);
+          _scale.set(1, 1.4, 1);
+          markers.setMatrixAt(markers.count, _matrix.compose(_pos, _quat, _scale));
+          markers.setColorAt(markers.count, MARKER_COLORS[crop.type]);
+          markers.count++;
+        }
+      }
+      for (const mesh of allPlantMeshes) {
+        mesh.visible = mesh.count > 0;
+        if (mesh.count) mesh.instanceMatrix.needsUpdate = true;
+      }
+      markers.visible = markers.count > 0;
+      if (markers.count) {
+        markers.instanceMatrix.needsUpdate = true;
+        markers.instanceColor.needsUpdate = true;
       }
     },
   };

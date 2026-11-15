@@ -463,6 +463,7 @@ export class PlayerHand {
   }
 
   triggerSwing() {
+    if (this.isSwinging) return;
     this.isSwinging = true;
     this.swingProgress = 0;
   }

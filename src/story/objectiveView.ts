@@ -1,23 +1,17 @@
 // @ts-nocheck
 import { MAV_CONFIG } from '../config/constants.ts';
 import { formatHours } from '../mission/missionText.ts';
-import { CERTIFICATES } from './storyChapters.ts';
+import { STEP_COLORS, tutorialStepById } from './tutorialSteps.ts';
 
 // O que o painel do objetivo desenha, de cima para baixo:
 //   1. a meta da partida, sempre a vista (encher o foguete e voltar para casa), com o foguete em
 //      degraus: cada bloco de gelo entregue acende um;
-//   2. o que fazer agora: um icone grande com 2 ou 3 palavras;
-//   3. onde a crianca esta na rotina: os 3 passos do tutorial ou a volta de trabalho que se repete.
+//   2. o que fazer agora: um icone grande com 2 ou 3 palavras e, no tutorial, uma linha dizendo
+//      onde ir e o que apertar;
+//   3. onde a crianca esta: "STEP 4/15" no tutorial ou a volta de trabalho que se repete.
 // Funcoes puras: o StoryHud so pinta o resultado.
 
 export const GOAL_TITLE = 'GOAL: FLY HOME';
-
-// Os 3 passos do tutorial (ato 1), na ordem
-const ARRIVAL_STEPS = [
-  { id: 'enter-base', icon: 'door' },
-  { id: 'report', icon: 'radio' },
-  { id: 'collect-ice', icon: 'ice' },
-];
 
 // A volta de trabalho (atos 2 e 3), que se repete ate o tanque encher: buscar gelo, levar ao
 // foguete e voltar a base para recarregar o ar
@@ -27,14 +21,7 @@ const LOOP_STEPS = [
   { id: 'base', icon: 'home' },
 ];
 
-// Treino de cadete (issue #88): os 4 certificados viram os passos enquanto ele dura
-const TRAINING_STEPS = CERTIFICATES.map((cert) => ({ id: cert.id, icon: cert.icon }));
-
 const TASKS = {
-  ...Object.fromEntries(CERTIFICATES.map((cert) => [cert.id, { icon: cert.icon, label: cert.task }])),
-  'enter-base': { icon: 'door', label: 'ENTER THE BASE' },
-  report: { icon: 'radio', label: 'CALL EARTH' },
-  'collect-ice': { icon: 'ice', label: 'GET 1 ICE' },
   'storm-guide': { icon: 'shield', label: 'GET SAFE', key: null },
   'send-data': { icon: 'radio', label: 'SEND SCIENCE' },
   ignite: { icon: 'rocket', label: 'LAUNCH!' },
@@ -92,28 +79,29 @@ function rocketMeter(s) {
 // story: StoryDirector; s: o mesmo retrato do jogo que o diretor le.
 // Devolve null enquanto a historia nao comecou.
 export function objectiveView(story, s) {
+  // Tutorial guiado (ato 1): a tarefa e o passo atual, com a dica de onde ir e o que apertar
+  const step = story.act === 1 ? tutorialStepById(story.objectiveId) : null;
   const rocketWork = isRocketWork(story.objectiveId);
   const job = rocketWork ? nextRocketJob(s) : null;
-  const task = job === 'data' || story.objectiveId === 'send-data'
-    ? scienceTask(s)
-    : rocketWork ? JOB_TASKS[job] : TASKS[story.objectiveId] ?? null;
+  const task = step
+    ? step
+    : job === 'data' || story.objectiveId === 'send-data'
+      ? scienceTask(s)
+      : rocketWork ? JOB_TASKS[job] : TASKS[story.objectiveId] ?? null;
   if (!task) return null;
 
-  // Passos: o tutorial no ato 1; depois, a volta de trabalho enquanto o tanque pede gelo
+  // Depois do tutorial, a volta de trabalho enquanto o tanque pede gelo
   let steps = null;
   let loop = false;
-  const trainingStep = TRAINING_STEPS.findIndex((step) => step.id === story.objectiveId);
-  if (trainingStep >= 0) {
-    steps = stepStates(TRAINING_STEPS, trainingStep);
-  } else if (story.act === 1) {
-    steps = stepStates(ARRIVAL_STEPS, ARRIVAL_STEPS.findIndex((step) => step.id === story.objectiveId));
-  } else {
-    const now = LOOP_STEPS.findIndex((step) => step.id === job);
-    if (now >= 0) {
-      steps = stepStates(LOOP_STEPS, now);
-      loop = true;
-    }
+  const now = LOOP_STEPS.findIndex((item) => item.id === job);
+  if (now >= 0) {
+    steps = stepStates(LOOP_STEPS, now);
+    loop = true;
   }
+  // "STEP 4/15": onde a crianca esta no tutorial
+  const progress = step ? { now: story.stepIndex + 1, total: story.steps.length } : null;
+  // Cor da secao da base a que o passo pertence (null fora do tutorial)
+  const color = step ? STEP_COLORS[step.zone] : null;
 
   // O que mais o lancamento pede, alem do tanque cheio (so aparece do ato 2 em diante)
   const goals = story.act === 1
@@ -152,6 +140,8 @@ export function objectiveView(story, s) {
     goal: GOAL_TITLE,
     rocket: rocketMeter(s),
     task,
+    progress,
+    color,
     steps,
     loop,
     goals,

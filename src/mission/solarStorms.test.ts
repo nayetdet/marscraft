@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildStormSchedule, leadTimeHours, marsBoundCmes, rescheduleStorms, stormStateAt, stormTotalDoseUGy,
 } from './solarStorms.ts';
-import { RADIATION_CONFIG, SPACE_WEATHER_CONFIG, STORM_CONFIG } from '../config/constants.ts';
+import { MISSION_CONFIG, RADIATION_CONFIG, SPACE_WEATHER_CONFIG, STORM_CONFIG } from '../config/constants.ts';
 import donki from '../data/donkiCme.json';
 
 const toMars = (id, startTime, marsArrivalTime, speedKmS, isGlancingBlow = false) =>
@@ -17,16 +17,19 @@ const cmes = [
 ];
 
 describe('leadTimeHours', () => {
-  it('is the trip NASA predicted for that CME, with 1 real day = 1 game hour', () => {
-    expect(leadTimeHours(cmes[1])).toBeCloseTo(2.5); // 2 dias e 12 h
-    expect(leadTimeHours(cmes[3])).toBeCloseTo(5); // 5 dias
+  it('is the trip NASA predicted for that CME, shrunk to a few seconds of game time', () => {
+    const scale = STORM_CONFIG.WARNING_REAL_HOURS_PER_GAME_HOUR;
+    expect(leadTimeHours(cmes[3])).toBeCloseTo(120 / scale); // 5 dias
+    // Viagem mais curta = menos aviso, mas nunca abaixo do minimo
+    expect(leadTimeHours(cmes[1])).toBeLessThan(leadTimeHours(cmes[3])); // 2 dias e 12 h
+    expect(leadTimeHours(cmes[1])).toBe(STORM_CONFIG.MIN_WARNING_HOURS);
   });
 
   it('matches the real prediction saved from DONKI: left 01/11 19:00Z, Mars on 07/11 06:00Z', () => {
     const cme = donki.cmes.find((c) => c.id === '2026-11-01T19:00:00-CME-001');
     expect(cme.marsArrivalTime).toBe('2026-11-07T06:00Z');
-    // 5 dias e 11 horas reais = 131 h -> 131 / 24 horas de jogo
-    expect(leadTimeHours(cme)).toBeCloseTo(131 / STORM_CONFIG.REAL_HOURS_PER_GAME_HOUR, 6);
+    // 5 dias e 11 horas reais = 131 h -> 131 / 250 horas de jogo (~26 s reais de aviso)
+    expect(leadTimeHours(cme)).toBeCloseTo(131 / STORM_CONFIG.WARNING_REAL_HOURS_PER_GAME_HOUR, 6);
   });
 });
 
@@ -58,6 +61,11 @@ describe('stormTotalDoseUGy', () => {
 });
 
 describe('buildStormSchedule', () => {
+  it('leaves at least 100 real seconds of calm between solar storms', () => {
+    const calmSeconds = STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS / MISSION_CONFIG.GAME_HOURS_PER_SECOND;
+    expect(calmSeconds).toBeGreaterThanOrEqual(100);
+  });
+
   it('uses only CMEs that NASA predicted would reach Mars', () => {
     expect(marsBoundCmes(cmes).map((c) => c.id)).toEqual(['fast', 'slow']);
     const schedule = buildStormSchedule(cmes, 10, 4);
@@ -71,8 +79,26 @@ describe('buildStormSchedule', () => {
     for (const [i, storm] of schedule.entries()) {
       expect(storm.arrival - storm.warningStart).toBeCloseTo(leadTimeHours(storm.cme));
       expect(storm.end - storm.arrival).toBeCloseTo(STORM_CONFIG.DURATION_HOURS);
-      if (i > 0) expect(storm.warningStart).toBeCloseTo(schedule[i - 1].end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS);
+      if (i > 0) {
+        const previous = schedule[i - 1];
+        const minimumSpacing = STORM_CONFIG.GAME_DAY_HOURS / STORM_CONFIG.MAX_STORMS_PER_GAME_DAY
+          + STORM_CONFIG.DAILY_SPACING_EPSILON_HOURS;
+        expect(storm.warningStart).toBeGreaterThanOrEqual(previous.end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS);
+        expect(storm.warningStart).toBeGreaterThanOrEqual(previous.warningStart + minimumSpacing);
+      }
     }
+  });
+
+  it('limits DONKI CME and SEP storms to two in every rolling 24 game hours', () => {
+    const liveSep = [{ id: 'live-sep', eventTime: '2026-11-04T12:00Z', seenBy: ['STEREO A'] }];
+    const schedule = buildStormSchedule(donki.cmes, 10, 24, liveSep);
+    const maxEventsInDay = Math.max(...schedule.map((storm) =>
+      schedule.filter((candidate) => candidate.warningStart >= storm.warningStart
+        && candidate.warningStart < storm.warningStart + STORM_CONFIG.GAME_DAY_HOURS).length));
+
+    expect(maxEventsInDay).toBe(STORM_CONFIG.MAX_STORMS_PER_GAME_DAY);
+    expect(schedule.some((storm) => storm.cme?.id && donki.cmes.some((cme) => cme.id === storm.cme.id))).toBe(true);
+    expect(schedule.some((storm) => storm.kind === 'sep' && storm.sep === liveSep[0])).toBe(true);
   });
 
   it('stays empty when no CME was headed to Mars, instead of using the others', () => {

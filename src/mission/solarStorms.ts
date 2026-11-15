@@ -8,7 +8,8 @@ const clamp01 = (v) => Math.max(0, Math.min(1, v));
 // prevista pelo modelo da NASA para aquela CME (`marsArrivalTime`), nao de uma conta nossa.
 export function leadTimeHours(cme) {
   const realHours = (Date.parse(cme.marsArrivalTime) - Date.parse(cme.startTime)) / REAL_HOUR_MS;
-  return realHours / STORM_CONFIG.REAL_HOURS_PER_GAME_HOUR;
+  if (!(realHours > 0)) return realHours / STORM_CONFIG.WARNING_REAL_HOURS_PER_GAME_HOUR;
+  return Math.max(STORM_CONFIG.MIN_WARNING_HOURS, realHours / STORM_CONFIG.WARNING_REAL_HOURS_PER_GAME_HOUR);
 }
 
 // So viram tempestade as CMEs que a NASA previu que chegariam a Marte
@@ -26,10 +27,67 @@ export function stormTotalDoseUGy(cme) {
   return R.STORM_DOSE_MIN_UGY + (R.STORM_DOSE_MAX_UGY - R.STORM_DOSE_MIN_UGY) * strength;
 }
 
+// Uma tempestade a partir de uma CME real (ou de uma SEP real, com `sep`), com o aviso em `warningStart`.
+// Cada tempestade: aviso -> chegada (aviso + `leadHours`) -> fim (chegada + duracao).
+// Sem `leadHours`, o aviso e a viagem prevista pela NASA (CME) ou o aviso curto da SEP.
+export function makeStorm({ index, cme = null, sep = null, warningStart, leadHours }) {
+  const lead = leadHours ?? (sep ? SPACE_WEATHER_CONFIG.SEP_WARNING_HOURS : leadTimeHours(cme));
+  const arrival = warningStart + lead;
+  const totalDoseUGy = sep ? RADIATION_CONFIG.STORM_DOSE_MIN_UGY : stormTotalDoseUGy(cme);
+  const storm = {
+    index,
+    cme,
+    leadHours: lead,
+    totalDoseUGy,
+    // A dose total e entregue ao longo da tempestade (uGy por hora de jogo)
+    doseUGyPerHour: totalDoseUGy / STORM_CONFIG.DURATION_HOURS,
+    warningStart,
+    arrival,
+    end: arrival + STORM_CONFIG.DURATION_HOURS,
+  };
+  if (sep) Object.assign(storm, { kind: 'sep', sep });
+  return storm;
+}
+
+// Primeira hora em que um novo aviso pode comecar depois da fila: calmaria depois da ultima
+// tempestade e no maximo MAX_STORMS_PER_GAME_DAY avisos em qualquer janela de 24 h de jogo.
+export function nextStormSlot(schedule, hours) {
+  const last = schedule[schedule.length - 1];
+  if (!last) return hours;
+  const dailyLimitSpacing = STORM_CONFIG.GAME_DAY_HOURS / STORM_CONFIG.MAX_STORMS_PER_GAME_DAY
+    + STORM_CONFIG.DAILY_SPACING_EPSILON_HOURS;
+  return Math.max(hours, last.end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS, last.warningStart + dailyLimitSpacing);
+}
+
+// Depois do tutorial, so viram tempestade os eventos que estao acontecendo agora na vida real,
+// segundo o fetch ao vivo do DONKI:
+// - CME: ja saiu do Sol e ainda esta a caminho de Marte, ou chegou ha menos de
+//   CME_ACTIVE_AFTER_ARRIVAL_HOURS. O aviso e o que falta da viagem real, encolhido como em
+//   leadTimeHours (no minimo MIN_WARNING_HOURS, para a crianca chegar ao abrigo).
+// - SEP: medida ha menos de SEP_ACTIVE_HOURS, com o aviso curto de sempre.
+// Devolve [{ id, cme, sep, leadHours }], na ordem em que os eventos comecaram.
+export function liveStormEvents({ cmes = [], seps = [] } = {}, nowMs) {
+  const W = SPACE_WEATHER_CONFIG;
+  const events = [];
+  for (const cme of marsBoundCmes(cmes)) {
+    const startMs = Date.parse(cme.startTime);
+    const arrivalMs = Date.parse(cme.marsArrivalTime);
+    if (!(nowMs >= startMs && nowMs < arrivalMs + W.CME_ACTIVE_AFTER_ARRIVAL_HOURS * REAL_HOUR_MS)) continue;
+    const realHoursLeft = Math.max(0, (arrivalMs - nowMs) / REAL_HOUR_MS);
+    const leadHours = Math.max(STORM_CONFIG.MIN_WARNING_HOURS, realHoursLeft / STORM_CONFIG.WARNING_REAL_HOURS_PER_GAME_HOUR);
+    events.push({ id: `cme:${cme.id}`, cme, sep: null, leadHours, startMs });
+  }
+  for (const sep of seps) {
+    const startMs = Date.parse(sep.eventTime);
+    if (!(nowMs >= startMs && nowMs < startMs + W.SEP_ACTIVE_HOURS * REAL_HOUR_MS)) continue;
+    events.push({ id: `sep:${sep.id}`, cme: null, sep, leadHours: W.SEP_WARNING_HOURS, startMs });
+  }
+  return events.sort((a, b) => a.startMs - b.startMs).map(({ startMs, ...event }) => event);
+}
+
 // Fila de tempestades a partir das CMEs reais com destino a Marte, em ordem cronologica,
 // repetindo a lista se acabar. Sem nenhuma CME para Marte a fila fica vazia: o jogo nao usa
 // CMEs que iam para outro lugar.
-// Cada tempestade: aviso -> chegada (aviso + viagem prevista pela NASA) -> fim (chegada + duracao).
 // `seps`: SEPs reais do fetch ao vivo (issue #100). Com elas, a cada SEP_EVERY_N_STORMS a
 // tempestade vira um pico de SEP com aviso curto (`kind: 'sep'`, `cme: null`). Sem SEP, nada muda.
 export function buildStormSchedule(cmes, startHours, count = 24, seps = []) {
@@ -43,26 +101,11 @@ export function buildStormSchedule(cmes, startHours, count = 24, seps = []) {
   let sepIndex = 0;
   for (let i = 0; i < count; i++) {
     const isSep = seps.length > 0 && i % W.SEP_EVERY_N_STORMS === W.SEP_EVERY_N_STORMS - 1;
-    const cme = isSep ? null : candidates[cmeIndex++ % candidates.length];
-    const sep = isSep ? seps[sepIndex++ % seps.length] : null;
-    const leadHours = isSep ? W.SEP_WARNING_HOURS : leadTimeHours(cme);
-    const arrival = warningStart + leadHours;
-    const end = arrival + STORM_CONFIG.DURATION_HOURS;
-    const totalDoseUGy = isSep ? RADIATION_CONFIG.STORM_DOSE_MIN_UGY : stormTotalDoseUGy(cme);
-    const storm = {
-      index: i,
-      cme,
-      leadHours,
-      totalDoseUGy,
-      // A dose total e entregue ao longo da tempestade (uGy por hora de jogo)
-      doseUGyPerHour: totalDoseUGy / STORM_CONFIG.DURATION_HOURS,
-      warningStart,
-      arrival,
-      end,
-    };
-    if (isSep) Object.assign(storm, { kind: 'sep', sep });
+    const storm = isSep
+      ? makeStorm({ index: i, sep: seps[sepIndex++ % seps.length], warningStart })
+      : makeStorm({ index: i, cme: candidates[cmeIndex++ % candidates.length], warningStart });
     schedule.push(storm);
-    warningStart = end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS;
+    warningStart = nextStormSlot(schedule, warningStart);
   }
   return schedule;
 }

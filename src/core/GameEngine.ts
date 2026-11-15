@@ -28,6 +28,7 @@ import { DustStormEffect } from '../sky/DustStormEffect.ts';
 import { MarsWindEffect } from '../sky/MarsWindEffect.ts';
 import { createWindState, updateWindState } from '../sky/windState.ts';
 import { VoxelWorld } from '../world/VoxelWorld.ts';
+import { PlayerFootprints } from '../world/PlayerFootprints.ts';
 import { buildNasaCustomModels } from '../world/nasaModelsBuilder.ts';
 import { targetCrop } from '../world/cropInteraction.ts';
 import { PlayerPhysics } from '../player/PlayerPhysics.ts';
@@ -37,10 +38,12 @@ import { getSuitTelemetryView } from '../player/suitTelemetry.ts';
 import { InputController } from '../player/InputController.ts';
 import { HudManager } from '../ui/HudManager.ts';
 import { DebugOverlay } from '../ui/DebugOverlay.ts';
+import { ResolutionScaler, isSoftwareRenderer } from '../graphics/resolutionScaler.ts';
 import { ShaderMode } from '../graphics/shaderMode/ShaderMode.ts';
 import { RoverController } from '../rover/RoverController.ts';
 import { GymEquipmentController } from '../player/GymEquipmentController.ts';
 import { ExpeditionState } from './ExpeditionState.ts';
+import { isGameSimulationRunning } from './gameSimulation.ts';
 import { Airlock } from '../world/Airlock.ts';
 import { StationSystem } from './StationSystem.ts';
 import { StationPanel } from '../ui/StationPanel.ts';
@@ -68,8 +71,11 @@ import { IceSensorEffect } from '../scanner/iceSensor.ts';
 import { ScannerHud } from '../ui/ScannerHud.ts';
 import { buildBaseDecor } from '../base/baseDecor.ts';
 import { SuitportStation } from '../base/SuitportStation.ts';
-import { buildGreenhouseFields } from '../base/greenhouseFields.ts';
-import { earthCard, plantsStalled } from '../base/greenhouseCare.ts';
+import { buildGreenhouseFields, createSproutModel, cropGrowthLook } from '../base/greenhouseFields.ts';
+import { EarthFacts, earthFactLogText, earthFactView, plantsStalled } from '../base/greenhouseCare.ts';
+import { FirstTimeHud } from '../ui/FirstTimeHud.ts';
+import { TradeoffHud } from '../ui/TradeoffHud.ts';
+import { FirstTimeMoments, momentLogText } from '../story/firstTimeMoments.ts';
 import { MenuScreens } from '../ui/MenuScreens.ts';
 import { StoryDirector } from '../story/StoryDirector.ts';
 import { objectiveView } from '../story/objectiveView.ts';
@@ -94,7 +100,7 @@ import { DUST_DEVIL_HIT_TOAST, ECLIPSE_END_TOAST, compassDirection, dustDevilPan
 import { MarsEventEffects } from '../sky/MarsEventEffects.ts';
 import { EventHud } from '../ui/EventHud.ts';
 import { carveImpactCrater, findImpactSite, hideRocksNear } from '../world/impactCrater.ts';
-import { EVENTS_CONFIG, TERRAIN_CONFIG } from '../config/constants.ts';
+import { EVENTS_CONFIG, GRAPHICS_CONFIG, TERRAIN_CONFIG } from '../config/constants.ts';
 
 // Raio angular (rad) em que a mira da luneta "pega" cada astro. A Lua fica a ~0,047 rad da
 // Terra, então os dois raios precisam ser menores que isso para não se sobreporem.
@@ -119,6 +125,7 @@ export class GameEngine {
     this.container = container;
     this.scene = new THREE.Scene();
     this.isScannerOpen = false;
+    this.isThirdPerson = false;
     this.scene.fog = new THREE.FogExp2(0x9a4d2e, 0.0015);
     this.isZoomed = false;
 
@@ -136,7 +143,16 @@ export class GameEngine {
       powerPreference: 'high-performance',
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    // Resolucao adaptativa: baixa o pixel ratio se o FPS ficar baixo (maquina sem placa de video)
+    this.resolution = new ResolutionScaler({
+      maxRatio: Math.min(window.devicePixelRatio || 1, GRAPHICS_CONFIG.MAX_PIXEL_RATIO),
+      steps: GRAPHICS_CONFIG.RES_STEPS,
+      minFps: GRAPHICS_CONFIG.RES_MIN_FPS,
+      seconds: GRAPHICS_CONFIG.RES_SECONDS,
+      warmupSeconds: GRAPHICS_CONFIG.RES_WARMUP_SECONDS,
+      software: isSoftwareRenderer(DebugOverlay.detectGpu(this.renderer)),
+    });
+    this._applyPixelRatio(this.resolution.ratio);
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.localClippingEnabled = true;
     this.container.appendChild(this.renderer.domElement);
@@ -163,6 +179,8 @@ export class GameEngine {
     // Zonas, placas, posteres e telas vivas da base (as caixas de colisao entram em `colliders`)
     // Clima espacial: comeca no dado embutido; o ao vivo do DONKI entra em applySpaceWeather (#100)
     this.spaceWeather = EMBEDDED_SPACE_WEATHER;
+    // Ultima resposta ao vivo do polling do DONKI (applyLiveSpaceWeather); null sem rede
+    this._liveSpaceWeather = null;
     this.baseDecor = buildBaseDecor(this.scene, colliders);
     for (const point of this.baseDecor.infoPoints) point.type = 'info';
     this.suitport = new SuitportStation(this.scene, colliders);
@@ -178,7 +196,21 @@ export class GameEngine {
     this.canInteractWithConsole = false;
 
     this.player = new PlayerPhysics(this.world, colliders);
+    this.playerFootprints = new PlayerFootprints(this.scene);
     this.survival = new SurvivalSystem();
+    this._savedArrivalPlayed = false;
+    try {
+      const saved = JSON.parse(window.localStorage.getItem('marscraft-save-v1') || 'null');
+      this._savedArrivalPlayed = saved?.arrivalPlayed === true;
+      if (saved?.survival) {
+        Object.assign(this.survival, saved.survival);
+        if (Array.isArray(saved.survival.inventorySlots)) {
+          this.survival.slots = this.survival.inventorySlots.slice(0, 9);
+        }
+      }
+      if (saved?.player) this.player.pos.set(saved.player.x, saved.player.y, saved.player.z);
+    } catch { /* Ignore unavailable or malformed saves. */ }
+    this._saveTimer = 0;
     this._wasSuitEquipped = this.survival.suitEquipped;
     // As tempestades solares so comecam no ato 2 da historia (StoryDirector)
     this.mission = new MissionSystem({ cmes: this.spaceWeather.cmes, seps: this.spaceWeather.seps, startHours: this._skyHours(), stormsStarted: false });
@@ -210,6 +242,11 @@ export class GameEngine {
     this._lastStorm = false;
     this._lastStormWarning = false;
     this.audio = new AudioManager();
+    document.addEventListener('click', (event) => {
+      const control = event.target?.closest?.('button, [role="button"], a');
+      if (!control || control.disabled || control.closest('[data-action]')) return;
+      this.audio.playUiClick();
+    });
 
     // Maozinha 3D do jogador em primeira pessoa
     this.playerHand = new PlayerHand(this.camera, materials, carrot.texture);
@@ -243,7 +280,7 @@ export class GameEngine {
       hud: this.hud,
       onPlaySound: (f1, d, f2) => this._playGymTone(f1, d, f2),
       onDismount: () => {
-        this.playerHand.handGroup.visible = !this.isZoomed && !this.roverController.isActive;
+        this.playerHand.handGroup.visible = !this.isZoomed && !this.isThirdPerson && !this.roverController.isActive;
         this.hud.showToast('Stepped off gym equipment');
       },
     });
@@ -279,6 +316,12 @@ export class GameEngine {
     // escrever com this.missionLog.add({ text, kind, hours }).
     this.missionLog = new MissionLog();
     this.studyReveals = new StudyReveals();
+    this.earthFacts = new EarthFacts();
+    // Animacoes de "primeira vez" (beber, pegar gelo, ligar para a Terra...) e fatos da estufa:
+    // entram numa fila e aparecem uma de cada vez, com o jogo rodando (nenhum painel aberto)
+    this.firstTimeMoments = new FirstTimeMoments();
+    this._momentQueue = [];
+    this._momentBusyUntil = 0;
     this.missionLogFeed = new MissionLogFeed({
       log: this.missionLog,
       reveals: this.studyReveals,
@@ -308,8 +351,13 @@ export class GameEngine {
         this.isScannerOpen = scannerOpen;
         this.isZoomed = zoomed;
         if (!this.roverController.isActive && !this.gymController.isActive) {
-          this.playerHand.handGroup.visible = !zoomed;
+          this.playerHand.handGroup.visible = !zoomed && !this.isThirdPerson;
         }
+      },
+      onToggleThirdPerson: () => {
+        this.isThirdPerson = !this.isThirdPerson;
+        this.playerHand.handGroup.visible = !this.isThirdPerson && !this.isZoomed;
+        this.playerAvatar.group.visible = this.isThirdPerson;
       },
       getTargetedBlock: () => this._getTargetedBlock(),
       harvestCrop: (plant) => this._harvestCrop(plant),
@@ -323,15 +371,25 @@ export class GameEngine {
       onGymAction: () => this.gymController.triggerRep(),
       onGymLook: (dx, dy) => this.gymController.look(dx, dy),
       onInteract: () => this.handlePlayerInteract(),
+      onSaveGame: () => this._saveGame(),
       onRoverAction: () => this.handleRoverAction(),
       onRoverLook: (dx, dy) => this.roverController.look(dx, dy),
       onToggleShield: () => this._toggleShield(),
       onSendData: () => this._sendScienceData(),
+      onBlockPlaced: (blockId) => {
+        if (blockId === BLOCK_IDS.REGOLITH) this.audio.playRegolithPlace();
+      },
+      onStartRegolithBreak: () => this.audio.playRegolithBreak(),
+      onStopRegolithBreak: () => this.audio.stopRegolithBreak(),
+      onStartShipBlockBreak: () => this.audio.playShipBlockBreak(),
+      onStopShipBlockBreak: () => this.audio.stopShipBlockBreak(),
+      onBlockBroken: (blockId) => this.audio.playBlockBreakImpact(blockId === BLOCK_IDS.REGOLITH),
+      onFoodConsumed: () => this.audio.playUiConfirm(),
       onSuitportAction: (action) => this._handleSuitportShortcut(action),
       isMissionModalOpen: () =>
         this.missionHud.isMavPanelOpen || this.missionHud.isVictoryShown
         || this.storyHud.isWindowClosedShown,
-      isInputBlocked: () => this.cutscenes.isActive || Boolean(this.sleep?.isSleeping),
+      isInputBlocked: () => this.cutscenes.isActive || Boolean(this.sleep?.isSleeping) || Boolean(this.tradeoffHud?.isOpen),
       getInteraction: () => this._getInteraction(),
       isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen || Boolean(this.sleep?.isPanelOpen),
       getWorkSpeed: () => (this.stations.fitness < 40 || this.stations.boneDensity < 40 || !this.stations.freshFood || this.sleep?.isTired ? 0.6 : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
@@ -340,9 +398,22 @@ export class GameEngine {
     this.sleep = new SleepController(this);
 
     this._lookDir = new THREE.Vector3();
+    this._thirdPersonBack = new THREE.Vector3();
+    this._thirdPersonCameraOffset = new THREE.Vector3();
 
     this.debug = new DebugOverlay(this.renderer);
     this.crewInstances = CrewInstances.for(this.scene);
+    this.playerAvatar = new CrewAvatar(this.scene, {
+      id: 99,
+      name: '',
+      state: 'idle',
+      route: [],
+      distance: 0,
+      routeLength: 0,
+      stationary: true,
+    }, CREW_CONFIG.SUIT_COLORS[0]);
+    this.playerAvatar.label.visible = false;
+    this.playerAvatar.group.visible = false;
 
     // Modo Shaders começa desligado; o botao do menu permite ligar. Criado antes do compile para
     // os shaders com sombra ja sairem prontos quando o jogador escolher ativa-los.
@@ -546,39 +617,52 @@ export class GameEngine {
     }
   }
 
+  // Pontos de interacao fixos: montados uma vez (antes a lista era refeita 2+ vezes por quadro)
+  _interactionCandidates() {
+    if (!this._staticInteractions) {
+      this._doorInteractions = this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' }));
+      this._suitportInteraction = { type: 'suitport', x: -0.68, y: 11.35, z: 7.5, minDot: 0.72, label: '' };
+      this._staticInteractions = [
+        { type: 'power', x: 10.6, y: 11.4, z: -3, label: 'Press F: life support' },
+        { type: 'console', x: 8.25, y: 11.5, z: -10.8, label: 'Press F: mission computer' },
+        { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth (call Earth) · [G] send science' },
+        { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
+        { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
+        { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
+        { type: 'galley', x: 13.1, y: 11.35, z: -16.2, label: 'Press F: kitchen' },
+        { type: 'galley', x: 16.1, y: 11.3, z: -21.0, label: 'Press F: pantry & kitchen' },
+        { type: 'hygiene', x: -16.0, y: 11.1, z: -38.3, label: 'Press F: bathroom & water recycler' },
+        { type: 'hygiene', x: -19.85, y: 11.6, z: -32.5, label: 'Press F: bathroom & water recycler' },
+        { type: 'workshop', x: 11.5, y: 11.5, z: -38.1, label: 'Press F: 3D printer workshop' },
+        { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
+        ...GREENHOUSE_BASKETS.map(basket => ({ ...basket, cropType: basket.type, type: 'basket', minDot: 0.95, label: `Press F or tap: collect ${basket.type}` })),
+        { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
+        { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
+        { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
+        ...BUNK_INTERACTIONS,
+      ];
+      this._interactionList = [];
+    }
+    // Ordem de antes (portas, traje, estacoes): no empate de distancia vence o primeiro
+    const list = this._interactionList;
+    list.length = 0;
+    for (const candidate of this._doorInteractions) {
+      candidate.z = candidate.door.z;
+      list.push(candidate);
+    }
+    const pos = this.player.pos;
+    if (pos.z > 6.15 && pos.z < 8.85 && pos.x > -1 && pos.x < 2) {
+      this._suitportInteraction.label = this.survival.suitEquipped ? 'Press F: dock EVA suit' : 'Press F: put on EVA suit';
+      list.push(this._suitportInteraction);
+    }
+    for (const candidate of this._staticInteractions) list.push(candidate);
+    return list;
+  }
+
   _getInteraction() {
     const dir = this.player.getLookDirection(this._interactionDir);
     let best = null, bestDistance = 4;
-    const candidates = [
-      ...this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' })),
-      ...(this.player.pos.z > 6.15 && this.player.pos.z < 8.85 && this.player.pos.x > -1 && this.player.pos.x < 2
-        ? [{
-            type: 'suitport',
-            x: -0.68,
-            y: 11.35,
-            z: 7.5,
-            minDot: 0.72,
-            label: this.survival.suitEquipped ? 'Press F: dock EVA suit' : 'Press F: put on EVA suit',
-          }]
-        : []),
-      { type: 'power', x: 10.6, y: 11.4, z: -3, label: 'Press F: life support' },
-      { type: 'console', x: 8.25, y: 11.5, z: -10.8, label: 'Press F: mission computer' },
-      { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth · [G] send science' },
-      { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
-      { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
-      { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
-      { type: 'galley', x: 13.1, y: 11.35, z: -16.2, label: 'Press F: kitchen' },
-      { type: 'galley', x: 16.1, y: 11.3, z: -21.0, label: 'Press F: pantry & kitchen' },
-      { type: 'hygiene', x: -16.0, y: 11.1, z: -38.3, label: 'Press F: bathroom & water recycler' },
-      { type: 'hygiene', x: -19.85, y: 11.6, z: -32.5, label: 'Press F: bathroom & water recycler' },
-      { type: 'workshop', x: 11.5, y: 11.5, z: -38.1, label: 'Press F: 3D printer workshop' },
-      { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
-      ...GREENHOUSE_BASKETS.map(basket => ({ ...basket, cropType: basket.type, type: 'basket', minDot: 0.95, label: `Press F or tap: collect ${basket.type}` })),
-      { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
-      { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
-      { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
-      ...BUNK_INTERACTIONS,
-    ];
+    const candidates = this._interactionCandidates();
     for (const candidate of candidates) {
       this._interactionPoint.set(candidate.x, candidate.y, candidate.z);
       this._interactionOffset.copy(this._interactionPoint).sub(this.player.pos);
@@ -604,7 +688,7 @@ export class GameEngine {
     if (!target) return;
     if (target.type === 'info') { this.hud.showToast(target.text(this._baseState()), 8000); return; }
     if (target.type === 'basket') { this.hud.showToast(this.stations.collectBasket(target.cropType, this.survival)); return; }
-    if (target.type === 'bunk') { this.sleep.openChooser(); return; }
+    if (target.type === 'bunk') { this._tradeoff('sleep', () => this.sleep.openChooser()); return; }
     if (target.type === 'door') {
       const msg = this.airlock.request(target.door, this.player.pos);
       if (msg.includes('Suitport')) this.suitport.flashLocked();
@@ -627,6 +711,7 @@ export class GameEngine {
   mountGym(mode) {
     this.gymController.mount(mode);
     this.playerHand.handGroup.visible = false;
+    this.playerAvatar.group.visible = false;
     this.highlightBox.visible = false;
     this.currentInteraction = null;
     this.hud.setInteractionPrompt(false);
@@ -639,23 +724,8 @@ export class GameEngine {
   }
 
   _playGymTone(freq = 360, duration = 0.08, secondFreq = null) {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-    this._audioContext ??= new AudioContextClass();
-    const audio = this._audioContext;
-    if (audio.state === 'suspended') audio.resume();
-    const oscillator = audio.createOscillator();
-    const gain = audio.createGain();
-    oscillator.type = 'triangle';
-    oscillator.frequency.setValueAtTime(freq, audio.currentTime);
-    if (secondFreq) {
-      oscillator.frequency.setValueAtTime(secondFreq, audio.currentTime + duration * 0.45);
-    }
-    gain.gain.setValueAtTime(0.03 * this.audio.masterVolume, audio.currentTime);
-    gain.gain.linearRampToValueAtTime(0, audio.currentTime + duration);
-    oscillator.connect(gain).connect(audio.destination);
-    oscillator.start();
-    oscillator.stop(audio.currentTime + duration);
+    if (freq <= 260) this.audio.playUiError();
+    else this.audio.playUiConfirm();
   }
 
   _onAirlockEvent(type) {
@@ -715,6 +785,7 @@ export class GameEngine {
       const model = createCropPlantModel(type); model.visible = false;
       this.stationCrop.add(model); return [type, model];
     }));
+    this.stationSprout = createSproutModel(); this.stationSprout.visible = false; this.stationCrop.add(this.stationSprout);
     this.stationCrop.position.set(GREENHOUSE_CENTER.x + GARDEN_CROP_BED.dx + 0.5, WORLD_CONFIG.GROUND_LEVEL + 2, GREENHOUSE_CENTER.z + GARDEN_CROP_BED.dz + 0.5); this.stationCrop.visible = false; this.scene.add(this.stationCrop);
     const colors = { treadmill: 0x38bdf8, bike: 0x4ade80, medical: 0xe76b65 };
     for (const [type, x, z] of [['treadmill', -9.2, 9.2], ['bike', -5.8, 9.5], ['medical', -7.6, 12.4]]) {
@@ -786,7 +857,7 @@ export class GameEngine {
     this._roverScanBox = { scanId: 'rover', minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: 0, maxZ: 0 };
   }
 
-  // Scanner aberto (com ou sem zoom): resolve o alvo na mira, avança o scan e aplica a descoberta quando completa.
+  // Com o botão de scan pressionado, resolve o alvo na mira e avança até aplicar a descoberta.
   _updateScanner(dt) {
     if (!this.isScannerOpen) {
       if (this.scanner.targetId) this.scanner.reset();
@@ -815,8 +886,9 @@ export class GameEngine {
       skyBodies: this._skyBodies,
       maxDist: this.scanJournal.scanRange(),
     });
-    const state = this.scanner.update(dt, target?.id ?? null);
-    this._updateScanHighlight(target, state, dt);
+    const isScanning = this.input.isScanButtonHeld;
+    const state = this.scanner.update(dt, target?.id ?? null, isScanning);
+    this._updateScanHighlight(isScanning ? target : null, state, dt);
     this.scannerHud.update(state);
     if (state.completed) this._onScanCompleted(state.completed);
   }
@@ -849,6 +921,7 @@ export class GameEngine {
   }
 
   _onScanCompleted({ entry, discovery }) {
+    this.audio.playUiConfirm();
     this.scannerHud.showCard(entry, discovery);
     if (discovery.missionNew) {
       this.hud.showToast(`+1 discovery in your science package (${discovery.missionCount} this mission). Send it home from the science & radio terminal.`, 4500);
@@ -883,10 +956,33 @@ export class GameEngine {
   }
 
   _updateCamera() {
-    this.camera.position.copy(this.player.pos);
-    this.camera.rotation.order = 'YXZ';
-    this.camera.rotation.y = this.player.yaw;
-    this.camera.rotation.x = this.player.pitch;
+    if (this.isThirdPerson) {
+      this.playerAvatar.group.visible = true;
+      this.playerAvatar.group.position.set(
+        this.player.pos.x,
+        this.player.pos.y - this.player.height,
+        this.player.pos.z
+      );
+      this.playerAvatar.group.rotation.y = this.player.yaw + Math.PI;
+
+      const back = this._thirdPersonBack.set(Math.sin(this.player.yaw), 0, Math.cos(this.player.yaw));
+      const obstruction = this.world.raycast(this.player.pos, back, CAMERA_CONFIG.THIRD_PERSON_DISTANCE);
+      const distance = obstruction.hit
+        ? Math.max(CAMERA_CONFIG.THIRD_PERSON_MIN_DISTANCE, obstruction.distance - 0.2)
+        : CAMERA_CONFIG.THIRD_PERSON_DISTANCE;
+      this.camera.position.copy(this.player.pos)
+        .addScaledVector(back, distance)
+        .add(this._thirdPersonCameraOffset.set(0, CAMERA_CONFIG.THIRD_PERSON_CAMERA_HEIGHT, 0));
+      this.camera.rotation.order = 'YXZ';
+      this.camera.rotation.y = this.player.yaw;
+      this.camera.rotation.x = this.player.pitch;
+    } else {
+      this.playerAvatar.group.visible = false;
+      this.camera.position.copy(this.player.pos);
+      this.camera.rotation.order = 'YXZ';
+      this.camera.rotation.y = this.player.yaw;
+      this.camera.rotation.x = this.player.pitch;
+    }
 
     const targetFov = this.isZoomed ? CAMERA_CONFIG.ZOOM_FOV : CAMERA_CONFIG.BASE_FOV;
     if (Math.abs(this.camera.fov - targetFov) > 0.05) {
@@ -1083,9 +1179,9 @@ export class GameEngine {
     };
   }
 
-  _updateMission(dt) {
+  _updateMission(dt, isGameRunning = this.input.isLocked) {
     // Com o painel do MAV aberto o jogador continua la fora: a radiacao conta
-    const playing = this.input.isLocked || this.missionHud.isMavPanelOpen;
+    const playing = isGameRunning || this.missionHud.isMavPanelOpen;
     const active = playing && !this.survival.isDead && !this.missionHud.isVictoryShown
       && !this.cutscenes.isActive && !this.storyHud.isWindowClosedShown;
     const damage = this.mission.update(this._skyHours(), {
@@ -1114,6 +1210,8 @@ export class GameEngine {
       const message = stormEventMessage(event, this.spaceWeather) || doseEventMessage(event.type);
       // O aviso e o inicio da tempestade ja aparecem no card de alerta (com a contagem e a fonte
       // do dado): a legenda repetia o mesmo recado por cima. Eles continuam no diario da missao.
+      if (event.type === 'storm-warning') this._tradeoff('storm-warning');
+      else if (event.type === 'sunset-soon') this._tradeoff('sunset');
       const onAlertCard = event.type === 'storm-warning' || event.type === 'storm-start';
       if (message && !onAlertCard) this.hud.showToast(message, event.type.startsWith('dose-') ? 8000 : 4500);
       this.missionLogFeed.onMissionEvent(event, this._skyHours());
@@ -1162,7 +1260,10 @@ export class GameEngine {
     for (const event of dust.drainEvents()) {
       const message = dustEventMessage(event.type);
       if (message) this.hud.showToast(message, event.type === 'dust-warning' ? 9000 : 6000);
-      if (event.type === 'dust-warning') this.storyHud.showCard(DUST_WARNING_CARD);
+      if (event.type === 'dust-warning') {
+        this.storyHud.showCard(DUST_WARNING_CARD);
+        this._tradeoff('dust-warning');
+      }
     }
 
     // Visual: ceu, Sol, neblina e particulas (sem alocar: so numeros)
@@ -1334,19 +1435,44 @@ export class GameEngine {
     const crop = this.stations.plots[0].crop;
     this.stationCrop.visible = Boolean(crop);
     if (crop) {
-      this.stationCrop.scale.y = 0.2 + 0.8 * crop.progress / CROP_CONFIG[crop.type].seconds;
-      for (const [type, model] of Object.entries(this.stationCropModels)) model.visible = type === crop.type;
+      const look = cropGrowthLook(crop.progress, CROP_CONFIG[crop.type].seconds);
+      this.stationCrop.scale.setScalar(look.scale);
+      this.stationSprout.visible = look.stage === 'sprout';
+      for (const [type, model] of Object.entries(this.stationCropModels)) model.visible = look.stage !== 'sprout' && type === crop.type;
     }
     this.greenhouseFields.update(this.stations.plots, {
       stalled: this.stations.hasGrowingCrops() && plantsStalled(this.greenhouseState()),
       stock: this.stations.harvestBaskets,
     });
-    // Cada colheita mostra um card "Ciencia espacial na Terra" (issue #89)
-    const harvests = this.stations.harvestCount;
-    if (harvests > (this._harvestsSeen ?? 0)) {
-      this._harvestsSeen = harvests;
-      this.storyHud.showCard(earthCard(harvests));
+  }
+
+  // O jogador colheu `type` no monitor da estufa. A primeira colheita de cada planta ganha um
+  // fato "Ciencia espacial na Terra" com animacao de descoberta, uma vez por partida, e ele fica
+  // no diario de bordo [J]. A colheita da tripulacao nao chama isto (issue #216).
+  onPlayerHarvest(type) {
+    const card = this.earthFacts.onPlayerHarvest(type);
+    if (!card) return;
+    this.missionLog.add({ text: earthFactLogText(card), kind: 'study', hours: this._skyHours() });
+    this._momentQueue.push(earthFactView(card));
+  }
+
+  // Chamado a cada quadro com o jogo rodando (sem painel aberto, sem animacao da historia):
+  // percebe a primeira vez de cada acao principal e mostra a proxima animacao da fila.
+  _updateMoments() {
+    const moment = this.firstTimeMoments.observe(this._storySnapshot);
+    if (moment) {
+      this.missionLog.add({ text: momentLogText(moment), kind: 'study', hours: this._skyHours() });
+      this._momentQueue.push(moment);
     }
+    if (!this._momentQueue.length) return;
+    const now = performance.now();
+    if (now < this._momentBusyUntil) return;
+    const view = this._momentQueue.shift();
+    const C = MISSION_LOG_CONFIG;
+    const cardMs = C.MOMENT_CARD_MS + C.MOMENT_CARD_MS_PER_LINE * view.lines.length;
+    this.firstTimeHud ??= new FirstTimeHud();
+    this.firstTimeHud.show(view, C.MOMENT_INTRO_MS, cardMs);
+    this._momentBusyUntil = now + C.MOMENT_INTRO_MS + cardMs + C.MOMENT_GAP_MS;
   }
 
   // Os 3 cuidados da estufa (luz, agua reciclada, sem poeira) para o monitor e para as plantas
@@ -1419,6 +1545,15 @@ export class GameEngine {
     return true;
   }
 
+  // Polling do DONKI (pollSpaceWeather, em main.ts): guarda a resposta ao vivo e, se a historia
+  // ja soltou as tempestades, poe na fila as que estao acontecendo agora na vida real.
+  // Nunca e chamado dentro do loop.
+  applyLiveSpaceWeather(spaceWeather) {
+    if (!spaceWeather?.live) return [];
+    this._liveSpaceWeather = spaceWeather;
+    return this.mission.queueLiveStorms(spaceWeather);
+  }
+
   _updateBaseDisplays(dt) {
     this._displayTimer += dt;
     if (this._displayTimer < 0.5) return;
@@ -1447,10 +1582,10 @@ export class GameEngine {
         : 'It is now noon on Mars: the solar panels are charging the battery.';
     }
     if (action === 'skip-training') {
-      if (this.story.skipTraining(this._storySnapshot)) return 'Cadet training skipped. Press Back, then Play: go get 1 ice.';
+      if (this.story.skipTraining()) return 'Tutorial skipped. Press Back, then Play: fill the rocket with ice.';
       return this.story.act === 0
-        ? 'Cadet training is off for this game: after calling Earth you go straight to the ice.'
-        : 'Cadet training is already done or skipped.';
+        ? 'Tutorial is off for this game: only 3 steps (enter the base, call Earth, get 1 ice).'
+        : 'The tutorial is already done or skipped.';
     }
     if (action.startsWith('event:')) return this.triggerEvent(action.slice(6));
     if (action === 'battery') {
@@ -1466,8 +1601,11 @@ export class GameEngine {
     // A historia usa o mesmo radio do terminal da base (CommsLink): distancia e atraso de hoje
     // Vezes que o jogador abriu o painel de energia (certificado de engenharia, issue #88)
     this.powerChecks = 0;
+    // O que o jogador ja fez, para os passos do tutorial guiado (src/story/tutorialSteps.ts).
+    // Beber, comer e lavar contam a tentativa: quem esta sem sede nao fica preso no passo.
+    this.tutorialCounts = { drink: 0, meal: 0, wash: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0 };
     this.story = new StoryDirector({
-      training: true, // treino de cadete (issue #88); o menu Demo Tools pode pular
+      training: true, // tutorial guiado completo; o menu Demo Tools pode pular
       replyDelayHours: this.comms.roundTripGameSeconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND,
       comms: {
         millionKm: Math.round(this.comms.distanceKm / 1e6),
@@ -1479,10 +1617,12 @@ export class GameEngine {
     this._objectiveText = '';
     // Retrato do jogo que o diretor le a cada frame (objeto reaproveitado)
     this._storySnapshot = {
-      hours: 0, insideHabitat: false, iceCount: 0, iceNeeded: 0, atConsole: false,
+      hours: 0, insideHabitat: false, iceCount: 0, iceNeeded: 0,
       stormPhase: 'calm', stormsSurvived: 0, propellantPct: 0, dataSent: false, launched: false,
       needsBase: false, iceForFullTank: MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK, scienceStep: null, scansLeft: 0,
       powerChecks: 0, harvestCount: 0, workoutCount: 0, shelterWaterL: 0,
+      drinkCount: 0, mealCount: 0, washCount: 0, earthCalls: 0, plantCount: 0,
+      roverDrives: 0, roverIceKg: 0, scanCount: 0, iceDelivered: 0,
     };
     this._scienceState = { discoveries: 0, samples: 0, sentDiscoveries: 0, sentSamples: 0, rawSamples: 0 };
 
@@ -1495,7 +1635,7 @@ export class GameEngine {
 
     this.cutsceneHud = new CutsceneHud({ onSkip: () => this.cutscenes.skip() });
     this.cutscenes = new CutscenePlayer({ hud: this.cutsceneHud });
-    this._arrivalPlayed = false;
+    this._arrivalPlayed = this._savedArrivalPlayed;
 
     // Capsula de pouso, chama e poeira ja nascem na cena para os shaders compilarem no loading
     this.lander = createLander();
@@ -1521,6 +1661,10 @@ export class GameEngine {
     return {
       airlock: { x: 0.5, y: ground + 3.2, z: outerDoor.z + 0.5, label: WAYPOINT_LABELS.airlock },
       console: { x: 4, y: ground + 3, z: -9.6, label: WAYPOINT_LABELS.console },
+      // Lugares do tutorial guiado: bebedouro, cozinha e banheiro
+      water: { x: WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.x, y: ground + 3, z: WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.z, label: WAYPOINT_LABELS.water },
+      kitchen: { x: 13.1, y: ground + 3, z: -16.2, label: WAYPOINT_LABELS.kitchen },
+      bathroom: { x: -16, y: ground + 2.6, z: -38.3, label: WAYPOINT_LABELS.bathroom },
       science: { x: 9.75, y: ground + 3, z: -10.8, label: WAYPOINT_LABELS.science },
       ice: { x: ice.x + 0.5, y: iceTop + 1.6, z: ice.z + 0.5, label: WAYPOINT_LABELS.ice },
       mav: { x: pad.x, y: ground + 9.2, z: pad.z, label: WAYPOINT_LABELS.mav },
@@ -1534,8 +1678,16 @@ export class GameEngine {
     };
   }
 
+  // Pede o modal de trade-off de uma situacao (gatilhos em src/story/tradeoffScenes.ts). Cada
+  // cena aparece uma vez por partida; `onClose` roda quando ela fecha (ou na hora, se ja foi vista).
+  _tradeoff(trigger, onClose = null) {
+    this.tradeoffHud ??= new TradeoffHud();
+    this.tradeoffHud.request(trigger, onClose);
+  }
+
   _playArrival() {
     this._arrivalPlayed = true;
+    this._saveGame();
     this.audio.playRocket();
     const site = CUTSCENE_CONFIG.LANDING_SITE;
     this.playerHand.handGroup.visible = false;
@@ -1614,7 +1766,7 @@ export class GameEngine {
     // O lookAt da animacao deixa a camera rolada; _updateCamera so escreve yaw e pitch
     this.camera.rotation.set(0, 0, 0);
     this._updateCamera();
-    this.story.start();
+    this.story.start(this._storySnapshot);
   }
 
   _initRationVisuals() {
@@ -1831,7 +1983,6 @@ export class GameEngine {
     s.insideHabitat = this.survival.insidePressurizedShip;
     s.iceCount = this.survival.countItem(BLOCK_IDS.MARS_ICE);
     s.iceNeeded = this.mission.iceNeeded();
-    s.atConsole = this.currentInteraction === 'rover_terminal';
     s.stormPhase = this.mission.storm.phase;
     s.stormsSurvived = this.mission.stormCredit;
     s.propellantPct = this.mission.propellant;
@@ -1841,6 +1992,16 @@ export class GameEngine {
     s.harvestCount = this.stations.harvestCount;
     s.workoutCount = this.stations.workoutCount;
     s.shelterWaterL = this.mission.shelterWaterL;
+    const done = this.tutorialCounts;
+    s.drinkCount = done.drink;
+    s.mealCount = done.meal;
+    s.washCount = done.wash;
+    s.earthCalls = done.earthCalls;
+    s.roverDrives = done.roverDrives;
+    s.roverIceKg = done.roverIceKg;
+    s.iceDelivered = this.mission.iceDelivered; // animacao de primeira vez (firstTimeMoments)
+    s.plantCount = this.stations.plantCount;
+    s.scanCount = this.scanJournal.missionCount;
     s.iceForFullTank = this.mission.iceForFullTank();
     const sci = this._scienceState;
     sci.discoveries = this.scanJournal.missionCount;
@@ -1853,13 +2014,20 @@ export class GameEngine {
     this.story.update(s);
 
     for (const event of this.story.drainEvents()) {
-      if (event.type === 'card') this.storyHud.showCard(event.card);
+      if (event.type === 'card') {
+        this.storyHud.showCard(event.card);
+        if (event.card.stepId) this._tradeoff(`step:${event.card.stepId}`);
+      }
       else if (event.type === 'certificate') {
+        this.events.start(s.hours); // primeiro selo do tutorial: os eventos de Marte ja podem acontecer
         this.storyHud.showCertificate(event.badge);
         this._playGymTone(520, 0.22, 780);
       }
+      else if (event.type === 'step-done') this._playGymTone(440, 0.16, 660);
       else if (event.type === 'start-storms') {
         this.mission.startStorms(s.hours);
+        // Depois da tempestade do tutorial, so as reais: o que o DONKI ja mostrou acontecendo agora entra na fila
+        this.mission.queueLiveStorms(this._liveSpaceWeather);
         this.events.start(s.hours); // eventos aleatorios so depois do tutorial (issue #107)
         if (this.mission.noStormData) this.hud.showToast(`Space weather is calm. ${NO_STORM_DATA_TEXT}`, 6000);
       }
@@ -1999,6 +2167,13 @@ export class GameEngine {
     this.hud.showToast(`${speaker.name}: ${problemText(station, problem)}`, 6000);
   }
 
+  // Abaixo de 1 a imagem e ampliada pelo navegador: pixelada (como os blocos), nao borrada
+  _applyPixelRatio(ratio) {
+    this.renderer.setPixelRatio(ratio);
+    this.renderer.domElement.style.imageRendering = ratio < 1 ? 'pixelated' : '';
+    this.shaderMode?.setSize();
+  }
+
   _onResize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
@@ -2023,6 +2198,7 @@ export class GameEngine {
     } else if (this.roverController.canCollectIce()) {
       const res = this.roverController.collectIce();
       if (res.success) {
+        this.tutorialCounts.roverIceKg += res.amount ?? 1;
         this._playGymTone(260, 0.14, 480);
       } else if (res.reason) {
         // Cacamba cheia ou bateria baixa: dizer por que a broca nao ligou
@@ -2167,6 +2343,7 @@ export class GameEngine {
       this.toggleRoverMode();
     } else if (this.currentInteraction === 'water_dispenser') {
       const res = this.survival.drinkFromBaseDispenser();
+      this.tutorialCounts.drink++;
       this.hud.showToast(res.message);
     } else if (this.currentInteraction === 'greenhouse') {
       this.stationPanel.open('greenhouse');
@@ -2177,12 +2354,14 @@ export class GameEngine {
     if (this.roverController.isActive) {
       this.roverController.deactivate();
       this.hud.setRoverMode(false);
-      this.playerHand.handGroup.visible = !this.isZoomed;
+      this.playerHand.handGroup.visible = !this.isZoomed && !this.isThirdPerson;
       this.hud.showToast('Disconnected from Rover Remote Terminal');
     } else if (this.currentInteraction === 'rover_terminal') {
       this.roverController.activate();
+      this.tutorialCounts.roverDrives++;
       this.hud.setRoverMode(true);
       this.playerHand.handGroup.visible = false;
+      this.playerAvatar.group.visible = false;
       this.highlightBox.visible = false;
       this.hud.showToast('Rover ready. Head to the ice crater to collect water.');
     }
@@ -2237,6 +2416,7 @@ export class GameEngine {
 
   _startEvent(event) {
     const { type, params } = event;
+    this._tradeoff(`event:${type}`);
     let info;
     let cardInfo;
     if (type === 'meteor') {
@@ -2299,6 +2479,15 @@ export class GameEngine {
     this.hud.showToast(dustDevilPanelsToast(typeof cleaned === 'number' ? Math.round(cleaned * 100) : 0), 6000);
   }
 
+  _saveGame() {
+    try {
+      const survival = {};
+      for (const key of ['health','oxygen','suitEquipped','suitThermal','suitOxygen','suitScrubber','suitDust','suitIntegrity','baseOxygen','baseBreached','water','food','baseWater','maxBaseWater','graywater','inventorySlots','isDead']) survival[key] = this.survival[key];
+      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed }));
+      return true;
+    } catch { return false; }
+  }
+
   start() {
     const loop = () => {
       requestAnimationFrame(loop);
@@ -2307,22 +2496,34 @@ export class GameEngine {
       const frameMs = now - this.lastTime;
       const dt = Math.min(frameMs / 1000, 0.05);
       this.lastTime = now;
+      this._saveTimer += dt;
+      if (this._saveTimer >= 5) {
+        this._saveTimer = 0;
+        this._saveGame();
+      }
 
       // Primeiro Play: a historia abre com a animacao de chegada
       if (!this._arrivalPlayed && this.input.isLocked && !this.input.isPortraitRequired) this._playArrival();
       const cutsceneActive = this.cutscenes.isActive;
 
-      const isGameRunning = this.input.isLocked
-        && !this.input.isPortraitRequired
-        && !this.survival.isDead
-        && !this.hud.isInventoryOpen
-        && !this.scannerHud.isJournalOpen
-        && !this.stationPanel.isOpen
-        && !this.missionHud.isVictoryShown
-        && !cutsceneActive
-        && !this.storyHud.isWindowClosedShown
-        && !this.sleep.isPanelOpen
-        && !this.sleep.isSleeping;
+      const isGameRunning = isGameSimulationRunning({
+        inputLocked: this.input.isLocked,
+        portraitRequired: this.input.isPortraitRequired,
+        isDead: this.survival.isDead,
+        inventoryOpen: this.hud.isInventoryOpen,
+        journalOpen: this.scannerHud.isJournalOpen,
+        stationOpen: this.stationPanel.isOpen,
+        victoryShown: this.missionHud.isVictoryShown,
+        cutsceneActive,
+        storyWindowClosedShown: this.storyHud.isWindowClosedShown,
+        sleepPanelOpen: this.sleep.isPanelOpen,
+        sleeping: this.sleep.isSleeping,
+        tradeoffOpen: Boolean(this.tradeoffHud?.isOpen),
+      });
+      // Modal de trade-off na fila: so abre com o jogo rodando e o mouse no jogo
+      if (isGameRunning && this.input.isLocked && !this.hud.isInventoryOpen && !this.scannerHud.isJournalOpen) this.tradeoffHud?.pump();
+      if (this._wasGameRunning && !isGameRunning) this.player.stopJumpMomentum();
+      this._wasGameRunning = isGameRunning;
       if (isGameRunning) {
         if (this.roverController.isActive) {
           if (this.scanHighlight.mesh) this.scanHighlight.clear();
@@ -2342,7 +2543,8 @@ export class GameEngine {
           const outsideTempC = outsideTemperatureC(this._skyHours());
           this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: false, isRoverActive: false, mission: this.mission, airlock: this.airlock, outsideTempC, suitUpgraded: this.stations.upgraded, dirtySuit: this.stations.dirtySuit });
         } else {
-          this.player.update(dt, this.input.keys);
+          const preserveHorizontalVelocity = this.hud.isInventoryOpen || this.scannerHud.isJournalOpen;
+          this.player.update(dt, this.input.keys, preserveHorizontalVelocity);
           clampToPlayArea(this.player.pos); // parede invisivel na borda, sem dano (issue #103)
           this._updateSurvival(dt);
           this.input.update(dt);
@@ -2423,12 +2625,15 @@ export class GameEngine {
         dirtySuit: this.stations.dirtySuit,
       });
       if (!isGameRunning && !this.roverController.isActive) this.playerHand.update(dt, false);
-      this._updateMission(dt);
+      this._updateMission(dt, isGameRunning);
       this._updateCrew(dt);
       this._updateRationHandoff(dt);
       this._updateBaseDisplays(dt);
       if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
-      if (isGameRunning) this._updateStory(dt);
+      if (isGameRunning) {
+        this._updateStory(dt);
+        this._updateMoments();
+      }
 
       const focusPos = this.roverController.isActive ? this.roverController.pos : this.player.pos;
       this._weatherFx.indoors = this.survival.isPlayerInsideShip(this.camera.position);
@@ -2456,6 +2661,15 @@ export class GameEngine {
         this.dustStorm.outdoorBlend,
         this._weatherFx.haze,
       );
+      this.playerFootprints.update(
+        dt,
+        this.player,
+        this.world,
+        isGameRunning
+          && !this.roverController.isActive
+          && !this.gymController.isActive
+          && !this.survival.isPlayerInsideShip(this.player.pos)
+      );
       this._updateEvents(dt, isGameRunning);
       // Trajes da tripulacao: copia a pose de cada peca para o desenho unico (instancing)
       this.crewInstances.sync();
@@ -2463,6 +2677,10 @@ export class GameEngine {
       this.shaderMode.render();
       if (isGameRunning && this.shaderMode.sampleFrame(frameMs)) {
         this.hud.showToast('Shaders turned off to keep the game smooth. Turn them back on in the menu.');
+      }
+      if (isGameRunning) {
+        const ratio = this.resolution.sample(frameMs);
+        if (ratio !== null) this._applyPixelRatio(ratio);
       }
       this.debug.frame(frameMs);
     };

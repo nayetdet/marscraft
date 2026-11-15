@@ -18,6 +18,63 @@ const MAX_DISTANCE = SURVIVAL_CONFIG.DUST_STORM_FATAL_RADIUS + 10;
 
 const NATURAL_GROUND = new Set([BLOCK_IDS.REGOLITH, BLOCK_IDS.SANDSTONE]);
 
+// Voxel outcrops make the landscape feel rocky at a distance, with irregular silhouettes
+// built from the same breakable blocks used elsewhere in the world.
+export function addVoxelOutcrops(world) {
+  const rand = createSeededRandom(SEED + 1);
+  const { x: baseX, z: baseZ } = TERRAIN_CONFIG.BASE_CENTER;
+  const occupied = new Set();
+  let placed = 0;
+
+  for (let attempt = 0; attempt < 220 && placed < 48; attempt += 1) {
+    const angle = rand() * Math.PI * 2;
+    const radius = 41 + Math.sqrt(rand()) * 48;
+    const cx = Math.round(baseX + Math.cos(angle) * radius);
+    const cz = Math.round(baseZ + Math.sin(angle) * radius);
+    if (Math.abs(cx) > world.halfX - 5 || Math.abs(cz) > world.halfZ - 5 || isBuildZone(cx, cz)) continue;
+
+    const coreHeight = 2 + Math.floor(rand() * 3);
+    const footprint = [];
+    for (let dx = -2; dx <= 2; dx += 1) {
+      for (let dz = -2; dz <= 2; dz += 1) {
+        const distance = Math.abs(dx) + Math.abs(dz);
+        if (distance > 3 || rand() < (distance === 0 ? 0.02 : 0.34 + distance * 0.1)) continue;
+        footprint.push({ dx, dz, distance });
+      }
+    }
+    if (footprint.length < 4) continue;
+
+    const cells = [];
+    let valid = true;
+    for (const { dx, dz, distance } of footprint) {
+      const x = cx + dx;
+      const z = cz + dz;
+      const key = `${x},${z}`;
+      const top = naturalGroundTop(world, x, z);
+      if (occupied.has(key) || isBuildZone(x, z) || top < 0) {
+        valid = false;
+        break;
+      }
+      cells.push({ x, z, top, distance, key });
+    }
+    if (!valid) continue;
+
+    for (const cell of cells) {
+      occupied.add(cell.key);
+      const height = Math.max(1, coreHeight - Math.floor(cell.distance / 1.5) - (rand() < 0.23 ? 1 : 0));
+      for (let dy = 0; dy < height; dy += 1) {
+        const variation = rand();
+        const id = variation < 0.62 ? BLOCK_IDS.DARK_BASALT
+          : variation < 0.94 ? BLOCK_IDS.BASALT
+            : BLOCK_IDS.SANDSTONE;
+        world.setBlock(cell.x, cell.top + dy, cell.z, id, false);
+      }
+    }
+    placed += 1;
+  }
+  return placed;
+}
+
 // y do topo do bloco solido mais alto da coluna, ou -1 se o topo nao for chao natural
 function naturalGroundTop(world, x, z) {
   for (let y = world.sizeY - 1; y >= 0; y -= 1) {

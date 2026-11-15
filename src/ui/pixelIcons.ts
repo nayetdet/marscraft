@@ -352,6 +352,18 @@ ICONS.info = [
   '........',
 ];
 
+// Rover (cards das animacoes de "primeira vez", src/story/firstTimeMoments.ts)
+ICONS.rover = [
+  '......X.',
+  '......X.',
+  '.XXXXXX.',
+  'XXXXXXXX',
+  'XXXXXXXX',
+  '.X.XX.X.',
+  'XXX..XXX',
+  '.X....X.',
+];
+
 const cache = new Map();
 
 export function pixelIconSvg(name) {

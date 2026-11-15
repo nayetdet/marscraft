@@ -47,6 +47,11 @@ export class PlayerPhysics {
     this.pitch = PHYSICS_CONFIG.SPAWN_PITCH;
   }
 
+  stopJumpMomentum() {
+    this.vel.y = 0;
+    this._jumpInProgress = false;
+  }
+
   getLookDirection(target = new THREE.Vector3()) {
     _lookEuler.set(this.pitch, this.yaw, 0, 'YXZ');
     return target.set(0, 0, -1).applyEuler(_lookEuler);
@@ -141,7 +146,7 @@ export class PlayerPhysics {
     return false;
   }
 
-  update(dt, keys) {
+  update(dt, keys, preserveHorizontalVelocity = false) {
     this.justLandedFromJump = false;
     const forward = this._forward.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     const right = this._right.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
@@ -152,13 +157,25 @@ export class PlayerPhysics {
     if (keys['KeyD'] || keys['ArrowRight']) moveDir.add(right);
     if (keys['KeyA'] || keys['ArrowLeft']) moveDir.sub(right);
 
-    this.isMoving = moveDir.lengthSq() > 0 && this.onGround;
-    if (moveDir.lengthSq() > 0) moveDir.normalize();
+    const hasMoveInput = moveDir.lengthSq() > 0;
+    const hasHorizontalMomentum = preserveHorizontalVelocity && (this.vel.x !== 0 || this.vel.z !== 0);
+    this.isMoving = (hasMoveInput || hasHorizontalMomentum) && this.onGround;
+    if (hasMoveInput) moveDir.normalize();
 
-    const sprinting = keys['Sprint'] || keys['ShiftLeft'] || keys['ShiftRight'];
-    const speed = sprinting ? PHYSICS_CONFIG.SPRINT_SPEED : PHYSICS_CONFIG.WALK_SPEED;
-    this.vel.x = moveDir.x * speed;
-    this.vel.z = moveDir.z * speed;
+    if (!preserveHorizontalVelocity) {
+      const sprinting = keys['Sprint'] || keys['ShiftLeft'] || keys['ShiftRight'];
+      const speed = sprinting ? PHYSICS_CONFIG.SPRINT_SPEED : PHYSICS_CONFIG.WALK_SPEED;
+      this.vel.x = moveDir.x * speed;
+      this.vel.z = moveDir.z * speed;
+    } else if (this.onGround) {
+      const horizontalSpeed = Math.hypot(this.vel.x, this.vel.z);
+      if (horizontalSpeed > 0) {
+        const remainingSpeed = Math.max(0, horizontalSpeed - PHYSICS_CONFIG.INVENTORY_GROUND_DECELERATION * dt);
+        const speedScale = remainingSpeed / horizontalSpeed;
+        this.vel.x *= speedScale;
+        this.vel.z *= speedScale;
+      }
+    }
 
     this.vel.y -= PHYSICS_CONFIG.MARS_GRAVITY * dt;
     if (keys['Space'] && this.onGround) {

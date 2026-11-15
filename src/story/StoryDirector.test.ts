@@ -15,7 +15,6 @@ function snap(overrides = {}) {
     hours: 15,
     insideHabitat: false,
     iceCount: 0,
-    atConsole: false,
     stormPhase: 'calm',
     stormsSurvived: 0,
     propellantPct: 0,
@@ -42,7 +41,7 @@ const cards = (director) => director.drainEvents().filter((e) => e.type === 'car
 // Leva o diretor ate o comeco do ato 2 (com a resposta da Terra ja entregue)
 function reachAct2(director) {
   director.update(snap({ insideHabitat: true }));
-  director.update(snap({ insideHabitat: true, atConsole: true }));
+  director.update(snap({ insideHabitat: true, earthCalls: 1 }));
   director.update(snap({ hours: 15 + REPLY }));
   director.update(snap({ hours: 16, iceCount: 1 }));
   director.drainEvents();
@@ -57,7 +56,7 @@ describe('StoryDirector', () => {
     expect(director.drainEvents()).toEqual([]);
   });
 
-  it('starts act 1 with the welcome card and the first objective', () => {
+  it('starts act 1 with the first step card and the first objective', () => {
     const director = new StoryDirector();
     director.start(15);
     expect(director.act).toBe(1);
@@ -66,10 +65,11 @@ describe('StoryDirector', () => {
     const events = director.drainEvents();
     expect(events).toHaveLength(1);
     expect(events[0].type).toBe('card');
-    expect(events[0].card.title).toMatch(/WELCOME TO MARS/);
+    expect(events[0].card.title).toBe('STEP 1/3: ENTER THE BASE');
+    expect(events[0].card.step).toBe(true);
   });
 
-  it('walks the 3 tutorial steps without making the player wait for Earth', () => {
+  it('walks the 3 core steps without making the player wait for Earth', () => {
     const director = started();
 
     director.update(snap());
@@ -79,10 +79,13 @@ describe('StoryDirector', () => {
     expect(director.objectiveId).toBe('report');
 
     // Avisou a Terra: o proximo passo ja vale, e a resposta fica a caminho
-    director.update(snap({ insideHabitat: true, atConsole: true }));
+    director.update(snap({ insideHabitat: true, earthCalls: 1 }));
     expect(director.objectiveId).toBe('collect-ice');
     expect(director.replySecondsLeft).toBe(25); // 0,5 h / 0,02 h por s
-    const sent = cards(director).at(-1);
+    const shown = cards(director);
+    const sent = shown.find((card) => card.title === 'MESSAGE SENT');
+    // O balao do passo seguinte vem logo depois do aviso do radio
+    expect(shown.at(-1).title).toBe('STEP 3/3: GET 1 ICE');
     expect(sent.link).toEqual({ minutes: 11, millionKm: 198 });
     expect(sent.source).toMatch(/14\/11\/2026/);
 
@@ -94,7 +97,7 @@ describe('StoryDirector', () => {
   it('delivers the answer from Earth after the radio delay, whatever the player is doing', () => {
     const director = started();
     director.update(snap({ insideHabitat: true }));
-    director.update(snap({ insideHabitat: true, atConsole: true }));
+    director.update(snap({ insideHabitat: true, earthCalls: 1 }));
     director.drainEvents();
 
     director.update(snap({ hours: 15 + REPLY }));
@@ -112,7 +115,7 @@ describe('StoryDirector', () => {
   it('still delivers the answer when the ice is collected before it arrives', () => {
     const director = started();
     director.update(snap({ insideHabitat: true }));
-    director.update(snap({ insideHabitat: true, atConsole: true }));
+    director.update(snap({ insideHabitat: true, earthCalls: 1 }));
     director.update(snap({ hours: 15.1, iceCount: 1 }));
     expect(director.act).toBe(2);
     director.drainEvents();
@@ -125,7 +128,7 @@ describe('StoryDirector', () => {
     const director = started();
     const base = { insideHabitat: true, iceCount: 3 };
     director.update(snap(base));
-    director.update(snap({ ...base, atConsole: true }));
+    director.update(snap({ ...base, earthCalls: 1 }));
     expect(director.objectiveId).toBe('collect-ice');
 
     // As 3 que ja estavam na mochila nao contam
@@ -141,7 +144,7 @@ describe('StoryDirector', () => {
   it('opens act 2 as soon as the ice is collected and starts the storms once', () => {
     const director = started();
     director.update(snap({ insideHabitat: true }));
-    director.update(snap({ insideHabitat: true, atConsole: true }));
+    director.update(snap({ insideHabitat: true, earthCalls: 1 }));
     director.update(snap({ hours: 15 + REPLY }));
     director.drainEvents();
 
@@ -175,12 +178,13 @@ describe('StoryDirector', () => {
     expect(director.objectiveId).toBe('storm-guide');
     expect(director.drainEvents()).toHaveLength(0);
 
+    // A tempestade do tutorial paga a exigencia: a janela de lancamento abre
     director.update(snap({ hours: 21, stormPhase: 'calm', stormsSurvived: 1 }));
-    expect(director.objectiveId).toBe('act2');
+    expect(director.act).toBe(3);
+    director.drainEvents();
 
-    // A segunda tempestade nao tem card nem objetivo guiado
+    // Uma tempestade real depois disso nao tem card guiado
     director.update(snap({ hours: 23, stormPhase: 'warning', stormsSurvived: 1 }));
-    expect(director.objectiveId).toBe('act2');
     expect(director.drainEvents()).toHaveLength(0);
   });
 

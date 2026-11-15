@@ -7,6 +7,7 @@ const ROCKET_VOLUME = 0.7;
 const DOOR_VOLUME = 0.12;
 // Chiado de descompressao do airlock (a "fumaca"): bem baixo, so de fundo
 const DECOMPRESSION_VOLUME = 0.05;
+const REGOLITH_PLACE_VOLUME = 0.07;
 const ROCKET_FADE_OUT_SECONDS = 1;
 // Manivela do airlock sem energia: o som da porta tocado devagar fica grave e pesado
 const CRANK_PLAYBACK_RATE = 0.45;
@@ -22,10 +23,20 @@ export class AudioManager {
     this.rover = this._createAudio(`${AUDIO_BASE_URL}barulho%20do%20carro.wav?v=2`, true);
     this.rocket = this._createAudio(`${AUDIO_BASE_URL}foguete.wav`, true);
     this.sandFall = this._createAudio(`${AUDIO_BASE_URL}queda_areia.wav`);
+    this.regolithPlace = this._createAudio(`${AUDIO_BASE_URL}colocando_areia.WAV`);
+    this.regolithBreak = this._createAudio(`${AUDIO_BASE_URL}quebrando_areia.WAV?v=3`);
+    this.shipBlockBreak = this._createAudio(`${AUDIO_BASE_URL}quebrando_pedra.WAV`, true);
+    this.regolithBreakImpact = this._createAudio(`${AUDIO_BASE_URL}quebrando_areia.WAV`);
+    this.shipBlockBreakImpact = this._createAudio(`${AUDIO_BASE_URL}quebrando_pedra.WAV`);
     this.doorOpen = this._createAudio(`${AUDIO_BASE_URL}porta_abrir.wav`);
     this.doorClose = this._createAudio(`${AUDIO_BASE_URL}porta_fechar.wav`);
     this.decompression = this._createAudio(`${AUDIO_BASE_URL}descompressao.wav`);
     this.doorCrank = this._createAudio(`${AUDIO_BASE_URL}porta_fechar.wav`);
+    this.uiClick = this._createAudio(`${AUDIO_BASE_URL}ui-click-kenney.ogg`);
+    this.uiConfirm = this._createAudio(`${AUDIO_BASE_URL}ui-confirm-kenney.ogg`);
+    this.uiError = this._createAudio(`${AUDIO_BASE_URL}ui-error-kenney.ogg`);
+    this.sciFiDoorOpen = this._createAudio(`${AUDIO_BASE_URL}sci-fi-door-open-kenney.ogg`);
+    this.sciFiDoorClose = this._createAudio(`${AUDIO_BASE_URL}sci-fi-door-close-kenney.ogg`);
     this.doorOpen.volume = DOOR_VOLUME;
     this.doorClose.volume = DOOR_VOLUME;
     this.decompression.volume = DECOMPRESSION_VOLUME;
@@ -33,6 +44,7 @@ export class AudioManager {
     this.doorCrank.preservesPitch = false;
     this.doorCrank.volume = DOOR_VOLUME;
     this.rocket.volume = ROCKET_VOLUME;
+    this.regolithPlace.volume = REGOLITH_PLACE_VOLUME;
     this._rocketFadeElapsed = null;
     this._rocketFadeStartVolume = ROCKET_VOLUME;
     this.rover.volume = LOOP_VOLUME / 2;
@@ -45,6 +57,8 @@ export class AudioManager {
     this._lastPosition = null;
     this._windNodes = null;
     this._windTime = 0;
+    this._lastHealth = null;
+    this._damageSoundCooldown = 0;
   }
 
   _createAudio(src, loop = false) {
@@ -92,10 +106,42 @@ export class AudioManager {
     this._playOneShot(this.decompression);
   }
 
+  playRegolithPlace() {
+    this._playOneShot(this.regolithPlace);
+  }
+
+  playRegolithBreak() {
+    this.regolithBreak.currentTime = 0;
+    this._play(this.regolithBreak);
+  }
+
+  stopRegolithBreak() {
+    this.regolithBreak.pause();
+    this.regolithBreak.currentTime = 0;
+  }
+
+  playShipBlockBreak() {
+    this.shipBlockBreak.currentTime = 0;
+    this._play(this.shipBlockBreak);
+  }
+
+  stopShipBlockBreak() {
+    this.shipBlockBreak.pause();
+    this.shipBlockBreak.currentTime = 0;
+  }
+
+  playBlockBreakImpact(isRegolith) {
+    this._playOneShot(isRegolith ? this.regolithBreakImpact : this.shipBlockBreakImpact);
+  }
+
   // Abertura manual do airlock (sem energia): som mecanico pesado
   playManualCrank() {
     this._playOneShot(this.doorCrank);
   }
+
+  playUiClick() { this._playOneShot(this.uiClick); }
+  playUiConfirm() { this._playOneShot(this.uiConfirm); }
+  playUiError() { this._playOneShot(this.uiError); }
 
   _getSynthContext() {
     if (typeof window === 'undefined') return null;
@@ -122,22 +168,13 @@ export class AudioManager {
   }
 
   playSuitEquip() {
-    const ctx = this._getSynthContext();
-    if (!ctx) return;
-    // Mechanical unlatch click + helmet lock + ascending NASA seal chime
-    this._playSuitTone(ctx, 190, 0.0, 0.08, 'square', 0.035);
-    this._playSuitTone(ctx, 320, 0.34, 0.09, 'triangle', 0.05);
-    this._playSuitTone(ctx, 523.25, 0.68, 0.14, 'sine', 0.06);
-    this._playSuitTone(ctx, 783.99, 0.82, 0.22, 'sine', 0.07);
+    this._playOneShot(this.sciFiDoorOpen);
+    window.setTimeout(() => this.playUiConfirm(), 250);
   }
 
   playSuitDock() {
-    const ctx = this._getSynthContext();
-    if (!ctx) return;
-    // Helmet release + clamp lock + descending confirmation chime
-    this._playSuitTone(ctx, 659.25, 0.0, 0.12, 'sine', 0.05);
-    this._playSuitTone(ctx, 440.0, 0.13, 0.16, 'sine', 0.05);
-    this._playSuitTone(ctx, 210, 0.52, 0.1, 'square', 0.03);
+    this._playOneShot(this.sciFiDoorClose);
+    window.setTimeout(() => this.playUiConfirm(), 250);
   }
 
   playSolarClean() {
@@ -269,6 +306,13 @@ export class AudioManager {
   update({ dt = 0, player, survival, isGameRunning, isRoverActive, roverSpeed = 0, sprinting, outdoorFactor = 0, windIntensity = 0 }) {
     this._updateRocketFade(dt);
     this._updateWindAudio(dt, isGameRunning, outdoorFactor, windIntensity);
+
+    this._damageSoundCooldown = Math.max(0, this._damageSoundCooldown - dt);
+    if (this._lastHealth !== null && survival.health < this._lastHealth && this._damageSoundCooldown <= 0) {
+      this.playUiError();
+      this._damageSoundCooldown = 0.65;
+    }
+    this._lastHealth = survival.health;
 
     const landedFromJump = Boolean(player.justLandedFromJump);
     if (landedFromJump && !this._wasLandingFromJump) {

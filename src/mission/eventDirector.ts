@@ -7,7 +7,8 @@ import { EVENTS_CONFIG, MISSION_CONFIG } from '../config/constants.ts';
 // sempre da a mesma agenda: da para repetir uma partida (?seed=123) e testar com Vitest.
 //
 // Regras de ritmo:
-// - nada antes de `start()`, que o GameEngine chama no inicio do ato 2 (o tutorial fica calmo);
+// - nada antes de `start()`, que o GameEngine chama no primeiro selo do tutorial (os primeiros
+//   passos ficam calmos) ou, com o tutorial pulado, no inicio do ato 2;
 // - no maximo um evento ativo por vez e uma folga minima (MIN_GAP_HOURS) entre eles;
 // - nenhum evento comeca durante uma tempestade solar (`blocked`), para nao somar dois perigos;
 // - eclipse so com o Sol alto, geada so no nascer do Sol e aurora so de noite (WINDOWS).

@@ -35,6 +35,15 @@ describe('ScannerSystem', () => {
     expect(scanner.update(0.01, 'moon').progress).toBeLessThan(0.1);
   });
 
+  it('cancels scan progress when the scan button is released', () => {
+    const { scanner } = setup();
+    const partial = scanner.update(DURATION / 2, 'earth');
+    expect(partial.progress).toBeCloseTo(0.5);
+
+    expect(scanner.update(0, 'earth', false)).toMatchObject({ targetId: null, progress: 0, done: false });
+    expect(scanner.update(DURATION / 2, 'earth').progress).toBeCloseTo(0.5);
+  });
+
   it('completes only once and recognizes the target immediately after rediscovery', () => {
     const { scanner } = setup();
     expect(scanner.update(DURATION, 'sun').completed).not.toBeNull();

@@ -216,6 +216,8 @@ export class RoverController {
     // a wider footprint, so expand each AABB by its half-width on the ground.
     const roverRadius = 1.15;
     for (const collider of this.colliders) {
+      if (collider.roverNoCollide) continue;
+
       const insideCurrent =
         this.pos.x >= collider.minX - roverRadius &&
         this.pos.x <= collider.maxX + roverRadius &&

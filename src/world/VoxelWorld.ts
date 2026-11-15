@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { createCropItemModel } from '../graphics/cropModels.ts';
 import * as THREE from 'three';
+import { encodeWorldEdits, restoreWorldEdits } from './worldSave.ts';
 import { BLOCK_IDS, CROP_TYPES_BY_ID } from '../config/blockTypes.ts';
 import { BLOCK_INTERACTION_CONFIG, WORLD_CONFIG } from '../config/constants.ts';
 import { generateMartianTerrain } from './terrainGenerator.ts';
@@ -8,7 +9,7 @@ import { buildNasaSpaceshipAndBase } from './nasaSpaceshipBuilder.ts';
 import { raycastVoxel } from './voxelRaycaster.ts';
 import { makeCanvasTexture } from '../graphics/textureGenerator.ts';
 import { OCCLUSION_BRIGHTNESS, naturalTint, vertexOcclusion } from './voxelShading.ts';
-import { createSurfaceOutcrops, createSurfaceRocks, removeSurfaceRocksSupportedBy } from './surfaceRocks.ts';
+import { addVoxelOutcrops, createSurfaceOutcrops, createSurfaceRocks, removeSurfaceRocksSupportedBy } from './surfaceRocks.ts';
 import { HABITAT_LAYOUT } from './habitatLayout.ts';
 
 const CHUNK_SIZE = 16;
@@ -127,15 +128,28 @@ export class VoxelWorld {
 
     generateMartianTerrain(this);
     buildNasaSpaceshipAndBase(this);
+    // Blocos que o jogador mudou (quebrou ou colocou): so eles vao para o save (worldSave.ts)
+    this.editedBlocks = new Set();
+    try {
+      const saved = JSON.parse(window.localStorage.getItem('marscraft-save-v1') || 'null');
+      restoreWorldEdits(this.data, saved, this.editedBlocks);
+    } catch { /* Ignore unavailable or malformed saves. */ }
+    this.trackEdits = true;
     for (const idx of this.baseBlocks) {
-      if (this.data[idx] === BLOCK_IDS.AIR) this.baseBlocks.delete(idx);
+      if (this.data[idx] === BLOCK_IDS.AIR) {
+        this.baseBlocks.delete(idx);
+        this.brokenBaseBlocks.add(idx);
+      }
     }
+    addVoxelOutcrops(this);
     this.rebuildMeshes();
     // Pedras decorativas e lajes baixas sobre o terreno natural (sem colisao)
     this.surfaceRocks = createSurfaceRocks(this);
     this.surfaceOutcrops = createSurfaceOutcrops(this);
     this.scene.add(this.surfaceRocks, this.surfaceOutcrops);
   }
+
+  exportSave() { return encodeWorldEdits(this.data, this.editedBlocks); }
 
   _index(x, y, z) {
     const ix = Math.floor(x) + this.halfX;
@@ -162,6 +176,7 @@ export class VoxelWorld {
     const idx = this._index(x, y, z);
     if (idx === -1) return false;
     this.data[idx] = id;
+    if (this.trackEdits) this.editedBlocks.add(idx);
     if (this.recordBaseBlocks) {
       if (id !== BLOCK_IDS.AIR && Math.floor(y) > HABITAT_LAYOUT.FLOOR_Y) this.baseBlocks.add(idx);
       else this.baseBlocks.delete(idx);

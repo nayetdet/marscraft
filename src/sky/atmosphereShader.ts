@@ -70,6 +70,14 @@ export const MARTIAN_SKY_FRAGMENT_SHADER = `
 
     vec3 skyColor = mix(zenithCol, horizonCol, horizonFactor);
 
+    // Faixas finas de poeira no horizonte, movendo-se lentamente com o vento.
+    // Sao mais visiveis em luz baixa e ganham contraste durante uma tempestade.
+    float windBand = sin(dir.x * 8.0 + dir.z * 5.0 + uTime * 0.025 + sin(dir.z * 11.0 - uTime * 0.018));
+    float bandHeight = 0.045 + windBand * 0.022;
+    float horizonHaze = exp(-abs(dir.y - bandHeight) * 34.0) * (0.025 + uDust * 0.09);
+    vec3 hazeTint = mix(vec3(0.90, 0.55, 0.31), vec3(0.62, 0.37, 0.23), uDust);
+    skyColor = mix(skyColor, hazeTint, horizonHaze * (0.35 + 0.65 * horizonFactor));
+
     // Halo azulado real de Marte ao redor do Sol
     float sunCos = max(dot(dir, normalize(uSunDir)), 0.0);
     float blueMieCone = pow(sunCos, 8.0) * (0.35 + 0.65 * twilightFactor) * smoothstep(-0.18, 0.35, uSunElevation);

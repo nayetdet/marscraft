@@ -5,7 +5,9 @@ import { WAYPOINT_LABELS, objectiveTarget, routeWaypoint } from './waypoints.ts'
 describe('objectiveTarget', () => {
   it('points each act 1 objective at its place', () => {
     expect(objectiveTarget('enter-base')).toBe('airlock');
-    expect(objectiveTarget('report')).toBe('console');
+    expect(objectiveTarget('report')).toBe('science'); // radio, longe do console do rover
+    expect(objectiveTarget('rover-drive')).toBe('console');
+    expect(objectiveTarget('scan')).toBeNull();
     expect(objectiveTarget('collect-ice')).toBe('ice');
   });
 
@@ -43,7 +45,7 @@ describe('objectiveTarget', () => {
   });
 
   it('has a label for every place', () => {
-    for (const place of ['airlock', 'console', 'science', 'ice', 'mav']) {
+    for (const place of ['airlock', 'console', 'science', 'ice', 'mav', 'water', 'kitchen', 'bathroom', 'greenhouse', 'gym']) {
       expect(WAYPOINT_LABELS[place]).toBeTruthy();
     }
   });

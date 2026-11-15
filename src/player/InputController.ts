@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { BLOCK_INTERACTION_CONFIG } from '../config/constants.ts';
-import { BLOCK_IDS } from '../config/blockTypes.ts';
+import { BLOCK_IDS, SHIP_BLOCK_IDS } from '../config/blockTypes.ts';
 import { applyMouseLook, requestRawPointerLock } from './mouseLook.ts';
 
 export class InputController {
@@ -13,6 +13,7 @@ export class InputController {
     sky,
     hud,
     onToggleZoom,
+    onToggleThirdPerson = () => {},
     getTargetedBlock,
     harvestCrop,
     isRoverActive = () => false,
@@ -32,8 +33,17 @@ export class InputController {
     getWorkSpeed,
     isJournalOpen = () => false,
     onToggleJournal = () => {},
+    onSaveGame = () => {},
+    onBlockPlaced = () => {},
+    onStartRegolithBreak = () => {},
+    onStopRegolithBreak = () => {},
+    onStartShipBlockBreak = () => {},
+    onStopShipBlockBreak = () => {},
+    onBlockBroken = () => {},
+    onFoodConsumed = () => {},
   }) {
     this.onToggleShield = onToggleShield;
+    this.onToggleThirdPerson = onToggleThirdPerson;
     this.onSendData = onSendData;
     this.onSuitportAction = onSuitportAction;
     this.isMissionModalOpen = isMissionModalOpen;
@@ -61,6 +71,14 @@ export class InputController {
     this.getWorkSpeed = getWorkSpeed;
     this.isJournalOpen = isJournalOpen;
     this.onToggleJournal = onToggleJournal;
+    this.onSaveGame = onSaveGame;
+    this.onBlockPlaced = onBlockPlaced;
+    this.onStartRegolithBreak = onStartRegolithBreak;
+    this.onStopRegolithBreak = onStopRegolithBreak;
+    this.onStartShipBlockBreak = onStartShipBlockBreak;
+    this.onStopShipBlockBreak = onStopShipBlockBreak;
+    this.onBlockBroken = onBlockBroken;
+    this.onFoodConsumed = onFoodConsumed;
 
     this.keys = {};
     this.isLocked = false;
@@ -74,6 +92,7 @@ export class InputController {
     document.body.classList.toggle('portrait-required', this.isPortraitRequired);
     this.isScannerOpen = false;
     this.isZoomed = false;
+    this.isScanButtonHeld = false;
     this.breakState = null;
     this.breakSwingTimer = 0;
     this.isBreakButtonHeld = false;
@@ -96,6 +115,7 @@ export class InputController {
 
     this.keys = {};
     this.isBreakButtonHeld = false;
+    this._releaseScopeScan();
     this._cancelBreaking();
     this.touchHeldActions.clear();
     this.joystickPointerId = null;
@@ -124,6 +144,7 @@ export class InputController {
     if (this.isLocked) {
       this.keys = {};
       this.isBreakButtonHeld = false;
+      this._releaseScopeScan();
       this._cancelBreaking();
       this.touchHeldActions.clear();
       this.joystickPointerId = null;
@@ -137,11 +158,26 @@ export class InputController {
     }
   }
 
-  _closeInventory() {
+  _closeInventory({ deferPointerLock = false } = {}) {
     this.hud.closeInventory();
     if (!this.isTouchMode) {
-      requestRawPointerLock(this.domElement, () => this._showPauseMenu?.());
+      if (deferPointerLock) {
+        // Browsers release pointer lock for Escape, so request it after keyup.
+        this._resumeOnEscapeKeyUp = true;
+      } else {
+        requestRawPointerLock(this.domElement, () => this._showPauseMenu?.());
+      }
     }
+  }
+
+  _handleInventoryKey(e) {
+    if (!this.hud.isInventoryOpen) return false;
+    if (e.code === 'Escape') {
+      e.preventDefault();
+      this._closeInventory({ deferPointerLock: true });
+      return true;
+    }
+    return e.code !== 'KeyE';
   }
 
   openJournal() {
@@ -174,7 +210,10 @@ export class InputController {
     if (slot.consumable) {
       const previousCount = slot.count;
       const msg = this.survival.consumeSlotItem(this.hud.selectedSlot);
-      if (slot.count < previousCount && slot.consumable.type === 'food') this.playerHand.triggerEat();
+      if (slot.count < previousCount && slot.consumable.type === 'food') {
+        this.playerHand.triggerEat();
+        this.onFoodConsumed?.();
+      }
       if (msg) {
         this.hud.showToast(msg);
         this.hud.renderHotbar(this.survival.slots);
@@ -191,6 +230,7 @@ export class InputController {
 
     if (!this.player.overlapsBlock(nx, ny, nz) && this.survival.useBlockFromSlot(this.hud.selectedSlot)) {
       this.world.setBlock(nx, ny, nz, slot.id, true);
+      this.onBlockPlaced(slot.id);
       this.hud.renderHotbar(this.survival.slots);
       this._syncHandWithSlot();
     }
@@ -220,14 +260,14 @@ export class InputController {
     } else if (action === 'mine') {
       if (this.isRoverActive()) this.onRoverAction();
       else if (this.getInteraction?.()?.type === 'greenhouse') this.onInteract();
-      else {
+      else if (!this._handleScopeMouseButton(0)) {
         this.isBreakButtonHeld = true;
         this._startBreaking();
       }
     } else if (action === 'use') {
       if (this.isRoverActive()) this.onRoverAction();
       else if (this.getInteraction?.()?.type === 'greenhouse') this.onInteract();
-      else this._useSelectedItem();
+      else if (!this._handleScopeMouseButton(2)) this._useSelectedItem();
     } else if (action === 'interact') {
       this.onInteract();
     } else if (action === 'sprint') {
@@ -246,6 +286,7 @@ export class InputController {
       this.touchHeldActions.delete(pointerId);
       if (action === 'jump') this.keys.Space = false;
       if (action === 'mine') {
+        this._releaseScopeScan();
         this.isBreakButtonHeld = false;
         this._cancelBreaking();
       }
@@ -289,6 +330,37 @@ export class InputController {
     if (slot?.id !== BLOCK_IDS.SCOPE && this.isScannerOpen) this._setScope(false, false);
   }
 
+  _isScopeSelected() {
+    return this.survival.slots[this.hud.selectedSlot]?.id === BLOCK_IDS.SCOPE;
+  }
+
+  _releaseScopeScan() {
+    this.isScanButtonHeld = false;
+    if (!this.isZoomed && this.isScannerOpen) this._setScope(false, false);
+  }
+
+  _handleScopeMouseButton(button) {
+    if (!this._isScopeSelected()) return false;
+    if (button === 0) {
+      this.isScanButtonHeld = true;
+      this._setScope(true, this.isZoomed);
+      return true;
+    }
+    if (button === 2) {
+      this._setScope(!this.isScannerOpen, !this.isScannerOpen);
+      return true;
+    }
+    return false;
+  }
+
+  _handleScopeWheel(event) {
+    if (!this.isZoomed) return false;
+    event.preventDefault();
+    const dir = Math.sign(event.deltaY);
+    if (dir !== 0) this._setScope(true, dir < 0);
+    return true;
+  }
+
   _canBreak(hit) {
     if (!hit.hit) return false;
     if (hit.type === 'crop') return Boolean(hit.plant);
@@ -305,13 +377,20 @@ export class InputController {
     this.breakSwingTimer = 0;
     this.playerHand.triggerSwing();
     if (hit.type === 'crop') this.world.updateCropBreakCracks(hit.plant, 0.01);
-    else this.world.updateBreakCracks(hit.x, hit.y, hit.z, 0.01);
+    else {
+      this.world.updateBreakCracks(hit.x, hit.y, hit.z, 0.01);
+      if (hit.block === BLOCK_IDS.REGOLITH) this.onStartRegolithBreak();
+      else if (SHIP_BLOCK_IDS.includes(hit.block)) this.onStartShipBlockBreak();
+    }
   }
 
   _cancelBreaking() {
     if (!this.breakState) return;
+    const blockId = this.breakState.type === 'crop' ? null : this.breakState.block;
     this.breakState = null;
     this.world.clearBreakCracks();
+    if (blockId === BLOCK_IDS.REGOLITH) this.onStopRegolithBreak();
+    else if (SHIP_BLOCK_IDS.includes(blockId)) this.onStopShipBlockBreak();
   }
 
   update(dt) {
@@ -350,6 +429,7 @@ export class InputController {
         if (this.harvestCrop(target.plant)) this.world.spawnCropDrop(position, target.plant.userData.cropItemId);
       } else {
         this.world.breakBlock(target.x, target.y, target.z);
+        this.onBlockBroken?.(target.block);
       }
       this._cancelBreaking();
     }
@@ -362,7 +442,13 @@ export class InputController {
     const menuCardHome = menuCard.parentElement;
     const pauseMenuCardHost = document.getElementById('pause-menu-card-host');
     const startBtn = document.getElementById('start-btn');
-    const resetBtn = document.getElementById('reset-btn');
+    const startLabel = startBtn.querySelector('.menu-button-label');
+    const setStartLabel = (label) => {
+      if (startLabel) startLabel.textContent = label;
+      else startBtn.textContent = label;
+    };
+    const resetWorldBtn = document.getElementById('reset-world-btn');
+    const quitBtn = document.getElementById('quit-btn');
     const controlsBtn = document.getElementById('controls-btn');
     const controlsBackBtn = document.getElementById('controls-back-btn');
     const menuMain = document.getElementById('menu-main');
@@ -371,7 +457,7 @@ export class InputController {
 
     const showPauseMenu = () => {
       pauseMenuCardHost.append(menuCard);
-      startBtn.textContent = 'Resume';
+      setStartLabel('Resume');
       overlay.classList.add('hidden');
       pauseOverlay.classList.remove('hidden');
       document.body.classList.add('pause-menu-open');
@@ -413,7 +499,7 @@ export class InputController {
         this._resumeOnEscapeKeyUp = true;
         this.isLocked = true;
         menuCardHome.append(menuCard);
-        startBtn.textContent = 'Play';
+        setStartLabel('Play');
         overlay.classList.add('hidden');
         pauseOverlay.classList.add('hidden');
         document.body.classList.remove('pause-menu-open');
@@ -455,7 +541,31 @@ export class InputController {
       if (!this.isTouchMode) requestRawPointerLock(this.domElement);
     });
 
-    resetBtn.addEventListener('click', () => window.location.reload());
+    resetWorldBtn.addEventListener('click', () => {
+      if (!window.confirm('Reset the world? This will erase your saved game.')) return;
+      try {
+        window.localStorage.removeItem('marscraft-save-v1');
+        window.localStorage.removeItem('marscraft-tradeoffs-seen-v1'); // os trade-offs voltam a ser explicados (TradeoffHud)
+      } catch { /* Ignore unavailable storage. */ }
+      window.location.reload();
+    });
+    quitBtn.addEventListener('click', () => {
+      this.onSaveGame();
+      this.hasStarted = false;
+      this.isLocked = false;
+      this.keys = {};
+      this.player.isMoving = false;
+      this._cancelBreaking();
+      document.body.classList.remove('touch-mode');
+      if (document.pointerLockElement === this.domElement) document.exitPointerLock();
+      else {
+        menuCardHome.append(menuCard);
+        setStartLabel('Play');
+        overlay.classList.remove('hidden');
+        pauseOverlay.classList.add('hidden');
+        document.body.classList.remove('pause-menu-open');
+      }
+    });
 
     if (respawnBtn) {
       respawnBtn.addEventListener('click', () => {
@@ -478,6 +588,7 @@ export class InputController {
       if (!this.isLocked) {
         // Sem pointer lock o jogador para: sem teclas presas e sem animacao de caminhada.
         this._cancelBreaking();
+        this._releaseScopeScan();
         this.keys = {};
         this.player.isMoving = false;
       }
@@ -492,7 +603,7 @@ export class InputController {
         showPauseMenu();
       } else {
         menuCardHome.append(menuCard);
-        startBtn.textContent = 'Play';
+        setStartLabel('Play');
         overlay.classList.toggle('hidden', !showStartMenu);
         pauseOverlay.classList.add('hidden');
         document.body.classList.remove('pause-menu-open');
@@ -519,6 +630,11 @@ export class InputController {
         if (e.code === 'KeyF' && !e.repeat) this.onInteract();
         return;
       }
+      if (e.code === 'F5' && this.isLocked && !e.repeat && !this.isRoverActive() && !this.isGymActive?.()) {
+        e.preventDefault();
+        this.onToggleThirdPerson();
+        return;
+      }
       if (this.isGymActive?.()) {
         if (e.code === 'Space' && !e.repeat) {
           e.preventDefault();
@@ -529,7 +645,7 @@ export class InputController {
         }
         return;
       }
-      if (this.hud.isInventoryOpen && e.code !== 'KeyE') return;
+      if (this._handleInventoryKey(e)) return;
       if (this.isJournalOpen()) {
         this._handleJournalKey(e, showPauseMenu);
         return;
@@ -603,16 +719,14 @@ export class InputController {
     window.addEventListener('blur', () => { this.keys = {}; });
 
     window.addEventListener('wheel', (e) => {
-      if (!this.isLocked || this.survival.isDead || this.isInputBlocked()) return;
+      if (this.survival.isDead || this.isInputBlocked()) return;
       const dir = Math.sign(e.deltaY);
-      // Com o scanner aberto, a rodinha controla o zoom (para cima aproxima) em vez da hotbar.
-      if (this.isScannerOpen) {
-        if (dir !== 0) this._setScope(true, dir < 0);
-        return;
-      }
+      // Only an active zoom claims the wheel; an unzoomed scanner must not block hotbar selection.
+      if (this._handleScopeWheel(e)) return;
+      if (!this.isLocked) return;
       this.hud.selectSlot(this.hud.selectedSlot + dir, this.survival.slots);
       this._syncHandWithSlot();
-    });
+    }, { passive: false });
 
     window.addEventListener('mousedown', (e) => {
       if (this._awaitingPointerLock && !this.isTouchMode) {
@@ -633,16 +747,20 @@ export class InputController {
       }
 
       if (e.button === 0) {
+        if (this._handleScopeMouseButton(0)) return;
         this.isBreakButtonHeld = true;
         this._startBreaking();
         return;
       }
 
-      if (e.button === 2) this._useSelectedItem();
+      if (e.button === 2) {
+        if (!this._handleScopeMouseButton(2)) this._useSelectedItem();
+      }
     });
 
     window.addEventListener('mouseup', (e) => {
       if (e.button === 0) {
+        this._releaseScopeScan();
         this.isBreakButtonHeld = false;
         this._cancelBreaking();
       }
@@ -650,6 +768,7 @@ export class InputController {
 
     window.addEventListener('blur', () => {
       this.isBreakButtonHeld = false;
+      this._releaseScopeScan();
       this._cancelBreaking();
       this.keys = {};
     });
@@ -710,6 +829,7 @@ export class InputController {
 
   _setScope(open, zoomed) {
     const nextZoom = open && zoomed;
+    if (!open) this.isScanButtonHeld = false;
     const changed = open !== this.isScannerOpen || nextZoom !== this.isZoomed;
     this.isScannerOpen = open;
     this.isZoomed = nextZoom;
@@ -738,8 +858,8 @@ export class InputController {
     if (e.ctrlKey || e.metaKey || e.altKey) return true;
     if (e.shiftKey) return true;
 
-    // Escape remains available to release pointer lock. F3 remains the game's debug overlay.
-    if (e.code.startsWith('F') && e.code !== 'F3') return true;
+    // Escape remains available to release pointer lock. F3/F5 belong to the game.
+    if (e.code.startsWith('F') && e.code !== 'F3' && e.code !== 'F5') return true;
     if (['Tab', 'Space', 'Backspace'].includes(e.code)) return true;
     return false;
   }

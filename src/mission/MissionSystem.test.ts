@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { describe, it, expect } from 'vitest';
 import { MissionSystem, mavProgress, oxygenPointsToKg } from './MissionSystem.ts';
-import { DOSE_CONFIG, ENERGY_CONFIG, MAV_CONFIG, SCIENCE_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.ts';
+import { DOSE_CONFIG, ENERGY_CONFIG, MAV_CONFIG, SCIENCE_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, SPACE_WEATHER_CONFIG, STORM_CONFIG, SURVIVAL_CONFIG } from '../config/constants.ts';
 import { TRANSIT_DOSE_MSV } from './doseBudget.ts';
 
-// CME com impacto direto previsto em Marte 3 dias depois (3 horas de jogo de aviso)
+// CME com impacto direto previsto em Marte 3 dias depois (aviso de poucos segundos no jogo)
 const cmes = [{
   id: 'cme', startTime: '2026-11-05T20:00Z', speedKmS: 900,
   headedToMars: true, marsArrivalTime: '2026-11-08T20:00Z', isGlancingBlow: false,
@@ -52,10 +52,12 @@ describe('MissionSystem energy', () => {
   });
 
   it('a dust storm cuts the solar charge and nobody gets hurt by it (issue #103)', () => {
-    const clear = createMission(10);
+    // Sem CME a caminho: so a poeira esta em jogo (uma tempestade solar machucaria)
+    const quiet = (hours) => new MissionSystem({ cmes: [], startHours: hours });
+    const clear = quiet(10);
     clear.dustWeather.panelDust = 0;
     clear.update(11);
-    const dusty = createMission(10);
+    const dusty = quiet(10);
     dusty.dustWeather.panelDust = 0;
     dusty.dustWeather.force('storm');
     const damage = dusty.update(11);
@@ -255,7 +257,7 @@ describe('MissionSystem storms', () => {
     const warning = mission.drainEvents().find((e) => e.type === 'storm-warning');
     expect(warning.storm).toBe(storm);
     // O aviso dura a viagem que a NASA previu para a CME
-    expect(warning.hoursUntil).toBeCloseTo(3, 1);
+    expect(warning.hoursUntil).toBeCloseTo(storm.leadHours, 1);
 
     mission.update(storm.arrival + 0.01, { insideHabitat: true });
     expect(mission.drainEvents().map((e) => e.type)).toContain('storm-start');
@@ -411,14 +413,93 @@ describe('MissionSystem demo storm control', () => {
   });
 });
 
-describe('MissionSystem with live SEPs (issue #100)', () => {
-  it('builds the storm queue with the real SEPs it was given, only when storms start', () => {
-    const seps = [{ id: 'sep', eventTime: '2025-11-15T03:42Z', seenBy: ['STEREO A'] }];
-    const mission = new MissionSystem({ cmes, seps, startHours: 12, stormsStarted: false });
-    expect(mission.schedule).toEqual([]);
+describe('MissionSystem tutorial storm and live DONKI storms', () => {
+  const NOW = Date.parse('2026-11-07T00:00Z'); // a CME de `cmes` esta a caminho de Marte
+  const live = (extra = {}) => ({ live: true, fetchedAt: '2026-11-07T00:00Z', cmes, seps: [], ...extra });
+  const pastTutorialStorm = () => {
+    const mission = new MissionSystem({ cmes, startHours: 12, stormsStarted: false });
     mission.startStorms(12);
-    expect(mission.schedule.some((s) => s.sep === seps[0])).toBe(true);
-    expect(createMission().schedule.some((s) => s.sep)).toBe(false);
+    mission.update(mission.schedule[0].end + 0.01, { insideHabitat: true });
+    mission.drainEvents();
+    return mission;
+  };
+
+  it('the tutorial has exactly one storm, and it pays the rocket requirement', () => {
+    const mission = new MissionSystem({ cmes, startHours: 12, stormsStarted: false });
+    mission.startStorms(12);
+    expect(mission.schedule).toHaveLength(1);
+    expect(mission.schedule[0].scripted).toBe(true);
+    expect(mission.stormCredit).toBe(0);
+
+    mission.update(mission.schedule[0].end + 0.01, { insideHabitat: true });
+    expect(mission.tutorialStormDone).toBe(true);
+    expect(mission.stormCredit).toBe(MAV_CONFIG.STORMS_TO_SURVIVE);
+    mission.drainEvents();
+
+    // Sem tempestade real, o resto da partida fica calmo
+    mission.update(200, { insideHabitat: true });
+    expect(mission.drainEvents().some((e) => e.type === 'storm-warning')).toBe(false);
+  });
+
+  it('fainting in the tutorial storm still opens the way: nobody gets stuck on a calm Sun', () => {
+    const mission = new MissionSystem({ cmes, startHours: 12, stormsStarted: false });
+    mission.startStorms(12);
+    mission.update(mission.schedule[0].arrival + 0.01);
+    mission.markDeath();
+    mission.update(mission.schedule[0].end + 0.01);
+    expect(mission.stormsSurvived).toBe(0);
+    expect(mission.stormCredit).toBe(MAV_CONFIG.STORMS_TO_SURVIVE);
+  });
+
+  it('ignores live data before the story starts the storms', () => {
+    const mission = new MissionSystem({ cmes, startHours: 12, stormsStarted: false });
+    expect(mission.queueLiveStorms(live(), NOW)).toEqual([]);
+    expect(mission.schedule).toEqual([]);
+  });
+
+  it('queues a CME that is happening now, once, after the tutorial storm', () => {
+    const mission = pastTutorialStorm();
+    const [storm] = mission.queueLiveStorms(live(), NOW);
+    expect(storm.live).toBe(true);
+    expect(storm.cme.id).toBe('cme');
+    expect(storm.source).toEqual({ live: true, fetchedAt: '2026-11-07T00:00Z' });
+    expect(storm.warningStart).toBeGreaterThanOrEqual(mission.schedule[0].end + STORM_CONFIG.GAP_BETWEEN_STORMS_HOURS);
+    // 44 h reais ate a chegada prevista: o aviso e o que falta da viagem, encolhido
+    expect(storm.leadHours).toBeCloseTo(Math.max(STORM_CONFIG.MIN_WARNING_HOURS, 44 / STORM_CONFIG.WARNING_REAL_HOURS_PER_GAME_HOUR));
+    // O polling seguinte traz a mesma CME: ela nao entra de novo
+    expect(mission.queueLiveStorms(live(), NOW + 10 * 60 * 1000)).toEqual([]);
+
+    mission.update(storm.warningStart + 0.01, { insideHabitat: true });
+    expect(mission.drainEvents().map((e) => e.type)).toContain('storm-warning');
+    mission.update(storm.end + 0.01, { insideHabitat: true });
+    expect(mission.drainEvents().map((e) => e.type)).toContain('storm-survived');
+    expect(mission.stormsSurvived).toBe(2);
+  });
+
+  it('a CME that already passed Mars, or did not leave the Sun yet, is not a storm now', () => {
+    const mission = pastTutorialStorm();
+    expect(mission.queueLiveStorms(live(), Date.parse('2026-11-20T00:00Z'))).toEqual([]);
+    expect(mission.queueLiveStorms(live(), Date.parse('2026-11-01T00:00Z'))).toEqual([]);
+    expect(mission.queueLiveStorms(live({ live: false }), NOW)).toEqual([]);
+  });
+
+  it('a fresh live SEP becomes a short-warning particle storm', () => {
+    const mission = pastTutorialStorm();
+    const seps = [{ id: 'sep', eventTime: '2026-11-06T20:00Z', seenBy: ['STEREO A'] }];
+    const [storm] = mission.queueLiveStorms(live({ cmes: [], seps }), NOW);
+    expect(storm.kind).toBe('sep');
+    expect(storm.sep).toBe(seps[0]);
+    expect(storm.leadHours).toBe(SPACE_WEATHER_CONFIG.SEP_WARNING_HOURS);
+    const old = [{ id: 'old', eventTime: '2026-11-01T00:00Z', seenBy: [] }];
+    expect(mission.queueLiveStorms(live({ cmes: [], seps: old }), NOW)).toEqual([]);
+  });
+
+  it('the demo button still makes a storm after the tutorial one is over', () => {
+    const mission = pastTutorialStorm();
+    const now = mission.lastHours;
+    expect(mission.triggerStormSoon(0.2)).toBe(true);
+    mission.update(now + 0.25);
+    expect(mission.storm.phase).toBe('active');
   });
 });
 

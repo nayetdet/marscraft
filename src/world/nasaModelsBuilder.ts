@@ -2,7 +2,7 @@
 import { GREENHOUSE_MONITOR_POS } from './greenhouseLayout.ts';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { MAV_CONFIG, WORLD_CONFIG } from '../config/constants.ts';
+import { MAV_CONFIG, ROVER_CONFIG, WORLD_CONFIG } from '../config/constants.ts';
 import { makeCanvasTexture } from '../graphics/textureGenerator.ts';
 import { EAST_WING, HABITAT_LAYOUT, SOLAR_FIELD } from './habitatLayout.ts';
 import { signTexture } from '../base/baseCanvas.ts';
@@ -203,6 +203,8 @@ export function buildNasaCustomModels(scene) {
 
   // 8. Doca e Usina Externa de Recepção de Gelo e Conversão em Água
   const iceDepot = createIceProcessingDepotModel(mats, 5.5, groundTopY, 9.5);
+  // O rover fica estacionado sobre a doca; ela continua sólida para o astronauta.
+  iceDepot.userData.roverNoCollide = true;
   iceDepot.userData.scanId = 'ice-depot';
   group.add(iceDepot);
   solidObjects.push(iceDepot);
@@ -268,6 +270,7 @@ export function buildNasaCustomModels(scene) {
       // Usado pelo scanner da luneta (scanTargeting); sem scanId, o alvo vem do módulo da base.
       if (plants.includes(obj)) collider.scanId = 'greenhouse';
       else if (obj.userData.scanId) collider.scanId = obj.userData.scanId;
+      if (obj.userData.roverNoCollide) collider.roverNoCollide = true;
       colliders.push(collider);
       if (plants.includes(obj)) obj.userData.collider = collider;
     }
@@ -544,6 +547,7 @@ function createGreenhouseMonitorModel(mats, x, y, z) {
 function createMarsRoverModel(mats, x, y, z) {
   const r = new THREE.Group();
   r.position.set(x, y, z);
+  r.rotation.y = ROVER_CONFIG.SPAWN_YAW;
   const wheels = [];
 
   for (const wx of [-1.2, 1.2]) {

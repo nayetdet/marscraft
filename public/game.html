@@ -5,16 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MarsCraft</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-  <style>
-    html, body { margin: 0; width: 100%; height: 100%; background: #140d09; }
-    #loading-overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; overflow: hidden; background: #6c4a33 url('/mars-dirt.svg') repeat; background-size: 64px 64px; color: #fff; font-family: 'Monocraft', monospace; font-weight: 700; text-align: center; image-rendering: pixelated; transition: opacity .35s ease; }
-    #loading-overlay.is-leaving { opacity: 0; pointer-events: none; }
-    .loading-content { box-sizing: border-box; width: min(340px, 76vw); min-height: 54px; }
-    .loading-caption { height: 18px; margin: 0 0 10px; font-size: 15px; line-height: 18px; white-space: nowrap; text-shadow: 2px 2px 0 #2b1b12; }
-    .loading-track { position: relative; box-sizing: border-box; width: 100%; height: 23px; padding: 2px; overflow: hidden; background: #222; border: 2px solid #000; box-shadow: inset 1px 1px 0 #555; }
-    .loading-progress { position: absolute; top: 2px; bottom: 2px; left: 2px; width: 28%; background: #6ebf3c; animation: marscraft-loading 1.5s steps(8,end) infinite alternate; }
-    @keyframes marscraft-loading { from { left: 2px; } to { left: 70%; } }
-  </style>
 </head>
 <body>
   <div id="loading-overlay" role="status" aria-live="polite">
@@ -85,8 +75,10 @@
         <strong id="story-objective-text" aria-live="polite"></strong>
         <span id="story-task-key" class="story-key story-task-key"></span>
       </div>
-      <!-- Ato 1: os 3 passos do tutorial. Atos 2 e 3: a volta de trabalho, que se repete
-           (gelo, foguete, base) -->
+      <!-- Tutorial guiado: onde ir e o que apertar, e em que passo a crianca esta -->
+      <p id="story-task-hint" class="story-task-hint"></p>
+      <b id="story-step-count" class="story-step-count"></b>
+      <!-- Atos 2 e 3: a volta de trabalho, que se repete (gelo, foguete, base) -->
       <div id="story-steps" class="story-steps" aria-hidden="true">
         <span class="story-step"></span><i></i><span class="story-step"></span><i></i><span class="story-step"></span>
       </div>
@@ -146,6 +138,8 @@
     </div>
     <!-- Ficha do alvo escaneado e aviso de descoberta (nao pausam o jogo) -->
     <div class="scan-side">
+      <!-- Card do fato das animacoes de "primeira vez" e da recompensa da estufa (FirstTimeHud) -->
+      <div id="first-time-card" class="first-time-card hidden" role="status" aria-live="polite"></div>
       <div id="scan-discovery" class="scan-discovery hidden" role="status"></div>
       <aside id="scan-card" class="scan-card hidden" aria-live="polite"></aside>
     </div>
@@ -282,7 +276,7 @@
       <div class="scan-readout">
         <div id="scan-name" class="scan-name"></div>
         <div class="scan-bar"><div id="scan-bar-fill" class="scan-bar-fill"></div></div>
-        <div id="scan-status" class="scan-status">Aim at something to scan it · scroll to zoom</div>
+        <div id="scan-status" class="scan-status">Aim at an object · hold left click to scan</div>
       </div>
     </div>
 
@@ -335,6 +329,18 @@
     </div>
   </div>
 
+  <!-- Small pixel-art glyphs shared by the start and pause menus. -->
+  <svg class="menu-icon-library" aria-hidden="true" focusable="false">
+    <symbol id="menu-icon-play" viewBox="0 0 24 24"><path fill="currentColor" d="M4 2h4v2h4v2h4v2h4v2h2v4h-2v2h-4v2h-4v2H8v2H4z"/><path fill="#fff3a6" d="M8 6h4v2h4v2h4v4h-4v2h-4v2H8z"/></symbol>
+    <symbol id="menu-icon-controls" viewBox="0 0 24 24"><path fill="currentColor" d="M2 5h8v2h4V5h8v5h-2v4h2v5h-8v-2h-4v2H2v-5h2v-4H2z"/><path fill="#eaf3ff" d="M6 9h2v2H6zm0 4h2v2H6zm10-4h2v2h-2zm0 4h2v2h-2zM10 9h4v6h-4z"/></symbol>
+    <symbol id="menu-icon-options" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5h3v2H3zm5-2h3v6H8zM3 17h3v2H3zm5-2h3v6H8zM13 5h3v2h-3zm5-2h3v6h-3zm-5 14h3v2h-3zm5-2h3v6h-3z"/><path fill="#fff3a6" d="M4 4h1v1H4zm0 12h1v1H4zm11-12h1v1h-1zm0 12h1v1h-1z"/></symbol>
+    <symbol id="menu-icon-demo" viewBox="0 0 24 24"><path fill="currentColor" d="M2 7h20v13H2zm3-3h14v2H5z"/><path fill="#bff3ff" d="M5 10h3v3H5zm5 0h3v3h-3zm5 0h4v2h-4zm-10 5h4v2H5zm6 0h8v2h-8z"/></symbol>
+    <symbol id="menu-icon-sources" viewBox="0 0 24 24"><path fill="currentColor" d="M3 3h18v18H3z"/><path fill="#ffe28a" d="M5 5h14v3H5z"/><path fill="#e8f6ff" d="M6 10h2v2H6zm4 0h8v2h-8zm-4 4h2v2H6zm4 0h8v2h-8zm-4 4h2v1H6zm4 0h8v1h-8z"/></symbol>
+    <symbol id="menu-icon-reset" viewBox="0 0 24 24"><path fill="currentColor" d="M5 3h14v3h2v14H3V6h2z"/><path fill="#ffd88c" d="M7 5h10v2H7zm0 5h10v2H7zm0 4h4v4H7zm6 0h4v1h-4zm0 3h4v1h-4z"/></symbol>
+    <symbol id="menu-icon-quit" viewBox="0 0 24 24"><path fill="currentColor" d="M4 2h12v3h3v3h3v8h-3v3h-3v3H4V2z"/><path fill="#ffe6a6" d="M7 5h6v2h3v2h3v6h-3v2h-3v2H7z"/><path fill="#d77b54" d="M2 11h9V8l5 4-5 4v-3H2z"/></symbol>
+    <symbol id="menu-icon-back" viewBox="0 0 24 24"><path fill="currentColor" d="M10 3h4v4h5v2h3v6h-3v2h-5v4h-4v-4H5v-2H2V9h3V7h5z"/><path fill="#eaf3ff" d="M11 6h2v4h5v2h3v2h-3v2h-5v4h-2v-6H6v-2h5z"/></symbol>
+  </svg>
+
   <!-- Minecraft-inspired start screen -->
   <div id="overlay" class="mc-overlay">
     <div class="menu-scene" aria-hidden="true">
@@ -365,14 +371,15 @@
       </div>
       <div class="mc-menu-card">
         <div id="menu-main">
-          <button id="start-btn" class="mc-btn primary">Play</button>
-          <button id="controls-btn" class="mc-btn secondary">Controls</button>
-          <button id="options-btn" class="mc-btn secondary">Options</button>
+          <button id="start-btn" class="mc-btn primary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-play"></use></svg><span class="menu-button-label">Play</span></button>
+          <button id="controls-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-controls"></use></svg><span class="menu-button-label">Controls</span></button>
+          <button id="options-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-options"></use></svg><span class="menu-button-label">Options</span></button>
           <div class="menu-row">
-            <button id="sources-btn" class="mc-btn secondary">Science &amp; Sources</button>
-            <button id="demo-btn" class="mc-btn secondary">Demo Tools</button>
+            <button id="demo-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-demo"></use></svg><span class="menu-button-label">Demo Tools</span></button>
+            <button id="sources-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-sources"></use></svg><span class="menu-button-label">Science &amp; Sources</span></button>
           </div>
-          <button id="reset-btn" class="mc-btn secondary">Quit</button>
+          <button id="reset-world-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-reset"></use></svg><span class="menu-button-label">Reset World</span></button>
+          <button id="quit-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-quit"></use></svg><span class="menu-button-label">Quit</span></button>
         </div>
         <section id="options-screen" class="controls-screen info-screen hidden" aria-labelledby="options-title">
           <h2 id="options-title">Options</h2>
@@ -386,7 +393,7 @@
               <button id="shaders-btn" class="mc-btn secondary" aria-pressed="false">Shaders: Off</button>
             </div>
           </div>
-          <button id="options-back-btn" class="mc-btn secondary">Back</button>
+          <button id="options-back-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-back"></use></svg><span class="menu-button-label">Back</span></button>
         </section>
         <section id="sources-screen" class="controls-screen info-screen hidden" aria-labelledby="sources-title">
           <h2 id="sources-title">Where the data comes from</h2>
@@ -409,8 +416,8 @@
             <div class="info-row"><b>Sleep</b><span>Astronauts on the Space Shuttle and the Space Station slept about 6 hours a night, with 8.5 hours planned (study of 85 astronauts, Barger et al., 2014). How much food and water you use while you sleep is a game rule.</span></div>
             <div class="info-row"><b>Night power</b><span>The fission reactor in the Power &amp; Heat room is based on Kilopower, a small reactor NASA tested in 2018 (1 to 10 kW, day and night). Its power and the radiation it adds are game rules: real reactors stay far from the crew or behind a heavy shield.</span></div>
           </div>
-          <p class="info-note">Game speed, battery size and storm length are scaled so a mission fits in a few minutes. The start menu space art was generated with AI assistance. Other art, textures and sounds are drawn by code, with no NASA logo. Parts of the code were written with AI assistance.</p>
-          <button id="sources-back-btn" class="mc-btn secondary">Back</button>
+          <p class="info-note">Game speed, battery size and storm length are scaled so a mission fits in a few minutes. The start menu space art was generated with AI assistance. Other art and textures are drawn by code. The game uses audio files and no NASA logo. Parts of the code were written with AI assistance.</p>
+          <button id="sources-back-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-back"></use></svg><span class="menu-button-label">Back</span></button>
         </section>
         <section id="demo-screen" class="controls-screen info-screen hidden" aria-labelledby="demo-title">
           <h2 id="demo-title">Demo Tools</h2>
@@ -421,7 +428,7 @@
             <button class="mc-btn secondary" data-demo="battery">Drain the battery to 10%</button>
             <button class="mc-btn secondary" data-demo="night">Jump to night</button>
             <button class="mc-btn secondary" data-demo="noon">Jump to noon</button>
-            <button class="mc-btn secondary" data-demo="skip-training">Skip cadet training</button>
+            <button class="mc-btn secondary" data-demo="skip-training">Skip the tutorial</button>
             <button class="mc-btn secondary" data-demo="event:meteor">Meteor impact</button>
             <button class="mc-btn secondary" data-demo="event:marsquake">Marsquake</button>
             <button class="mc-btn secondary" data-demo="event:eclipse">Phobos eclipse</button>
@@ -430,7 +437,7 @@
             <button class="mc-btn secondary" data-demo="event:aurora">Green aurora</button>
           </div>
           <p id="demo-feedback" class="info-note demo-feedback" role="status"></p>
-          <button id="demo-back-btn" class="mc-btn secondary">Back</button>
+          <button id="demo-back-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-back"></use></svg><span class="menu-button-label">Back</span></button>
         </section>
         <section id="controls-screen" class="controls-screen hidden" aria-labelledby="controls-title">
           <h2 id="controls-title">Controls</h2>
@@ -440,6 +447,8 @@
             <div class="control-row"><kbd>W</kbd><span>Tap twice to sprint</span></div>
             <div class="control-row"><kbd>Shift</kbd><span>Hold to sprint</span></div>
             <div class="control-row"><kbd>Mouse</kbd><span>Look around</span></div>
+            <div class="control-row"><kbd>F3</kbd><span>Toggle diagnostics</span></div>
+            <div class="control-row"><kbd>F5</kbd><span>Toggle third-person view</span></div>
             <div class="control-row"><kbd>Space</kbd><span>Jump</span></div>
             <div class="control-row"><kbd>Hold LMB</kbd><span>Break blocks</span></div>
             <div class="control-row"><kbd>RMB</kbd><span>Place or use item</span></div>
@@ -456,7 +465,7 @@
             <div class="control-row"><kbd>Space</kbd><span>Drill or offload ice</span></div>
             <div class="control-row"><kbd>F</kbd><span>Exit rover terminal</span></div>
           </div>
-          <button id="controls-back-btn" class="mc-btn secondary">Back</button>
+          <button id="controls-back-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-back"></use></svg><span class="menu-button-label">Back</span></button>
         </section>
       </div>
     </div>
@@ -588,6 +597,7 @@
                 <div id="mav-pill-data" class="mav-check-tile"><span data-mav-icon="radio"></span><b>DATA</b><strong id="mav-data">NO</strong></div>
               </div>
               <div class="mc-action-stack">
+                <p>Survive solar storms by sheltering in the base or using the shield. Scan and analyze samples, then send science from the radio terminal. Each rock sample tube needs more ice for the heavier rocket.</p>
                 <button id="mav-factory" type="button" class="mc-btn mc-act-card mc-toggle-row is-active" aria-pressed="true">
                   <span class="mc-act-icon" data-mav-icon="bolt" aria-hidden="true"></span>
                   <span class="mc-act-main"><strong>FACTORY</strong></span>
@@ -653,6 +663,18 @@
     <small id="story-card-source"></small>
     <button id="story-card-ok" class="mc-btn story-card-ok" type="button">OK <span class="story-key">[Enter]</span></button>
   </aside>
+
+  <!-- Modal de trade-off (TradeoffHud): a cena animada do custo de uma tarefa ou evento, uma vez por partida -->
+  <div id="tradeoff-modal" class="tradeoff-modal hidden" role="dialog" aria-modal="true" aria-label="Trade-off">
+    <div class="to-window">
+      <header class="to-head"><i aria-hidden="true"></i><small>EVERY CHOICE HAS A COST</small></header>
+      <div class="to-body" aria-live="polite"></div>
+      <footer class="to-actions"><button class="mc-btn primary to-ok" type="button">OK <span class="to-key">[Enter]</span></button></footer>
+    </div>
+  </div>
+
+  <!-- Abertura das animacoes de "primeira vez" (FirstTimeHud): a palavra do momento no meio da tela -->
+  <div id="first-time-burst" class="first-time-burst hidden" aria-hidden="true"></div>
 
   <!-- Selo de certificado do treino de cadete (issue #88) -->
   <div id="cert-badge" class="cert-badge hidden" role="status" aria-live="polite">

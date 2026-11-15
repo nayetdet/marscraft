@@ -13,7 +13,7 @@ import { Battery, solarChargePerHour } from './energy.ts';
 import { doseRateMsvPerHour, missionDoseMsvPerHour, radiationDamage } from './radiation.ts';
 import { DOSE_LIMIT_MSV, createDoseLedger, doseBreakdown, doseSourceFor } from './doseBudget.ts';
 import { OxygenPlant } from './oxygenPlant.ts';
-import { buildStormSchedule, rescheduleStorms, stormStateAt } from './solarStorms.ts';
+import { buildStormSchedule, liveStormEvents, makeStorm, marsBoundCmes, nextStormSlot, rescheduleStorms, stormStateAt } from './solarStorms.ts';
 import { DustWeather } from './dustWeather.ts';
 
 const PROPELLANT_PER_ICE = 100 / MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK;
@@ -35,18 +35,30 @@ export function mavProgress({ propellant, stormsSurvived, dataSent }) {
   };
 }
 
+// A tempestade do tutorial: uma so, com a primeira CME real com destino a Marte dos dados.
+// Vazia se os dados nao tem nenhuma (noStormData).
+function tutorialStorm(cmes, startHours) {
+  return buildStormSchedule(cmes, startHours, 1).map((storm) => ({ ...storm, scripted: true }));
+}
+
 // Energia, tempestades solares, radiacao e o MAV. Sem DOM nem Three.js, para testar com Vitest.
 // O tempo vem do relogio do ceu em horas de jogo totais: (sol - 1) * 24 + hora do dia.
 export class MissionSystem {
   // `stormsStarted: false` deixa o clima espacial calmo ate `startStorms()` (a historia so
   // solta as tempestades no ato 2, para nenhuma CME cair no meio do tutorial).
+  // A fila comeca com UMA tempestade, a do tutorial (`scripted`). Depois dela so entram as que
+  // estao acontecendo agora na vida real (`queueLiveStorms`, com o polling do DONKI).
   // `seps`: SEPs reais do fetch ao vivo do DONKI (issue #100); vazio no dado embutido.
   constructor({ cmes, seps = [], startHours, stormsStarted = true, rng = Math.random }) {
     this.battery = new Battery();
     this.cmes = cmes;
     this.seps = seps;
     this.stormsStarted = stormsStarted;
-    this.schedule = stormsStarted ? buildStormSchedule(cmes, startHours, undefined, seps) : [];
+    this.schedule = stormsStarted ? tutorialStorm(cmes, startHours) : [];
+    // A tempestade do tutorial ja acabou (sobrevivendo ou nao): a exigencia do foguete esta paga
+    this.tutorialStormDone = false;
+    // Eventos reais do DONKI que ja viraram tempestade nesta partida (cada um entra uma vez so)
+    this._liveStormIds = new Set();
     this.lastHours = startHours;
 
     this.shieldOn = false;
@@ -113,14 +125,17 @@ export class MissionSystem {
   }
 
   // A fila de tempestades comecou, mas os dados nao tem nenhuma CME com destino a Marte
+  // (nem a tempestade do tutorial existe)
   get noStormData() {
-    return this.stormsStarted && this.schedule.length === 0;
+    return this.stormsStarted && !this.schedule.some((storm) => storm.scripted);
   }
 
-  // Tempestades que contam para o foguete e para a janela de lancamento. Sem nenhuma CME para
-  // Marte nos dados nao ha o que sobreviver: a exigencia cai, em vez de travar a partida.
+  // Tempestades que contam para o foguete e para a janela de lancamento. So a do tutorial conta:
+  // quando ela acaba, ou se os dados nao tem nenhuma CME para Marte, a exigencia esta paga. As
+  // tempestades reais que vem depois sao perigo de verdade, mas nunca travam a decolagem.
   get stormCredit() {
-    return this.noStormData ? MAV_CONFIG.STORMS_TO_SURVIVE : this.stormsSurvived;
+    if (this.noStormData || this.tutorialStormDone) return Math.max(this.stormsSurvived, MAV_CONFIG.STORMS_TO_SURVIVE);
+    return this.stormsSurvived;
   }
 
   get progress() {
@@ -244,9 +259,47 @@ export class MissionSystem {
     if (this.stormsStarted) return;
     this.stormsStarted = true;
     this.dustWeather.start(hours);
-    this.schedule = buildStormSchedule(this.cmes, hours, undefined, this.seps);
+    this.schedule = tutorialStorm(this.cmes, hours);
     this.storm = stormStateAt(this.schedule, hours);
     this._phaseKey = this._keyFor(this.storm);
+  }
+
+  // Polling do DONKI: poe na fila as tempestades que estao acontecendo agora na vida real.
+  // So vale depois que a historia soltou as tempestades; cada CME ou SEP real entra uma vez so,
+  // depois da tempestade do tutorial e respeitando a calmaria entre tempestades.
+  // `spaceWeather`: resposta ao vivo de /api/space-weather. Devolve as tempestades novas.
+  queueLiveStorms(spaceWeather, nowMs = Date.now()) {
+    if (!this.stormsStarted || !spaceWeather?.live) return [];
+    const added = [];
+    for (const event of liveStormEvents(spaceWeather, nowMs)) {
+      if (this._liveStormIds.has(event.id)) continue;
+      this._liveStormIds.add(event.id);
+      const storm = makeStorm({
+        index: this.schedule.length,
+        cme: event.cme,
+        sep: event.sep,
+        leadHours: event.leadHours,
+        warningStart: nextStormSlot(this.schedule, this.lastHours),
+      });
+      // `source`: de onde veio o dado desta tempestade (o fetch ao vivo), para o texto da fonte
+      Object.assign(storm, { live: true, source: { live: true, fetchedAt: spaceWeather.fetchedAt } });
+      this.schedule.push(storm);
+      added.push(storm);
+    }
+    if (added.length) this._updateStormPhase();
+    return added;
+  }
+
+  // Controles de demo e admin: a proxima tempestade da fila. Se a fila acabou (depois do
+  // tutorial, sem tempestade real), cria uma com uma CME real dos dados, comecando agora.
+  _upcomingStorm(now) {
+    const next = this.schedule.find((storm) => storm.end > now);
+    if (next) return next;
+    const candidates = marsBoundCmes(this.cmes);
+    if (!candidates.length) return null;
+    const storm = makeStorm({ index: this.schedule.length, cme: candidates[this.schedule.length % candidates.length], warningStart: now });
+    this.schedule.push(storm);
+    return storm;
   }
 
   _runFactory(h) {
@@ -290,6 +343,7 @@ export class MissionSystem {
       }
       this._diedDuringStorm = false;
       this._playedDuringStorm = false;
+      if (previous.storm.scripted) this.tutorialStormDone = true;
     }
 
     if (this.storm.phase === 'warning') this._emit('storm-warning', this.storm.storm, this.storm.hoursUntil);
@@ -304,7 +358,7 @@ export class MissionSystem {
     if (this.storm.phase === 'active') return false;
     const now = this.lastHours;
     this.startStorms(now); // a historia so solta as tempestades no ato 2; o controle de demo nao espera
-    const next = this.schedule.find((storm) => storm.end > now);
+    const next = this._upcomingStorm(now);
     if (!next) return false;
     const arrival = now + leadHours;
     if (next.arrival <= arrival) return true; // ja chega antes disso
@@ -350,6 +404,7 @@ export class MissionSystem {
 
   // Painel de admin: forca o aviso, a tempestade ou o fim dela agora
   forceStorm(target) {
+    if (target !== 'end') this._upcomingStorm(this.lastHours);
     this.schedule = rescheduleStorms(this.schedule, this.lastHours, target);
     this._updateStormPhase();
     return this.storm.phase;

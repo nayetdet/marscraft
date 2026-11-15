@@ -100,10 +100,13 @@ const PARTICLE_VERTEX = /* glsl */ `
   uniform vec3 uBox;
   uniform vec3 uOffset;
   uniform vec3 uFastOffset;
+  uniform vec3 uWind;
   attribute float aSeed;
   attribute float aLayer;
   varying float vAlpha;
   varying float vWarmth;
+  varying vec2 vWindScreen;
+  varying float vSeed;
 
   void main() {
     // aLayer >= 0.65: graos rapidos de vento perto do chao; < 0.65: poeira fina em suspensao
@@ -120,6 +123,8 @@ const PARTICLE_VERTEX = /* glsl */ `
     p = mod(p - cameraPosition + uBox * 0.5, uBox) - uBox * 0.5 + cameraPosition;
 
     vec4 mv = viewMatrix * vec4(p, 1.0);
+    vWindScreen = (mat3(viewMatrix) * uWind).xy;
+    vSeed = aSeed;
     float sizeFactor = mix(0.55 + 1.35 * aSeed, 0.75 + 1.55 * aSeed * (1.0 + 0.35 * uGust), isFast);
     gl_PointSize = clamp(sizeFactor * uScale / max(-mv.z, 0.5), ${V.PARTICLE_MIN_SIZE.toFixed(1)}, ${V.PARTICLE_MAX_SIZE.toFixed(1)});
 
@@ -140,9 +145,14 @@ const PARTICLE_FRAGMENT = /* glsl */ `
   uniform float uOpacity;
   varying float vAlpha;
   varying float vWarmth;
+  varying vec2 vWindScreen;
+  varying float vSeed;
   void main() {
     vec2 centered = gl_PointCoord - 0.5;
-    float dist = length(centered);
+    vec2 windDir = normalize(vWindScreen + vec2(0.0001));
+    float along = dot(centered, windDir);
+    float across = dot(centered, vec2(-windDir.y, windDir.x));
+    float dist = length(vec2(along * 0.48, across * mix(1.2, 2.2, vSeed)));
     if (dist > 0.5) discard;
     float soft = smoothstep(0.5, 0.1, dist);
     vec3 col = mix(uColor, uHighlightColor, vWarmth);
@@ -173,6 +183,7 @@ interface ParticleUniforms {
   uBox: THREE.IUniform<THREE.Vector3>;
   uOffset: THREE.IUniform<THREE.Vector3>;
   uFastOffset: THREE.IUniform<THREE.Vector3>;
+  uWind: THREE.IUniform<THREE.Vector3>;
   uColor: THREE.IUniform<THREE.Color>;
   uHighlightColor: THREE.IUniform<THREE.Color>;
   uOpacity: THREE.IUniform<number>;
@@ -283,6 +294,7 @@ export class DustStormEffect {
       uBox: { value: new THREE.Vector3(box.x, box.y, box.z) },
       uOffset: { value: new THREE.Vector3() },
       uFastOffset: { value: new THREE.Vector3() },
+      uWind: { value: new THREE.Vector3(1, 0, 0) },
       uColor: { value: new THREE.Color() },
       uHighlightColor: { value: new THREE.Color() },
       uOpacity: { value: 0 },
@@ -413,6 +425,7 @@ export class DustStormEffect {
     this.particleUniforms.uTime.value = this.time;
     this.particleUniforms.uOpacity.value = opacity;
     this.particleUniforms.uGust.value = wind ? wind.gust : this.haze;
+    this.particleUniforms.uWind.value.copy(_wind).normalize();
     // Um pouco mais clara que a neblina, para aparecer contra ela e brilhar na luz
     this.particleUniforms.uColor.value.copy(_dust).lerp(_skyFog, 0.45).multiplyScalar(1.12);
     this.particleUniforms.uHighlightColor.value.copy(_skyFog).lerp(GUST_DUST_TINT, 0.35).multiplyScalar(1.22);

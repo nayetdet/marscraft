@@ -332,12 +332,15 @@ export class StationPanel {
 
   _harvestPlot(plotIndex) {
     const { stations, survival } = this.engine;
+    const type = stations.plots[plotIndex]?.crop?.type;
+    const before = stations.harvestCount;
     const message = stations.harvest(survival, (id, i) => {
       const { dx, dz } = PLOT_PLANT_CELLS[plotIndex][i];
       const position = { x: GREENHOUSE_CENTER.x + dx + 0.5, y: WORLD_CONFIG.GROUND_LEVEL + 2, z: GREENHOUSE_CENTER.z + dz + 0.5 };
       this.engine.world.spawnCropDrop(position, id);
     }, plotIndex);
     this.engine.updateCropVisuals?.();
+    if (stations.harvestCount > before) this.engine.onPlayerHarvest?.(type);
     return message;
   }
 
@@ -583,23 +586,8 @@ export class StationPanel {
   }
 
   _playGymSound(freq = 320, duration = 0.07, secondFreq = 0) {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-    this.engine._audioContext ??= new AudioContextClass();
-    const audio = this.engine._audioContext;
-    if (audio.state === 'suspended') audio.resume();
-    const osc = audio.createOscillator();
-    const gain = audio.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(freq, audio.currentTime);
-    if (secondFreq > 0) {
-      osc.frequency.setValueAtTime(secondFreq, audio.currentTime + duration * 0.5);
-    }
-    gain.gain.setValueAtTime(0.03, audio.currentTime);
-    gain.gain.linearRampToValueAtTime(0, audio.currentTime + duration);
-    osc.connect(gain).connect(audio.destination);
-    osc.start();
-    osc.stop(audio.currentTime + duration);
+    if (freq <= 260) this.engine.audio.playUiError();
+    else this.engine.audio.playUiConfirm();
   }
 
   _doGymStep(side) {
@@ -889,8 +877,11 @@ export class StationPanel {
       hud.renderHotbar(survival.slots);
       return msg;
     }
-    if (action === 'cookMeal') { const msg = utility.cookMeal(); hud.renderHotbar(survival.slots); return msg; }
-    if (action === 'washUp') return utility.washUp();
+    // Comer e lavar contam para o tutorial guiado mesmo sem fome (GameEngine.tutorialCounts)
+    const done = this.engine.tutorialCounts;
+    if (action === 'eatRation') { done.meal++; return utility.eatRation(); }
+    if (action === 'cookMeal') { done.meal++; const msg = utility.cookMeal(); hud.renderHotbar(survival.slots); return msg; }
+    if (action === 'washUp') { done.wash++; return utility.washUp(); }
     if (action === 'serviceFilter') return utility.serviceFilter();
     if (action === 'printPart') { const msg = utility.printPart(this.engine.crew?.stations ?? []); hud.renderHotbar(survival.slots); return msg; }
     if (action === 'fillWall') return this.engine.mission.fillShelterWall(survival);
@@ -906,7 +897,12 @@ export class StationPanel {
       return stations.exercise('bike');
     }
     if (action === 'treat') return stations.treat(survival);
-    if (action === 'send') return stations.send(this.engine.radioOptions(true));
+    if (action === 'send') {
+      const msg = stations.send(this.engine.radioOptions(true));
+      // So conta como chamada se ha mensagem a caminho (radio mudo ou sem energia nao valem)
+      if (stations.messageTimer > 0) done.earthCalls++;
+      return msg;
+    }
     if (action === 'upgrade') return stations.upgrade();
     if (action === 'upgradeTool') return stations.upgradeTool();
     if (action === 'sendScience') return this.engine.sendSciencePackage();

@@ -14,6 +14,13 @@ export const TERRAIN_CONFIG = {
   BASE_CENTER: { x: -4, z: 0 },
   BASE_FLAT_RADIUS: 28,
   BASE_BLEND_RADIUS: 36,
+  FOOTPRINT_SPACING: 0.72,
+  FOOTPRINT_LIFETIME: 24,
+  FOOTPRINT_MAX_COUNT: 64,
+  FOOTPRINT_WIDTH: 0.3,
+  FOOTPRINT_LENGTH: 0.46,
+  FOOTPRINT_SIDE_OFFSET: 0.15,
+  FOOTPRINT_OPACITY: 0.5,
 };
 
 const DUST_STORM_MAP_EDGE_RADIUS = Math.min(
@@ -26,6 +33,7 @@ export const PHYSICS_CONFIG = {
   JUMP_SPEED: 6.4,
   WALK_SPEED: 6.2,
   SPRINT_SPEED: 8.7,
+  INVENTORY_GROUND_DECELERATION: 18.0, // blocks por segundo ao quadrado
   PLAYER_HEIGHT: 1.7,
   PLAYER_RADIUS: 0.34,
   SPAWN_POS: { x: 0, y: 10.75, z: 11.5 },
@@ -39,6 +47,9 @@ export const CAMERA_CONFIG = {
   NEAR: 0.1,
   FAR: 1200,
   REACH_DISTANCE: 6.5,
+  THIRD_PERSON_DISTANCE: 4.5,
+  THIRD_PERSON_CAMERA_HEIGHT: 0.25,
+  THIRD_PERSON_MIN_DISTANCE: 0.15,
 };
 
 // Modo "Shaders" (src/graphics/shaderMode/): sombra do Sol em tempo real, lampadas da base com
@@ -115,6 +126,14 @@ export const GRAPHICS_CONFIG = {
   GUARD_MIN_FPS: 26,
   GUARD_SECONDS: 6,
   GUARD_WARMUP_SECONDS: 4,
+  // Resolucao adaptativa (resolutionScaler.ts): pixel ratio maximo, degraus abaixo dele e a regra
+  // para descer um degrau (media abaixo de RES_MIN_FPS por RES_SECONDS, depois do aquecimento).
+  // Render por software ja comeca no menor degrau.
+  MAX_PIXEL_RATIO: 1.5,
+  RES_STEPS: [1, 0.75, 0.5],
+  RES_MIN_FPS: 40,
+  RES_SECONDS: 2,
+  RES_WARMUP_SECONDS: 4,
 };
 
 export const INPUT_CONFIG = {
@@ -217,6 +236,8 @@ export const DUST_STORM_VISUAL_CONFIG = {
   PARTICLE_COUNT: 1800,
   PARTICLE_BOX: { x: 40, y: 16, z: 40 },
   WIND_SPEED: 11, // blocos/s
+  AMBIENT_PARTICLE_OPACITY: 0.22, // poeira baixa e constante ao ar livre, mesmo sem tempestade
+  AMBIENT_WIND_SPEED: 1.4, // vento ambiente mais fraco que as rajadas da tempestade
 };
 
 // Vento e poeira rasa fora da base (src/sky/MarsWindEffect.ts, src/sky/windState.ts, AudioManager.ts)
@@ -256,6 +277,8 @@ export const WATER_SYSTEM_CONFIG = {
 // Uma viagem completa de gelo (ir a cratera, 5 perfuracoes, voltar) gasta cerca de um quarto
 // a um terco da bateria do rover.
 export const ROVER_CONFIG = {
+  // Frente local do rover aponta para -Z; yaw PI deixa a doca e segue para fora da base (+Z).
+  SPAWN_YAW: Math.PI,
   MAX_STEP_HEIGHT: 2.15, // blocos que o rover consegue subir, com margem para a suspensao
   START_BATTERY: 100, // %
   DRIVE_DRAIN_PER_SECOND: 0.5, // % por segundo real acelerando (frente ou re)
@@ -301,10 +324,13 @@ export const ENERGY_CONFIG = {
   MARS_SUNLIGHT_FRACTION: 0.43,
   // Custos (em % de bateria)
   OXYGEN_COST_PER_POINT: 1.5, // reciclar 1 ponto de O2 no habitat (MOXIE + reciclagem)
-  // Blindagem contra radiacao ligada. Era 12,5 com tempestades de 3 h (37,5 % por tempestade);
-  // com a tempestade de 1 h (STORM_CONFIG.DURATION_HOURS) uma tempestade inteira custa 25 %.
-  SHIELD_DRAIN_PER_HOUR: 25,
-  ISRU_DRAIN_PER_HOUR: 25, // fabrica de combustivel ligada
+  // Blindagem contra radiacao ligada. Anda junto com STORM_CONFIG.DURATION_HOURS: com a
+  // tempestade de 0,2 h (10 s reais) uma tempestade inteira custa 22 % da bateria (era 25 %
+  // com a tempestade de 1 h e 25 %/h). Esquecida ligada, esvazia a bateria em ~45 s.
+  SHIELD_DRAIN_PER_HOUR: 110,
+  // Fabrica de combustivel ligada. Anda junto com MAV_CONFIG.ISRU_HOURS_PER_ICE_BLOCK: um bloco
+  // de gelo custa 7,5 % da bateria (era 15 % com 0,6 h por bloco e 25 %/h).
+  ISRU_DRAIN_PER_HOUR: 50,
   // Gerador nuclear (issue #85). [Ref] O MMRTG do Curiosity e do Perseverance gera ~110 W de
   // eletricidade de dia e de noite, com calor do plutonio (NASA). Na base ele so paga o suporte
   // de vida minimo (O2 do jogador e da tripulacao, filtro de CO2): fabrica, blindagem, luz da
@@ -350,10 +376,11 @@ export const RADIATION_CONFIG = {
   // toda tempestade machuque la fora, as fortes machuquem dentro do habitat sem abrigo, e o
   // abrigo com a parede cheia ou a blindagem dentro do habitat protejam em qualquer tempestade.
   // Anda junto com STORM_CONFIG.DURATION_HOURS: a tempestade entrega a mesma dose total em menos
-  // horas de jogo, entao a taxa por hora sobe na mesma proporcao (era 0,5 com 3 h de tempestade).
-  HARM_THRESHOLD_MSV_PER_HOUR: 1.5,
+  // horas de jogo, entao a taxa por hora sobe na mesma proporcao (era 0,5 com 3 h de tempestade
+  // e 1,5 com 1 h; agora a tempestade dura 0,2 h).
+  HARM_THRESHOLD_MSV_PER_HOUR: 7.5,
   // Acima desta taxa o HUD mostra radiacao alta (ainda sem dano)
-  WARN_MSV_PER_HOUR: 0.3, // era 0,1 com 3 h de tempestade
+  WARN_MSV_PER_HOUR: 1.5, // era 0,1 com 3 h de tempestade e 0,3 com 1 h
   DAMAGE_PER_EXCESS_MSV: 3, // pontos de vida por mSv acima do limite (escala de jogo)
   // [Ref] limite de carreira de astronautas da NASA: 600 mSv (NASA-STD-3001, 2022)
   CAREER_LIMIT_MSV: 600,
@@ -370,17 +397,33 @@ export const RADIATION_CONFIG = {
 
 export const STORM_CONFIG = {
   // So entram na fila CMEs com impacto previsto em Marte pelo modelo WSA-ENLIL da NASA (DONKI).
-  // O tempo de aviso e a viagem prevista (saida do Sol ate a chegada em Marte), encolhida:
-  // 1 dia real de viagem da CME = 1 hora de jogo de aviso
+  // Relogio da dose de radiacao: 1 hora de jogo = 1 dia real em Marte (radiation.ts)
   REAL_HOURS_PER_GAME_HOUR: 24,
-  FIRST_WARNING_AFTER_HOURS: 1,
+  // O tempo de aviso e a viagem prevista da CME (saida do Sol ate a chegada em Marte), encolhida.
+  // Teste com jogadores em 15/11/2026: esperar minutos pelo aviso parava o jogo. Agora 250 horas
+  // reais de viagem = 1 hora de jogo. CME mais lenta da mais aviso: as do DONKI (38 a 173 h de
+  // viagem) dao de 20 a 35 s reais.
+  WARNING_REAL_HOURS_PER_GAME_HOUR: 250,
+  // Aviso minimo: 0,4 h de jogo = 20 s reais. E o tempo justo para a crianca que esta no lugar
+  // mais longe (a cratera de gelo, ~43 blocos da porta) ler o alerta (~4 s), voltar andando sem
+  // correr e sem ir em linha reta (~10 s), passar pelo airlock (~4 s) e entrar no abrigo (~1 s).
+  // balance.test.ts refaz essa conta: se a base ou a velocidade mudarem, o teste avisa.
+  MIN_WARNING_HOURS: 0.4,
+  // Calmaria antes do primeiro aviso e entre tempestades: 2 h de jogo = 100 s reais
+  FIRST_WARNING_AFTER_HOURS: 0.4,
   GAP_BETWEEN_STORMS_HOURS: 2,
+  // No maximo duas tempestades em qualquer janela de 24 h de jogo. O micro intervalo evita
+  // contar tres eventos nas duas pontas exatas da mesma janela.
+  MAX_STORMS_PER_GAME_DAY: 2,
+  GAME_DAY_HOURS: 24,
+  DAILY_SPACING_EPSILON_HOURS: 0.000001,
   // Horas de jogo de tempestade. Na mesma escala do aviso sao ~3 dias reais; a tempestade de
   // 2017 ficou alta por mais de 2 dias (NASA JPL)
   // Teste com jogadores em 15/11/2026: 3 h de jogo (2,5 min reais) parado no abrigo cansava.
-  // Agora 1 h (50 s reais). A dose total da tempestade nao muda, so chega mais rapido: por isso
-  // HARM_THRESHOLD e WARN de RADIATION_CONFIG subiram na mesma proporcao (x3).
-  DURATION_HOURS: 1,
+  // Passou a 1 h (50 s reais) e, no mesmo dia, a 0,2 h (10 s reais): a espera ainda era longa.
+  // A dose total da tempestade nao muda, so chega mais rapido: por isso HARM_THRESHOLD e WARN de
+  // RADIATION_CONFIG sobem na mesma proporcao.
+  DURATION_HOURS: 0.2,
   // Controle de demo (menu "Demo controls"): aviso curto antes da tempestade chegar (~10 s reais)
   DEMO_LEAD_HOURS: 0.2,
 };
@@ -397,10 +440,21 @@ export const SPACE_WEATHER_CONFIG = {
   FETCH_TIMEOUT_MS: 5000,
   // SEP (particulas solares energeticas) so entra quando o fetch ao vivo trouxe uma; nunca inventamos.
   // Regras do jogo: a cada 3 tempestades, a 3a e um pico de SEP. As particulas voam quase na
-  // velocidade da luz, entao o aviso e curto (~25 s reais). O DONKI nao da a forca da SEP em Marte:
+  // velocidade da luz, entao o aviso e curto (15 s reais, menor que o de qualquer CME: da tempo correndo ou com a blindagem). O DONKI nao da a forca da SEP em Marte:
   // o pico usa a menor tempestade que o Curiosity mediu (RADIATION_CONFIG.STORM_DOSE_MIN_UGY).
   SEP_EVERY_N_STORMS: 3,
-  SEP_WARNING_HOURS: 0.25,
+  SEP_WARNING_HOURS: 0.3,
+  // Depois da tempestade do tutorial, so ha tempestade solar quando o DONKI mostra uma de verdade
+  // agora (liveStormEvents). O jogo pergunta a /api/space-weather a cada LIVE_POLL_MINUTES reais;
+  // a rota guarda a resposta na CDN pelo mesmo tempo, entao todos os jogadores dividem os pedidos.
+  LIVE_POLL_MINUTES: 10,
+  // Uma CME conta como "acontecendo agora" da saida do Sol ate este tempo depois da chegada
+  // prevista em Marte. [Ref] a tempestade de setembro de 2017 deixou a radiacao alta em Marte
+  // por mais de 2 dias (NASA JPL, MAVEN e Curiosity RAD).
+  CME_ACTIVE_AFTER_ARRIVAL_HOURS: 48,
+  // Uma SEP conta como "acontecendo agora" ate este tempo depois de medida (escala de jogo:
+  // o DONKI da so o inicio do evento, nao o fim)
+  SEP_ACTIVE_HOURS: 24,
 };
 
 export const MAV_CONFIG = {
@@ -409,8 +463,12 @@ export const MAV_CONFIG = {
   PAD_RADIUS: 4,
   INTERACT_RADIUS: 6,
   ICE_BLOCKS_FOR_FULL_TANK: 10,
-  ISRU_HOURS_PER_ICE_BLOCK: 0.6,
-  STORMS_TO_SURVIVE: 3,
+  // Horas de jogo para a fabrica transformar 1 bloco de gelo em combustivel: 0,15 h = 7,5 s
+  // reais (era 0,6 h = 30 s; teste com jogadores de 15/11/2026). Escala de jogo.
+  ISRU_HOURS_PER_ICE_BLOCK: 0.15,
+  // So a tempestade do tutorial conta (15/11/2026): depois dela, tempestade so vem quando o DONKI
+  // mostra uma de verdade, e um dia calmo no Sol nao pode travar a decolagem.
+  STORMS_TO_SURVIVE: 1,
   // [Ref] um astronauta consome ~0,84 kg de O2 por dia (NASA BVAD), usado para converter
   // os pontos de O2 do jogo em kg no resumo da vitoria
   OXYGEN_KG_PER_DAY: 0.84,
@@ -513,8 +571,10 @@ export const COMMS_CONFIG = {
   CONJUNCTION_SUN_ANGLE_DEG: 2,
   // [Ref] 1 sol = 24 h 39 min = 1,0275 dia da Terra (Mars Fact Sheet): avanca a data real do jogo
   EARTH_DAYS_PER_SOL: 1.0275,
-  // Escala de jogo: cada minuto real de viagem da luz vira 3 s de espera (ida e volta)
-  GAME_SECONDS_PER_LIGHT_MINUTE: 3,
+  // Escala de jogo: cada minuto real de viagem da luz vira 0,35 s de espera. Com Marte a 11
+  // minutos-luz, a resposta volta em ~8 s (era 3 s por minuto = ~66 s; teste de 15/11/2026).
+  // O card do radio continua mostrando o atraso real em minutos.
+  GAME_SECONDS_PER_LIGHT_MINUTE: 0.35,
   // Conjuncao encenada uma vez por partida (a real so volta em 2028): comeca depois de
   // ~1,5 sol de jogo e dura 6 horas de jogo (5 min reais)
   GAME_CONJUNCTION_START_HOURS: 36,
@@ -590,6 +650,20 @@ export const CROP_CONFIG = Object.freeze({
   soy: { water: 3, energy: 5, seconds: 9, nutrition: 10, strategy: 'Big harvest, thirsty plants' },
 });
 
+// Como a planta aparece enquanto cresce (so visual; o tempo e o de CROP_CONFIG.seconds). Logo ao
+// plantar ja aparece um broto bem visivel em cada bandeja, para a crianca ver que plantou.
+export const CROP_LOOK_CONFIG = Object.freeze({
+  // Fracao do crescimento em que a muda ainda e um broto (depois vira a planta da cultura)
+  SPROUT_UNTIL: 0.3,
+  // Escala do broto recem-plantado e da planta quando deixa de ser broto (1 = pronta)
+  SPROUT_MIN_SCALE: 0.8,
+  PLANT_MIN_SCALE: 0.45,
+  // Marcador de "pronto para colher" sobre o campo: altura acima do piso, quanto sobe e desce, giro
+  MARKER_HEIGHT: 1.35,
+  MARKER_BOB: 0.1,
+  MARKER_SPIN: 1.6,
+});
+
 // Dose de radiacao acumulada como orcamento da missao (issue #104). Fontes em
 // docs/data/numeros-reais.md, secao "Dose da missao".
 export const DOSE_CONFIG = {
@@ -662,7 +736,8 @@ export const DUST_WEATHER_CONFIG = {
   // o recorde a geracao cai em linha reta.
   SOLAR_FACTOR_AT_RECORD: 0.2,
   // Escala de jogo (horas de jogo; 1 h = 100 s reais). O clima so comeca no ato 2 da historia.
-  FIRST_STORM_AFTER_HOURS: [8, 16],
+  // A primeira vem cedo (3 a 7 min reais): numa partida curta a crianca precisa ver uma
+  FIRST_STORM_AFTER_HOURS: [2, 4],
   GAP_BETWEEN_STORMS_HOURS: [24, 36],
   WARNING_HOURS: 2,
   STORM_HOURS: [6, 9],
@@ -738,6 +813,11 @@ export const MISSION_LOG_CONFIG = {
   MERGE_HOURS: 1,
   SUMMARY_CARD_MS: 9000, // resumo do fim do sol na tela
   STUDY_CARD_MS: 7000, // estudo real da NASA revelado
+  // Animacao de "primeira vez" de cada acao principal e do fato da estufa (FirstTimeHud, issue #216)
+  MOMENT_INTRO_MS: 1900, // abertura no meio da tela, antes do card do fato
+  MOMENT_CARD_MS: 5000, // card do fato: tempo base...
+  MOMENT_CARD_MS_PER_LINE: 1300, // ...mais este tanto por frase, para dar tempo de ler
+  MOMENT_GAP_MS: 600, // pausa entre dois momentos seguidos
 };
 
 // Dormir no beliche do dormitorio (issue #109): substitui o avanco de tempo gratis da tecla T.
@@ -780,8 +860,8 @@ export const SLEEP_CONFIG = {
 export const EVENTS_CONFIG = Object.freeze({
   // Eventos sorteados (a aurora nao entra: ela vem depois de uma tempestade solar sobrevivida)
   RANDOM_TYPES: Object.freeze(['meteor', 'marsquake', 'eclipse', 'dustDevil', 'frost']),
-  // Horas de jogo do inicio do ato 2 ate o primeiro evento (1 h de jogo = 100 s reais)
-  FIRST_DELAY_HOURS: Object.freeze([1, 2]),
+  // Horas de jogo do primeiro selo do tutorial ate o primeiro evento (1 h de jogo = 100 s reais)
+  FIRST_DELAY_HOURS: Object.freeze([0.5, 1]),
   // Horas de jogo entre o fim de um evento e o inicio do proximo, na agenda sorteada
   GAP_HOURS: Object.freeze([2.5, 5]),
   // Intervalo minimo garantido entre dois eventos, mesmo depois de adiar um deles

@@ -83,6 +83,29 @@ describe('EVA oxygen budget (issue #81)', () => {
   });
 });
 
+describe('solar storm warning (playtest of 15/11/2026)', () => {
+  const secondsPerGameHour = 1 / MISSION_CONFIG.GAME_HOURS_PER_SECOND;
+
+  it('even the shortest warning lets a child walk back from the ice crater into the shelter', () => {
+    const outerDoor = { x: 0.5, z: 8.85 };
+    const ice = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER;
+    const shelter = { x: 4.3, z: 4.8 }; // meio do abrigo (HABITAT_LAYOUT.SHELTER_*)
+    const straight = Math.hypot(ice.x - outerDoor.x, ice.z - outerDoor.z);
+    const reading = 4; // ler o alerta e decidir
+    const walking = (straight * 1.5) / PHYSICS_CONFIG.WALK_SPEED; // sem correr, sem linha reta
+    const airlock = 4; // duas portas e a limpeza do traje
+    const inside = Math.hypot(shelter.x - outerDoor.x, shelter.z - outerDoor.z) / PHYSICS_CONFIG.WALK_SPEED;
+    const needed = reading + walking + airlock + inside;
+    expect(STORM_CONFIG.MIN_WARNING_HOURS * secondsPerGameHour).toBeGreaterThanOrEqual(needed);
+  });
+
+  it('but the warning stays short: nobody waits more than 45 seconds for a storm', () => {
+    // A CME mais lenta do DONKI embutido leva ~173 h reais ate Marte
+    const slowest = 173 / STORM_CONFIG.WARNING_REAL_HOURS_PER_GAME_HOUR;
+    expect(Math.max(slowest, STORM_CONFIG.MIN_WARNING_HOURS) * secondsPerGameHour).toBeLessThanOrEqual(45);
+  });
+});
+
 describe('base energy pacing (issue #81)', () => {
   const day = passiveDrawPerHour({ night: false });
   const night = passiveDrawPerHour({ night: true });

@@ -29,6 +29,7 @@ export class StationSystem {
     // Algum campo parou de crescer por falta de agua no tanque da base
     this.cropsThirsty = false;
     this.harvestCount = 0;
+    this.plantCount = 0; // sementes plantadas pelo jogador (tutorial guiado)
     this.cropCollection = new Set();
     this.harvestBaskets = Object.fromEntries(Object.keys(CROP_CONFIG).map(type => [type, 0]));
     this.crewHarvestTimer = 0;
@@ -168,6 +169,7 @@ export class StationSystem {
     if (survival.baseWater < cost.water) return 'Not enough water in the base tank.';
     if (!this.mission.spend(cost.energy)) return 'Not enough power.';
     plot.crop = { type, progress: 0 };
+    this.plantCount++;
     return `Planted ${type}. It drinks ${cost.water} L from the base tank while it grows, and needs light and a clean greenhouse.`;
   }
   harvest(survival, spawnDrop, plotIndex = this.selectedPlot) {

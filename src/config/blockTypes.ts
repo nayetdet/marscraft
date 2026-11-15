@@ -22,8 +22,20 @@ export const BLOCK_IDS = {
   SCOPE: 17,
   SHIELD_REMOTE: 18, // item de mao, nao e bloco do mundo
   JOURNAL: 19,
-  RATION: 20, // racao embalada estilo NASA, consumivel no inventario
+  RATION: 21, // racao embalada estilo NASA, consumivel no inventario
+  DARK_BASALT: 20,
 };
+
+export const SHIP_BLOCK_IDS = Object.freeze([
+  BLOCK_IDS.NASA_HULL,
+  BLOCK_IDS.GOLD_FOIL,
+  BLOCK_IDS.HAB_GLASS,
+  BLOCK_IDS.SOLAR_PANEL,
+  BLOCK_IDS.HAB_LIGHT,
+  BLOCK_IDS.THRUSTER_METAL,
+  BLOCK_IDS.CONSOLE_SCREEN,
+  BLOCK_IDS.RED_BEACON,
+]);
 
 export const HOTBAR_BLOCKS = [
   {
@@ -34,15 +46,15 @@ export const HOTBAR_BLOCKS = [
     equipment: true,
   },
   {
-    id: BLOCK_IDS.SHIELD_REMOTE,
-    name: 'Shield Remote (Use to turn the radiation shield on/off)',
+    id: BLOCK_IDS.JOURNAL,
+    name: 'Discovery Journal (Use to open)',
     initialCount: 1,
     consumable: null,
     equipment: true,
   },
   {
-    id: BLOCK_IDS.JOURNAL,
-    name: "Discovery Journal (Use to open)",
+    id: BLOCK_IDS.SHIELD_REMOTE,
+    name: 'Shield Remote (Use to turn the radiation shield on/off)',
     initialCount: 1,
     consumable: null,
     equipment: true,
@@ -111,6 +123,7 @@ const BASE_BLOCK_ITEMS = [
   { id: BLOCK_IDS.THRUSTER_METAL, name: 'Metal Floor Plate' },
   { id: BLOCK_IDS.CONSOLE_SCREEN, name: 'Console Block' },
   { id: BLOCK_IDS.RED_BEACON, name: 'Orange Beacon' },
+  { id: BLOCK_IDS.DARK_BASALT, name: 'Dark Basalt' },
 ].map((item) => ({ ...item, initialCount: 0, consumable: null }));
 
 // Item registry is independent of the nine initial hotbar slots.
