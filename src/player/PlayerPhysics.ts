@@ -146,7 +146,7 @@ export class PlayerPhysics {
     return false;
   }
 
-  update(dt, keys) {
+  update(dt, keys, preserveHorizontalVelocity = false) {
     this.justLandedFromJump = false;
     const forward = this._forward.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     const right = this._right.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
@@ -157,13 +157,17 @@ export class PlayerPhysics {
     if (keys['KeyD'] || keys['ArrowRight']) moveDir.add(right);
     if (keys['KeyA'] || keys['ArrowLeft']) moveDir.sub(right);
 
-    this.isMoving = moveDir.lengthSq() > 0 && this.onGround;
-    if (moveDir.lengthSq() > 0) moveDir.normalize();
+    const hasMoveInput = moveDir.lengthSq() > 0;
+    const hasHorizontalMomentum = preserveHorizontalVelocity && (this.vel.x !== 0 || this.vel.z !== 0);
+    this.isMoving = (hasMoveInput || hasHorizontalMomentum) && this.onGround;
+    if (hasMoveInput) moveDir.normalize();
 
-    const sprinting = keys['Sprint'] || keys['ShiftLeft'] || keys['ShiftRight'];
-    const speed = sprinting ? PHYSICS_CONFIG.SPRINT_SPEED : PHYSICS_CONFIG.WALK_SPEED;
-    this.vel.x = moveDir.x * speed;
-    this.vel.z = moveDir.z * speed;
+    if (!preserveHorizontalVelocity) {
+      const sprinting = keys['Sprint'] || keys['ShiftLeft'] || keys['ShiftRight'];
+      const speed = sprinting ? PHYSICS_CONFIG.SPRINT_SPEED : PHYSICS_CONFIG.WALK_SPEED;
+      this.vel.x = moveDir.x * speed;
+      this.vel.z = moveDir.z * speed;
+    }
 
     this.vel.y -= PHYSICS_CONFIG.MARS_GRAVITY * dt;
     if (keys['Space'] && this.onGround) {
