@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { InputController, isPauseMenuOpen } from './InputController.ts';
+import { InputController, isPauseMenuOpen, returnToStartMenu } from './InputController.ts';
 import { BLOCK_IDS, SHIP_BLOCK_IDS } from '../config/blockTypes.ts';
 import { BLOCK_INTERACTION_CONFIG } from '../config/constants.ts';
 
@@ -21,6 +21,75 @@ describe('pause menu keyboard input', () => {
   it('allows gameplay keys after the pause menu closes', () => {
     const pauseOverlay = { classList: { contains: () => true } };
     expect(isPauseMenuOpen(pauseOverlay)).toBe(false);
+  });
+});
+
+describe('quit from pause menu', () => {
+  it('saves quietly, clears play state, and restores the start menu', () => {
+    const classList = (...initial) => {
+      const values = new Set(initial);
+      return {
+        add: (...names) => names.forEach((name) => values.add(name)),
+        remove: (...names) => names.forEach((name) => values.delete(name)),
+        contains: (name) => values.has(name),
+      };
+    };
+    const screen = { classList: classList() };
+    const input = {
+      onSaveGame: vi.fn(),
+      hasStarted: true,
+      isLocked: true,
+      isTouchMode: true,
+      _awaitingPointerLock: true,
+      _resumeOnEscapeKeyUp: true,
+      _clearTouchInput: vi.fn(),
+      keys: { KeyW: true },
+      player: { isMoving: true },
+      domElement: {},
+    };
+    const body = { classList: classList('touch-mode', 'game-paused', 'pause-menu-open') };
+    const overlay = { classList: classList('hidden', 'menu-info-open') };
+    const pauseOverlay = { classList: classList() };
+    const menuCard = { querySelectorAll: vi.fn(() => [screen]) };
+    const menuCardHome = { append: vi.fn() };
+    const mainMenuClasses = classList('is-controls');
+    const menuMain = {
+      classList: classList('hidden'),
+      closest: vi.fn(() => ({ classList: mainMenuClasses })),
+    };
+    const setStartLabel = vi.fn();
+    const documentRef = { pointerLockElement: input.domElement, exitPointerLock: vi.fn() };
+
+    returnToStartMenu(input, {
+      body,
+      documentRef,
+      overlay,
+      pauseOverlay,
+      menuCard,
+      menuCardHome,
+      menuMain,
+      setStartLabel,
+    });
+
+    expect(input.onSaveGame).toHaveBeenCalledOnce();
+    expect(input.hasStarted).toBe(false);
+    expect(input.isLocked).toBe(false);
+    expect(input.isTouchMode).toBe(false);
+    expect(input._awaitingPointerLock).toBe(false);
+    expect(input._resumeOnEscapeKeyUp).toBe(false);
+    expect(input._clearTouchInput).toHaveBeenCalledOnce();
+    expect(input.keys).toEqual({});
+    expect(input.player.isMoving).toBe(false);
+    expect(documentRef.exitPointerLock).toHaveBeenCalledOnce();
+    expect(screen.classList.contains('hidden')).toBe(true);
+    expect(menuCardHome.append).toHaveBeenCalledWith(menuCard);
+    expect(setStartLabel).toHaveBeenCalledWith('Play');
+    expect(menuMain.classList.contains('hidden')).toBe(false);
+    expect(mainMenuClasses.contains('is-controls')).toBe(false);
+    expect(overlay.classList.contains('menu-info-open')).toBe(false);
+    expect(overlay.classList.contains('hidden')).toBe(false);
+    expect(pauseOverlay.classList.contains('hidden')).toBe(true);
+    expect(body.classList.contains('pause-menu-open')).toBe(false);
   });
 });
 
