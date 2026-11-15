@@ -24,6 +24,11 @@ const SOURCES = {
   perseverance: { name: 'NASA Perseverance rover', url: 'https://science.nasa.gov/mission/mars-2020-perseverance/' },
   bvad: { name: 'NASA life support baseline values (BVAD)', url: null },
   iss: { name: 'NASA International Space Station', url: 'https://www.nasa.gov/international-space-station/' },
+  // Fichas da tempestade (issue #419): fatos em docs/data/numeros-reais.md
+  dustTau: { name: 'NASA JPL: Opportunity rover in the 2018 dust storm', url: 'https://www.jpl.nasa.gov/news/opportunity-hunkers-down-during-dust-storm/' },
+  dustTauClear: { name: 'NASA JPL release on Opportunity, 08/2018', url: 'https://phys.org/news/2018-08-opportunity-recovery-efforts.html' },
+  dustWind: { name: 'NASA: The Fact and Fiction of Martian Dust Storms', url: 'https://www.nasa.gov/solar-system/the-fact-and-fiction-of-martian-dust-storms/' },
+  spiritCleaning: { name: 'NASA Photojournal PIA03608 (Spirit rover)', url: 'https://science.nasa.gov/photojournal/solar-panel-dust-accumulation-and-cleanings/' },
 };
 
 export const SCAN_CATEGORIES = [
@@ -349,6 +354,33 @@ export const SCAN_CATALOG = [
       { label: 'Blue sunsets', value: 'Fine dust scatters blue light near the Sun', source: SOURCES.marsScience },
     ],
     why: 'The air is too thin to breathe or to block much radiation, so you always need a suit.',
+  },
+  // Fichas que so existem na tempestade (issue #419, src/story/acts/act2StormScans.ts): a luneta
+  // so registra la fora e com o evento acontecendo. Os ids sao os de act2StormScans.ts.
+  {
+    id: 'dust-storm-wall',
+    category: 'landscape',
+    title: 'Dust Storm Wall',
+    summary: 'A wall of fine red dust that hides the Sun. You are standing inside it!',
+    facts: [
+      { label: 'Dust in the air (tau)', value: '~0.5 on a clear day', source: SOURCES.dustTauClear },
+      { label: '2018 global storm', value: 'Tau 10.8, the highest ever measured on the ground', source: SOURCES.dustTau },
+      { label: 'Wind', value: 'Mars air is too thin to knock you over', source: SOURCES.dustWind },
+      { label: 'Scan', value: 'Only outside, during a dust storm', source: GAME_RULE },
+    ],
+    why: 'The dust blocks sunlight and covers the solar panels: less power for the whole base.',
+  },
+  {
+    id: 'dust-devil',
+    category: 'landscape',
+    title: 'Dust Devil',
+    summary: 'A small whirlwind that lifts dust as it crosses the ground.',
+    facts: [
+      { label: 'Real event', value: "09/03/2005: wind cleaned Spirit's panels, power up ~50%", source: SOURCES.spiritCleaning },
+      { label: 'Next day', value: 'Spirit filmed dust devils nearby', source: SOURCES.spiritCleaning },
+      { label: 'Scan', value: 'Only outside, while it spins', source: GAME_RULE },
+    ],
+    why: 'Wind can sweep dust off solar panels and bring the power back.',
   },
   // ---------- Amostras do mapa ----------
   ...SAMPLE_ENTRIES,

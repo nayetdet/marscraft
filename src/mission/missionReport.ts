@@ -4,6 +4,7 @@ import { BASE_DOSE_MSV_PER_HOUR } from './radiation.ts';
 import { handoverSummary } from '../story/acts/act5Handover.ts';
 import { suitTradeSummary } from '../story/acts/act2SuitChoice.ts';
 import { firstIceSummary } from '../story/firstIceChoice.ts';
+import { stormScansSummary } from '../story/acts/act2StormScans.ts';
 
 // Boletim do cadete (issue #90): 5 notas (S, A, B, C) calculadas com o que o jogador fez na
 // partida, mais uma frase de perfil e o que ele descobriu (issue #271). Logica pura: o ReportCard
@@ -25,6 +26,7 @@ import { firstIceSummary } from '../story/firstIceChoice.ts';
 //   baseHandover,                                    // a base na decolagem (act5Handover.ts, #423)
 //   sciencePointsUsed, suitUpgraded,                 // ciencia gasta em Marte x traje melhorado (#417)
 //   firstIceChoice,                                  // para onde foi o primeiro gelo (firstIceChoice.ts, #413)
+//   stormScansMissed,                                // fichas de tempestade que ficaram para tras (act2StormScans.ts, #419)
 // }
 
 const clamp01 = (v) => Math.max(0, Math.min(1, Number.isFinite(v) ? v : 0));
@@ -207,5 +209,7 @@ export function missionReport(stats) {
     suitTrade: suitTradeSummary(stats),
     // Ato 1 (#413): para onde foi o primeiro gelo (tanque da base ou foguete)
     firstIce: firstIceSummary(stats),
+    // Ato 2 (#419): ciencia que a crianca deixou passar (fichas que so existem na tempestade)
+    stormScans: stormScansSummary(stats),
   };
 }
