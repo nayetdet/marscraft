@@ -127,14 +127,25 @@ export class VoxelWorld {
 
     generateMartianTerrain(this);
     buildNasaSpaceshipAndBase(this);
+    try {
+      const saved = JSON.parse(window.localStorage.getItem('marscraft-save-v1') || 'null');
+      if (saved?.world && saved.world.length === this.data.length) {
+        this.data.set(saved.world);
+      }
+    } catch { /* Ignore unavailable or malformed saves. */ }
     for (const idx of this.baseBlocks) {
-      if (this.data[idx] === BLOCK_IDS.AIR) this.baseBlocks.delete(idx);
+      if (this.data[idx] === BLOCK_IDS.AIR) {
+        this.baseBlocks.delete(idx);
+        this.brokenBaseBlocks.add(idx);
+      }
     }
     this.rebuildMeshes();
     // Pedras decorativas sobre o terreno natural (sem colisao)
     this.surfaceRocks = createSurfaceRocks(this);
     this.scene.add(this.surfaceRocks);
   }
+
+  exportSave() { return Array.from(this.data); }
 
   _index(x, y, z) {
     const ix = Math.floor(x) + this.halfX;
