@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { DUST_WEATHER_CONFIG, MISSION_CONFIG } from '../config/constants.ts';
 import { createAtmosphereDome } from './atmosphereShader.ts';
-import { advanceSolClock } from './solClock.ts';
+import { advanceSolClock, getSolarAngle } from './solClock.ts';
 import {
   createEarthAndMoonSystem,
   createMartianMoons,
@@ -98,7 +98,7 @@ export class MarsSkySystem {
     this.advanceTime(dt * this.autoAdvanceSpeed);
     this.celestialGroup.position.copy(playerPos);
 
-    const sunAngle = ((this.timeOfDay - 6) / 24) * Math.PI * 2;
+    const sunAngle = getSolarAngle(this.timeOfDay);
     const sunDir = _sunDir.set(Math.cos(sunAngle), Math.sin(sunAngle), -0.35).normalize();
 
     this.skyUniforms.uTime.value += dt;
