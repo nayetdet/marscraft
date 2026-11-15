@@ -49,7 +49,7 @@ export function scatterRocks(world) {
       const top = naturalGroundTop(world, Math.floor(x), Math.floor(z));
       if (top < 0) continue;
       // Meio enterrada: o centro fica um pouco acima do chao
-      rocks.push({ x, y: top + size * squash * 0.35, z, size, squash, yaw, tilt, color });
+      rocks.push({ x, y: top + size * squash * 0.35, z, supportY: top - 1, size, squash, yaw, tilt, color });
     }
   }
   return rocks;
@@ -62,6 +62,7 @@ export function createSurfaceRocks(world) {
   const geometry = new THREE.IcosahedronGeometry(1, 0);
   const material = new THREE.MeshLambertMaterial({ flatShading: true });
   const mesh = new THREE.InstancedMesh(geometry, material, rocks.length);
+  const rocksBySupport = new Map();
 
   const dummy = new THREE.Object3D();
   const color = new THREE.Color();
@@ -72,9 +73,32 @@ export function createSurfaceRocks(world) {
     dummy.updateMatrix();
     mesh.setMatrixAt(i, dummy.matrix);
     mesh.setColorAt(i, color.setHex(rock.color));
+
+    const supportKey = `${Math.floor(rock.x)},${rock.supportY},${Math.floor(rock.z)}`;
+    const supportedRocks = rocksBySupport.get(supportKey) ?? [];
+    supportedRocks.push(i);
+    rocksBySupport.set(supportKey, supportedRocks);
   });
+  mesh.userData.rocksBySupport = rocksBySupport;
+  mesh.userData.rockTransform = dummy;
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   mesh.computeBoundingSphere();
   return mesh;
+}
+
+export function removeSurfaceRocksSupportedBy(mesh, x, y, z) {
+  const key = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
+  const indices = mesh?.userData?.rocksBySupport?.get(key);
+  if (!indices) return 0;
+
+  const transform = mesh.userData.rockTransform;
+  for (const index of indices) {
+    mesh.getMatrixAt(index, transform.matrix);
+    transform.matrix.makeScale(0, 0, 0);
+    mesh.setMatrixAt(index, transform.matrix);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.userData.rocksBySupport.delete(key);
+  return indices.length;
 }
