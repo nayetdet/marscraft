@@ -8,7 +8,14 @@ import { isBuildZone } from './terrainGenerator.ts';
 // gelo que estava logo abaixo do chao e joga pedacos de gelo na borda. O tamanho e escala de jogo.
 // As funcoes recebem o mundo ({ getBlock, setBlock, sizeY }) e nao usam Three.js, salvo hideRocksNear.
 
-const NATURAL = new Set([BLOCK_IDS.REGOLITH, BLOCK_IDS.SANDSTONE, BLOCK_IDS.BASALT, BLOCK_IDS.MARS_ICE]);
+const NATURAL = new Set([
+  BLOCK_IDS.REGOLITH,
+  BLOCK_IDS.SANDSTONE,
+  BLOCK_IDS.BASALT,
+  BLOCK_IDS.DARK_BASALT,
+  BLOCK_IDS.MARS_ICE,
+  BLOCK_IDS.METEOR_ICE,
+]);
 const TRIES = 24;
 
 // y do bloco solido mais alto da coluna, ou -1 se for ar ate o fundo
@@ -55,6 +62,13 @@ export function carveImpactCrater(world, { x, z }, config = EVENTS_CONFIG) {
   const R = config.METEOR_CRATER_RADIUS;
   const rimOuter = R + 1.5;
   const cells = [];
+  const changed = new Set();
+  const addCell = (cx, cz) => {
+    const key = `${cx},${cz}`;
+    if (changed.has(key)) return;
+    changed.add(key);
+    cells.push([cx, cz]);
+  };
   let iceBlocks = 0;
   const span = Math.ceil(rimOuter);
   for (let dx = -span; dx <= span; dx++) {
@@ -70,21 +84,45 @@ export function carveImpactCrater(world, { x, z }, config = EVENTS_CONFIG) {
         const depth = Math.max(1, Math.round(config.METEOR_CRATER_DEPTH * (1 - (d / R) ** 2)));
         const floor = Math.max(1, top - depth);
         for (let y = top; y > floor; y--) world.setBlock(cx, y, cz, BLOCK_IDS.AIR, false);
-        if (d <= config.METEOR_ICE_RADIUS) {
-          // Gelo que estava logo abaixo do chao fica a mostra no fundo
-          world.setBlock(cx, floor, cz, BLOCK_IDS.MARS_ICE, false);
-          if (floor > 1) world.setBlock(cx, floor - 1, cz, BLOCK_IDS.MARS_ICE, false);
+        world.setBlock(cx, floor, cz, BLOCK_IDS.DARK_BASALT, false);
+        if (floor > 1) world.setBlock(cx, floor - 1, cz, BLOCK_IDS.DARK_BASALT, false);
+        const iceBand = d >= config.METEOR_ICE_RADIUS * 0.45 && d <= config.METEOR_ICE_RADIUS;
+        const icePatch = (Math.abs(dx * 7 + dz * 13) % 4) !== 0;
+        if (iceBand && icePatch) {
+          // Veios brancos de gelo fresco contrastam com o basalto escuro da bacia.
+          world.setBlock(cx, floor, cz, BLOCK_IDS.METEOR_ICE, false);
+          if (floor > 1) world.setBlock(cx, floor - 1, cz, BLOCK_IDS.METEOR_ICE, false);
           iceBlocks++;
         }
       } else {
         // Borda de material jogado para fora, com alguns pedacos de gelo
         const chunk = ((dx * 7 + dz * 13) % 5 + 5) % 5 === 0;
-        world.setBlock(cx, top + 1, cz, chunk ? BLOCK_IDS.MARS_ICE : BLOCK_IDS.REGOLITH, false);
+        world.setBlock(cx, top + 1, cz, chunk ? BLOCK_IDS.METEOR_ICE : BLOCK_IDS.REGOLITH, false);
         if (chunk) iceBlocks++;
       }
-      cells.push([cx, cz]);
+      addCell(cx, cz);
     }
   }
+
+  // Raios curtos de ejecta claro irradiam para fora da borda sem criar meshes adicionais:
+  // todos os blocos continuam no atlas compartilhado do terreno.
+  const rayCount = 8;
+  for (let ray = 0; ray < rayCount; ray++) {
+    const angle = (ray * Math.PI * 2) / rayCount + (ray % 2 ? 0.06 : -0.04);
+    const length = 3 + (ray % 3);
+    for (let step = 1; step <= length; step++) {
+      const distance = rimOuter + step * 0.85;
+      const side = step <= Math.ceil(length / 2) ? (ray % 2 ? 1 : -1) * 0.7 : 0;
+      const cx = Math.round(x + Math.cos(angle) * distance - Math.sin(angle) * side);
+      const cz = Math.round(z + Math.sin(angle) * distance + Math.cos(angle) * side);
+      if (isBuildZone(cx, cz)) continue;
+      const top = naturalTop(world, cx, cz);
+      if (top < 1 || top + 1 >= world.sizeY) continue;
+      world.setBlock(cx, top + 1, cz, BLOCK_IDS.SANDSTONE, false);
+      addCell(cx, cz);
+    }
+  }
+
   return { iceBlocks, cells };
 }
 

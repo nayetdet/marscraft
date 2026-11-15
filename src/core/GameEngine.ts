@@ -117,7 +117,7 @@ const SKY_SCAN_RADII = { sun: 0.05, earth: 0.035, moon: 0.02, phobos: 0.04, deim
 // Raio (em unidades da cena) da esfera verde do efeito de scan em volta de cada astro.
 const SKY_HIGHLIGHT_RADII = { sun: 10, earth: 8.5, moon: 3, phobos: 7, deimos: 3.5 };
 // Alvos de terreno pintam a mancha em volta do bloco mirado, então a chave inclui o bloco.
-const TERRAIN_PATCH_IDS = new Set(['regolith', 'sandstone', 'crater-rock', 'water-ice', 'crater-rim']);
+const TERRAIN_PATCH_IDS = new Set(['regolith', 'sandstone', 'crater-rock', 'water-ice', 'meteor-ice', 'crater-rim']);
 // Topo do piso do habitat (y = 10), onde a agua do abrigo comeca
 const SHELTER_FLOOR_TOP = HABITAT_LAYOUT.FLOOR_Y + 1;
 
@@ -940,6 +940,15 @@ export class GameEngine {
     });
     const isScanning = this.input.isScanButtonHeld;
     const state = this.scanner.update(dt, target?.id ?? null, isScanning);
+    if (
+      isScanning &&
+      state.done &&
+      target?.id === 'meteor-ice' &&
+      target.hit &&
+      this.world.getBlock(target.hit.x, target.hit.y, target.hit.z) === BLOCK_IDS.METEOR_ICE
+    ) {
+      this.iceSensor.clear();
+    }
     this._updateScanHighlight(isScanning ? target : null, state, dt);
     this.scannerHud.update(state);
     if (state.completed) this._onScanCompleted(state.completed);
@@ -1186,7 +1195,7 @@ export class GameEngine {
   }
 
   _refreshMavPanel() {
-    this.missionHud.updateMavPanel(this.mission, this.survival.countItem(BLOCK_IDS.MARS_ICE), this.stations.analyzedSamples, this.scienceStatus());
+    this.missionHud.updateMavPanel(this.mission, this.survival.countWaterIce(), this.stations.analyzedSamples, this.scienceStatus());
   }
 
   _toggleShield() {
@@ -1216,10 +1225,10 @@ export class GameEngine {
   }
 
   _loadIceIntoMav(count) {
-    const inBag = this.survival.countItem(BLOCK_IDS.MARS_ICE);
+    const inBag = this.survival.countWaterIce();
     const accepted = this.mission.deliverIce(Math.min(count, inBag));
     if (accepted <= 0) return;
-    this.survival.removeItems(BLOCK_IDS.MARS_ICE, accepted);
+    this.survival.removeWaterIce(accepted);
     this.hud.renderHotbar(this.survival.slots);
     const heldSlot = this.survival.slots[this.hud.selectedSlot];
     this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
@@ -2156,7 +2165,7 @@ export class GameEngine {
     const s = this._storySnapshot;
     s.hours = this._skyHours();
     s.insideHabitat = this.survival.insidePressurizedShip;
-    s.iceCount = this.survival.countItem(BLOCK_IDS.MARS_ICE);
+    s.iceCount = this.survival.countWaterIce();
     s.iceNeeded = this.mission.iceNeeded();
     s.stormPhase = this.mission.storm.phase;
     s.stormsSurvived = this.mission.stormCredit;

@@ -78,6 +78,11 @@ describe('carveImpactCrater', () => {
     };
     const rim = site.x + EVENTS_CONFIG.METEOR_CRATER_RADIUS + 1;
     expect(top(site.x, site.z)).toBeLessThan(top(rim, site.z));
-    expect(world.getBlock(site.x, top(site.x, site.z), site.z)).toBe(BLOCK_IDS.MARS_ICE);
+    expect(world.getBlock(site.x, top(site.x, site.z), site.z)).toBe(BLOCK_IDS.DARK_BASALT);
+    expect(exposed.some((block) => world.getBlock(block.x, block.y, block.z) === BLOCK_IDS.METEOR_ICE)).toBe(true);
+
+    const rays = cells.filter(([x, z]) => Math.hypot(x - site.x, z - site.z) > EVENTS_CONFIG.METEOR_CRATER_RADIUS + 1.5);
+    expect(rays.length).toBeGreaterThan(0);
+    expect(rays.some(([x, z]) => world.getBlock(x, top(x, z), z) === BLOCK_IDS.SANDSTONE)).toBe(true);
   }, 30000);
 });

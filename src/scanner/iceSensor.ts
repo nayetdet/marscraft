@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as THREE from 'three';
-import { BLOCK_IDS } from '../config/blockTypes.ts';
+import { BLOCK_IDS, isWaterIceBlock } from '../config/blockTypes.ts';
 
 export const ICE_SENSOR_CONFIG = {
   // Raio grande o bastante para alcançar a sub-cratera de gelo (ICE_CRATER_CENTER) a partir da base.
@@ -24,7 +24,7 @@ export function findExposedIce(world, center, radius = ICE_SENSOR_CONFIG.RADIUS,
       const dz = z - cz;
       if (dx * dx + dz * dz > r2) continue;
       for (let y = 0; y < sizeY; y++) {
-        if (world.getBlock(x, y, z) !== BLOCK_IDS.MARS_ICE) continue;
+        if (!isWaterIceBlock(world.getBlock(x, y, z))) continue;
         const exposed = neighbors.some(([nx, ny, nz]) => world.getBlock(x + nx, y + ny, z + nz) === BLOCK_IDS.AIR);
         if (!exposed) continue;
         found.push({ x, y, z });
