@@ -34,6 +34,7 @@ import { getSuitTelemetryView } from '../player/suitTelemetry.ts';
 import { InputController } from '../player/InputController.ts';
 import { HudManager } from '../ui/HudManager.ts';
 import { DebugOverlay } from '../ui/DebugOverlay.ts';
+import { ResolutionScaler, isSoftwareRenderer } from '../graphics/resolutionScaler.ts';
 import { ShaderMode } from '../graphics/shaderMode/ShaderMode.ts';
 import { RoverController } from '../rover/RoverController.ts';
 import { GymEquipmentController } from '../player/GymEquipmentController.ts';
@@ -93,7 +94,7 @@ import { DUST_DEVIL_HIT_TOAST, ECLIPSE_END_TOAST, compassDirection, dustDevilPan
 import { MarsEventEffects } from '../sky/MarsEventEffects.ts';
 import { EventHud } from '../ui/EventHud.ts';
 import { carveImpactCrater, findImpactSite, hideRocksNear } from '../world/impactCrater.ts';
-import { EVENTS_CONFIG, TERRAIN_CONFIG } from '../config/constants.ts';
+import { EVENTS_CONFIG, GRAPHICS_CONFIG, TERRAIN_CONFIG } from '../config/constants.ts';
 
 // Raio angular (rad) em que a mira da luneta "pega" cada astro. A Lua fica a ~0,047 rad da
 // Terra, então os dois raios precisam ser menores que isso para não se sobreporem.
@@ -136,7 +137,16 @@ export class GameEngine {
       powerPreference: 'high-performance',
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    // Resolucao adaptativa: baixa o pixel ratio se o FPS ficar baixo (maquina sem placa de video)
+    this.resolution = new ResolutionScaler({
+      maxRatio: Math.min(window.devicePixelRatio || 1, GRAPHICS_CONFIG.MAX_PIXEL_RATIO),
+      steps: GRAPHICS_CONFIG.RES_STEPS,
+      minFps: GRAPHICS_CONFIG.RES_MIN_FPS,
+      seconds: GRAPHICS_CONFIG.RES_SECONDS,
+      warmupSeconds: GRAPHICS_CONFIG.RES_WARMUP_SECONDS,
+      software: isSoftwareRenderer(DebugOverlay.detectGpu(this.renderer)),
+    });
+    this._applyPixelRatio(this.resolution.ratio);
     this.renderer.toneMapping = THREE.NoToneMapping;
     this.renderer.localClippingEnabled = true;
     this.container.appendChild(this.renderer.domElement);
@@ -595,39 +605,52 @@ export class GameEngine {
     }
   }
 
+  // Pontos de interacao fixos: montados uma vez (antes a lista era refeita 2+ vezes por quadro)
+  _interactionCandidates() {
+    if (!this._staticInteractions) {
+      this._doorInteractions = this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' }));
+      this._suitportInteraction = { type: 'suitport', x: -0.68, y: 11.35, z: 7.5, minDot: 0.72, label: '' };
+      this._staticInteractions = [
+        { type: 'power', x: 10.6, y: 11.4, z: -3, label: 'Press F: life support' },
+        { type: 'console', x: 8.25, y: 11.5, z: -10.8, label: 'Press F: mission computer' },
+        { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth (call Earth) · [G] send science' },
+        { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
+        { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
+        { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
+        { type: 'galley', x: 13.1, y: 11.35, z: -16.2, label: 'Press F: kitchen' },
+        { type: 'galley', x: 16.1, y: 11.3, z: -21.0, label: 'Press F: pantry & kitchen' },
+        { type: 'hygiene', x: -16.0, y: 11.1, z: -38.3, label: 'Press F: bathroom & water recycler' },
+        { type: 'hygiene', x: -19.85, y: 11.6, z: -32.5, label: 'Press F: bathroom & water recycler' },
+        { type: 'workshop', x: 11.5, y: 11.5, z: -38.1, label: 'Press F: 3D printer workshop' },
+        { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
+        ...GREENHOUSE_BASKETS.map(basket => ({ ...basket, cropType: basket.type, type: 'basket', minDot: 0.95, label: `Press F or tap: collect ${basket.type}` })),
+        { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
+        { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
+        { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
+        ...BUNK_INTERACTIONS,
+      ];
+      this._interactionList = [];
+    }
+    // Ordem de antes (portas, traje, estacoes): no empate de distancia vence o primeiro
+    const list = this._interactionList;
+    list.length = 0;
+    for (const candidate of this._doorInteractions) {
+      candidate.z = candidate.door.z;
+      list.push(candidate);
+    }
+    const pos = this.player.pos;
+    if (pos.z > 6.15 && pos.z < 8.85 && pos.x > -1 && pos.x < 2) {
+      this._suitportInteraction.label = this.survival.suitEquipped ? 'Press F: dock EVA suit' : 'Press F: put on EVA suit';
+      list.push(this._suitportInteraction);
+    }
+    for (const candidate of this._staticInteractions) list.push(candidate);
+    return list;
+  }
+
   _getInteraction() {
     const dir = this.player.getLookDirection(this._interactionDir);
     let best = null, bestDistance = 4;
-    const candidates = [
-      ...this.airlock.doors.map(door => ({ type: 'door', door, x: 0.5, y: 11.4, z: door.z, label: 'Press F: cycle airlock' })),
-      ...(this.player.pos.z > 6.15 && this.player.pos.z < 8.85 && this.player.pos.x > -1 && this.player.pos.x < 2
-        ? [{
-            type: 'suitport',
-            x: -0.68,
-            y: 11.35,
-            z: 7.5,
-            minDot: 0.72,
-            label: this.survival.suitEquipped ? 'Press F: dock EVA suit' : 'Press F: put on EVA suit',
-          }]
-        : []),
-      { type: 'power', x: 10.6, y: 11.4, z: -3, label: 'Press F: life support' },
-      { type: 'console', x: 8.25, y: 11.5, z: -10.8, label: 'Press F: mission computer' },
-      { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth (call Earth) · [G] send science' },
-      { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
-      { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
-      { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
-      { type: 'galley', x: 13.1, y: 11.35, z: -16.2, label: 'Press F: kitchen' },
-      { type: 'galley', x: 16.1, y: 11.3, z: -21.0, label: 'Press F: pantry & kitchen' },
-      { type: 'hygiene', x: -16.0, y: 11.1, z: -38.3, label: 'Press F: bathroom & water recycler' },
-      { type: 'hygiene', x: -19.85, y: 11.6, z: -32.5, label: 'Press F: bathroom & water recycler' },
-      { type: 'workshop', x: 11.5, y: 11.5, z: -38.1, label: 'Press F: 3D printer workshop' },
-      { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
-      ...GREENHOUSE_BASKETS.map(basket => ({ ...basket, cropType: basket.type, type: 'basket', minDot: 0.95, label: `Press F or tap: collect ${basket.type}` })),
-      { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
-      { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
-      { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
-      ...BUNK_INTERACTIONS,
-    ];
+    const candidates = this._interactionCandidates();
     for (const candidate of candidates) {
       this._interactionPoint.set(candidate.x, candidate.y, candidate.z);
       this._interactionOffset.copy(this._interactionPoint).sub(this.player.pos);
@@ -1824,6 +1847,13 @@ export class GameEngine {
     this.hud.showToast(`${speaker.name}: ${problemText(station, problem)}`, 6000);
   }
 
+  // Abaixo de 1 a imagem e ampliada pelo navegador: pixelada (como os blocos), nao borrada
+  _applyPixelRatio(ratio) {
+    this.renderer.setPixelRatio(ratio);
+    this.renderer.domElement.style.imageRendering = ratio < 1 ? 'pixelated' : '';
+    this.shaderMode?.setSize();
+  }
+
   _onResize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
@@ -2116,7 +2146,7 @@ export class GameEngine {
     try {
       const survival = {};
       for (const key of ['health','oxygen','suitEquipped','suitThermal','suitOxygen','suitScrubber','suitDust','suitIntegrity','baseOxygen','baseBreached','water','food','baseWater','maxBaseWater','graywater','inventorySlots','isDead']) survival[key] = this.survival[key];
-      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ world: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed }));
+      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed }));
       return true;
     } catch { return false; }
   }
@@ -2287,6 +2317,10 @@ export class GameEngine {
       this.shaderMode.render();
       if (isGameRunning && this.shaderMode.sampleFrame(frameMs)) {
         this.hud.showToast('Shaders turned off to keep the game smooth. Turn them back on in the menu.');
+      }
+      if (isGameRunning) {
+        const ratio = this.resolution.sample(frameMs);
+        if (ratio !== null) this._applyPixelRatio(ratio);
       }
       this.debug.frame(frameMs);
     };
