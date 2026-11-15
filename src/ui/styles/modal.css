@@ -32,6 +32,7 @@ body.pause-menu-open #menu-main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
+body.pause-menu-open #menu-main.hidden { display: none; }
 body.pause-menu-open #menu-main > #start-btn,
 body.pause-menu-open #menu-main > #controls-btn,
 body.pause-menu-open #menu-main > .menu-row { grid-column: 1 / -1; }
