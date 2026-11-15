@@ -132,6 +132,7 @@ export const TUTORIAL_STEPS = [
     lines: [
       { icon: 'bolt', text: 'Go to the POWER ROOM: press F' },
       { icon: 'sun', text: 'Sun by day, battery by night' },
+      { icon: 'radiation', text: 'The REACTOR gives power day and night' },
     ],
     done: more('powerChecks'),
   },

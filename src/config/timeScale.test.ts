@@ -64,9 +64,9 @@ describe('declared exceptions to the clock (issue #229)', () => {
 
   it('measures power with one declared ruler: the game reactor is a 10 kW Kilopower', () => {
     expect(percentPerHourToKw(ENERGY_CONFIG.REACTOR_CHARGE_PER_HOUR)).toBeCloseTo(TIME_SCALE_CONFIG.REACTOR_KW);
-    expect(BATTERY_KWH).toBeCloseTo(125);
+    expect(BATTERY_KWH).toBeCloseTo(62.5);
     expect(percentToKwh(ENERGY_CONFIG.BATTERY_CAPACITY)).toBeCloseTo(BATTERY_KWH);
-    expect(SOLAR_PEAK_KW).toBeCloseTo(26.875);
+    expect(SOLAR_PEAK_KW).toBeCloseTo(13.4375);
     expect(RTG_IN_REAL_MMRTGS).toBeGreaterThan(1);
   });
 
@@ -82,6 +82,6 @@ describe('declared exceptions to the clock (issue #229)', () => {
     expect(plants.real).toMatch(/lettuce 28, soy 90, potato 105/);
     expect(plants.why).toContain(String(TIME_SCALE_CONFIG.CROP_REAL_DAYS_PER_GAME_SECOND));
     expect(REAL_VS_GAME.find((row) => row.topic === 'Crew food and water')!.game).toMatch(/30 L of water.*1\.8 kg of food/);
-    expect(REAL_VS_GAME.find((row) => row.topic === 'Battery')!.game).toMatch(/125 kWh/);
+    expect(REAL_VS_GAME.find((row) => row.topic === 'Battery')!.game).toMatch(/63 kWh/);
   });
 });
