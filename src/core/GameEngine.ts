@@ -171,8 +171,10 @@ export class GameEngine {
 
     this.player = new PlayerPhysics(this.world, colliders);
     this.survival = new SurvivalSystem();
+    this._savedArrivalPlayed = false;
     try {
       const saved = JSON.parse(window.localStorage.getItem('marscraft-save-v1') || 'null');
+      this._savedArrivalPlayed = saved?.arrivalPlayed === true;
       if (saved?.survival) {
         Object.assign(this.survival, saved.survival);
         if (Array.isArray(saved.survival.inventorySlots)) {
@@ -1429,7 +1431,7 @@ export class GameEngine {
 
     this.cutsceneHud = new CutsceneHud({ onSkip: () => this.cutscenes.skip() });
     this.cutscenes = new CutscenePlayer({ hud: this.cutsceneHud });
-    this._arrivalPlayed = false;
+    this._arrivalPlayed = this._savedArrivalPlayed;
 
     // Capsula de pouso, chama e poeira ja nascem na cena para os shaders compilarem no loading
     this.lander = createLander();
@@ -1474,6 +1476,7 @@ export class GameEngine {
 
   _playArrival() {
     this._arrivalPlayed = true;
+    this._saveGame();
     this.audio.playRocket();
     const site = CUTSCENE_CONFIG.LANDING_SITE;
     this.playerHand.handGroup.visible = false;
@@ -2024,7 +2027,7 @@ export class GameEngine {
     try {
       const survival = {};
       for (const key of ['health','oxygen','suitEquipped','suitThermal','suitOxygen','suitScrubber','suitDust','suitIntegrity','baseOxygen','baseBreached','water','food','baseWater','maxBaseWater','graywater','inventorySlots','isDead']) survival[key] = this.survival[key];
-      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ world: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival }));
+      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ world: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed }));
       return true;
     } catch { return false; }
   }
