@@ -244,6 +244,29 @@ describe('VoxelWorld meshing', () => {
     expect(world.drops).toHaveLength(0);
   });
 
+  it('keeps a player drop on the ground until the player leaves and returns', () => {
+    const position = new THREE.Vector3(0, SKY_Y, 20);
+    const player = new THREE.Vector3(0, SKY_Y + 1.05, 20);
+    world.spawnPlayerDrop(position, 0, BLOCK_IDS.REGOLITH);
+    const drop = world.drops.at(-1);
+    const collect = vi.fn(() => true);
+    drop.age = 2;
+    drop.grounded = true;
+    drop.groundY = position.y;
+    drop.mesh.position.copy(position);
+
+    expect(world.updateDrops(0, player, collect)).toEqual([]);
+    expect(collect).not.toHaveBeenCalled();
+    expect(drop.waitingForPlayerToLeave).toBe(true);
+
+    const away = player.clone();
+    away.x += 2;
+    world.updateDrops(0, away, collect);
+    expect(drop.waitingForPlayerToLeave).toBe(false);
+    expect(world.updateDrops(0, player, collect)).toEqual([BLOCK_IDS.REGOLITH]);
+    expect(collect).toHaveBeenCalledOnce();
+  });
+
   it.each(Object.entries(CROP_ITEM_IDS))('preserves %s identity through dropping, failed pickup and successful pickup', (type, id) => {
     const position = new THREE.Vector3(0, SKY_Y, 20);
     world.spawnPlayerDrop(position, 0, id);
@@ -254,6 +277,8 @@ describe('VoxelWorld meshing', () => {
     const disposed = vi.fn(); material.addEventListener('dispose', disposed);
     const player = drop.mesh.position.clone(); player.y += 1.05;
     drop.age = 10;
+    const away = player.clone(); away.x += 2;
+    world.updateDrops(0, away, () => false);
     expect(world.updateDrops(0, player, () => false)).toEqual([]);
     expect(world.drops).toHaveLength(1);
     expect(world.updateDrops(0, player, () => true)).toEqual([id]);
