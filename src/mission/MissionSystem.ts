@@ -362,6 +362,15 @@ export class MissionSystem {
 
   // Move agua do tanque da base (`tank.baseWater`) para a parede do abrigo. Agua na parede
   // protege da radiacao, mas nao serve para beber nem para a estufa.
+  setShelterWallWater(tank, target) {
+    if (!Number.isFinite(target)) return;
+    const total = this.shelterWaterL + tank.baseWater;
+    const minimum = Math.max(0, total - tank.maxBaseWater);
+    const maximum = Math.min(RADIATION_CONFIG.SHELTER_WALL_MAX_L, total);
+    this.shelterWaterL = Math.max(minimum, Math.min(maximum, target));
+    tank.baseWater = total - this.shelterWaterL;
+  }
+
   fillShelterWall(tank) {
     const room = RADIATION_CONFIG.SHELTER_WALL_MAX_L - this.shelterWaterL;
     if (room <= 0) return 'The water wall is already full.';

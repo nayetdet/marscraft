@@ -475,7 +475,7 @@
   <div id="station-overlay" class="station-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="station-title">
     <section class="station-window">
       <header><span id="station-title"></span><button id="station-close" aria-label="Close station">X</button></header>
-      <div class="station-screen"><div id="station-content" class="station-text"></div><div id="power-monitor" class="power-monitor hidden"></div><div id="gym-interactive" class="gym-interactive hidden"></div><div id="greenhouse-monitor" class="gh-monitor hidden"></div><div id="station-sources" class="station-sources"></div><p id="station-feedback" role="status"></p></div>
+      <div class="station-screen"><div id="station-content" class="station-text"></div><div id="power-monitor" class="power-monitor hidden"></div><div id="gym-interactive" class="gym-interactive hidden"></div><div id="greenhouse-monitor" class="gh-monitor hidden"></div><details class="station-source-details"><summary>NASA sources</summary><div id="station-sources" class="station-sources"></div></details><p id="station-feedback" role="status"></p></div>
       <div id="station-actions"></div>
       <p class="station-footer">MISSION SYSTEMS // SIMULATION PAUSED</p>
     </section>
@@ -553,48 +553,73 @@
   </div>
 
   <!-- Painel do MAV (Mars Ascent Vehicle): o foguete que leva a tripulacao de volta -->
-  <div id="mav-overlay" class="inventory-overlay hidden">
-    <section class="inventory-window mav-window" aria-label="Mars Ascent Vehicle">
-      <header><h2>MAV - Mars Ascent Vehicle</h2><span id="mav-overall">0% ready</span></header>
-      <p class="mav-intro">This rocket takes you back to orbit, on your way home. Finish all three jobs, then press IGNITE.</p>
-
-      <div class="mav-req">
-        <h3>1. Rocket fuel: <span id="mav-fuel-pct">0%</span></h3>
-        <div class="mav-track"><div id="mav-fuel-fill" class="mav-fill"></div></div>
-        <p>The fuel factory splits Martian ice into hydrogen and oxygen, then mixes the hydrogen with carbon dioxide from the Mars air to make methane. Methane + oxygen = rocket fuel. It needs ice and uses energy.</p>
-        <p id="mav-fuel-status" class="mav-status"></p>
-        <div class="mav-actions">
-          <button id="mav-load-one" class="mc-btn">Load 1 ice</button>
-          <button id="mav-load-all" class="mc-btn">Load all ice</button>
-          <button id="mav-factory" class="mc-btn">Factory: ON</button>
+  <div id="mav-overlay" class="station-overlay is-machine hidden" data-station="mav" role="dialog" aria-modal="true" aria-labelledby="mav-title">
+    <section class="station-window mav-window" aria-label="Mars Ascent Vehicle">
+      <header><span id="mav-title">MAV ROCKET</span><button id="mav-close" type="button" aria-label="Close">X</button></header>
+      <div class="station-screen">
+        <div id="mav-monitor" class="mc-monitor" data-machine="mav">
+          <div id="mav-top-bar" class="gh-top-bar mc-top-bar">
+            <div class="gh-res-pill beds" title="Rocket ready"><span class="mc-pill-ico" data-mav-icon="rocket"></span><strong id="mav-overall">0%</strong></div>
+            <div class="gh-res-pill water" title="Ice in bag"><span class="mc-pill-ico" data-mav-icon="drop"></span><strong id="mav-ice-bag">0</strong></div>
+            <div class="gh-res-pill power" title="Base battery"><span class="mc-pill-ico" data-mav-icon="bolt"></span><strong id="mav-power-pct">100%</strong></div>
+            <span id="mav-nasa-wrap"></span>
+          </div>
+          <div class="gh-body mc-body">
+            <div class="mc-stage-wrap">
+              <div class="mc-stage-box">
+                <div id="mav-stage-svg"></div>
+                <div class="mc-stat-bars mc-air-bars">
+                  <div class="mc-mini-bar">
+                    <span><span data-mav-icon="rocket"></span> FUEL</span>
+                    <div class="mc-bar-track"><i id="mav-fuel-fill" style="width:0%"></i></div>
+                    <strong id="mav-fuel-pct">0%</strong>
+                  </div>
+                </div>
+                <div id="mav-cue-box" class="mc-stage-caption is-ok" role="status">
+                  <span id="mav-cue-tag" class="mc-cap-tag">FUEL</span>
+                  <strong id="mav-fuel-status">Load 6 ice</strong>
+                </div>
+              </div>
+            </div>
+            <div class="gh-side mc-side">
+              <div class="mav-check-grid">
+                <div id="mav-pill-fuel" class="mav-check-tile"><span data-mav-icon="rocket"></span><b>FUEL</b><strong id="mav-tile-fuel">0%</strong></div>
+                <div id="mav-pill-storms" class="mav-check-tile"><span data-mav-icon="storm"></span><b>STORMS</b><strong id="mav-storms">0/3</strong></div>
+                <div id="mav-pill-data" class="mav-check-tile"><span data-mav-icon="radio"></span><b>DATA</b><strong id="mav-data">NO</strong></div>
+              </div>
+              <div class="mc-action-stack">
+                <button id="mav-factory" type="button" class="mc-btn mc-act-card mc-toggle-row is-active" aria-pressed="true">
+                  <span class="mc-act-icon" data-mav-icon="bolt" aria-hidden="true"></span>
+                  <span class="mc-act-main"><strong>FACTORY</strong></span>
+                  <span id="mav-factory-toggle" class="pw-toggle mc-air-toggle is-on" aria-hidden="true"><span>OFF</span><span class="pw-toggle-track"><i></i></span><span>ON</span></span>
+                </button>
+                <div class="mc-action-duo">
+                  <button id="mav-load-one" type="button" class="mc-btn mc-act-card is-compact">
+                    <span class="mc-act-icon" data-mav-icon="drop" aria-hidden="true"></span>
+                    <span class="mc-act-main"><strong>+1 ICE</strong></span>
+                  </button>
+                  <button id="mav-load-all" type="button" class="mc-btn mc-act-card is-compact">
+                    <span class="mc-act-icon" data-mav-icon="up" aria-hidden="true"></span>
+                    <span class="mc-act-main"><strong id="mav-load-all-lbl">ALL (0)</strong></span>
+                  </button>
+                </div>
+                <div class="mav-tube-bar">
+                  <span class="mc-act-icon" data-mav-icon="rock" aria-hidden="true"></span>
+                  <span class="mav-tube-info"><strong>TUBES</strong><small>+2 ICE</small></span>
+                  <strong id="mav-tubes" class="mav-tube-count">0/3</strong>
+                  <div class="mav-tube-btns">
+                    <button id="mav-tube-unload" type="button" class="mc-btn mav-step-btn" aria-label="Unload 1 tube">-</button>
+                    <button id="mav-tube-load" type="button" class="mc-btn mav-step-btn" aria-label="Load 1 tube">+</button>
+                  </div>
+                </div>
+                <button id="mav-ignite" type="button" class="mc-btn mc-act-card mav-ignite-btn" disabled>
+                  <span class="mc-act-icon" data-mav-icon="rocket" aria-hidden="true"></span>
+                  <span class="mc-act-main"><strong>IGNITE!</strong></span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-
-      <div class="mav-req">
-        <h3>2. Solar storms survived: <span id="mav-storms">0/3</span></h3>
-        <p>A solar storm starts when the Sun throws out a huge cloud of fast particles (scientists call it a CME). Stay alive until 3 storms pass: hide in the base or turn on the shield with the Shield Remote (hotbar slot 3).</p>
-      </div>
-
-      <div class="mav-req">
-        <h3>3. Science sent to Earth: <span id="mav-data">No</span></h3>
-        <p>Scan things with the scope and analyze regolith samples, then send them from the science &amp; radio terminal inside the base (Send button, or [G] next to it). A bigger package uses more energy.</p>
-        <p id="mav-data-status" class="mav-status"></p>
-      </div>
-
-      <div class="mav-req">
-        <h3>Extra: rock sample tubes on board: <span id="mav-tubes">0</span></h3>
-        <p>Real rovers like Perseverance seal rock samples in tubes so a rocket can one day bring them to Earth. A heavier rocket needs more fuel, so each tube asks for more ice.</p>
-        <p id="mav-tubes-math" class="mav-status"></p>
-        <div class="mav-actions">
-          <button id="mav-tube-load" class="mc-btn">Load 1 sample tube</button>
-          <button id="mav-tube-unload" class="mc-btn">Unload 1 tube</button>
-        </div>
-      </div>
-
-      <p id="mav-power" class="mav-status"></p>
-      <div class="mav-actions">
-        <button id="mav-ignite" class="mc-btn primary" disabled>IGNITE</button>
-        <button id="mav-close" class="mc-btn">Close [F]</button>
       </div>
     </section>
   </div>

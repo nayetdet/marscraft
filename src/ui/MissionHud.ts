@@ -2,7 +2,7 @@
 import { MAV_CONFIG, SCIENCE_CONFIG } from '../config/constants.ts';
 
 import { smoothNetRate } from '../mission/energy.ts';
-import { scienceCountText, scienceMissingText } from '../mission/sciencePackage.ts';
+import { mavCue, mavNasaPopoverHtml, renderMavStageSvg } from './mavPanelView.ts';
 import { missionStatus } from './missionCards.ts';
 import { pixelIconSvg } from './pixelIcons.ts';
 
@@ -53,21 +53,35 @@ export class MissionHud {
 
     this.mavOverlayEl = $('mav-overlay');
     this.mavOverallEl = $('mav-overall');
+    this.mavIceBagEl = $('mav-ice-bag');
+    this.mavPowerPctEl = $('mav-power-pct');
+    this.mavStageSvgEl = $('mav-stage-svg');
+    this.mavCueBoxEl = $('mav-cue-box');
+    this.mavCueTagEl = $('mav-cue-tag');
     this.fuelPctEl = $('mav-fuel-pct');
     this.fuelFillEl = $('mav-fuel-fill');
     this.fuelStatusEl = $('mav-fuel-status');
     this.loadOneBtn = $('mav-load-one');
     this.loadAllBtn = $('mav-load-all');
+    this.loadAllLblEl = $('mav-load-all-lbl');
     this.factoryBtn = $('mav-factory');
+    this.factoryToggleEl = $('mav-factory-toggle');
+    this.pillFuelEl = $('mav-pill-fuel');
+    this.tileFuelEl = $('mav-tile-fuel');
+    this.pillStormsEl = $('mav-pill-storms');
     this.stormsEl = $('mav-storms');
+    this.pillDataEl = $('mav-pill-data');
     this.dataEl = $('mav-data');
-    this.dataStatusEl = $('mav-data-status');
     this.tubesEl = $('mav-tubes');
-    this.tubesMathEl = $('mav-tubes-math');
     this.tubeLoadBtn = $('mav-tube-load');
     this.tubeUnloadBtn = $('mav-tube-unload');
-    this.mavPowerEl = $('mav-power');
     this.igniteBtn = $('mav-ignite');
+
+    const nasaWrap = $('mav-nasa-wrap');
+    if (nasaWrap) nasaWrap.outerHTML = mavNasaPopoverHtml();
+    for (const el of this.mavOverlayEl?.querySelectorAll('[data-mav-icon]') ?? []) {
+      setIcon(el, el.dataset.mavIcon);
+    }
 
     this.victoryOverlayEl = $('victory-overlay');
     this.victorySummaryEl = $('victory-summary');
@@ -232,50 +246,74 @@ export class MissionHud {
   }
 
   // `analyzedSamples`: amostras analisadas no laboratorio (as que podem virar tubos);
-  // `totals`: ciencia feita nesta partida ({ discoveries, samples }) para dizer o que falta enviar
-  updateMavPanel(mission, iceInBag, analyzedSamples = 0, totals = { discoveries: 0, samples: 0 }) {
+  updateMavPanel(mission, iceInBag, analyzedSamples = 0, _totals = { discoveries: 0, samples: 0 }) {
     if (!this.isMavPanelOpen) return;
     const progress = mission.progress;
-    setText(this.mavOverallEl, `${Math.floor(progress.overallPct)}% ready`);
-
     const fuel = Math.floor(mission.propellant);
+    const waiting = Math.max(0, Math.ceil(mission.iceStock - 1e-6));
+    const iceNeeded = mission.iceNeeded();
+    const storms = Math.min(mission.stormCredit, MAV_CONFIG.STORMS_TO_SURVIVE);
+    const batteryPct = Math.round(mission.battery.percent);
+    const tubes = mission.sampleTubes;
+
+    const vm = {
+      propellantPct: fuel,
+      overallPct: Math.floor(progress.overallPct),
+      ready: Boolean(progress.ready),
+      factoryOn: Boolean(mission.factoryOn),
+      batteryPct,
+      iceInBag,
+      iceWaiting: waiting,
+      iceNeeded,
+      storms,
+      stormsNeeded: MAV_CONFIG.STORMS_TO_SURVIVE,
+      dataSent: Boolean(mission.dataSent),
+      sampleTubes: tubes,
+      maxSampleTubes: SCIENCE_CONFIG.MAX_SAMPLE_TUBES,
+      analyzedSamples,
+      icePerTube: SCIENCE_CONFIG.ICE_PER_SAMPLE_TUBE,
+    };
+
+    setText(this.mavOverallEl, `${vm.overallPct}%`);
+    setText(this.mavIceBagEl, `${iceInBag}`);
+    setText(this.mavPowerPctEl, `${batteryPct}%`);
+
+    const svg = renderMavStageSvg(vm);
+    if (this.mavStageSvgEl && this.mavStageSvgEl._svg !== svg) {
+      this.mavStageSvgEl._svg = svg;
+      this.mavStageSvgEl.innerHTML = svg;
+    }
+
     setText(this.fuelPctEl, `${fuel}%`);
-    const fillWidth = `${mission.propellant.toFixed(1)}%`;
-    if (this.fuelFillEl.style.width !== fillWidth) this.fuelFillEl.style.width = fillWidth;
+    setWidth(this.fuelFillEl, mission.propellant);
+    this.fuelFillEl?.classList.toggle('is-full', fuel >= 100);
+    const cue = mavCue(vm);
+    setClass(this.mavCueBoxEl, `mc-stage-caption is-${cue.tone}`);
+    setText(this.mavCueTagEl, cue.tag, 'mc-cap-tag');
+    setText(this.fuelStatusEl, cue.text);
 
-    const waiting = Math.ceil(mission.iceStock - 1e-6);
-    let status;
-    if (fuel >= 100) status = 'Tank full!';
-    else if (waiting > 0 && !mission.factoryOn) status = `${waiting} ice waiting. The factory is OFF.`;
-    else if (waiting > 0 && mission.battery.charge <= 0) status = `${waiting} ice waiting. No energy: the factory is stopped.`;
-    else if (waiting > 0) status = `Making fuel... ${waiting} ice waiting in the factory.`;
-    else status = `Bring ice from the ice crater. Still needed: ${mission.iceNeeded()} ice. You have ${iceInBag}.`;
-    setText(this.fuelStatusEl, status, 'mav-status');
-
-    const canLoad = iceInBag > 0 && mission.iceNeeded() > 0;
+    const canLoad = iceInBag > 0 && iceNeeded > 0;
     this.loadOneBtn.disabled = !canLoad;
     this.loadAllBtn.disabled = !canLoad;
-    setText(this.loadAllBtn, `Load all ice (${iceInBag})`, 'mc-btn');
-    setText(this.factoryBtn, `Factory: ${mission.factoryOn ? 'ON' : 'OFF'}`, 'mc-btn');
+    setText(this.loadAllLblEl, `ALL (${iceInBag})`);
 
-    setText(this.stormsEl, `${Math.min(mission.stormCredit, MAV_CONFIG.STORMS_TO_SURVIVE)}/${MAV_CONFIG.STORMS_TO_SURVIVE}`);
-    setText(this.dataEl, mission.dataSent ? 'Yes' : 'No');
-    setText(this.dataStatusEl, `Sent so far: ${scienceCountText(mission.sentDiscoveries, mission.sentSamples)}. ` +
-      scienceMissingText({ ...totals, sentDiscoveries: mission.sentDiscoveries, sentSamples: mission.sentSamples }), 'mav-status');
+    this.factoryBtn.setAttribute('aria-pressed', String(vm.factoryOn));
+    setClass(this.factoryBtn, `mc-btn mc-act-card mc-toggle-row${vm.factoryOn ? ' is-active' : ''}`);
+    setClass(this.factoryToggleEl, `pw-toggle mc-air-toggle ${vm.factoryOn ? 'is-on' : 'is-off'}`);
 
-    // Tubos de amostra: a conta do gelo a mais aparece inteira
-    const tubes = mission.sampleTubes;
-    const perTube = SCIENCE_CONFIG.ICE_PER_SAMPLE_TUBE;
-    setText(this.tubesEl, `${tubes}/${SCIENCE_CONFIG.MAX_SAMPLE_TUBES}`);
-    setText(this.tubesMathEl,
-      `Ice for a full tank: ${MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK} (empty rocket) + ${tubes} tube${tubes === 1 ? '' : 's'} x ${perTube} = ${mission.iceForFullTank()} ice. ` +
-      `Analyzed samples ready for a tube: ${Math.max(0, analyzedSamples - tubes)}. ` +
-      `(Game rule: a real tube weighs far less than a block of ice.)`, 'mav-status');
-    this.tubeLoadBtn.disabled = tubes >= SCIENCE_CONFIG.MAX_SAMPLE_TUBES || tubes >= analyzedSamples;
-    setText(this.tubeLoadBtn, `Load 1 sample tube (+${perTube} ice needed)`, 'mc-btn');
+    setText(this.tileFuelEl, `${fuel}%`);
+    setClass(this.pillFuelEl, `mav-check-tile${fuel >= 100 ? ' is-ok' : ''}`);
+    setText(this.stormsEl, `${storms}/${vm.stormsNeeded}`);
+    setClass(this.pillStormsEl, `mav-check-tile${storms >= vm.stormsNeeded ? ' is-ok' : ''}`);
+    setText(this.dataEl, vm.dataSent ? 'OK' : 'NO');
+    setClass(this.pillDataEl, `mav-check-tile${vm.dataSent ? ' is-ok' : ''}`);
+
+    setText(this.tubesEl, `${tubes}/${vm.maxSampleTubes}`);
+    this.tubeLoadBtn.disabled = tubes >= vm.maxSampleTubes || tubes >= analyzedSamples;
     this.tubeUnloadBtn.disabled = tubes <= 0;
-    setText(this.mavPowerEl, `Base battery: ${Math.round(mission.battery.percent)}%. Fuel making, the shield, the radio and making oxygen all share this energy.`, 'mav-status');
+
     this.igniteBtn.disabled = !progress.ready;
+    setClass(this.igniteBtn, `mc-btn mc-act-card mav-ignite-btn${progress.ready ? ' is-ready' : ''}`);
   }
 
   showVictory(rows, sourcesText) {

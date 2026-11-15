@@ -66,5 +66,7 @@ describe('power panel view', () => {
   it('draws a switch button for each toggle', () => {
     const html = powerPanelHtml(powerPanelModel(state()));
     for (const id of ['reactor', 'lights', 'heater', 'shield', 'factory']) expect(html).toContain(`data-action="toggle:${id}"`);
+    expect(html).toMatch(/data-action="toggle:heater" aria-pressed="true"[\s\S]*?pw-toggle is-on/);
+    expect(html).toMatch(/data-action="toggle:shield" aria-pressed="false"[\s\S]*?pw-toggle is-off/);
   });
 });
