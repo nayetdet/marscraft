@@ -1914,7 +1914,7 @@ export class GameEngine {
       if (isGameRunning && !this.roverController.isActive) this._updateExpedition(dt);
       if (isGameRunning) this._updateStory(dt);
 
-      this.dustStorm.update(dt, this.roverController.isActive ? this.roverController.pos : this.player.pos, this.camera, this._weatherFx);
+      this.dustStorm.update(dt, this.camera, this._weatherFx);
       this._updateEvents(dt, isGameRunning);
       this.renderer.render(this.scene, this.camera);
       this.debug.frame(frameMs);

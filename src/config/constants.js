@@ -15,7 +15,6 @@ export const TERRAIN_CONFIG = {
   BASE_BLEND_RADIUS: 36,
 };
 
-const DUST_STORM_FRONT_OFFSET = 24;
 const DUST_STORM_MAP_EDGE_RADIUS = Math.min(
   WORLD_CONFIG.SIZE_X / 2 - Math.abs(TERRAIN_CONFIG.BASE_CENTER.x),
   WORLD_CONFIG.SIZE_Z / 2 - Math.abs(TERRAIN_CONFIG.BASE_CENTER.z)
@@ -80,40 +79,26 @@ export const SURVIVAL_CONFIG = {
   // Borda da area jogavel (parede de poeira), medida a partir de TERRAIN_CONFIG.BASE_CENTER.
   // Issue #103: a borda nao machuca mais. O vento de Marte nao derruba ninguem (o ar e fino
   // demais); quem limita a distancia e o ar do traje. No raio FATAL fica uma parede invisivel.
-  DUST_STORM_START_RADIUS: DUST_STORM_MAP_EDGE_RADIUS - DUST_STORM_FRONT_OFFSET,
   DUST_STORM_FATAL_RADIUS: DUST_STORM_MAP_EDGE_RADIUS,
-  // Intensidade (0..1) a partir da qual o HUD manda voltar ja; antes disso e so aviso
-  DUST_STORM_TURN_BACK_START: 0.55,
-  // Blocos antes do inicio da tempestade em que o HUD ja avisa que a borda esta perto
-  DUST_STORM_WARNING_DISTANCE: 8,
 };
 
-// Visual da tempestade da borda (src/sky/DustStormEffect.js). O dano fica no SURVIVAL_CONFIG.
+// Visual da nevoa na borda do mapa (src/sky/DustStormEffect.js); nao causa dano.
 export const DUST_STORM_VISUAL_CONFIG = {
-  INNER_WALL_OPACITY: 0.38,
-  MIDDLE_WALL_OPACITY: 0.68,
   OUTER_WALL_OPACITY: 1,
   OVERHEAD_FOG_HEIGHT: 24,
   OVERHEAD_FOG_VIEW_START: 12,
   OVERHEAD_FOG_VIEW_END: 36,
-  OVERHEAD_INNER_BAND_OPACITY: 0.14,
-  OVERHEAD_MIDDLE_BAND_OPACITY: 0.24,
   OVERHEAD_OUTER_BAND_OPACITY: 0.34,
   WALL_BOTTOM_Y: -4,
   WALL_HEIGHT: 44,
   // A parede some perto da camera (entre estas distancias, em blocos) para nao virar um plano duro
   WALL_FADE_NEAR: 1.5,
   WALL_FADE_FAR: 8,
-  // A névoa cresce nas duas faixas entre a frente interna e a borda externa.
-  VISUAL_LEAD: DUST_STORM_FRONT_OFFSET,
   DOME_RADIUS: 26,
-  DOME_MAX_OPACITY: 0.93,
   FOG_BASE_DENSITY: 0.0015,
-  FOG_MAX_DENSITY: 0.11,
   PARTICLE_COUNT: 1400,
   PARTICLE_BOX: { x: 36, y: 16, z: 36 },
   WIND_SPEED: 11, // blocos/s
-  WIND_PUSH: 0.45, // parte do vento que sopra de volta para a base
 };
 
 export const WATER_SYSTEM_CONFIG = {

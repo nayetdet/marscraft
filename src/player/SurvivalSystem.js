@@ -1,7 +1,6 @@
 import { BLOCK_IDS, HOTBAR_BLOCKS, ITEM_DEFINITIONS } from '../config/blockTypes.js';
 import { SURVIVAL_CONFIG, WATER_SYSTEM_CONFIG } from '../config/constants.js';
 import { isInsidePressurizedVolume } from '../world/habitatLayout.js';
-import { dustStormIntensity, dustStormProximity } from '../world/dustStormZone.js';
 
 export class SurvivalSystem {
   constructor() {
@@ -24,8 +23,6 @@ export class SurvivalSystem {
     this.damageFeedbackDetail = null;
     this.damageFeedbackTime = 0;
     this.insidePressurizedShip = false;
-    this.dustStormIntensity = 0;
-    this.dustStormProximity = 0;
 
     // Sistema de Água Potável e Irrigação da Base
     this.baseWater = WATER_SYSTEM_CONFIG.INITIAL_BASE_WATER;
@@ -86,9 +83,6 @@ export class SurvivalSystem {
       this.baseOxygen += recovered;
       this.lastOxygenRefilled = recovered * this.maxStat / 100;
     }
-    this.dustStormIntensity = this.insidePressurizedShip ? 0 : dustStormIntensity(playerPos.x, playerPos.z);
-    this.dustStormProximity = this.insidePressurizedShip ? 0 : dustStormProximity(playerPos.x, playerPos.z);
-
     if (this.insidePressurizedShip && !baseBreached) {
       const suitRefill = Math.max(0, Math.min(
         this.maxStat - this.oxygen,
