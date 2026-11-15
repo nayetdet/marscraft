@@ -167,6 +167,14 @@ export class PlayerPhysics {
       const speed = sprinting ? PHYSICS_CONFIG.SPRINT_SPEED : PHYSICS_CONFIG.WALK_SPEED;
       this.vel.x = moveDir.x * speed;
       this.vel.z = moveDir.z * speed;
+    } else if (this.onGround) {
+      const horizontalSpeed = Math.hypot(this.vel.x, this.vel.z);
+      if (horizontalSpeed > 0) {
+        const remainingSpeed = Math.max(0, horizontalSpeed - PHYSICS_CONFIG.INVENTORY_GROUND_DECELERATION * dt);
+        const speedScale = remainingSpeed / horizontalSpeed;
+        this.vel.x *= speedScale;
+        this.vel.z *= speedScale;
+      }
     }
 
     this.vel.y -= PHYSICS_CONFIG.MARS_GRAVITY * dt;
