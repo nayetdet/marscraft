@@ -103,6 +103,25 @@ export const STORY_PT_BR: Record<string, string> = {
   'NASA Mars Fact Sheet. NASA International Space Station': 'Ficha Técnica de Marte da NASA. Estação Espacial Internacional da NASA',
   'NASA Orion storm shelter (Artemis)': 'Abrigo contra tempestades Orion da NASA (Artemis)', 'NASA Curiosity rover': 'Rover Curiosity da NASA',
   'NASA Science: Mars. NASA Perseverance rover (MOXIE)': 'NASA Science: Marte. Rover Perseverance da NASA (MOXIE)', 'NASA, 2024 (Curiosity RAD)': 'NASA, 2024 (RAD do Curiosity)',
+  // Ato 2 (#415): quem sai do posto para ajudar
+  'WHO BRINGS THE GLASS?': 'QUEM TRAZ O VIDRO?', 'The helper leaves a job behind': 'Quem ajuda deixa um trabalho parado',
+  ENGINEER: 'ENGENHEIRO', BOTANIST: 'BOTÂNICA', 'Plants keep growing': 'As plantas seguem crescendo', 'Water recycler stops 1 hour': 'Reciclador de água para 1 hora',
+  'Water keeps recycling': 'A água segue sendo reciclada', 'Plants stop growing 1 hour': 'As plantas param de crescer 1 hora',
+  'Real: astronaut time is scarce on the Space Station (NASA Inspector General, IG-20-005). The 1 hour stop is a game rule.': 'Real: o tempo dos astronautas é escasso na Estação Espacial (Inspetoria-Geral da NASA, IG-20-005). A parada de 1 hora é regra do jogo.',
+  'Now choose who brings new glass': 'Agora escolha quem traz o vidro novo',
+  'Botanist: I am getting new glass. Come and take it!': 'Botânica: Vou buscar o vidro novo. Venha pegar!',
+  '[F] Get the new window glass from the botanist': '[F] Pegar o vidro novo da janela com a botânica',
+  'Botanist: Here is the glass. Put it on the cracked window!': 'Botânica: Aqui está o vidro. Coloque na janela rachada!',
+  'Water recycler stopped: the engineer is helping you.': 'Reciclador de água parado: o engenheiro está ajudando você.',
+  'WATER RECYCLER STOPPED: the engineer is helping': 'RECICLADOR DE ÁGUA PARADO: o engenheiro está ajudando',
+  'The engineer is back: the water recycler runs again.': 'O engenheiro voltou: o reciclador de água funciona de novo.',
+  'Greenhouse stopped: the botanist is helping you.': 'Estufa parada: a botânica está ajudando você.',
+  'GREENHOUSE STOPPED: the botanist is helping': 'ESTUFA PARADA: a botânica está ajudando',
+  'The botanist is back: the plants grow again.': 'A botânica voltou: as plantas crescem de novo.',
+  'Get glass from your helper (F), then press F on the window': 'Pegue o vidro com quem ajuda (F) e aperte F na janela',
+  'Get new glass from a crew helper and replace the cracked window': 'Pegue o vidro novo com quem veio ajudar e troque a janela rachada',
+  'A crew helper brings new window glass': 'Alguém da tripulação traz o vidro novo',
+  'Take the glass: press F on the helper': 'Pegue o vidro: aperte F em quem ajuda',
 };
 
 // Caption copy for arrival, launch, and ration handoff cutscenes.
@@ -148,6 +167,13 @@ export const CUTSCENE_ES: Record<string, string> = {
 
 // Extra tutorial, objective, and mission-journal copy from the later story acts.
 export const STORY_MORE_PT_BR: Record<string, string> = {
+  // Ato 2 (#417): traje ou Terra
+  'SUIT OR EARTH?': 'TRAJE OU TERRA?', 'Your scans are science points': 'Seus scans valem pontos de ciência',
+  'Choose at the science & radio terminal': 'Escolha no terminal de ciência e rádio',
+  'UPGRADE SUIT': 'MELHORAR TRAJE', '35% less radiation outside': '35% menos radiação lá fora', '4 points never reach Earth': '4 pontos nunca chegam à Terra',
+  'SEND TO EARTH': 'ENVIAR À TERRA', 'Points count for the rocket': 'Os pontos contam para o foguete', 'Each upload eats battery': 'Cada envio gasta bateria',
+  'Game rule: the suit upgrade and its cost are not NASA data.': 'Regra do jogo: a melhoria do traje e o custo dela não são dados da NASA.',
+  'No suit upgrade: full radiation outside, more science for Earth': 'Traje sem melhoria: radiação cheia lá fora, mais ciência para a Terra',
   'USE YOUR SCOPE': 'USE A LUNETA', 'Left-click scans; right-click opens or closes it': 'Clique esquerdo escaneia; clique direito abre ou fecha a luneta.',
   'GET WATER': 'BUSCAR ÁGUA', 'SAVE POWER': 'ECONOMIZAR ENERGIA', 'GROW FOOD': 'CULTIVAR COMIDA', 'CHARGE THE ROVER': 'CARREGAR O ROVER',
   'Rover console: press F. Drill ice (SPACE), unload it at the base (SPACE)': 'Console do rover: pressione F. Perfure gelo (ESPAÇO) e descarregue na base (ESPAÇO)',
@@ -221,6 +247,13 @@ export const STORY_MORE_PT_BR: Record<string, string> = {
 };
 
 export const STORY_MORE_ES: Record<string, string> = {
+  // Acto 2 (#417): traje o Tierra
+  'SUIT OR EARTH?': '¿TRAJE O TIERRA?', 'Your scans are science points': 'Tus escaneos valen puntos de ciencia',
+  'Choose at the science & radio terminal': 'Elige en el terminal de ciencia y radio',
+  'UPGRADE SUIT': 'MEJORAR TRAJE', '35% less radiation outside': '35% menos radiación afuera', '4 points never reach Earth': '4 puntos nunca llegan a la Tierra',
+  'SEND TO EARTH': 'ENVIAR A LA TIERRA', 'Points count for the rocket': 'Los puntos cuentan para el cohete', 'Each upload eats battery': 'Cada envío gasta batería',
+  'Game rule: the suit upgrade and its cost are not NASA data.': 'Regla del juego: la mejora del traje y su costo no son datos de la NASA.',
+  'No suit upgrade: full radiation outside, more science for Earth': 'Traje sin mejora: radiación completa afuera, más ciencia para la Tierra',
   'USE YOUR SCOPE': 'USA LA MIRA', 'Left-click scans; right-click opens or closes it': 'El clic izquierdo escanea; el derecho abre o cierra la mira.',
   'GET WATER': 'BUSCA AGUA', 'SAVE POWER': 'AHORRA ENERGÍA', 'GROW FOOD': 'CULTIVA COMIDA', 'CHARGE THE ROVER': 'CARGA EL ROVER',
   'Rover console: press F. Drill ice (SPACE), unload it at the base (SPACE)': 'Consola del rover: pulsa F. Perfora hielo (ESPACIO) y descárgalo en la base (ESPACIO)',
@@ -360,4 +393,23 @@ export const STORY_ES: Record<string, string> = {
   'ROCKET FUEL!': '¡COMBUSTIBLE PARA EL COHETE!', 'ICE TO FUEL': 'DEL HIELO AL COMBUSTIBLE', 'You loaded ice into the rocket': 'Cargaste hielo en el cohete', 'Water ice can become rocket fuel and oxygen': 'El hielo de agua puede convertirse en combustible y oxígeno', 'MOXIE made oxygen from Mars air in 2021': 'En 2021, MOXIE produjo oxígeno a partir del aire de Marte',
   'STORM SURVIVED!': '¡TORMENTA SUPERADA!', 'SOLAR STORM': 'TORMENTA SOLAR', 'You made it through a solar storm': 'Sobreviviste a una tormenta solar', 'In 2024 Curiosity measured its biggest solar storm on Mars': 'En 2024, Curiosity midió la mayor tormenta solar registrada en Marte', 'It was like 30 chest X-rays at once': 'Fue como recibir 30 radiografías de tórax a la vez',
   'Earth can help. The answer is slow.': 'La Tierra puede ayudar. La respuesta tarda.', 'One battery. It can\'t run everything.': 'Una batería. No puede alimentar todo.', 'Plants feed you. They drink first.': 'Las plantas te alimentan, pero primero beben agua.', 'Every drop has three jobs.': 'Cada gota tiene tres tareas.', 'Ice is out there. So is danger.': 'El hielo está afuera. El peligro también.', 'No Sun at night. Heat drains power.': 'De noche no hay Sol. La calefacción consume energía.', 'Sleep skips time. You still eat.': 'Dormir adelanta el tiempo. Aun así, necesitas comer.', 'Dust hides the Sun. Save power.': 'El polvo oculta el Sol. Ahorra energía.', 'Three ways to hide. Each one costs.': 'Tres formas de protegerte. Cada una cuesta algo.', 'Fixing a machine costs power.': 'Reparar una máquina consume energía.',
+  // Ato 2 (#415): quem sai do posto para ajudar
+  'WHO BRINGS THE GLASS?': '¿QUIÉN TRAE EL VIDRIO?', 'The helper leaves a job behind': 'Quien ayuda deja un trabajo parado',
+  ENGINEER: 'INGENIERO', BOTANIST: 'BOTÁNICA', 'Plants keep growing': 'Las plantas siguen creciendo', 'Water recycler stops 1 hour': 'El reciclador de agua para 1 hora',
+  'Water keeps recycling': 'El agua se sigue reciclando', 'Plants stop growing 1 hour': 'Las plantas dejan de crecer 1 hora',
+  'Real: astronaut time is scarce on the Space Station (NASA Inspector General, IG-20-005). The 1 hour stop is a game rule.': 'Real: el tiempo de los astronautas es escaso en la Estación Espacial (Inspección General de la NASA, IG-20-005). La parada de 1 hora es una regla del juego.',
+  'Now choose who brings new glass': 'Ahora elige quién trae el vidrio nuevo',
+  'Botanist: I am getting new glass. Come and take it!': 'Botánica: Voy a buscar el vidrio nuevo. ¡Ven a recogerlo!',
+  '[F] Get the new window glass from the botanist': '[F] Recoger el vidrio nuevo de la ventana con la botánica',
+  'Botanist: Here is the glass. Put it on the cracked window!': 'Botánica: Aquí está el vidrio. ¡Ponlo en la ventana agrietada!',
+  'Water recycler stopped: the engineer is helping you.': 'Reciclador de agua parado: el ingeniero te está ayudando.',
+  'WATER RECYCLER STOPPED: the engineer is helping': 'RECICLADOR DE AGUA PARADO: el ingeniero está ayudando',
+  'The engineer is back: the water recycler runs again.': 'El ingeniero volvió: el reciclador de agua funciona otra vez.',
+  'Greenhouse stopped: the botanist is helping you.': 'Invernadero parado: la botánica te está ayudando.',
+  'GREENHOUSE STOPPED: the botanist is helping': 'INVERNADERO PARADO: la botánica está ayudando',
+  'The botanist is back: the plants grow again.': 'La botánica volvió: las plantas crecen otra vez.',
+  'Get glass from your helper (F), then press F on the window': 'Recoge el vidrio con quien ayuda (F) y pulsa F en la ventana',
+  'Get new glass from a crew helper and replace the cracked window': 'Recoge el vidrio nuevo con quien vino a ayudar y cambia la ventana agrietada',
+  'A crew helper brings new window glass': 'Alguien de la tripulación trae el vidrio nuevo',
+  'Take the glass: press F on the helper': 'Recoge el vidrio: pulsa F en quien ayuda',
 };

@@ -2,6 +2,8 @@
 import { ACT5_CONFIG, RADIATION_CONFIG } from '../config/constants.ts';
 import { BASE_DOSE_MSV_PER_HOUR } from './radiation.ts';
 import { handoverSummary } from '../story/acts/act5Handover.ts';
+import { suitTradeSummary } from '../story/acts/act2SuitChoice.ts';
+import { firstIceSummary } from '../story/firstIceChoice.ts';
 
 // Boletim do cadete (issue #90): 5 notas (S, A, B, C) calculadas com o que o jogador fez na
 // partida, mais uma frase de perfil e o que ele descobriu (issue #271). Logica pura: o ReportCard
@@ -21,6 +23,8 @@ import { handoverSummary } from '../story/acts/act5Handover.ts';
 //   topFinds: [{ name, points }],                    // as descobertas que valem mais
 //   launched, launchWindow,                          // decolou? em qual janela (1 = a primeira)
 //   baseHandover,                                    // a base na decolagem (act5Handover.ts, #423)
+//   sciencePointsUsed, suitUpgraded,                 // ciencia gasta em Marte x traje melhorado (#417)
+//   firstIceChoice,                                  // para onde foi o primeiro gelo (firstIceChoice.ts, #413)
 // }
 
 const clamp01 = (v) => Math.max(0, Math.min(1, Number.isFinite(v) ? v : 0));
@@ -197,5 +201,11 @@ export function missionReport(stats) {
     ? { title: 'Mission Commander', text: 'You did great at everything. Earth is proud of you!' }
     : { title: top.profile, text: `You ${top.strength}, but next time ${low.tip}!` };
 
-  return { categories, profile, explorer: explorerSummary(stats), launch: launchSummary(stats), handover: handoverSummary(stats) };
+  return {
+    categories, profile, explorer: explorerSummary(stats), launch: launchSummary(stats), handover: handoverSummary(stats),
+    // Ato 2 (#417): ciencia que ficou em Marte x protecao do traje
+    suitTrade: suitTradeSummary(stats),
+    // Ato 1 (#413): para onde foi o primeiro gelo (tanque da base ou foguete)
+    firstIce: firstIceSummary(stats),
+  };
 }

@@ -5,8 +5,9 @@ import { createSpaceRationModel } from '../graphics/rationModel.ts';
 import { createSampleRockModel } from '../graphics/sampleModels.ts';
 import { UTILITY_CONFIG } from '../config/constants.ts';
 import { LIGHTS_OFF_ID, LIGHTS_ON_ID, nightLightsToast } from '../story/acts/act3NightLights.ts';
+import { FIRST_ICE_NO_ICE_TOAST, FIRST_ICE_ROCKET_ID, FIRST_ICE_ROCKET_TOAST, FIRST_ICE_TANK_ID, firstIceCard, firstIceTankToast, firstIceWaterL, shouldAskFirstIce } from '../story/firstIceChoice.ts';
 import * as THREE from 'three';
-import { BLOCK_INTERACTION_CONFIG, CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
+import { BLOCK_INTERACTION_CONFIG, CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STORY_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
 import { separateCrew } from '../crew/separateCrew.ts';
 import { CrewManager } from '../crew/CrewManager.ts';
 import { CrewAvatar } from '../crew/CrewAvatar.ts';
@@ -274,6 +275,9 @@ export class GameEngine {
     this.expedition = new ExpeditionState(this.mission.battery);
     this.airlock = new Airlock(this.scene, colliders, this.expedition);
     this.stations = new StationSystem(this.expedition);
+    // Treino com custo em comida, agua e horas (issue #421)
+    this.stations.body = this.survival;
+    this.stations.passHours = (hours) => this.sky.advanceTime(hours);
     // Campos da estufa: plantas 3D por campo. O jardim ja comeca com uma batata pronta para colher
     // e um campo de dentro com alface crescendo.
     this.greenhouseFields = buildGreenhouseFields(this.scene);
@@ -518,7 +522,7 @@ export class GameEngine {
     const inside = this.survival.isPlayerInsideShip(this.player.pos);
     const insideCore = inside && !(Math.abs(this.player.pos.x - 0.5) < 1.5 && this.player.pos.z >= 6);
     this._updateUtility();
-    const greenhouseLit = this.utility.greenhouseLightsOn && !this.utility.cold;
+    const greenhouseLit = this.utility.greenhouseLightsOn && !this.utility.cold && !this.utility.greenhousePaused;
     this.expedition.greenhousePowered = greenhouseLit && this.expedition.spend(this.utility.greenhouseLightsCost(dt));
     this._maybePlayRationDeliveryCutscene();
     this.stations.update(dt, insideCore, this.survival, !inside);
@@ -540,7 +544,8 @@ export class GameEngine {
     document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
     const tiredWarning = this.sleep.updateWarning();
-    document.getElementById('station-warning').textContent = this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : tiredWarning;
+    // Ato 2 (#415): a maquina de quem saiu para ajudar esta parada
+    document.getElementById('station-warning').textContent = this.act2.stationWarning ?? this.stations.contaminated ? 'DUST IN HABITAT: clean at life support' : this.stations.co2 >= 40 ? `CO2 ${Math.round(this.stations.co2)}%: replace filter` : (this.stations.fitness < 40 || this.stations.boneDensity < 40) ? 'Low bone density / fitness: work is slower. Train in the Gym Wing!' : tiredWarning;
   }
 
   // Avanca o modulo norte no relogio do ceu e repassa o estado para a tripulacao
@@ -1333,8 +1338,12 @@ export class GameEngine {
   // Escolha feita num card de radio sem parar o jogo (issue #135). Devolve false para o card
   // continuar aberto. O escudo liga pelo mesmo caminho do Shield Remote: gasta a mesma bateria.
   _onCardChoice(id) {
+    // Ato 1 (#413): o primeiro gelo vai para o tanque da base ou para o foguete
+    if (id === FIRST_ICE_TANK_ID || id === FIRST_ICE_ROCKET_ID) return this._onFirstIceChoice(id);
     const act5Choice = this.act5.onCardChoice(id); // ato 5 (#423): como deixar a base
     if (act5Choice !== null) return act5Choice;
+    const act2Choice = this.act2.onCardChoice(id); // ato 2 (#415): quem traz o vidro
+    if (act2Choice !== null) return act2Choice;
     // Ato 3 (#420): luz da estufa a noite, escolhida no card do por do sol (Act3Controller)
     if (id === LIGHTS_ON_ID || id === LIGHTS_OFF_ID) {
       this.utility.greenhouseLightsOn = id === LIGHTS_ON_ID;
@@ -1349,6 +1358,29 @@ export class GameEngine {
       if (!this.mission.shieldOn) this._toggleShield();
       return this.mission.shieldOn;
     }
+    return true;
+  }
+
+  // Escolha do card YOUR FIRST ICE (src/story/firstIceChoice.ts, issue #413). TANK despeja o gelo
+  // da mochila no tanque da base na hora (o passo `load-rocket` termina e o foguete fica sem o
+  // bloco). ROCKET segue o caminho de sempre: levar o gelo ao foguete, que gasta bateria.
+  _onFirstIceChoice(id) {
+    if (id === FIRST_ICE_ROCKET_ID) {
+      this._firstIceChoice = id;
+      this.hud.showToast(FIRST_ICE_ROCKET_TOAST, 6000);
+      return true;
+    }
+    const removed = this.survival.removeWaterIce(STORY_CONFIG.FIRST_ICE_BLOCKS);
+    if (removed <= 0) {
+      this.hud.showToast(FIRST_ICE_NO_ICE_TOAST);
+      return true;
+    }
+    this._firstIceChoice = id;
+    const added = this.survival.addBaseWater(firstIceWaterL());
+    this.hud.renderHotbar(this.survival.slots);
+    const heldSlot = this.survival.slots[this.hud.selectedSlot];
+    this.playerHand.setHeldBlock(heldSlot?.id, heldSlot?.count ?? 0);
+    this.hud.showToast(firstIceTankToast(added), 6000);
     return true;
   }
 
@@ -1458,6 +1490,7 @@ export class GameEngine {
       launched: m.launched,
       launchWindow: this.story.launchWindow,
       baseHandover: this.act5.handoverStats(),
+      firstIceChoice: this._firstIceChoice ?? null, // ato 1 (#413)
       ...this._scienceReportStats(),
     };
   }
@@ -1481,6 +1514,9 @@ export class GameEngine {
       sampleTypes: new Set(this.stations.analyzed.map((sample) => sample.typeId)).size,
       sciencePointsSent: status.sentPoints,
       sciencePointsGoal: SCIENCE_CONFIG.POINTS_TO_LAUNCH,
+      // Ciencia gasta em Marte x traje melhorado (issue #417)
+      sciencePointsUsed: status.usedPoints,
+      suitUpgraded: this.stations.upgraded,
       // Ciencia que viaja nos tubos de amostra (issue #422): so conta aqui, no boletim
       scienceTubePoints: this.mission.tubePoints,
       sampleTubes: this.mission.sampleTubes,
@@ -1944,6 +1980,7 @@ export class GameEngine {
       drinkCount: 0, mealCount: 0, earthCalls: 0, plantCount: 0,
       roverDrives: 0, roverIceKg: 0, scanCount: 0, iceDelivered: 0,
       suitEquipped: false, suitUps: 0,
+      firstIceToTank: false, // ato 1 (#413): o primeiro gelo foi para o tanque da base
       rationsMade: 0, // ato 3 (#409): racoes feitas com planta da crianca (Act3Controller)
       // Recursos da base, para os desvios do tutorial (issue #237, tutorialDetours.ts)
       baseWaterL: 0, batteryCharge: 0, foodStock: 0, roverBattery: 0, roverActive: false,
@@ -2370,6 +2407,7 @@ export class GameEngine {
     s.insideHabitat = this.survival.insidePressurizedShip;
     s.iceCount = this.survival.countWaterIce();
     s.iceNeeded = this.mission.iceNeeded();
+    s.firstIceToTank = this._firstIceChoice === FIRST_ICE_TANK_ID; // ato 1 (#413)
     s.stormPhase = this.mission.storm.phase;
     s.stormsSurvived = this.mission.stormCredit;
     s.propellantPct = this.mission.propellant;
@@ -2431,6 +2469,11 @@ export class GameEngine {
         this._playGymTone(440, 0.16, 660);
         // Ato 1 (#407): o rover entregou o gelo e um meteoro cai, deixando gelo novo la fora
         if (event.id === 'rover-ice') this.events.trigger('meteor', s.hours);
+        // Ato 1 (#413): com o primeiro gelo na mao, o card TANK x ROCKET, uma vez por partida
+        if (shouldAskFirstIce({ asked: Boolean(this._firstIceAsked), stepId: event.id, iceCount: s.iceCount })) {
+          this._firstIceAsked = true;
+          this.storyHud.showCard(firstIceCard());
+        }
         for (const act of this.actControllers) act.onStepDone(event.id, s);
       }
       else if (event.type === 'start-storms') {

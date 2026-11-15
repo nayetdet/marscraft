@@ -762,6 +762,10 @@ export const STORY_CONFIG = {
   DETOUR_RESUME_EXTRA: { water: 20, power: 2, food: 0, roverPower: 5 },
   // Racoes na despensa que o passo de comer pede (UtilityModule.eatRation tira 1)
   TUTORIAL_RATIONS_NEEDED: 1,
+  // Trade-off do primeiro gelo (ato 1, issue #413, src/story/firstIceChoice.ts): blocos de gelo
+  // que a escolha TANK despeja no tanque da base e segundos reais do card na tela. Regra de jogo.
+  FIRST_ICE_BLOCKS: 1,
+  FIRST_ICE_CARD_SECONDS: 20,
 };
 
 // Animacoes de chegada e de decolagem (docs/superpowers/plans/2026-11-14-story-arc.md)
@@ -1138,6 +1142,10 @@ export const ACT2_CONFIG = {
   WINDOW_PANE_MAX_BLOCKS: 40, // tamanho maximo de uma janela (blocos de vidro vizinhos)
   // O engenheiro leva este tempo (segundos reais) para buscar o vidro novo
   STORY_REPAIR_FETCH_SECONDS: 10,
+  // Trade-off "quem sai do posto para ajudar" (issue #415, act2CrewHelp.ts). Regra de jogo.
+  CREW_HELP_CARD_SECONDS: 15, // tempo do card da escolha na tela
+  CREW_HELP_DEFAULT_SECONDS: 20, // sem resposta neste tempo (segundos reais), vem o engenheiro
+  CREW_HELP_HOURS: 1, // horas de jogo que a maquina de quem ajuda fica parada (50 s reais)
   REPAIR_REACH: 4.5, // blocos: distancia maxima para trocar a janela rachada
 };
 
@@ -1147,6 +1155,11 @@ export const ACT3_CONFIG = {
   // Trade-off da luz da estufa a noite (issue #420): segundos do card LIGHTS ON x LIGHTS OFF na
   // tela. Sem resposta, a luz fica como estava.
   NIGHT_LIGHTS_CARD_SECONDS: 20,
+  // Trade-off da academia (issue #421): alem da bateria (STATION_CONFIG.EXERCISE_COST), cada
+  // treino gasta comida e agua da crianca (% da barra) e horas do relogio de Marte. Regra de jogo.
+  WORKOUT_FOOD_PCT: 10,
+  WORKOUT_WATER_PCT: 15,
+  WORKOUT_HOURS: 2,
 };
 
 // Ato 4 (issue #410): traje, 3 amostras de cada tipo, analise e envio.
