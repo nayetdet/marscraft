@@ -179,7 +179,7 @@ export class SleepController {
     survival.takeDamage(damage, 'RADIATION_OVERDOSE', 'solar-radiation');
     // Modulo norte (aquecedor, filtro), radio e estacoes da base andam como acordado
     this.engine._updateUtility();
-    const greenhouseLit = utility.greenhouseLightsOn && !utility.cold;
+    const greenhouseLit = utility.greenhouseLightsOn && !utility.cold && !utility.greenhousePaused;
     expedition.greenhousePowered = greenhouseLit && expedition.spend(utility.greenhouseLightsCost(seconds));
     stations.update(seconds, true, survival, false);
     // Na espera da tempestade a crianca esta acordada: fome e sede no ritmo normal, nao no do sono

@@ -24,6 +24,9 @@ export class UtilityModule {
     this.base = base; // estoque da tripulacao (racoes, agua cinza)
     this.heaterOn = true;
     this.greenhouseLightsOn = true;
+    // Ato 2 (#415): quem cuida da maquina saiu para ajudar no conserto (Act2Controller)
+    this.recyclerPaused = false; // a agua cinza nao e limpa
+    this.greenhousePaused = false; // as plantas nao crescem
     // % de bateria por hora de jogo que o reciclador de agua gasta agora (painel de energia)
     this.recyclerDrawPerHour = 0;
     this.waterRecycledL = 0; // litros devolvidos ao tanque nesta partida (boletim)
@@ -109,7 +112,7 @@ export class UtilityModule {
   _recycleWater(hours) {
     this.recyclerDrawPerHour = 0;
     const base = this.base;
-    if (!base || this.cold || !(base.graywater > 0)) return;
+    if (!base || this.cold || this.recyclerPaused || !(base.graywater > 0)) return;
     const room = Math.max(0, base.maxWater - base.water) / this.waterRecovery;
     const wanted = Math.min(base.graywater, STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR * hours, room);
     if (wanted <= 0) return;

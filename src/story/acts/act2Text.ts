@@ -26,7 +26,7 @@ export const ACT2_CARDS = {
     speaker: SPEAKERS.engineer,
     lines: [
       { icon: 'check', text: 'This window is cracked' },
-      { icon: 'wrench', text: `${NAME} is getting new glass` },
+      { icon: 'wrench', text: 'Now choose who brings new glass' },
       { icon: 'radio', text: 'Space Station crews hunt leaks by sound' },
     ],
     source: 'Real: in 2020 the Space Station crew used an ultrasonic leak detector to find an air leak (NASA).',

@@ -269,6 +269,7 @@ describe('Act2Controller: hidden leak, scope and repair', () => {
     const engineer = f.engine.crew.members[0];
     f.act.leak.found = true;
     f.act.onStepStart('fix-window', {});
+    f.act.onCardChoice('help-engineer'); // #415: a crianca chama o engenheiro
     // Enquanto o engenheiro busca o vidro, a seta mostra a janela achada
     expect(f.act.interactionPrompt(engineer)).toBeNull();
     expect(f.act.waypoint(ACT2_PLACES.repair).label).toBe('CRACKED WINDOW');
