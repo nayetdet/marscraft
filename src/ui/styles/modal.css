@@ -1176,6 +1176,7 @@ body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 
 .mc-menu-card .demo-grid .mc-btn { min-height: 44px; font-size: 13px; padding: 8px; }
 .demo-feedback { min-height: 34px; margin-top: 10px; color: #ffffa0; }
 .controls-screen.info-screen > .mc-btn { margin-top: 10px; }
+#quit-screen > .mc-btn { min-height: 44px; }
 
 /* Celular em paisagem: preserve a mesma grade e compacte o titulo. */
 @media (max-height: 460px) {

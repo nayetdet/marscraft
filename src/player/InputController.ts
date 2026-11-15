@@ -533,6 +533,8 @@ export class InputController {
     const controlsBackBtn = document.getElementById('controls-back-btn');
     const menuMain = document.getElementById('menu-main');
     const controlsScreen = document.getElementById('controls-screen');
+    const quitScreen = document.getElementById('quit-screen');
+    const quitBackBtn = document.getElementById('quit-back-btn');
     const respawnBtn = document.getElementById('respawn-btn');
 
     const showPauseMenu = () => {
@@ -549,6 +551,12 @@ export class InputController {
     };
 
     this._showPauseMenu = showPauseMenu;
+    quitBackBtn.addEventListener('click', () => {
+      quitScreen.classList.add('hidden');
+      menuMain.classList.remove('hidden');
+      menuMain.closest('.mc-menu').classList.remove('is-controls');
+      overlay.classList.remove('menu-info-open');
+    });
     this.hud.inventoryCloseBtn?.addEventListener('click', () => this._closeInventory({ silent: true }));
     document.getElementById('mobile-pause-button')?.addEventListener('pointerdown', (event) => {
       event.preventDefault();
@@ -642,18 +650,31 @@ export class InputController {
       this.onSaveGame();
       this.hasStarted = false;
       this.isLocked = false;
+      this.isTouchMode = false;
+      this._awaitingPointerLock = false;
+      this._resumeOnEscapeKeyUp = false;
+      this._clearTouchInput();
       this.keys = {};
       this.player.isMoving = false;
-      this._cancelBreaking();
       document.body.classList.remove('touch-mode');
       document.body.classList.remove('game-paused');
+      document.body.classList.remove('pause-menu-open');
       if (document.pointerLockElement === this.domElement) document.exitPointerLock();
-      else {
+
+      // Browsers only let a page close a window that was opened by script.
+      // Try while this click is still a user gesture, then explain how to leave
+      // if the browser keeps the tab open.
+      try { window.close(); } catch { /* The browser may forbid closing this tab. */ }
+      if (!window.closed) {
+        [controlsScreen, ...['options', 'sources', 'demo'].map((name) => document.getElementById(`${name}-screen`))]
+          .forEach((screen) => screen?.classList.add('hidden'));
         menuCardHome.append(menuCard);
         setStartLabel('Play');
+        menuMain.classList.add('hidden');
+        quitScreen.classList.remove('hidden');
+        overlay.classList.add('menu-info-open');
         overlay.classList.remove('hidden');
         pauseOverlay.classList.add('hidden');
-        document.body.classList.remove('pause-menu-open');
       }
     });
 
