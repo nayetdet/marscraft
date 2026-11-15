@@ -251,19 +251,4 @@ export class SurvivalSystem {
       message: `Drank clean water from habitat purifier (+Hydration full). Base reserve: ${Math.round(this.baseWater)}L`,
     };
   }
-
-  harvestGreenhouseCrop() {
-    if (this.greenhouseHydration < 20) {
-      return { success: false, message: 'Crops are dry! Supply water to the habitat to irrigate.' };
-    }
-    // Id 12 é HYDRO_PLANT
-    const added = this.addBlockToInventory(12);
-    if (added) {
-      return {
-        success: true,
-        message: 'Harvested a fresh carrot from the irrigated greenhouse (+1 Food item)!',
-      };
-    }
-    return { success: false, message: 'Inventory is full.' };
-  }
 }

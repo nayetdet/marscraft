@@ -1,6 +1,6 @@
 # MineMars: estado atual × requisitos do desafio
 
-> Snapshot de 2026-11-14 (base: `main` em `8ac347f`). Atualize quando mecânicas mudarem.
+> Snapshot de 2026-11-14 (base: `main` em `67604af`). Atualize quando mecânicas mudarem.
 
 ## O que o jogo já é
 
@@ -9,9 +9,11 @@ Jogo voxel em primeira pessoa **no navegador** (Three.js + Vite, sem backend, de
 | Sistema | Onde | O que faz hoje |
 |---|---|---|
 | Mundo voxel | `src/world/VoxelWorld.js`, `terrainGenerator.js`, `src/data/marsTerrain.js` | Mundo 224×48×224 com chunks e meshing. O relevo é a **elevação real** de uma cratera de ~180 m dentro de Gale (HiRISE, 1 bloco ≈ 1 m); só a área das construções foi nivelada e a cratera de gelo é do jogo. Dá para quebrar e colocar blocos. |
-| Base e nave | `src/world/nasaSpaceshipBuilder.js`, `nasaModelsBuilder.js` | Habitat principal, túnel pressurizado, estufa (domo), painéis solares (só visual), antena, rover e console, com colisão nos objetos |
-| Sobrevivência | `src/player/SurvivalSystem.js`, `SURVIVAL_CONFIG` | 4 barras de 0–20: **O2, Vida, Água, Comida**. O O2 cai fora e recarrega dentro da área pressurizada. Água e comida caem sempre. Zerar qualquer uma tira vida, e vida zerada mata. |
-| Consumíveis | `src/config/blockTypes.js` | Martian Ice (+água) e Mars Potato (+comida, +vida), usados com o botão direito |
+| Base e nave | `src/world/nasaSpaceshipBuilder.js`, `nasaModelsBuilder.js` | Habitat principal, túnel pressurizado, estufa (domo), painéis solares, antena, rover e console, com colisão nos objetos |
+| Sobrevivência | `src/player/SurvivalSystem.js`, `SURVIVAL_CONFIG` | 4 barras de 0–20: **O2, Vida, Água, Comida**. O O2 cai fora e recarrega dentro da área pressurizada, pago pela bateria. Água e comida caem sempre. Zerar qualquer uma tira vida, e vida zerada mata. |
+| Missão | `src/mission/*`, `MISSION_CONFIG`, `ENERGY_CONFIG`, `RADIATION_CONFIG`, `STORM_CONFIG` | Bateria carregada pelos painéis, tempestades solares das CMEs do DONKI, dose de radiação em mSv, rádio com atraso e o MAV. O relógio é um só: 1 hora de jogo = 100 s reais, 1 sol = 40 min reais. |
+| Tripulação e estações | `src/crew/*`, `src/core/StationSystem.js`, `UtilityModule.js` | Tripulantes NPC que consomem ar, água e comida e operam estufa, reciclador, gerador de O2 e enfermaria; módulo norte com energia, cozinha, banheiro e oficina |
+| Consumíveis | `src/config/blockTypes.js` | Martian Ice (+água) e as colheitas da estufa (alface, batata, soja e cenoura: +comida, +vida), usados com o botão direito |
 | Céu astronômico | `src/sky/*` | Sol, Terra e Lua vistos de Marte, Fobos e Deimos, ciclo dia/noite em "sols", luneta (tecla Z), avanço de tempo (tecla T) |
 | HUD | `src/ui/HudManager.js`, `index.html` | Barras estilo Minecraft, hotbar de 9 slots, inventário (tecla E, 36 slots), toasts, tela de morte e rótulos no céu. **UI em inglês.** |
 
@@ -41,19 +43,21 @@ O abrigo de tempestade, o terminal de rádio e o módulo norte são da issue #56
 | **Orçamento de energia** | ✅ | Bateria carregada pelo Sol (43 % da Terra, zero à noite); gastam O2, blindagem, fábrica de combustível e rádio (issue #30). |
 | **Condição de vitória** | ✅ | Abastecer o MAV (gelo + energia), sobreviver a 3 tempestades e enviar os dados científicos (issue #30). Agora dentro de uma história em 3 atos, com janela de lançamento: se ela fechar, a partida termina sem decolagem. |
 | **História (início, meio e fim)** | ✅ | Animação de pouso → ato 1 (tutorial guiado em 3 passos, HUD em ícones) → ato 2 (preparar a volta, tempestades) → ato 3 (janela de lançamento) → animação de decolagem. Ver [`../superpowers/specs/2026-11-14-story-arc-design.md`](../superpowers/specs/2026-11-14-story-arc-design.md). |
-| **Produção de comida** | 🟡 | Batatas são um estoque finito; não há cultivo, nem custo de água/energia na estufa. |
+| **Produção de comida** | ✅ | Nove campos plantáveis na estufa (alface, batata e soja), que custam água e energia e só crescem com luz, calor e base limpa; a tripulação também produz rações na estufa. As contas da água da estufa têm defeitos conhecidos (issue #101). |
 | **Módulo norte (issue #56, parte B)** | ✅ | Sala de energia e aquecimento (consumo de cada sistema e corte de carga; o aquecedor gasta mais à noite e desligado congela canos e estufa), cozinha e despensa (ração da despensa × refeição fresca com cenoura, água e energia), banheiro (lavar vira água cinza; filtro gasto recupera menos que 98 %) e oficina com impressora 3D (regolito + energia consertam a estação mais gasta). O depósito de carga (B6) foi descartado: ensina pouco pelo esforço. |
 | **Atraso de comunicação** | ✅ | Terminal de rádio no habitat (issue #56): o atraso vem da distância Terra–Marte calculada para a data (órbitas do JPL); pedir conselho ao Controle da Missão custa energia e a resposta chega atrasada, montada com a situação do momento do envio. Uma conjunção solar encenada deixa o rádio mudo e a criança decide sozinha. No ato 1 da história, o primeiro relatório ao Controle da Missão já ensina esse atraso (resposta só depois da ida e volta do sinal). |
-| **Toda escolha tem custo (trade-off)** | ❌ | **Este é o gap principal.** Hoje não há nenhuma decisão com custo: a estratégia ótima é ficar dentro da nave. |
-| **Dados reais da NASA** | ✅ | Tempestades (CMEs do DONKI), dose de radiação (RadLab, Curiosity) e o relevo do mundo (HiRISE, cratera em Gale: terreno e radiação vêm do mesmo lugar). O céu é "inspirado", não alimentado por dados. |
+| **Toda escolha tem custo (trade-off)** | 🟡 | O núcleo existe: a bateria é disputada por O2, blindagem, fábrica de combustível, aquecedor, luz da estufa e rádio; a água é disputada por beber, plantar e a parede do abrigo; sair para buscar gelo custa O2 e dose. Ainda há escolhas de graça: o avanço de tempo da tecla T (issue #109) e a bateria do rover, que não limita nada (issue #111). |
+| **Dados reais da NASA** | 🟡 | Tempestades (CMEs do DONKI), dose de radiação (RadLab, Curiosity), estudos de plantas (OSDR) e o relevo do mundo (HiRISE, cratera em Gale: terreno e radiação vêm do mesmo lugar). Tudo embutido, nada ao vivo (issue #100). A fila de tempestades ainda usa CMEs que não iam para Marte e uma escala de dose sem fonte (issue #99). O céu é "inspirado", não alimentado por dados. |
 | **Atribuição de fontes no jogo** | ✅ | Tela "NASA Data" no menu e fonte em cada pôster e tela da base. |
-| Público de 7 a 12 anos, linguagem simples | 🟡 | O texto é simples, mas o jogo **não ensina** nenhuma restrição real. Vale explicar termos como "sol" e "dose". |
+| Público de 7 a 12 anos, linguagem simples | 🟡 | Pôsteres, telas da base e cards de rádio explicam cada restrição com frases curtas. Falta um tutorial dedicado (issue #88) e explicar a causa da morte (issue #83). |
 | Navegador, sem conta | ✅ | — |
-| Rejogabilidade | 🟡 | Mundo fixo e sem eventos aleatórios. |
-| 2 ou 3 recursos centrais | ⚠️ | Hoje são 4 barras (O2, vida, água, comida) e nenhuma é de energia ou radiação. Considere **trocar** e não somar: Energia + O2 + Radiação, com água e comida abstraídas ou ligadas à estufa. |
+| Rejogabilidade | 🟡 | Mundo fixo e sem eventos aleatórios (issue #107). O tamanho da tripulação muda a partida. |
+| 2 ou 3 recursos centrais | ⚠️ | O painel de missão mostra energia, água, ar e radiação da base, e o jogador ainda tem 4 barras próprias (O2, vida, água, comida). É mais do que os 2 ou 3 que o desafio sugere. |
 | UI em inglês para submissão | ✅ | A UI já está em inglês (PR #8). Falta escrever em inglês a página de submissão e a demo. |
 
-## Proposta de núcleo de trade-off (mínimo viável para a entrega)
+## Proposta de núcleo de trade-off (histórico)
+
+> Esta era a proposta inicial. Energia, O2 pago pela bateria, radiação com tempestades do DONKI, rádio com atraso e estufa já estão no jogo; o texto fica como registro da intenção.
 
 Três recursos ligados entre si, todos alimentados por dados reais:
 
@@ -93,7 +97,7 @@ Ficou de fora: marcar o pôr do sol como sinal de voltar para dentro e um resumo
 
 ## Atualização da estufa — 14/11/2026
 
-O snapshot e vários gaps acima estão desatualizados: o código já contém estufa plantável, energia, comunicação e fontes NASA. A estufa agora diferencia alface (rápida), batata (equilibrada) e soja (maior custo/rendimento), acompanha as três culturas colhidas e revela registros reais da API OSDR no caderno, com data e links. Veja o procedimento reprodutível em `docs/data/apis-nasa.md`. Tempos e rendimentos são regras do jogo, identificadas assim na tela; os estudos embutidos são históricos.
+A estufa diferencia alface (rápida), batata (equilibrada) e soja (maior custo/rendimento), acompanha as três culturas colhidas e revela registros reais da API OSDR no caderno, com data e links. Veja o procedimento reprodutível em `docs/data/apis-nasa.md`. Tempos e rendimentos são regras do jogo, identificadas assim na tela; os estudos embutidos são históricos.
 
 ### Culturas como itens e modelos voxel
 

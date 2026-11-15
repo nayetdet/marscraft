@@ -28,7 +28,7 @@ import { HudManager } from '../ui/HudManager.js';
 import { DebugOverlay } from '../ui/DebugOverlay.js';
 import { RoverController } from '../rover/RoverController.js';
 import { GymEquipmentController } from '../player/GymEquipmentController.js';
-import { MissionSystem as ExpeditionSystem } from './MissionSystem.js';
+import { ExpeditionState } from './ExpeditionState.js';
 import { Airlock } from '../world/Airlock.js';
 import { StationSystem } from './StationSystem.js';
 import { StationPanel } from '../ui/StationPanel.js';
@@ -141,11 +141,8 @@ export class GameEngine {
     // Radio Terra-Marte (issue #56, A2): atraso pela distancia real de hoje e conjuncao solar
     this.comms = new CommsLink({ startDate: new Date(), startHours: this._skyHours() });
     this._wasBlackout = false;
-    this.expedition = new ExpeditionSystem();
-    Object.defineProperty(this.expedition, 'energy', {
-      get: () => this.mission.battery.charge,
-      set: (value) => { this.mission.battery.charge = value; },
-    });
+    // As estacoes da base gastam a mesma bateria da missao
+    this.expedition = new ExpeditionState(this.mission.battery);
     this.airlock = new Airlock(this.scene, colliders, this.expedition);
     this.stations = new StationSystem(this.expedition);
     // Campos da estufa: plantas 3D por campo; um campo de dentro ja comeca com alface crescendo
@@ -287,10 +284,9 @@ export class GameEngine {
     const insideCore = inside && !(Math.abs(this.player.pos.x - 0.5) < 1.5 && this.player.pos.z >= 6);
     this._updateUtility();
     const greenhouseLit = this.utility.greenhouseLightsOn && !this.utility.cold;
-    this.expedition.greenhousePowered = greenhouseLit && this.expedition.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
+    this.expedition.greenhousePowered = greenhouseLit && this.expedition.spend(this.utility.greenhouseLightsCost(dt));
     this.stations.update(dt, insideCore, this.survival, !inside);
     this._updateShelterWater();
-    this.expedition.radiation = Math.min(100, this.mission.totalDoseMsv / RADIATION_CONFIG.CAREER_LIMIT_MSV * 100);
     this.updateCropVisuals();
     this.airlock.update(dt, this.player.pos);
     if (this.survival.health <= 0) this.survival.isDead = true;
@@ -357,21 +353,6 @@ export class GameEngine {
     if (colliderIndex >= 0) this.customColliders.splice(colliderIndex, 1);
     plant.removeFromParent();
     return true;
-  }
-
-  _growCrops(dt) {
-    if (!this.expedition.greenhousePowered || this.stations?.contaminated) return;
-    for (let i = this.growingCrops.length - 1; i >= 0; i--) {
-      const crop = this.growingCrops[i];
-      crop.elapsed += dt;
-      const progress = Math.min(1, crop.elapsed / MISSION_CONFIG.CROP_GROWTH_TIME);
-      crop.plant.scale.setScalar(0.25 + progress * 0.75);
-      if (progress === 1) {
-        this.plants.push(crop.plant);
-        if (crop.collider) this.customColliders.push(crop.collider);
-        this.growingCrops.splice(i, 1);
-      }
-    }
   }
 
   _getInteraction() {

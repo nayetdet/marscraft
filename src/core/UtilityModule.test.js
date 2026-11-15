@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BLOCK_IDS } from '../config/blockTypes.js';
-import { STATION_CONFIG, UTILITY_CONFIG as U } from '../config/constants.js';
+import { CREW_CONFIG, MISSION_CONFIG, STATION_CONFIG, UTILITY_CONFIG as U } from '../config/constants.js';
 import { Battery } from '../mission/energy.js';
 import { UtilityModule } from './UtilityModule.js';
 
@@ -45,6 +45,24 @@ describe('north module (issue #56, part B)', () => {
     expect(base.graywater).toBe(U.WASH_WATER_L);
     utility.waterFilter = 10;
     expect(utility.waterRecovery).toBeLessThan(STATION_CONFIG.WATER_RECOVERY);
+  });
+
+  it('the power panel shows the greenhouse lights at their real rate per game hour (issue #110)', () => {
+    const { utility } = setup();
+    const loads = utility.loads({ crewSize: 2, operatingStations: 1 });
+    const lights = loads.find(([name]) => name === 'Greenhouse lights');
+    expect(lights[1]).toBe(2.5);
+    expect(lights[1]).toBe(U.GREENHOUSE_LIGHTS_PER_HOUR);
+    // O que o motor desconta em 1 hora de jogo (100 s reais) e o que o painel mostra
+    const secondsPerGameHour = 1 / MISSION_CONFIG.GAME_HOURS_PER_SECOND;
+    expect(secondsPerGameHour).toBe(100);
+    expect(utility.greenhouseLightsCost(secondsPerGameHour)).toBeCloseTo(lights[1]);
+    // O total do painel e a soma das linhas ligadas
+    const total = loads.reduce((sum, [, rate, on]) => sum + (on ? rate : 0), 0);
+    expect(total).toBeCloseTo(
+      2 * CREW_CONFIG.OXYGEN_ENERGY_PER_HOUR + STATION_CONFIG.WORK_ENERGY_PER_HOUR
+      + U.GREENHOUSE_LIGHTS_PER_HOUR + U.HEATER_DAY_PER_HOUR,
+    );
   });
 
   it('the 3D printer spends regolith and power to fix the most worn station', () => {

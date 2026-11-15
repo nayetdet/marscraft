@@ -1,15 +1,20 @@
 import { BLOCK_IDS } from '../config/blockTypes.js';
 import { GREENHOUSE_PLOTS } from '../world/greenhouseLayout.js';
 import { greenhouseMapSvg, plotMapLabel, plotStatus } from './greenhouseMap.js';
-import { COMMS_CONFIG, CROP_CONFIG, MISSION_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U } from '../config/constants.js';
+import { COMMS_CONFIG, CROP_CONFIG, RADIATION_CONFIG, STATION_CONFIG as C, UTILITY_CONFIG as U } from '../config/constants.js';
 import { shelterDoseFactor } from '../mission/radiation.js';
-import { formatDateDMY, formatHours } from '../mission/missionText.js';
+import { formatDateDMY, formatDose, formatHours, radiationStatusText, stormStatusText } from '../mission/missionText.js';
 import { requestRawPointerLock } from '../player/mouseLook.js';
-import { RESEARCH_DATA as DATA } from '../data/missionResearch.js';
+import donkiCme from '../data/donkiCme.json';
 import plantResearch from '../data/osdrPlants.json';
 import { plantDiscovery } from '../data/plantDiscoveries.js';
 import { createCropTexture } from '../graphics/cropTextures.js';
 import { GymWorkout } from './gymWorkout.js';
+
+const DATA_SOURCES = {
+  donki: 'https://ccmc.gsfc.nasa.gov/tools/DONKI/',
+  radlab: 'https://visualization.osdr.nasa.gov/radlab/',
+};
 
 const SHELTER_SOURCES = {
   prediccs: 'https://posters.unh.edu/private_media/4209/',
@@ -157,8 +162,8 @@ export class StationPanel {
 
       const { expedition: m, stations: s, utility } = this.engine;
       if (s.hasGrowingCrops()) {
-        const lit = utility ? (utility.greenhouseLightsOn && !utility.cold) : true;
-        m.greenhousePowered = lit && m.spend(MISSION_CONFIG.GREENHOUSE_RATE * dt);
+        const lit = utility.greenhouseLightsOn && !utility.cold;
+        m.greenhousePowered = lit && m.spend(utility.greenhouseLightsCost(dt));
         const readyBefore = s.readyPlotCount();
         if (m.greenhousePowered && !s.contaminated) s.growCrops(dt);
         this.engine.updateCropVisuals?.();
@@ -542,7 +547,6 @@ export class StationPanel {
     const { expedition: mission, stations, survival, hud } = this.engine;
     if (action === 'mission') return mission.objective || 'No mission objective yet.';
     if (action === 'filter') return stations.replaceFilter();
-    if (action === 'cleanSuit') return stations.cleanSuit();
     const { utility } = this.engine;
     if (action.startsWith('toggle:')) return utility.toggle(action.slice(7));
     if (action === 'eatRation') return utility.eatRation();
@@ -606,7 +610,6 @@ export class StationPanel {
     const loads = utility.loads({
       crewSize: crew?.members.length ?? 0,
       operatingStations: crew?.stations.filter((st) => st.operating).length ?? 0,
-      greenhouseRatePerSecond: MISSION_CONFIG.GREENHOUSE_RATE,
     });
     const lines = loads.map(([name, rate, on]) => `  ${name.padEnd(18)} ${!on ? 'OFF' : rate > 0 ? `-${rate.toFixed(1)}%/h` : 'idle'}`);
     const used = loads.reduce((sum, [, rate, on]) => sum + (on ? rate : 0), 0);
@@ -830,17 +833,13 @@ export class StationPanel {
     if (this.greenhouseContainer) this.greenhouseContainer.classList.add('hidden');
 
     const pages = {
-      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nRADIATION: ${Math.round(m.radiation)}%   FILTER: ${Math.round(s.filter)}%\nSCIENCE POINTS: ${s.science}\n\nNASA DONKI historical CME: ${DATA.cme.observed}, ${DATA.cme.speedKmS} km/s.\nNASA RadLab Curiosity MSL-RAD: ${DATA.radiation.start} to ${DATA.radiation.end}; median ${DATA.radiation.median} (raw, unit unconfirmed).\nNASA data retrieved ${DATA.cme.retrieved}; archived, not live. The storm and its effects are simulated and game-scaled.`, [['mission', 'Show mission objective'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
-      airlock: ['AIRLOCK & SUIT', `SUIT DUST: ${s.dirtySuit ? 'CLEANING NEEDED' : 'CLEAN'}
-HABITAT: ${s.contaminated ? 'CONTAMINATED' : 'CLEAN'}
-
-Clean your suit before entering the habitat. Use the doors to cycle the airlock.`, [['cleanSuit', 'Clean suit'], ['cleanBase', 'Clean habitat']]],
+      console: ['MISSION COMPUTER', `OBJECTIVE: ${m.objective}\nBATTERY: ${Math.round(m.energy)}%   OXYGEN: ${Math.round(v.oxygen)}/${v.maxStat}\nFILTER: ${Math.round(s.filter)}%   SCIENCE POINTS: ${s.science}\n\n${radiationStatusText(mission)}\n\n${stormStatusText(mission.storm, donkiCme.fetched)}\n\nThe NASA data is saved inside the game, it is not live. Storm length and damage are game rules.`, [['mission', 'Show mission objective'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`]]],
       power: ['LIFE SUPPORT / ECLSS', `BATTERY: ${Math.round(m.energy)}%\nCO2 FILTER: ${Math.round(s.filter)}%\nCO2: ${Math.round(s.co2)}%\n\nThe oxygen system and greenhouse need power. A worn filter lets CO2 build up.`, [['filter', 'Replace CO2 filter'], ['cleanBase', 'Clean habitat']]],
       greenhouse: ['MARS GARDEN / FIELD NOTEBOOK', this.gardenText(s, m, v), [
         ...Object.entries(CROP_CONFIG).map(([type, r]) => ['plant:' + type, type.toUpperCase() + ' | ' + r.water + ' water / ' + r.energy + '% power / ' + r.seconds + 's / +' + r.nutrition + ' food']),
         ['harvest', 'Harvest & discover NASA research'], ['cleanBase', 'Clean habitat'],
       ]],
-      medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\nRADIATION: ${Math.round(m.radiation)}%\n\nIn Mars's 0.38g gravity, astronauts lose bone mineral density and muscle mass. Use the treadmill and bike in the Gym Wing!`, [['treat', 'Use medical station']]],
+      medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\nRADIATION DOSE SO FAR: ${formatDose(mission.totalDoseMsv)}\n\nIn Mars's 0.38g gravity, astronauts lose bone mineral density and muscle mass. Use the treadmill and bike in the Gym Wing!`, [['treat', 'Use medical station']]],
       science: ['SCIENCE & RADIO TO EARTH', `SCIENCE POINTS: ${s.science}   SAMPLES: ${s.samples}\n\n${this._radioText(s)}`, [['analyze', 'Analyze regolith'], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (${C.UPGRADE_COST} science)`], ['upgradeTool', `Upgrade tool (${C.TOOL_UPGRADE_COST} science)`]]],
       mav: ['MAV DATA TERMINAL', `ANALYZED SAMPLES: ${s.analyzedSamples}/${C.MAV_REQUIRED_SAMPLES}\nPACKAGE: ${s.mavSent ? 'RECEIVED' : s.message}\n\nAnalyze samples at the science station, then send the package from the MAV.`, [['sendMav', 'Send MAV science package']]],
       powerroom: ['POWER & HEAT ROOM', this._powerText(), this._powerButtons()],
@@ -853,7 +852,7 @@ Clean your suit before entering the habitat. Use the doors to cycle the airlock.
     this.title.textContent = title;
     this.content.textContent = text;
     const links = this.type === 'console'
-      ? [['NASA DONKI: historical event', DATA.cme.url], ['NASA RadLab: radiation data', DATA.radiation.url]]
+      ? [['NASA DONKI: space weather events', DATA_SOURCES.donki], ['NASA RadLab: radiation data', DATA_SOURCES.radlab]]
       : this.type === 'shelter'
         ? [['PREDICCS: water shielding (UNH, MSL/RAD data)', SHELTER_SOURCES.prediccs], ['NASA: storm shelters and water walls', SHELTER_SOURCES.nasa]]
         : this.type === 'greenhouse' ? [['CSA: food production', 'https://www.asc-csa.gc.ca/eng/youth-educators/toolkits/food-production/'], ...plantResearch.studies.map(study => [study.id + ': NASA study', study.url])] : [];

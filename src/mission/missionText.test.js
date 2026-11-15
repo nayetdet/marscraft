@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatDateDMY, formatDose, formatHours, stormEventMessage } from './missionText.js';
+import { formatDateDMY, formatDose, formatHours, radiationStatusText, stormEventMessage, stormStatusText } from './missionText.js';
 
 describe('missionText', () => {
   it('formats dates as DD/MM/YYYY', () => {
@@ -25,5 +25,26 @@ describe('missionText', () => {
     expect(msg).toContain('894 km/s');
     expect(msg).toContain('real data from 14/11/2026');
     expect(msg.toLowerCase()).not.toContain('live');
+  });
+
+  it('the mission computer shows the same storm as the HUD, with its source (issue #110)', () => {
+    const storm = { cme: { startTime: '2026-11-09T05:00Z', speedKmS: 726 } };
+    const warning = stormStatusText({ phase: 'warning', storm, hoursUntil: 1.5 }, '2026-11-14');
+    expect(warning).toContain('reaches Mars in 1h 30m');
+    expect(warning).toContain('09/11/2026');
+    expect(warning).toContain('726 km/s');
+    const active = stormStatusText({ phase: 'active', storm, hoursUntil: 0, hoursLeft: 2 }, '2026-11-14');
+    expect(active).toContain('ACTIVE, 2h 00m left');
+    expect(stormStatusText({ phase: 'calm', storm: null, hoursUntil: Infinity }, '2026-11-14')).toMatch(/none on the way/);
+    // Em calmaria nao adianta a proxima CME da fila
+    expect(stormStatusText({ phase: 'calm', storm, hoursUntil: 4 }, '2026-11-14')).not.toContain('726');
+  });
+
+  it('the mission computer shows the dose in mSv, like the rest of the game (issue #110)', () => {
+    const text = radiationStatusText({ doseRate: 0.0211, totalDoseMsv: 3.456 });
+    expect(text).toContain('0.02 mSv per hour');
+    expect(text).toContain('3.5 mSv');
+    expect(text).toContain('600 mSv');
+    expect(text).not.toMatch(/unit unconfirmed|%/);
   });
 });

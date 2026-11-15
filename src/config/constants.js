@@ -88,16 +88,13 @@ export const WATER_SYSTEM_CONFIG = {
 // Taxas "por hora de jogo": com GAME_HOURS_PER_SECOND = 0.01, 1 hora de jogo = 100 s reais.
 // Fontes dos numeros reais em docs/data/numeros-reais.md.
 export const MISSION_CONFIG = {
-  MAX_ENERGY: 100, START_ENERGY: 80, SOLAR_RATE: 0.22,
-  GREENHOUSE_RATE: 0.025, OXYGEN_ENERGY_RATE: 0.18,
   AIRLOCK_COST: 1, AIRLOCK_CYCLE: 0.8, DOOR_SPEED: 10,
   // Limpeza eletrostatica do traje no airlock (segundos). Sem energia, o aviso fica na tela
   // SUIT_CLEAN_SKIP_TIME e a poeira entra na base. Ver docs/data/airlock-e-poeira.md
   SUIT_CLEAN_TIME: 0.8, SUIT_CLEAN_SKIP_TIME: 0.6,
-  CROP_GROWTH_TIME: 90, STORM_INTERVAL: 240, STORM_DURATION: 35, STORM_WARNING: 20,
-  RADIATION_RATE: 0.04, STORM_RADIATION_RATE: 0.25,
 
-  // Hora de jogo por segundo real (igual a MarsSkySystem.autoAdvanceSpeed)
+  // Hora de jogo por segundo real (igual a MarsSkySystem.autoAdvanceSpeed): 1 hora de jogo
+  // = 100 s reais e 1 sol de 24 h = 40 min reais. Toda taxa "por hora" do jogo usa este relogio.
   GAME_HOURS_PER_SECOND: 0.01,
   // Passo maximo de simulacao, para avancos de tempo grandes (tecla T) nao pularem eventos
   MAX_STEP_HOURS: 0.05,
@@ -175,7 +172,7 @@ export const MAV_CONFIG = {
   OXYGEN_KG_PER_DAY: 0.84,
 };
 
-// Tripulacao NPC (issue #47). Taxas por hora de jogo (1 hora de jogo = 50 s reais).
+// Tripulacao NPC (issue #47). Taxas por hora de jogo (1 hora de jogo = 100 s reais).
 // Agua : comida por tripulante segue o NASA BVAD (~3 kg : ~1,8 kg por pessoa/dia).
 // O O2 do tripulante e pago em energia, como o O2 do jogador no habitat (reciclagem + MOXIE).
 export const CREW_CONFIG = {
@@ -205,12 +202,14 @@ export const CREW_CONFIG = {
 };
 
 // Modulo norte (issue #56, parte B): energia/aquecimento, cozinha, banheiro e oficina.
-// Custos em % de bateria; "por hora" = hora de jogo (50 s reais). Fontes em docs/data/numeros-reais.md.
+// Custos em % de bateria; "por hora" = hora de jogo (100 s reais). Fontes em docs/data/numeros-reais.md.
 export const UTILITY_CONFIG = {
   // B2 aquecedor: gasta mais a noite, quando faz mais frio la fora e os paineis nao geram.
   // [Ref] InSight: media ~-62 C, minima -97,7 C (Elysium Planitia). Potencia em escala de jogo.
   HEATER_DAY_PER_HOUR: 1,
   HEATER_NIGHT_PER_HOUR: 4,
+  // Luz de cultivo da estufa: so gasta com a luz ligada (escala de jogo)
+  GREENHOUSE_LIGHTS_PER_HOUR: 2.5,
   // B3 cozinha: racao da despensa (compartilhada com a tripulacao) x refeicao fresca da estufa
   RATION_FOOD: 6,
   MEAL_WATER_L: 1,
@@ -227,8 +226,6 @@ export const UTILITY_CONFIG = {
   // B5 oficina: impressora 3D transforma regolito em peca de reposicao
   PRINT_REGOLITH: 3,
   PRINT_POWER: 6,
-  // Consumo exibido no painel de distribuicao (estimado a partir das regras do jogo)
-  GAME_SECONDS_PER_HOUR: 50,
 };
 
 // Radio Terra-Marte (issue #56, A2). Fontes em docs/data/numeros-reais.md.
@@ -266,11 +263,10 @@ export const STATION_CONFIG = {
   MEDBAY_LOW_HEALTH: 8,
   FILTER_DECAY: 0.2, CO2_RISE: 0.08, CO2_CLEAR: 0.12,
   DUST_DAMAGE: 0.015, DECONTAMINATION_COST: 2, FILTER_COST: 4,
-  EXERCISE_COST: 3, TREATMENT_COST: 5, FOOD_COST: 3,
+  EXERCISE_COST: 3, TREATMENT_COST: 5,
   COMMS_COST: 3, COMMS_DELAY: 40, SCIENCE_PER_SAMPLE: 2, UPGRADE_COST: 4,
   FITNESS_DECAY: 0.015, FRESH_FOOD_DURATION: 120,
-  CROP_WATER_COST: 2, CROP_ENERGY_COST: 3, CROP_GROWTH_TIME: 60,
-  CROP_NUTRITION: 5, TOOL_UPGRADE_COST: 4, MAV_REQUIRED_SAMPLES: 2,
+  TOOL_UPGRADE_COST: 4, MAV_REQUIRED_SAMPLES: 2,
   MAV_TRANSMISSION_COST: 5,
   SUIT_RADIATION_DAMAGE_FACTOR: 0.65,
 };
