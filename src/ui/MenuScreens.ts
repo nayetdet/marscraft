@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { MARS_TERRAIN, formatCoords } from '../data/marsTerrain.ts';
 import { formatDateDMY } from '../mission/missionText.ts';
-import { getLanguage, isLanguage, setLanguage } from './i18n.ts';
+import { LANGUAGES, getLanguage, setLanguage } from './i18n.ts';
 
 // Telas extras do menu: créditos, fontes, opções e ferramentas de demo.
 // O menu principal e as telas trocam de lugar com a classe `hidden`, como a tela de controles.
@@ -35,11 +35,13 @@ export class MenuScreens {
       if (action) feedback.textContent = onDemo(action);
     });
     this.shadersBtn = document.getElementById('shaders-btn');
-    this.languageSelect = document.getElementById('language-select');
-    this.languageSelect.value = getLanguage();
-    this.languageSelect.addEventListener('change', () => {
-      if (isLanguage(this.languageSelect.value)) onLanguageChange(this.languageSelect.value);
-    });
+    this.languageButtons = new Map(LANGUAGES.map((language) => [language, document.getElementById(`language-${language}`)]));
+    this.selectedLanguage = getLanguage();
+    for (const [language, button] of this.languageButtons) {
+      button.addEventListener('click', () => this.selectLanguage(language, onLanguageChange));
+      button.addEventListener('keydown', (event) => this.handleLanguageKeydown(event, language, onLanguageChange));
+    }
+    this.syncLanguageButtons();
     const volumeSlider = document.getElementById('volume-slider');
     const volumeValue = document.getElementById('volume-value');
     volumeSlider.value = String(Math.round(volume * 100));
@@ -61,6 +63,37 @@ export class MenuScreens {
   setShadersEnabled(enabled) {
     this.shadersBtn.textContent = `Shaders: ${enabled ? 'On' : 'Off'}`;
     this.shadersBtn.setAttribute('aria-pressed', String(enabled));
+  }
+
+  syncLanguageButtons() {
+    for (const [language, button] of this.languageButtons) {
+      const selected = language === this.selectedLanguage;
+      button.classList.toggle('is-selected', selected);
+      button.setAttribute('aria-checked', String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    }
+  }
+
+  selectLanguage(language, onLanguageChange) {
+    this.selectedLanguage = language;
+    this.syncLanguageButtons();
+    onLanguageChange(language);
+  }
+
+  handleLanguageKeydown(event, language, onLanguageChange) {
+    const current = LANGUAGES.indexOf(language);
+    let next = current;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (current + 1) % LANGUAGES.length;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (current - 1 + LANGUAGES.length) % LANGUAGES.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = LANGUAGES.length - 1;
+    else return;
+
+    event.preventDefault();
+    const nextLanguage = LANGUAGES[next];
+    const nextButton = this.languageButtons.get(nextLanguage);
+    nextButton.focus();
+    this.selectLanguage(nextLanguage, onLanguageChange);
   }
 
   // Origem dos dados de tempestade na tela "NASA Data": "Real data from DD/MM/AAAA" ou, depois de

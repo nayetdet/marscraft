@@ -422,13 +422,22 @@
               <div><h3>Graphics</h3><p>Real-time sun shadows, glow and light rays. Turn off if the game feels slow.</p></div>
               <button id="shaders-btn" class="mc-btn secondary" aria-pressed="false">Shaders: Off</button>
             </div>
-            <div class="option-row">
+            <div class="option-row language-option-row">
               <div><h3>Language</h3><p>Choose the language used throughout the game.</p></div>
-              <select id="language-select" class="language-select" aria-label="Language">
-                <option value="en">🇺🇸 English</option>
-                <option value="pt-BR">🇧🇷 Português (Brasil)</option>
-                <option value="es">🇪🇸 Español</option>
-              </select>
+              <div id="language-options" class="language-options" role="radiogroup" aria-label="Language">
+                <button id="language-en" class="language-choice" type="button" role="radio" aria-checked="true" tabindex="0">
+                  <svg class="language-flag" viewBox="0 0 24 16" aria-hidden="true" focusable="false">
+                    <defs><clipPath id="language-flag-us-clip"><rect width="24" height="16" rx="2"/></clipPath></defs>
+                    <g clip-path="url(#language-flag-us-clip)"><rect width="24" height="16" fill="#fff"/><path fill="#c83d4b" d="M0 0h24v1.23H0zm0 2.46h24v1.23H0zm0 2.46h24v1.23H0zm0 2.46h24v1.23H0zm0 2.46h24v1.23H0zm0 2.46h24v1.23H0zm0 2.46h24v1.23H0z"/><rect width="10.5" height="8.6" fill="#244777"/><g fill="#fff"><circle cx="1.8" cy="1.6" r=".35"/><circle cx="4" cy="1.6" r=".35"/><circle cx="6.2" cy="1.6" r=".35"/><circle cx="8.4" cy="1.6" r=".35"/><circle cx="2.9" cy="3" r=".35"/><circle cx="5.1" cy="3" r=".35"/><circle cx="7.3" cy="3" r=".35"/><circle cx="1.8" cy="4.4" r=".35"/><circle cx="4" cy="4.4" r=".35"/><circle cx="6.2" cy="4.4" r=".35"/><circle cx="8.4" cy="4.4" r=".35"/><circle cx="2.9" cy="5.8" r=".35"/><circle cx="5.1" cy="5.8" r=".35"/><circle cx="7.3" cy="5.8" r=".35"/><circle cx="1.8" cy="7.2" r=".35"/><circle cx="4" cy="7.2" r=".35"/><circle cx="6.2" cy="7.2" r=".35"/><circle cx="8.4" cy="7.2" r=".35"/></g></g><rect x=".35" y=".35" width="23.3" height="15.3" rx="2" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width=".7"/>
+                  </svg><span>English</span>
+                </button>
+                <button id="language-pt-BR" class="language-choice" type="button" role="radio" aria-checked="false" tabindex="-1">
+                  <svg class="language-flag" viewBox="0 0 24 16" aria-hidden="true" focusable="false"><rect x=".35" y=".35" width="23.3" height="15.3" rx="2" fill="#239b62" stroke="#fff" stroke-opacity=".45" stroke-width=".7"/><path d="M12 2.1 21.6 8 12 13.9 2.4 8 12 2.1Z" fill="#f5d64e"/><circle cx="12" cy="8" r="3.35" fill="#24549a"/><path d="M9.1 7.2c1.8-.6 3.7-.35 5.7.7" fill="none" stroke="#fff" stroke-width=".55" stroke-linecap="round"/></svg><span>Português (Brasil)</span>
+                </button>
+                <button id="language-es" class="language-choice" type="button" role="radio" aria-checked="false" tabindex="-1">
+                  <svg class="language-flag" viewBox="0 0 24 16" aria-hidden="true" focusable="false"><rect x=".35" y=".35" width="23.3" height="15.3" rx="2" fill="#c94143" stroke="#fff" stroke-opacity=".45" stroke-width=".7"/><path d="M.7 4.4h22.6v7.2H.7z" fill="#efc94c"/><path d="M6.2 6.4v3.1m0-2.6c-.7.5-.7 1.6 0 2.1m0-2.1c.7.5.7 1.6 0 2.1" fill="none" stroke="#b23c3c" stroke-width=".45" stroke-linecap="round"/></svg><span>Español</span>
+                </button>
+              </div>
             </div>
           </div>
           <button id="options-back-btn" class="mc-btn secondary"><svg class="menu-icon" aria-hidden="true" focusable="false"><use href="#menu-icon-back"></use></svg><span class="menu-button-label">Back</span></button>
