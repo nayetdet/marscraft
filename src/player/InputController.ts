@@ -713,6 +713,8 @@ export class InputController {
 
     window.addEventListener('keydown', (e) => {
       if (this.isPortraitRequired || this.survival.isDead || this.isStationOpen?.() || this.isInputBlocked()) return;
+      // The pause menu owns keyboard input; Escape is handled by the capture listener above.
+      if (!pauseOverlay.classList.contains('hidden')) return;
       // Painel do MAV ou tela de vitoria abertos: so [F] continua ativo.
       if (this.isMissionModalOpen()) {
         if (e.code === 'KeyF' && !e.repeat) this.onInteract();

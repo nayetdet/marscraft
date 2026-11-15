@@ -2333,9 +2333,9 @@ export class GameEngine {
     this.mission.oxygenCostMultiplier = 1;
     // Numa animacao quem posiciona a tripulacao e a propria animacao (o embarque no foguete)
     for (const avatar of this.crewAvatars) {
-      if (!avatar.cutsceneControlled) avatar.update(dt);
+      if (!avatar.cutsceneControlled && (active || this.cutscenes.isActive)) avatar.update(dt);
     }
-    if (this.isThirdPerson && !this.roverController.isActive && !this.gymController.isActive) {
+    if (active && this.isThirdPerson && !this.roverController.isActive && !this.gymController.isActive) {
       const canMove = active
         && !this.hud.isInventoryOpen
         && !this.scannerHud.isJournalOpen
