@@ -40,8 +40,6 @@ function baseData(over: Partial<MachineViewData> = {}): MachineViewData {
     maxCrewFood: 12,
     freshFoodActive: false,
     graywater: 8.5,
-    waterFilter: 96,
-    waterRecoveryPct: 98,
     cold: false,
     isNight: false,
     crewStations: [{ name: 'Greenhouse', health: 0.72 }, { name: 'Water Recycler', health: 1 }],
@@ -68,8 +66,8 @@ function baseData(over: Partial<MachineViewData> = {}): MachineViewData {
 }
 
 describe('machineViews', () => {
-  it('recognizes all 8 custom machine station types', () => {
-    for (const type of ['console', 'power', 'medical', 'science', 'galley', 'hygiene', 'workshop', 'shelter']) {
+  it('recognizes all 6 custom machine station types', () => {
+    for (const type of ['console', 'power', 'medical', 'science', 'galley', 'shelter']) {
       expect(isCustomMachineType(type)).toBe(true);
       expect(machineModalTitle(type)).not.toBe('STATION');
     }
@@ -84,8 +82,6 @@ describe('machineViews', () => {
       medical: ['treat'],
       science: ['analyze', 'sendScience', 'send', 'upgrade', 'upgradeTool'],
       galley: ['cookMeal'],
-      hygiene: ['washUp', 'serviceFilter'],
-      workshop: ['printPart'],
       shelter: [],
     };
 

@@ -536,7 +536,9 @@ export const MAV_CONFIG = {
   PAD_POSITION: { x: 24, z: 20 },
   PAD_RADIUS: 4,
   INTERACT_RADIUS: 6,
-  ICE_BLOCKS_FOR_FULL_TANK: 10,
+  // Blocos de gelo para encher o tanque. Eram 10; com a missao inteira dentro da janela de
+  // lancamento, 6 viagens cabem sem virar repeticao. Regra de jogo.
+  ICE_BLOCKS_FOR_FULL_TANK: 6,
   // Horas de jogo para a fabrica transformar 1 bloco de gelo em combustivel: 0,15 h = 7,5 s
   // reais (era 0,6 h = 30 s; teste com jogadores de 15/11/2026). Escala de jogo.
   ISRU_HOURS_PER_ICE_BLOCK: 0.15,
@@ -628,17 +630,10 @@ export const UTILITY_CONFIG = {
   MEAL_WATER_L: 1,
   MEAL_POWER: 2,
   MEAL_HEAL: 2,
-  // B4 banheiro: lavar gasta agua limpa, que vira agua cinza para o reciclador.
-  // [Ref] ISS recupera ~98 % da agua (STATION_CONFIG.WATER_RECOVERY); filtro gasto recupera menos.
-  WASH_WATER_L: 2,
-  WASH_HEAL: 1,
-  FILTER_WEAR_PER_HOUR: 2, // % do filtro do processador de agua por hora de jogo
-  WORN_FILTER: 25, // abaixo disso a recuperacao cai
-  WORN_RECOVERY: 0.7,
-  FILTER_SERVICE_POWER: 3,
-  // B5 oficina: impressora 3D transforma regolito em peca de reposicao
-  PRINT_REGOLITH: 3,
-  PRINT_POWER: 6,
+  // B4 reciclador de agua: limpa a agua cinza sozinho e gasta bateria por litro limpo.
+  // [Ref] a Estacao Espacial recupera ~98 % da agua (STATION_CONFIG.WATER_RECOVERY). O custo de
+  // energia e regra de jogo: 3 L por hora (STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR) = 0,6 %/h.
+  RECYCLER_POWER_PER_L: 0.2,
 };
 
 // Radio Terra-Marte (issue #56, A2). Fontes em docs/data/numeros-reais.md.
@@ -688,10 +683,10 @@ export const STATION_CONFIG = {
 
 // Historia em 3 atos (docs/superpowers/specs/2026-11-14-story-arc-design.md)
 export const STORY_CONFIG = {
-  // Horas de jogo que a janela de lancamento fica aberta depois da ultima tempestade (~6,7 min reais)
-  WINDOW_HOURS: 8,
-  // Tempestades sobrevividas que abrem a janela (o mesmo numero que o MAV exige)
-  STORMS_FOR_WINDOW: MAV_CONFIG.STORMS_TO_SURVIVE,
+  // Horas de jogo que a janela de lancamento fica aberta. Ela abre no fim do tutorial e a missao
+  // inteira cabe nela (gelo, ciencia e a tempestade solar no meio): 1 sol = 24 h de jogo = 20 min
+  // reais. Antes eram 8 h, contadas so depois da tempestade. Regra de jogo.
+  WINDOW_HOURS: 24,
   // Segundos reais que um card de radio fica na tela
   CARD_SECONDS: 12,
   // O card MESSAGE SENT fecha sozinho mais cedo: so o tempo de o pacote ir de Marte ate a Terra (issue #135)
@@ -720,11 +715,9 @@ export const CUTSCENE_CONFIG = {
   TOUR_STOP_SECONDS: 3,
   // Segundos da frase da rotina (gelo, foguete, base), no fim do passeio
   TOUR_ROUTINE_SECONDS: 4.4,
-  // Segundos da previa da missao: a tripulacao embarca e o foguete parte rumo a Terra
-  TOUR_MISSION_SECONDS: 6.6,
-  // Aceleracao do foguete nessa previa, em blocos/s^2: mais forte que a da decolagem de verdade
-  // (LAUNCH_ACCEL), porque a previa dura poucos segundos
-  PREVIEW_LAUNCH_ACCEL: 7,
+  // Segundos do plano da missao, com o foguete parado na plataforma. A frase tem 8 palavras e a
+  // regra e no maximo 2 por segundo. (Eram 6,6 s com a previa da decolagem, que saiu.)
+  TOUR_MISSION_SECONDS: 4.4,
   LAUNCH_SECONDS: 15.5,
   // Aceleracao do MAV na decolagem, em blocos/s^2 (escala de jogo)
   LAUNCH_ACCEL: 2.2,
@@ -914,6 +907,9 @@ export const SCIENCE_CONFIG = {
   // verdade pesa: regra de jogo, para a escolha "levar mais ciencia x buscar mais gelo" aparecer.
   ICE_PER_SAMPLE_TUBE: 1,
   MAX_SAMPLE_TUBES: 4,
+  // Pistas da missao (issue #344, src/mission/clues.ts): a seta manda buscar uma pista a cada
+  // tantos blocos de gelo entregues, para a ciencia e o combustivel andarem juntos. Regra de jogo.
+  ICE_PER_CLUE_TRIP: 2,
 };
 
 // Amostras espalhadas pelo mapa (issue #270). Posicoes sorteadas com semente fixa: nao sao dado
@@ -928,6 +924,9 @@ export const SAMPLE_SITE_CONFIG = {
   PLACEMENT_TRIES: 600,
   // Amostras de gelo ficam perto da cratera de gelo (anel em volta do centro dela)
   ICE_RING: [13, 18],
+  // Pistas da missao (issue #344): o primeiro local de cada tipo fica num anel proprio em volta
+  // da base, cada vez mais longe (o gelo ja fica perto, na cratera de gelo). Regra de jogo.
+  CLUE_RINGS: { 'sample-mudstone': [40, 48], 'sample-sulfur': [64, 76] } as Record<string, [number, number]>,
   INTERACT_RADIUS: 3.2, // blocos: de perto, olhando para a amostra
   BEACON_HEIGHT: 2.6, // altura do facho de luz que marca o local
 };

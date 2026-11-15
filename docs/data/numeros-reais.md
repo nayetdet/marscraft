@@ -263,6 +263,20 @@ Dez locais de amostra espalhados pelo mapa (`SAMPLE_SITE_CONFIG`, `src/world/sam
 | Buried Ice Core | 2 | Em 2008 a sonda Phoenix cavou perto do polo norte e achou pedaços brancos que **sumiram em 4 dias**: era gelo de água sublimando. **Não é de Gale**: a ficha do jogo diz que o achado real é da Phoenix, e a cratera de gelo do mapa é do jogo | [NASA/JPL, 19/06/2008](https://www.jpl.nasa.gov/news/bright-chunks-at-phoenix-landers-mars-site-must-have-been-ice/) |
 | Plain Regolith | 1 (só a primeira análise conta) | Sem fato próprio: o regolito comum vale pouco para a exploração do mapa ter motivo | regra do jogo |
 
+## Pistas da missão (issue #344)
+
+A missão do jogo usa a pergunta real do Curiosity em Gale: a cratera já foi um lago, e dava para viver ali? Três tipos de amostra da tabela acima são as **pistas** que respondem a ela (`src/mission/clues.ts`). O foguete só decola com as 3 enviadas para a Terra, além dos pontos de ciência.
+
+| Pista no jogo | Amostra | O que responde | Base real |
+|---|---|---|---|
+| WATER NOW | Buried Ice Core | Marte ainda tem água, congelada | Phoenix, 2008 (linha "Buried Ice Core" acima). Não é de Gale: a ficha avisa |
+| OLD LAKE | Layered Mudstone | Esta rocha era lama no fundo de um lago | Curiosity em Yellowknife Bay, 2013 (linha "Layered Mudstone" acima) |
+| LIFE INGREDIENT | Yellow Sulfur Crystals | O enxofre é um dos ingredientes de que a vida precisa | O mesmo comunicado de 2013 lista o enxofre entre os elementos-chave para a vida achados no lamito; os cristais são o achado de 2024 (linha "Yellow Sulfur Crystals" acima) |
+
+A resposta da tela de vitória ("Gale was a lake, good for life") resume a conclusão de 2013: um lago antigo com água boa para micróbios. O jogo não diz que houve vida.
+
+**Regra de jogo:** qual amostra é pista, a ordem, a distância de cada local (`SAMPLE_SITE_CONFIG.CLUE_RINGS`: lamito a 40 a 48 blocos da base, enxofre a 64 a 76) e o ritmo de uma pista a cada 2 blocos de gelo (`SCIENCE_CONFIG.ICE_PER_CLUE_TRIP`).
+
 ## Regra única do tempo e referência real (issue #229)
 
 **A regra:** o relógio do jogo anda `GAME_HOURS_PER_SECOND = 0,02` hora de jogo por segundo real: **1 hora de jogo = 50 s reais, 1 sol de 24 h = 20 min reais**. Tudo o que gasta ou produz "por hora" segue esse relógio. O que precisa de outra compressão para caber numa partida é uma **exceção com nome** (`TIME_SCALE_CONFIG` e as constantes citadas abaixo) e aparece para a criança na aba **REAL VS GAME** do diário [J] (`src/data/realVsGame.ts`). Testes em `src/config/timeScale.test.ts` e `src/config/balance.test.ts`.

@@ -99,6 +99,8 @@ import { clampToPlayArea, distanceFromBaseCenter } from '../world/dustStormZone.
 import { WeatherHud } from '../ui/WeatherHud.ts';
 import { LANDER_NOZZLE_Y, createLander, landerCollider } from '../story/cutscene/landerModel.ts';
 import { createArrivalCutscene } from '../story/cutscene/arrivalCutscene.ts';
+import { earthFarewell } from '../story/storyChapters.ts';
+import { CLUES, allCluesSent, clueDue, clueStates, countClues, nextClueIndex } from '../mission/clues.ts';
 import { MAV_NOZZLE_Y, createLaunchCutscene } from '../story/cutscene/launchCutscene.ts';
 import { createRationDeliveryCutscene } from '../story/cutscene/rationDeliveryCutscene.ts';
 import { EventDirector, inWindow, seedFromSearch } from '../mission/eventDirector.ts';
@@ -525,8 +527,6 @@ export class GameEngine {
     if (m.dustWeather.panelDust >= 0.5) return 'Your solar panels are dusty. Clean them at the solar field, west of the power room.';
     if (m.battery.percent < 30) return 'Your battery is low. Turn off the fuel factory or the greenhouse lights until the Sun is back, but keep the heater on at night.';
     if (m.shelterWaterL < 20 && this.survival.baseWater > 30) return 'Put some water in the storm shelter wall before the next storm.';
-    if (this.utility.waterFilter < 30) return 'Your water filter is dirty. Clean it in the bathroom so you get back more water.';
-    if ((this.crew?.stations ?? []).some((st) => st.health < 0.5)) return 'A crew station is wearing out. Print a spare part in the workshop.';
     if (this.comms.hoursUntilConjunction < 12) return 'Solar conjunction is coming: the radio will go silent for a while. Plan ahead!';
     return 'Everything looks good from here. Keep collecting ice and science samples.';
   }
@@ -651,21 +651,16 @@ export class GameEngine {
       this._suitportInteraction = { type: 'suitport', x: -0.68, y: 11.35, z: 7.5, minDot: 0.72, label: '' };
       this._staticInteractions = [
         { type: 'power', x: 10.6, y: 11.4, z: -3, label: 'Press F: life support' },
-        { type: 'console', x: 8.25, y: 11.5, z: -10.8, label: 'Press F: mission computer' },
         { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth (call Earth) · [G] send science' },
         { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
         { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
         { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
         { type: 'galley', x: 13.1, y: 11.35, z: -16.2, label: 'Press F: kitchen' },
         { type: 'galley', x: 16.1, y: 11.3, z: -21.0, label: 'Press F: pantry & kitchen' },
-        { type: 'hygiene', x: -16.0, y: 11.1, z: -38.3, label: 'Press F: bathroom & water recycler' },
-        { type: 'hygiene', x: -19.85, y: 11.6, z: -32.5, label: 'Press F: bathroom & water recycler' },
-        { type: 'workshop', x: 11.5, y: 11.5, z: -38.1, label: 'Press F: 3D printer workshop' },
         { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
         ...GREENHOUSE_BASKETS.map(basket => ({ ...basket, cropType: basket.type, type: 'basket', minDot: 0.95, label: `Press F or tap: collect ${basket.type}` })),
         { type: 'treadmill', x: -9.2, y: 11.2, z: 10.2, label: 'Press F or Click: get on space treadmill (bone density)' },
         { type: 'bike', x: -5.8, y: 11.2, z: 10.4, label: 'Press F or Click: get on exercise bike (muscle & cardio)' },
-        { type: 'medical', x: -7.6, y: 11.3, z: 12.1, label: 'Press F or Click: medbay & bone scanner' },
         ...BUNK_INTERACTIONS,
       ];
       this._interactionList = [];
@@ -826,8 +821,8 @@ export class GameEngine {
     }));
     this.stationSprout = createSproutModel(); this.stationSprout.visible = false; this.stationCrop.add(this.stationSprout);
     this.stationCrop.position.set(GREENHOUSE_CENTER.x + GARDEN_CROP_BED.dx + 0.5, WORLD_CONFIG.GROUND_LEVEL + 2, GREENHOUSE_CENTER.z + GARDEN_CROP_BED.dz + 0.5); this.stationCrop.visible = false; this.scene.add(this.stationCrop);
-    const colors = { treadmill: 0x38bdf8, bike: 0x4ade80, medical: 0xe76b65 };
-    for (const [type, x, z] of [['treadmill', -9.2, 9.2], ['bike', -5.8, 9.5], ['medical', -7.6, 12.4]]) {
+    const colors = { treadmill: 0x38bdf8, bike: 0x4ade80 };
+    for (const [type, x, z] of [['treadmill', -9.2, 9.2], ['bike', -5.8, 9.5]]) {
       const frame = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.12), dark);
       const screen = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.14), new THREE.MeshLambertMaterial({ color: colors[type], emissive: colors[type], emissiveIntensity: 0.18 }));
       frame.position.set(x, 11.4, z); screen.position.set(x, 11.4, z + 0.04);
@@ -1281,7 +1276,13 @@ export class GameEngine {
       'Science sent through orbiters: NASA Mars Relay Network. Rock sample tubes: NASA Perseverance; science points, upload costs and extra ice per tube are game rules. ' +
       'Map samples: real finds by NASA Curiosity in Gale Crater (dune sand, mudstone, sulfur, iron meteorite) and by NASA Phoenix (buried ice); where they sit on the map is a game rule. ' +
       'Mars events: NASA InSight (marsquakes and the 2021 meteor impact), MRO, Perseverance (Phobos eclipse, aurora), Spirit (dust devils) and Viking 2 (frost); when and how strong they are is a game rule.';
-    this.missionHud.showVictory(rows, sources);
+    this.missionHud.showVictory(rows, sources, earthFarewell({
+      sentPoints: m.sentPoints,
+      discoveries: m.sentDiscoveries,
+      samples: m.sentSamples,
+      oneWayMinutes: Math.round(this.comms.lightMinutes),
+      cluesSent: allCluesSent(this.scienceStatus().clues),
+    }));
     renderReportCard(document.getElementById('victory-report'), missionReport(this._reportStats()));
     document.exitPointerLock();
   }
@@ -1736,7 +1737,7 @@ export class GameEngine {
     if (action === 'skip-training') {
       if (this.story.skipTraining()) return 'Tutorial skipped. Press Back, then Play: fill the rocket with ice.';
       return this.story.act === 0
-        ? 'Tutorial is off for this game: only 3 steps (enter the base, call Earth, get 1 ice).'
+        ? 'The tutorial has only 5 steps: enter the base, call Earth, get 1 ice, load the rocket, scan 1 thing.'
         : 'The tutorial is already done or skipped.';
     }
     if (action.startsWith('event:')) return this.triggerEvent(action.slice(6));
@@ -1755,9 +1756,9 @@ export class GameEngine {
     this.powerChecks = 0;
     // O que o jogador ja fez, para os passos do tutorial guiado (src/story/tutorialSteps.ts).
     // Beber, comer e lavar contam a tentativa: quem esta sem sede nao fica preso no passo.
-    this.tutorialCounts = { drink: 0, meal: 0, wash: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0 };
+    this.tutorialCounts = { drink: 0, meal: 0, earthCalls: 0, roverDrives: 0, roverIceKg: 0 };
     this.story = new StoryDirector({
-      training: true, // tutorial guiado completo; o menu Demo Tools pode pular
+      training: false, // tutorial padrao: so os 5 passos que a missao usa (CORE_STEPS)
       replyDelayHours: this.comms.roundTripGameSeconds * MISSION_CONFIG.GAME_HOURS_PER_SECOND,
       comms: {
         millionKm: Math.round(this.comms.distanceKm / 1e6),
@@ -1776,12 +1777,16 @@ export class GameEngine {
       stormPhase: 'calm', stormsSurvived: 0, propellantPct: 0, dataSent: false, launched: false,
       needsBase: false, iceForFullTank: MAV_CONFIG.ICE_BLOCKS_FOR_FULL_TANK, scienceStep: null, sciencePointsLeft: 0, sciencePointsSent: 0,
       powerChecks: 0, harvestCount: 0, workoutCount: 0, shelterWaterL: 0,
-      drinkCount: 0, mealCount: 0, washCount: 0, earthCalls: 0, plantCount: 0,
+      drinkCount: 0, mealCount: 0, earthCalls: 0, plantCount: 0,
       roverDrives: 0, roverIceKg: 0, scanCount: 0, iceDelivered: 0,
       // Recursos da base, para os desvios do tutorial (issue #237, tutorialDetours.ts)
       baseWaterL: 0, batteryCharge: 0, foodStock: 0, roverBattery: 0, roverActive: false,
     };
-    this._scienceState = { pendingPoints: 0, sentPoints: 0, rawSamples: 0 };
+    this._scienceState = { pendingPoints: 0, sentPoints: 0, rawSamples: 0, cluesToFind: 0, cluesInBag: 0, cluesUnsent: 0 };
+    // Pistas da missao (issue #344): estado de cada uma e o lugar da proxima, reaproveitados a cada frame
+    this._clueStates = [];
+    this._clueInBag = (typeId) => this.survival.countItem(sampleTypeById(typeId)?.itemId) > 0;
+    this._clueWaypoint = { x: 0, y: 0, z: 0, label: WAYPOINT_LABELS.clue };
 
     // Setas do objetivo: uma flutua no mundo e a outra fica na tela (aponta mesmo atraves das paredes)
     this.waypoints = this._buildWaypoints();
@@ -1806,6 +1811,26 @@ export class GameEngine {
   }
 
   // Posicao no mundo de cada lugar para onde a seta do objetivo pode apontar
+  // Local la fora da proxima pista (issue #344): a amostra daquele tipo mais perto do jogador que
+  // ainda nao foi coletada. null se nao sobrou nenhuma.
+  _clueSiteWaypoint(index) {
+    const clue = CLUES[index];
+    if (!clue) return null;
+    let best = null;
+    let bestDistance = Infinity;
+    for (const site of this.sampleSites.sites) {
+      if (site.typeId !== clue.typeId || this.sampleSites.isCollected(site.id)) continue;
+      const distance = Math.hypot(site.x - this.player.pos.x, site.z - this.player.pos.z);
+      if (distance < bestDistance) { best = site; bestDistance = distance; }
+    }
+    if (!best) return null;
+    this._clueWaypoint.x = best.x + 0.5;
+    this._clueWaypoint.y = best.y + 2.2;
+    this._clueWaypoint.z = best.z + 0.5;
+    this._clueWaypoint.label = `CLUE: ${clue.label}`;
+    return this._clueWaypoint;
+  }
+
   _buildWaypoints() {
     const ground = WORLD_CONFIG.GROUND_LEVEL + 1;
     const outerDoor = this.airlock.doors.find((door) => door.name === 'outer');
@@ -1818,17 +1843,15 @@ export class GameEngine {
     return {
       airlock: { x: 0.5, y: ground + 3.2, z: outerDoor.z + 0.5, label: WAYPOINT_LABELS.airlock },
       console: { x: 4, y: ground + 3, z: -9.6, label: WAYPOINT_LABELS.console },
-      // Lugares do tutorial guiado: bebedouro, cozinha e banheiro
+      // Lugares do tutorial guiado: bebedouro e cozinha
       water: { x: WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.x, y: ground + 3, z: WATER_SYSTEM_CONFIG.WATER_DISPENSER_POS.z, label: WAYPOINT_LABELS.water },
       kitchen: { x: 13.1, y: ground + 3, z: -16.2, label: WAYPOINT_LABELS.kitchen },
-      bathroom: { x: -16, y: ground + 2.6, z: -38.3, label: WAYPOINT_LABELS.bathroom },
       science: { x: 9.75, y: ground + 3, z: -10.8, label: WAYPOINT_LABELS.science },
       ice: { x: ice.x + 0.5, y: iceTop + 1.6, z: ice.z + 0.5, label: WAYPOINT_LABELS.ice },
       mav: { x: pad.x, y: ground + 9.2, z: pad.z, label: WAYPOINT_LABELS.mav },
       shelter: { x: shelterX, y: ground + 2.2, z: shelterZ, label: 'STORM SHELTER' },
       powerroom: { x: -15.5, y: ground + 2.5, z: -16.5, label: 'POWER & HEAT CONTROL' },
       lifeSupport: { x: 10.6, y: ground + 2.5, z: -3, label: 'LIFE SUPPORT' },
-      recycler: { x: -16, y: ground + 2.2, z: -38.3, label: 'WATER RECYCLER' },
       // Treino de cadete (issue #88): monitor da estufa e academia
       greenhouse: { x: GREENHOUSE_MONITOR_POS.x, y: ground + 3, z: GREENHOUSE_MONITOR_POS.z, label: WAYPOINT_LABELS.greenhouse },
       gym: { x: -7.5, y: ground + 3, z: 10.2, label: WAYPOINT_LABELS.gym },
@@ -1852,7 +1875,7 @@ export class GameEngine {
     this.engineFlame.setSize(1.3, 6);
     this.engineFlame.group.position.set(0, LANDER_NOZZLE_Y, 0);
     this.lander.add(this.engineFlame.group);
-    // A animacao termina com o foguete decolando; _endArrival o devolve a plataforma
+    // O foguete fica na plataforma a animacao inteira; _endArrival confirma a posicao dele
     this._mavHome.copy(this.mavRocket.position);
     this.previewFlame.setSize(1.0, 5.5);
     this.previewFlame.group.position.set(0, MAV_NOZZLE_Y, 0);
@@ -1868,17 +1891,9 @@ export class GameEngine {
       places: this._tourPlaces(),
       rocket: this.mavRocket,
       rocketFlame: this.previewFlame,
-      crew: this.crewAvatars,
-      earthDir: this._earthDirection(this._mavHome),
       onTouchdown: () => this.audio.fadeOutRocket(),
       onEnd: () => this._endArrival(),
     }));
-  }
-
-  // Direcao unitaria de `from` ate a Terra no ceu, ou null se ela estiver baixa demais no horizonte
-  _earthDirection(from) {
-    const dir = this.sky.getEarthWorldPosition(new THREE.Vector3()).sub(from).normalize();
-    return dir.y > 0.2 ? { x: dir.x, y: dir.y, z: dir.z } : null;
   }
 
   // Ponto do mundo de cada lugar que a animacao de chegada apresenta
@@ -2159,7 +2174,6 @@ export class GameEngine {
     const done = this.tutorialCounts;
     s.drinkCount = done.drink;
     s.mealCount = done.meal;
-    s.washCount = done.wash;
     s.earthCalls = done.earthCalls;
     s.roverDrives = done.roverDrives;
     s.roverIceKg = done.roverIceKg;
@@ -2172,6 +2186,14 @@ export class GameEngine {
     sci.pendingPoints = science.pendingPoints;
     sci.sentPoints = science.sentPoints;
     sci.rawSamples = this.stations.rawSampleCount(this.survival);
+    // Pistas da missao (issue #344): onde cada uma esta e se a seta deve desviar ate a proxima
+    const clues = clueStates(science, this._clueInBag, this._clueStates);
+    sci.cluesToFind = countClues(clues, 'todo');
+    sci.cluesInBag = countClues(clues, 'bag');
+    sci.cluesUnsent = clues.length - countClues(clues, 'sent');
+    s.clueStates = clues;
+    s.nextClue = nextClueIndex(clues);
+    s.clueDue = clueDue(clues, s.iceForFullTank - s.iceNeeded, s.iceNeeded);
     s.scienceStep = scienceStep(sci);
     s.sciencePointsLeft = pointsStillNeeded(sci);
     s.sciencePointsSent = science.sentPoints;
@@ -2215,7 +2237,7 @@ export class GameEngine {
     const inside = s.insideHabitat && !this.roverController.isActive;
     const alertPlace = routeWaypoint(this.missionHud.activeAlertWaypoint, inside);
     const place = alertPlace ?? (this._finishedStory() ? null : routeWaypoint(objectiveTarget(this.story.objectiveId, s), inside));
-    let target = place ? this.waypoints[place] : null;
+    let target = place === 'clue' ? this._clueSiteWaypoint(s.nextClue) : place ? this.waypoints[place] : null;
     if (place === 'brokenWindow') {
       const windows = this.world.brokenBaseBlocks;
       if (this._brokenWindowIndex === null || !windows.has(this._brokenWindowIndex)) {

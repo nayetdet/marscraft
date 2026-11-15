@@ -100,10 +100,10 @@ describe('Martian Terrain & NASA Base Builder', () => {
   it('knows where the ground was shaped for the game', () => {
     const pad = MAV_CONFIG.PAD_POSITION;
     const ice = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER;
-    for (const [x, z] of [[-4, 0], [pad.x, pad.z], [ice.x, ice.z], [-28, -40], [-27, 16]]) {
+    for (const [x, z] of [[-4, 0], [pad.x, pad.z], [ice.x, ice.z], [-28, -26], [-27, 16]]) {
       expect(isBuildZone(x, z)).toBe(true);
     }
-    for (const [x, z] of [[64, 64], [-70, -60], [100, -40], [0, 60]]) {
+    for (const [x, z] of [[64, 64], [-70, -60], [100, -40], [0, 60], [-28, -40]]) {
       expect(isBuildZone(x, z)).toBe(false);
     }
   });

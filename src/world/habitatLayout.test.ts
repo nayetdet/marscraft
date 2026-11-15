@@ -42,10 +42,9 @@ describe('isInsidePressurizedVolume', () => {
     ['gym corridor', -5.5, 11.7, 6.5],
     ['gym module', -8.5, 11.7, 10.5],
     ['main habitat, new north-east corner', 10.5, 11.7, -9.5],
-    ['north spine corridor', -2.5, 11.7, -28.5],
+    ['north spine corridor', -2.5, 11.7, -22.5],
     ['power module', -15.5, 11.7, -20.5],
     ['link to the kitchen', 2.5, 11.7, -21.5],
-    ['workshop module', 11.5, 11.7, -34.5],
     ['link to the crew quarters', 15.5, 11.7, -7.5],
     ['crew quarters module', 23.5, 11.7, -5.5],
   ])('counts the %s as pressurized', (_, x, y, z) => {
@@ -60,7 +59,9 @@ describe('isInsidePressurizedVolume', () => {
     ['above the side of the greenhouse dome', -17.5, 22.7, 5.5],
     ['on the open surface', 0.5, 11.7, 24.5],
     ['outside, south of the crew quarters link', 15.5, 11.7, -3.5],
-    ['outside between the power and bathroom modules', -15.5, 11.7, -27.5],
+    ['outside north of the power module', -15.5, 11.7, -27.5],
+    ['outside where the workshop used to be', 11.5, 11.7, -34.5],
+    ['outside past the end of the spine corridor', -2.5, 11.7, -28.5],
     ['outside between the spine and the kitchen', 2.5, 11.7, -17.5],
   ])('does not count standing %s as pressurized', (_, x, y, z) => {
     expect(isInsidePressurizedVolume(x, y, z)).toBe(false);

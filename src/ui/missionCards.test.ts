@@ -133,10 +133,11 @@ describe('missionStatus', () => {
     expect(dry.alerts[0].title).toMatch(/plants stopped/);
   });
 
-  it('points to the recycler when used water is waiting to be cleaned (issue #101)', () => {
+  it('points to the power room when used water is waiting for the recycler (issue #101)', () => {
     const s = missionStatus(fakeMission(), FETCHED, { water: 4, graywater: 12 });
     expect(s.alerts[0]).toMatchObject({ id: 'water', tone: 'danger' });
-    expect(s.alerts[0].text).toMatch(/water recycler/);
+    expect(s.alerts[0].text).toMatch(/recycler/);
+    expect(s.alerts[0].target).toBe('powerroom');
   });
 
   it('formats a short source line', () => {

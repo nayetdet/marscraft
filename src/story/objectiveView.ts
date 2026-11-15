@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { MAV_CONFIG, SCIENCE_CONFIG } from '../config/constants.ts';
 import { formatHours } from '../mission/missionText.ts';
+import { CLUES } from '../mission/clues.ts';
 import { STEP_COLORS, tutorialStepById } from './tutorialSteps.ts';
 
 // O que o painel do objetivo desenha, de cima para baixo:
@@ -8,7 +9,7 @@ import { STEP_COLORS, tutorialStepById } from './tutorialSteps.ts';
 //      degraus: cada bloco de gelo entregue acende um;
 //   2. o que fazer agora: um icone grande com 2 ou 3 palavras e, no tutorial, uma linha dizendo
 //      onde ir e o que apertar;
-//   3. onde a crianca esta: "STEP 4/15" no tutorial ou a volta de trabalho que se repete.
+//   3. onde a crianca esta: "STEP 4/5" no tutorial ou a volta de trabalho que se repete.
 // Funcoes puras: o StoryHud so pinta o resultado.
 
 export const GOAL_TITLE = 'GOAL: FLY HOME';
@@ -34,6 +35,16 @@ const BACK_TO_BASE = { icon: 'home', label: 'BACK TO BASE' };
 const MAKING_FUEL = { icon: 'bolt', label: 'MAKING FUEL' };
 const SURVIVE = { icon: 'storm', label: 'SURVIVE THE STORMS' };
 const ANALYZE_ROCKS = { icon: 'rock', label: 'ANALYZE SAMPLES', hint: 'Science terminal: press F, then ANALYZE' };
+// Buscar a proxima pista da missao la fora (issue #344): um objeto por pista, criado uma vez
+const CLUE_TASKS = CLUES.map((clue) => ({
+  icon: 'rock',
+  label: `FIND CLUE: ${clue.label}`,
+  hint: 'Follow the arrow to the glowing sample: press F',
+}));
+const FIND_CLUE = { icon: 'rock', label: 'FIND A CLUE', hint: 'Look for the glowing samples outside: press F' };
+function clueTask(s) {
+  return CLUE_TASKS[s.nextClue] ?? FIND_CLUE;
+}
 // Um objeto por quantidade que falta, criado uma vez (o painel roda a cada frame)
 const SCAN_TASKS = new Map();
 function scanTask(left) {
@@ -51,6 +62,7 @@ function scanTask(left) {
 // analisar amostras ou enviar. `s.scienceStep` vem de sciencePackage.scienceStep(); sem ele
 // (testes antigos), enviar. `s.sciencePointsLeft` = pontos que ainda faltam achar.
 export function scienceTask(s = {}) {
+  if (s.scienceStep === 'clue') return clueTask(s);
   if (s.scienceStep === 'scan') return scanTask(s.sciencePointsLeft ?? 0);
   if (s.scienceStep === 'analyze') return ANALYZE_ROCKS;
   return TASKS['send-data'];
@@ -60,8 +72,9 @@ export function scienceTask(s = {}) {
 // 'ice' (buscar gelo) | 'load' (levar o gelo ao foguete) | 'base' (voltar a base depois da
 // entrega) | 'data' (ciencia: escanear, analisar ou enviar) | 'fuel' (fabrica trabalhando) | 'storms'.
 // `needsBase` vem do StoryDirector: acabou de entregar gelo e ainda nao voltou a base.
-export function nextRocketJob({ iceCount = 0, iceNeeded = 0, propellantPct = 0, dataSent = false, needsBase = false } = {}) {
-  if (iceNeeded > 0) return iceCount > 0 ? 'load' : needsBase ? 'base' : 'ice';
+// `clueDue` (issue #344): hora de desviar ate a proxima pista, na mesma saida do gelo (clues.clueDue).
+export function nextRocketJob({ iceCount = 0, iceNeeded = 0, propellantPct = 0, dataSent = false, needsBase = false, clueDue = false } = {}) {
+  if (iceNeeded > 0) return iceCount > 0 ? 'load' : needsBase ? 'base' : clueDue ? 'clue' : 'ice';
   if (!dataSent) return 'data';
   return propellantPct < 100 ? 'fuel' : 'storms';
 }
@@ -92,6 +105,8 @@ export function objectiveView(story, s) {
   const job = rocketWork ? nextRocketJob(s) : null;
   const task = step
     ? step
+    : job === 'clue'
+      ? clueTask(s)
     : job === 'data' || story.objectiveId === 'send-data'
       ? scienceTask(s)
       : rocketWork ? JOB_TASKS[job] : TASKS[story.objectiveId] ?? null;
@@ -105,7 +120,7 @@ export function objectiveView(story, s) {
     steps = stepStates(LOOP_STEPS, now);
     loop = true;
   }
-  // "STEP 4/15": onde a crianca esta no tutorial
+  // "STEP 4/5": onde a crianca esta no tutorial
   const progress = step ? { now: story.stepIndex + 1, total: story.steps.length } : null;
   // Cor da secao da base a que o passo pertence (null fora do tutorial)
   const color = step ? STEP_COLORS[step.zone] : null;
@@ -114,17 +129,19 @@ export function objectiveView(story, s) {
   const goals = story.act === 1
     ? null
     : {
-        storms: Math.min(s.stormsSurvived, story.stormsForWindow),
-        stormsNeeded: story.stormsForWindow,
+        storms: Math.min(s.stormsSurvived, story.stormsNeeded),
+        stormsNeeded: story.stormsNeeded,
         dataSent: Boolean(s.dataSent),
         // "6/10": pontos de ciencia ja enviados para a Terra, da meta que o foguete pede
         sciencePoints: Math.min(s.sciencePointsSent ?? 0, SCIENCE_CONFIG.POINTS_TO_LAUNCH),
         scienceGoal: SCIENCE_CONFIG.POINTS_TO_LAUNCH,
+        // As 3 pistas da missao (issue #344): 'todo' | 'bag' | 'found' | 'sent', ou null (testes antigos)
+        clues: s.clueStates ?? null,
       };
 
-  // A janela de lancamento fechando (ato 3)
+  // A janela de lancamento fechando (ato 2)
   let timer = null;
-  if (story.act === 3 && story.windowHoursLeft !== null && story.objectiveId !== 'done') {
+  if (story.act >= 2 && story.windowHoursLeft !== null && story.objectiveId !== 'done') {
     const fill = story.windowHours > 0 ? story.windowHoursLeft / story.windowHours : 0;
     timer = { icon: 'clock', label: formatHours(story.windowHoursLeft), fill, tone: fill <= 0.25 ? 'danger' : 'warn' };
   }

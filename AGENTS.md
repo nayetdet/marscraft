@@ -51,7 +51,7 @@ src/core/GameEngine.ts     loop principal; instancia e conecta todos os sistemas
 src/mission/               missao: bateria e paineis (energy), tempestades solares do DONKI (solarStorms), radiacao,
                            radio Terra-Marte (commsLink, earthMars), MAV e textos (MissionSystem, missionText),
                            gerador de O2 eletrolise x MOXIE (oxygenPlant, oxygenText)
-                           ciencia em pontos (sciencePackage: itens, meta para decolar, envio e melhorias), boletim final (missionReport)
+                           ciencia em pontos (sciencePackage: itens, meta para decolar, envio e melhorias), as 3 pistas da missao (clues: quais amostras, estado de cada uma, quando buscar), boletim final (missionReport)
                            espera rapida da tempestade no abrigo, so com a parede de agua cheia (stormSkip; quem faz o relogio correr e o SleepController)
                            tempestade de poeira e poeira nos paineis (dustWeather, weatherText)
 src/data/marsWeather.ts    clima real do InSight por sol (insightWeather.tson): temperatura la fora e relatorio do tempo
@@ -83,7 +83,7 @@ src/graphics/              texturas procedurais em canvas e materiais dos blocos
 src/crew/                  tripulação NPC (#47/#48): CrewManager (necessidades, ordens, avisos), estações
                            (estufa, reciclador de água, gerador de O2, enfermaria), trilhos, avatar voxel e
                            crewInstances (desenha as caixas de todos os trajes juntas, com instancing)
-src/story/                 história em 3 atos: StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
+src/story/                 história em 2 atos (tutorial de 5 passos e a missão, com a janela de lançamento já aberta): StoryDirector (objetivos, janela de lançamento), textos em storyChapters,
                            tutorialSteps (os passos do tutorial guiado do ato 1, um por vez, em dados),
                            tutorialDetours (o desvio de cada recurso: se falta agua, energia, comida ou bateria do rover para o passo, manda buscar e depois volta, em dados),
                            objectiveView (o que o painel do objetivo desenha), waypoints (para onde a seta aponta) e WaypointBeacon (seta 3D),

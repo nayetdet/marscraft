@@ -12,20 +12,9 @@ const PLACES = {
 };
 const ROCKET_HOME = { x: 24, y: 9.4, z: 20 };
 // A Terra no ceu, a noroeste e a meia altura
-const EARTH_DIR = { x: -0.6, y: 0.64, z: -0.48 };
 
 function vec(x = 0, y = 0, z = 0) {
   return { x, y, z, set(nx, ny, nz) { this.x = nx; this.y = ny; this.z = nz; } };
-}
-
-function crewMember() {
-  return {
-    hidden: false,
-    walked: 0,
-    at: null,
-    poseWalking(x, y, z) { this.hidden = false; this.walked++; this.at = { x, y, z }; },
-    hide() { this.hidden = true; },
-  };
 }
 
 function scene(overrides = {}) {
@@ -33,7 +22,6 @@ function scene(overrides = {}) {
   const calls = { touchdown: 0 };
   const rocket = { position: vec(ROCKET_HOME.x, ROCKET_HOME.y, ROCKET_HOME.z), rotation: vec() };
   const rocketFlame = { power: 0, setPower(power) { this.power = power; } };
-  const crew = [crewMember(), crewMember(), crewMember()];
   const def = createArrivalCutscene({
     camera,
     lander: { position: vec(), rotation: vec() },
@@ -45,12 +33,10 @@ function scene(overrides = {}) {
     places: PLACES,
     rocket,
     rocketFlame,
-    crew,
-    earthDir: EARTH_DIR,
     onTouchdown: () => { calls.touchdown++; },
     ...overrides,
   });
-  return { def, camera, calls, rocket, rocketFlame, crew };
+  return { def, camera, calls, rocket, rocketFlame };
 }
 
 // Toca a animacao do comeco ate `until`, em passos pequenos
@@ -68,7 +54,7 @@ describe('arrival cutscene', () => {
     expect(tour.map((c) => c.text)).toEqual([
       'THE BASE', 'SOLAR PANELS', 'GREENHOUSE', 'ICE CRATER', 'THE ROCKET', 'EVERY TRIP', 'YOUR MISSION',
     ]);
-    expect(caption(def, 'YOUR MISSION').sub).toBe('Fill the rocket. Fly home.');
+    expect(caption(def, 'YOUR MISSION').sub).toBe('Find 3 clues. Fill the rocket. Fly home.');
     expect(def.captions.at(-1)).toMatchObject({ big: true, text: 'SOL 1' });
     expect(def.captions.at(-1).to).toBeCloseTo(def.duration);
   });
@@ -118,53 +104,14 @@ describe('arrival cutscene', () => {
     expect(calls.touchdown).toBe(1);
   });
 
-  it('keeps the rocket on the pad, engine off, until the mission preview', () => {
-    const { def, rocket, rocketFlame, crew } = scene();
-    play(def, caption(def, 'EVERY TRIP').to);
-    expect(rocket.position).toMatchObject(ROCKET_HOME);
-    expect(rocketFlame.power).toBe(0);
-    expect(crew.every((member) => member.walked === 0 && !member.hidden)).toBe(true);
-  });
-
-  it('walks the crew to the rocket, one after the other, before the engine starts', () => {
-    const { def, rocket, rocketFlame, crew } = scene();
-    const start = caption(def, 'YOUR MISSION').from;
-
-    // No comeco, todos andando do lado de fora, no chao
-    play(def, start + 0.3);
-    expect(crew.every((member) => member.walked > 0 && !member.hidden)).toBe(true);
-    expect(crew[0].at.y).toBe(9);
-
-    // O primeiro da fila entra antes do ultimo
-    play(def, start + 2.1);
-    expect(crew[0].hidden).toBe(true);
-    expect(crew[2].hidden).toBe(false);
-    expect(rocketFlame.power).toBe(0);
-
-    // Todos a bordo e o foguete ainda na plataforma, sem chama
-    play(def, start + 3);
-    expect(crew.every((member) => member.hidden)).toBe(true);
-    expect(rocketFlame.power).toBe(0);
-    expect(rocket.position.y).toBeCloseTo(ROCKET_HOME.y);
-  });
-
-  it('launches the rocket and turns it towards Earth', () => {
+  it('keeps the rocket on the pad, engine off, for the whole animation: no launch preview', () => {
     const { def, rocket, rocketFlame } = scene();
-    play(def, caption(def, 'YOUR MISSION').to);
-    expect(rocketFlame.power).toBe(1);
-    expect(rocket.position.y).toBeGreaterThan(ROCKET_HOME.y + 10);
-    // A Terra esta a noroeste: o foguete foi para x e z menores e inclinou
-    expect(rocket.position.x).toBeLessThan(ROCKET_HOME.x - 3);
-    expect(rocket.position.z).toBeLessThan(ROCKET_HOME.z - 3);
-    expect(Math.abs(rocket.rotation.x) + Math.abs(rocket.rotation.z)).toBeGreaterThan(0.3);
-  });
-
-  it('flies straight up when Earth is below the horizon', () => {
-    const { def, rocket } = scene({ earthDir: null });
-    play(def, caption(def, 'YOUR MISSION').to);
-    expect(rocket.position.y).toBeGreaterThan(ROCKET_HOME.y + 10);
-    expect(rocket.position.x).toBeCloseTo(ROCKET_HOME.x);
-    expect(rocket.rotation.x).toBeCloseTo(0);
-    expect(rocket.rotation.z).toBeCloseTo(0);
+    for (const t of [caption(def, 'EVERY TRIP').to, caption(def, 'YOUR MISSION').from + 0.5, caption(def, 'YOUR MISSION').to, def.duration]) {
+      play(def, t);
+      expect(rocket.position).toMatchObject(ROCKET_HOME);
+      expect(rocket.rotation.x).toBeCloseTo(0);
+      expect(rocket.rotation.z).toBeCloseTo(0);
+      expect(rocketFlame.power).toBe(0);
+    }
   });
 });

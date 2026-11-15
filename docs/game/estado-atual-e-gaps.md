@@ -25,7 +25,7 @@ A base é dividida em zonas com placa, cor no piso e função: `CMD-1` comando, 
 - **Pôsteres educativos** (`basePosters.js`): 8 pôsteres com um quadro "REAL DATA" e a fonte; três deles formam uma galeria no túnel da estufa. Mirar e apertar [F] mostra o dado.
 - **Menu**: "NASA Data" (fontes, aviso de que o dado é embutido e rótulo "LIVE" só para o clima espacial buscado na hora) e "Demo Controls" (adiantar a próxima tempestade real, noite, meio-dia e bateria a 10 %), pensado para jurados e para gravar o vídeo.
 
-A ala norte (`NORTH_WING` em `habitatLayout.js`) é um corredor central envidraçado que liga quatro módulos separados, cada um com a sua função: energia e aquecimento, cozinha, banheiro e oficina. O campo solar fica a oeste do módulo de energia.
+A ala norte (`NORTH_WING` em `habitatLayout.js`) é um corredor central envidraçado que liga dois módulos separados: energia e aquecimento, e cozinha. O banheiro e a oficina saíram no corte de escopo de 15/11/2026 (ver o fim deste arquivo). O campo solar fica a oeste do módulo de energia.
 
 O dormitório é um módulo próprio a leste do habitat (`EAST_WING` em `habitatLayout.js`), com três beliches, armários e mesa. A mobília de cenário de cada seção fica em `src/base/baseFurniture.ts`.
 
@@ -117,3 +117,21 @@ O ponto de interação da estufa abre o painel de cultivo. As folhas das portas 
 - **Modais de trade-off (15/11/2026, `src/story/tradeoffScenes.ts`, `src/ui/TradeoffHud.ts`):** cada trade-off é explicado na hora da tarefa ou do evento, não antes da missão, num modal animado no meio da tela que pausa o jogo (uma ou duas palavras, uma frase de até 7 palavras; fecha com Enter, OK ou clique). São 10 cenas: EARTH (relatório pelo rádio), POWER (bateria), FOOD (plantar), WATER (parede de água), OUTSIDE (buscar gelo), NIGHT (pôr do sol), SLEEP (beliche), DUST STORM, SOLAR STORM e MARSQUAKE. Cada cena aparece **uma vez por partida** (fica guardada no navegador; Reset World apaga): na segunda vez a criança resolve sozinha. Nenhuma cena repete o trade-off de outra (meteoro = gelo lá fora, sem cena própria). O modal de antes do Play (PR #286) saiu. Para criar uma cena nova: uma entrada em `TRADEOFF_SCENES` com o gatilho.
 - **Ritmo dos eventos (15/11/2026):** os eventos sorteados de Marte começam no primeiro selo do tutorial (antes era só no ato 2) e o primeiro vem em 50 a 100 s reais; a primeira tempestade de poeira vem de 2 a 4 horas de jogo depois do início do ato 2 (antes, 8 a 16). A tempestade solar continua só depois do tutorial.
 - **Boletim (#90, `src/mission/missionReport.ts`):** vitória e janela fechada mostram 4 notas S/A/B/C (radiação, saúde, cultivo e engenharia) e um perfil com o ponto forte e uma dica. A água reciclada não entra na nota: o reciclador da tripulação não roda na partida (a tripulação é só ambiente desde o commit c097929).
+
+## Roteiro enxuto e corte de escopo — 15/11/2026
+
+O jogo tinha final, mas a história parava para esperar e várias salas só existiam para um passo do tutorial. O que mudou (vale sobre o que este arquivo diz mais acima):
+
+- **História em 2 atos** (`src/story/StoryDirector.ts`): tutorial e missão. A janela de lançamento abre no fim do tutorial e a tempestade solar cai no meio dela, como obstáculo; antes a janela só abria depois da tempestade. O foguete ainda pede ter passado por essa tempestade antes do IGNITE.
+- **Tutorial padrão de 5 passos** (`CORE_STEPS` em `tutorialSteps.ts`): entrar na base, chamar a Terra, pegar 1 gelo, carregar o foguete e escanear. O passeio completo pela base continua no código (`training: true`), desligado.
+- **Números** (`constants.ts`): o tanque pede 6 blocos de gelo (eram 10) e a janela dura 1 sol, 24 h de jogo (eram 8 h, contadas depois da tempestade). São regras de jogo; a janela ainda precisa de teste com jogadores.
+- **Premissa e final:** a chegada diz "Find 3 clues. Fill the rocket. Fly home." e a tela de vitória abre com a última mensagem da Terra (`earthFarewell` em `storyChapters.ts`), que cita a ciência enviada e o atraso do rádio.
+- **Salas cortadas:** o banheiro e a oficina saíram do mundo (geometria, mobília, painéis, alertas). O scanner da enfermaria na academia e o mission computer do comando deixaram de ser interação: o que eles mostravam já está no terminal de ciência e rádio. Os painéis `medical` e `console` continuam no código, sem uso.
+- **Reciclador de água automático** (`UtilityModule._recycleWater`): a água cinza da cozinha, das plantas e de beber volta sozinha (98 %, como na Estação Espacial), pagando bateria por litro (`UTILITY_CONFIG.RECYCLER_POWER_PER_L`, regra de jogo). Para com a bateria vazia ou os canos congelados. Antes a água cinza nunca voltava: o reciclador só rodava em `CrewManager.update`, que o motor não chama.
+- **Terremoto:** ainda baixa a saúde de uma estação da tripulação, mas isso não muda nada no jogo (a tripulação é só ambiente).
+
+- **3 pistas de ciência como motivo da missão (issue #344, `src/mission/clues.ts`):** a pergunta é a do Curiosity em Gale (a cratera já foi um lago? dava para viver ali?). As pistas são três amostras do mapa: gelo (WATER NOW), lamito (OLD LAKE) e enxofre (LIFE INGREDIENT). Cada uma passa por coletar, analisar e enviar; o painel do objetivo mostra as 3 casinhas (contorno azul = na mochila, azul = analisada, verde = na Terra). O foguete só decola com os pontos **e** as 3 pistas enviadas, e a amostra de uma pista não pode ser gasta em melhoria. A seta manda buscar uma pista a cada 2 blocos de gelo entregues, e os primeiros locais do lamito e do enxofre ficam em anéis próprios, cada vez mais longe da base. A última mensagem da Terra responde à pergunta.
+- **Chegada sem a prévia do final:** a animação termina num plano do foguete parado, com a frase "Find 3 clues. Fill the rocket. Fly home.". A tripulação embarcando e o foguete subindo saíram: entregavam o final antes da hora.
+- **Terreno:** a área aplainada ao norte acaba logo depois dos dois módulos que restaram.
+
+Ficou de fora: remover os painéis `medical` e `console` de `machineViews.ts` e `StationPanel.ts` (sem uso, mas o `console` é o padrão de várias tabelas do painel).

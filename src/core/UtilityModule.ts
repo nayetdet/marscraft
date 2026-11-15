@@ -8,8 +8,9 @@ import { coldFraction, outsideTemperatureC } from '../data/marsWeather.ts';
 // Nenhuma acao e de graca: tudo cobra energia, agua, comida da despensa ou regolito.
 //   B1/B2 energia e aquecimento: aquecedor, luz da estufa e corte de carga
 //   B3 cozinha: racao (acaba, e a tripulacao come da mesma despensa) x refeicao fresca
-//   B4 banheiro: lavar e cozinhar viram agua cinza; o filtro do processador se gasta
-//   B5 oficina: impressora 3D usa regolito para consertar estacoes
+//   B4 reciclador de agua: a agua cinza (cozinha, plantas, beber) volta limpa sozinha, gastando
+//      bateria. Sem bateria ou com os canos congelados ele para. (O banheiro e a oficina sairam
+//      no corte de escopo de 15/11/2026.)
 export class UtilityModule {
   constructor({ mission, survival, stations, base }) {
     this.mission = mission; // MissionSystem (bateria, escudo, fabrica)
@@ -18,7 +19,9 @@ export class UtilityModule {
     this.base = base; // estoque da tripulacao (racoes, agua cinza)
     this.heaterOn = true;
     this.greenhouseLightsOn = true;
-    this.waterFilter = 100;
+    // % de bateria por hora de jogo que o reciclador de agua gasta agora (painel de energia)
+    this.recyclerDrawPerHour = 0;
+    this.waterRecycledL = 0; // litros devolvidos ao tanque nesta partida (boletim)
     this.cold = false; // aquecedor desligado de noite: canos e estufa congelam
     this.heaterDrawPerHour = 0;
     // Ritmo (issue #81): fracao do consumo passivo normal (src/mission/pacing.js)
@@ -66,14 +69,13 @@ export class UtilityModule {
     return rate * this.demandFactor;
   }
 
-  // Taxa real de recuperacao de agua: 98 % com filtro bom, menos com filtro gasto
+  // Fracao da agua cinza que volta limpa. [Ref] a Estacao Espacial recupera ~98 %.
   get waterRecovery() {
-    return STATION_CONFIG.WATER_RECOVERY * (this.waterFilter < U.WORN_FILTER ? U.WORN_RECOVERY : 1);
+    return STATION_CONFIG.WATER_RECOVERY;
   }
 
   update(hours) {
     if (hours <= 0) return;
-    this.waterFilter = Math.max(0, this.waterFilter - U.FILTER_WEAR_PER_HOUR * hours);
     this.heaterDrawPerHour = 0;
     if (this.heaterOn) {
       const rate = this.heaterRatePerHour;
@@ -85,6 +87,28 @@ export class UtilityModule {
     } else {
       this.cold = this.isNight;
     }
+    this._recycleWater(hours);
+  }
+
+  // Reciclador de agua: limpa a agua cinza e devolve ao tanque da base. Roda sozinho, mas nada e
+  // de graca: cada litro limpo gasta bateria, e ele para com a bateria vazia ou os canos
+  // congelados. Chamado pelo `update`, depois do aquecedor (que decide se esta frio).
+  _recycleWater(hours) {
+    this.recyclerDrawPerHour = 0;
+    const base = this.base;
+    if (!base || this.cold || !(base.graywater > 0)) return;
+    const room = Math.max(0, base.maxWater - base.water) / this.waterRecovery;
+    const wanted = Math.min(base.graywater, STATION_CONFIG.WATER_RECYCLE_L_PER_HOUR * hours, room);
+    if (wanted <= 0) return;
+    const need = wanted * U.RECYCLER_POWER_PER_L;
+    const got = this.mission.battery.drain(need);
+    const treated = need > 0 ? wanted * Math.min(1, got / need) : wanted;
+    if (treated <= 0) return;
+    base.graywater -= treated;
+    const back = treated * this.waterRecovery;
+    base.water = Math.min(base.maxWater, base.water + back);
+    this.waterRecycledL += back;
+    this.recyclerDrawPerHour = (treated * U.RECYCLER_POWER_PER_L) / hours;
   }
 
   toggle(system) {
@@ -131,6 +155,7 @@ export class UtilityModule {
       ['Crew at work', operatingStations * STATION_CONFIG.WORK_ENERGY_PER_HOUR * f, true, null],
       ['Greenhouse lights', U.GREENHOUSE_LIGHTS_PER_HOUR * f, this.greenhouseLightsOn, 'lights'],
       ['Heater', this.heaterRatePerHour, this.heaterOn, 'heater'],
+      ['Water recycler', this.recyclerDrawPerHour, true, null],
       ['Radiation shield', ENERGY_CONFIG.SHIELD_DRAIN_PER_HOUR, m.shieldOn, 'shield'],
       ['Fuel factory', factoryRunning ? ENERGY_CONFIG.ISRU_DRAIN_PER_HOUR : 0, m.factoryOn, 'factory'],
     ];
@@ -188,39 +213,5 @@ export class UtilityModule {
     s.health = Math.min(s.maxStat, s.health + U.MEAL_HEAL);
     this.stations.freshFood = STATION_CONFIG.FRESH_FOOD_DURATION;
     return 'Cooked a fresh meal: full and healthy, and you work faster for a while!';
-  }
-
-  washUp() {
-    const s = this.survival;
-    if (this.cold) return 'The pipes are frozen. Turn the heater on.';
-    if (s.baseWater < U.WASH_WATER_L) return 'Not enough water in the base tank.';
-    s.baseWater -= U.WASH_WATER_L;
-    this.base.graywater += U.WASH_WATER_L;
-    s.health = Math.min(s.maxStat, s.health + U.WASH_HEAL);
-    return `Washed up. ${U.WASH_WATER_L} L went to the gray water tank: the recycler will clean it to drink again.`;
-  }
-
-  serviceFilter() {
-    if (this.waterFilter >= 95) return 'The water filter is still fresh.';
-    if (!this.mission.battery.spend(U.FILTER_SERVICE_POWER)) return 'Not enough power.';
-    this.waterFilter = 100;
-    return 'Water filter cleaned: the recycler gets back 98% of the water again.';
-  }
-
-  // Conserta a estacao da tripulacao mais gasta (ou o filtro de CO2, se nao houver tripulacao)
-  printPart(crewStations = []) {
-    const s = this.survival;
-    const worst = crewStations.reduce((a, b) => (!a || b.health < a.health ? b : a), null);
-    const needsFix = (worst && worst.health < 0.95) || this.stations.filter < 95;
-    if (!needsFix) return 'Nothing is broken right now.';
-    if (s.countItem(BLOCK_IDS.REGOLITH) < U.PRINT_REGOLITH) return `Collect ${U.PRINT_REGOLITH} regolith blocks outside to print a part.`;
-    if (!this.mission.battery.spend(U.PRINT_POWER)) return 'Not enough power to print.';
-    s.removeItems(BLOCK_IDS.REGOLITH, U.PRINT_REGOLITH);
-    if (worst && worst.health < 0.95) {
-      worst.health = 1;
-      return `Printed a spare part from regolith: the ${worst.name} is fixed!`;
-    }
-    this.stations.filter = 100;
-    return 'Printed a new CO2 filter frame from regolith!';
   }
 }

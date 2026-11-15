@@ -45,11 +45,15 @@ export function placeSampleSites({ groundTop, seed = SAMPLE_SITE_CONFIG.SEED, co
   const ice = WATER_SYSTEM_CONFIG.ICE_CRATER_CENTER;
   const sites: SampleSite[] = [];
 
+  const seen = new Set<string>();
   for (const typeId of sampleTypeOrder(count)) {
-    // O gelo fica num anel em volta da cratera de gelo; o resto, num anel em volta da base
+    // O gelo fica num anel em volta da cratera de gelo; o resto, num anel em volta da base.
+    // O primeiro local de um tipo que e pista (issue #344) tem o seu anel: cada pista mais longe.
     const isIce = typeId === ICE_TYPE_ID;
     const center = isIce ? ice : base;
-    const [rMin, rMax] = isIce ? config.ICE_RING : [config.MIN_RADIUS, config.MAX_RADIUS];
+    const clueRing = seen.has(typeId) ? undefined : config.CLUE_RINGS?.[typeId];
+    seen.add(typeId);
+    const [rMin, rMax] = isIce ? config.ICE_RING : clueRing ?? [config.MIN_RADIUS, config.MAX_RADIUS];
     for (let attempt = 0; attempt < config.PLACEMENT_TRIES; attempt += 1) {
       const angle = rand() * Math.PI * 2;
       const radius = rMin + rand() * (rMax - rMin);

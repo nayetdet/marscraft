@@ -73,7 +73,7 @@ export function eventCard(type, { stationName = 'base' } = {}) {
     ? [
       { icon: 'home', text: 'The ground is shaking!' },
       { icon: 'down', text: `The ${stationName} got damaged` },
-      { icon: 'bolt', text: 'Fix it: 3D printer in the workshop' },
+      { icon: 'check', text: 'Everyone is safe' },
     ]
     : LINES[type];
   return { title: EVENT_NAMES[type].toUpperCase(), lines, ...EVENT_FACTS[type], seconds: EVENTS_CONFIG.CARD_SECONDS };
@@ -94,7 +94,7 @@ export function meteorToast({ iceBlocks, distance, direction }) {
 }
 
 export function quakeToast({ stationName, lostPct }) {
-  return `Marsquake! The ${stationName} lost ${lostPct}% health. Print a spare part in the workshop, or live with it.`;
+  return `Marsquake! The ${stationName} lost ${lostPct}% health. Everyone is safe.`;
 }
 
 // `cleanedPct`: quanto da poeira dos paineis saiu (null se o jogo ainda nao tem poeira nos paineis)

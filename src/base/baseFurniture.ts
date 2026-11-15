@@ -122,56 +122,6 @@ export function addBaseFurniture({ box, solid, mats, zoneMats, F }) {
   prop(0.5, 0.7, 0.5, mats.blue, 6.4, -24.4);
   prop(0.5, 0.7, 0.5, mats.green, 6.4, -23.7);
 
-  // ================= Banheiro (ar em x = -21..-10, z = -39..-30; porta a leste) =================
-  // Chuveiro na parede sul: base azul, duas laterais de vidro e o chuveiro em cima
-  deco(1.5, 0.1, 1.5, mats.blue, -17.2, 0.05, -30.8);
-  for (const x of [-17.95, -16.45]) {
-    deco(0.06, 2.0, 1.5, mats.glass, x, 1.0, -30.8);
-    solid(x - 0.06, x + 0.06, -31.55, -30.0, 2.0);
-  }
-  deco(0.3, 0.08, 0.3, mats.silver, -17.2, 2.05, -30.4);
-  deco(0.06, 0.5, 0.06, mats.silver, -17.2, 1.8, -30.1);
-  // Segunda pia, com espelho
-  prop(1.2, 0.9, 0.6, mats.white, -13.9, -38.65);
-  deco(0.8, 0.12, 0.45, mats.slate, -13.9, 0.95, -38.63);
-  deco(1.0, 0.8, 0.04, mats.gray, -13.9, 1.75, -38.93);
-  // Lavadora, armario de toalhas e um banco
-  prop(0.9, 1.0, 0.8, mats.white, -12.2, -30.5);
-  deco(0.5, 0.5, 0.04, mats.charcoal, -12.2, 0.55, -30.92);
-  prop(0.6, 1.8, 1.6, mats.gray, -20.65, -36.8);
-  [mats.blue, mats.orange, mats.green].forEach((mat, i) => deco(0.04, 0.4, 0.4, mat, -20.33, 1.3, -37.3 + i * 0.5));
-  prop(2.0, 0.45, 0.5, mats.white, -15.5, -34.5);
-  deco(2.0, 0.05, 0.5, mats.blue, -15.5, 0.475, -34.5);
-  // Cano de agua no teto, do processador ate o chuveiro
-  deco(0.14, 0.14, 2.2, mats.water, -19.6, 3.2, -31.2);
-  deco(2.6, 0.14, 0.14, mats.water, -18.4, 3.2, -30.2);
-
-  // ================= Oficina (ar em x = 6..17, z = -39..-30; porta a oeste) =================
-  // Segunda bancada na parede sul, com ferramentas e morsa
-  prop(4.0, 0.92, 0.8, mats.gray, 11.5, -30.45);
-  deco(4.1, 0.08, 0.9, mats.slate, 11.5, 0.96, -30.45);
-  deco(0.4, 0.12, 0.14, mats.red, 10.2, 1.06, -30.5);
-  deco(0.14, 0.12, 0.5, mats.yellow, 10.9, 1.06, -30.45);
-  deco(0.5, 0.1, 0.1, mats.blue, 11.8, 1.05, -30.3);
-  deco(0.3, 0.3, 0.3, mats.silver, 12.9, 1.15, -30.4);
-  // Quadro de ferramentas na parede oeste, ao sul da porta
-  deco(0.06, 1.0, 2.4, mats.charcoal, 6.05, 1.6, -31.5);
-  [mats.red, mats.yellow, mats.silver, mats.blue].forEach((mat, i) => deco(0.05, 0.5, 0.14, mat, 6.1, 1.6, -32.3 + i * 0.55));
-  // Funil de regolito a noroeste e mesa de montagem no centro
-  prop(1.2, 1.2, 1.2, mats.brown, 7.0, -38.2);
-  deco(0.8, 0.5, 0.8, mats.orange, 7.0, 1.45, -38.2);
-  deco(2.0, 0.08, 1.1, mats.slate, 11.5, 0.85, -34.5);
-  for (const [dx, dz] of [[-0.9, -0.45], [0.9, -0.45], [-0.9, 0.45], [0.9, 0.45]]) deco(0.1, 0.81, 0.1, mats.silver, 11.5 + dx, 0.405, -34.5 + dz);
-  solid(10.5, 12.5, -35.05, -33.95, 0.9);
-  deco(0.5, 0.3, 0.5, mats.brown, 11.3, 1.04, -34.5);
-  deco(0.16, 0.16, 0.16, mats.cyanGlow, 12.0, 0.97, -34.3);
-  // Roda do rover num suporte e caixas de pecas
-  prop(0.5, 0.8, 0.5, mats.silver, 14.8, -36.2);
-  deco(0.9, 0.9, 0.35, mats.charcoal, 14.8, 1.25, -36.2);
-  deco(0.3, 0.3, 0.4, mats.silver, 14.8, 1.25, -36.2);
-  crate(15.6, -38.3, 0.9, mats.brown);
-  crate(14.6, -38.35, 0.7, mats.orange);
-
   // ================= Academia (ar em x = -11..-4, z = 8..13) =================
   // Suporte de halteres, tapete e prateleira de toalhas
   prop(0.5, 0.9, 1.0, mats.slate, -10.65, 8.6);

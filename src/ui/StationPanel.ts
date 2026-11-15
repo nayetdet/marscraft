@@ -894,13 +894,10 @@ export class StationPanel {
       hud.renderHotbar(survival.slots);
       return msg;
     }
-    // Comer e lavar contam para o tutorial guiado mesmo sem fome (GameEngine.tutorialCounts)
+    // Comer conta para o tutorial guiado mesmo sem fome (GameEngine.tutorialCounts)
     const done = this.engine.tutorialCounts;
     if (action === 'eatRation') { done.meal++; return utility.eatRation(); }
     if (action === 'cookMeal') { done.meal++; const msg = utility.cookMeal(); hud.renderHotbar(survival.slots); return msg; }
-    if (action === 'washUp') { done.wash++; return utility.washUp(); }
-    if (action === 'serviceFilter') return utility.serviceFilter();
-    if (action === 'printPart') { const msg = utility.printPart(this.engine.crew?.stations ?? []); hud.renderHotbar(survival.slots); return msg; }
     if (action === 'fillWall') return this.engine.mission.fillShelterWall(survival);
     if (action === 'drainWall') return this.engine.mission.drainShelterWall(survival);
     if (action === 'waitStorm') {
@@ -1014,29 +1011,6 @@ export class StationPanel {
       `The cook turns one harvested item into one ration using ${U.RATION_PREP_POWER}% power. Talk to the cook here in the kitchen [F] to pick up a packaged space ration for your inventory. Every ration you take is one less for your crew. ` +
       'A fresh meal from the greenhouse costs water and power, but fills you up and gives you energy to work.\n' +
       'Real case: astronauts mostly eat food packed on Earth; fresh crops supplement their meals. Preparing rations on Mars is a game model.';
-  }
-
-  _hygieneText(survival) {
-    const { crewStock, utility } = this.engine;
-    return `CLEAN WATER TANK: ${Math.round(survival.baseWater)} / ${survival.maxBaseWater} L\n` +
-      `GRAY WATER (used, waiting to clean): ${crewStock.graywater.toFixed(1)} L\n` +
-      `WATER FILTER: ${Math.round(utility.waterFilter)}%\n` +
-      `WATER WE GET BACK: ${Math.round(utility.waterRecovery * 100)}%${utility.cold ? '   (PIPES FROZEN)' : ''}\n\n` +
-      'Drink -> use -> recycle -> drink again. Water you drink, cook with or wash with becomes gray water, and so does the water the plants breathe out. ' +
-      'The recycler cleans it, even sweat and urine, so everyone can drink it again, but only while a crew member runs it. ' +
-      'A dirty filter gets back less water.\n' +
-      "Real case: the Space Station gets back 98% of its water. Yesterday's coffee becomes tomorrow's coffee!";
-  }
-
-  _workshopText(survival) {
-    const { crew, stations } = this.engine;
-    const parts = (crew?.stations ?? []).map((st) => `  ${st.name.padEnd(18)} ${Math.round(st.health * 100)}%`);
-    return `REGOLITH IN YOUR BAG: ${survival.countItem(BLOCK_IDS.REGOLITH)}\n` +
-      `CO2 FILTER: ${Math.round(stations.filter)}%\n` +
-      `CREW STATIONS:\n${parts.join('\n') || '  (no crew)'}\n\n` +
-      'Spare parts from Earth take months to arrive. The 3D printer melts Mars dirt (regolith) into a new part and fixes the most worn machine right away. ' +
-      'But you must go outside to dig the regolith, under radiation, and printing uses a lot of power.\n' +
-      'Real case: the first 3D print in space was made on the Space Station in 2014.';
   }
 
   _radioText(s) {
@@ -1219,17 +1193,6 @@ export class StationPanel {
         ['CARROTS', `${v.countItem(BLOCK_IDS.HYDRO_PLANT)}`, null, 'food'],
         ['WATER', `${round(v.baseWater)} L`, pct(v.baseWater, v.maxBaseWater), 'water'],
       ],
-      hygiene: [
-        ['CLEAN WATER', `${round(v.baseWater)} L`, pct(v.baseWater, v.maxBaseWater), 'water'],
-        ['USED WATER', `${crewStock.graywater.toFixed(1)} L`, null, 'water'],
-        ['FILTER', `${round(utility.waterFilter)}%`, pct(utility.waterFilter), 'air'],
-        ['RECOVERED', `${round(utility.waterRecovery * 100)}%`, pct(utility.waterRecovery * 100), 'water'],
-      ],
-      workshop: [
-        ['MARS DIRT', `${v.countItem(BLOCK_IDS.REGOLITH)}`, null, 'earth'],
-        ['POWER', `${round(m.energy)}%`, pct(m.energy), 'power'],
-        ...(this.engine.crew?.stations ?? []).map(st => [st.name, `${round(st.health * 100)}%`, pct(st.health * 100), 'science']),
-      ],
       shelter: [
         ['WATER WALL', `${round(mission.shelterWaterL)} / ${RADIATION_CONFIG.SHELTER_WALL_MAX_L} L`, pct(mission.shelterWaterL, RADIATION_CONFIG.SHELTER_WALL_MAX_L), 'water'],
         ['RADIATION BLOCKED', `${round((1 - shelterDoseFactor(mission.shelterWaterL)) * 100)}%`, pct((1 - shelterDoseFactor(mission.shelterWaterL)) * 100), 'health'],
@@ -1243,8 +1206,6 @@ export class StationPanel {
       medical: 'Exercise helps keep your bones strong.',
       science: 'Sending discoveries costs power. Signals take time to reach Earth.',
       galley: 'Rations are shared with your crew. Fresh meals use water and power.',
-      hygiene: utility.cold ? 'Pipes are frozen! Warm the base to recycle water.' : 'Used water can be cleaned and used again.',
-      workshop: 'Print a part to fix the most worn crew station.',
       shelter: 'Water in the wall shields you, but cannot be used for drinking.',
     };
     const symbols = { power: 'bolt', water: 'drop', air: 'air', health: 'heart', food: 'food', science: 'scope', earth: 'rock', warning: 'radiation' };
@@ -1254,15 +1215,12 @@ export class StationPanel {
       medical: ['HEALTH BAY', 'Take care of your crew'],
       science: ['DISCOVERY LAB', 'Explore Mars, share with Earth'],
       galley: ['SPACE KITCHEN', 'Fuel up for your next mission'],
-      hygiene: ['WATER WORKS', 'Every drop counts'],
-      workshop: ['MAKER STATION', 'Turn Mars dirt into a fix'],
       shelter: ['STORM SHELTER', 'Build a water shield'],
     };
     const [eyebrow, subtitle] = scenes[this.type] ?? scenes.console;
     const sceneIcons = {
       console: ['home', 'radio'], power: ['drop', 'air'], medical: ['heart', 'check'],
-      science: ['scope', 'rock'], galley: ['plant', 'food'], hygiene: ['drop', 'check'],
-      workshop: ['rock', 'up'], shelter: ['shield', 'drop'],
+      science: ['scope', 'rock'], galley: ['plant', 'food'], shelter: ['shield', 'drop'],
     };
     const artwork = (sceneIcons[this.type] ?? sceneIcons.console).map(name => pixelIconSvg(name)).join('');
     const hero = document.createElement('div'); hero.className = 'machine-hero';
@@ -1377,8 +1335,6 @@ export class StationPanel {
       maxCrewFood: crewStock.maxFood,
       freshFoodActive: s.freshFood > 0,
       graywater: crewStock.graywater,
-      waterFilter: utility.waterFilter,
-      waterRecoveryPct: Math.round(utility.waterRecovery * 100),
       cold: utility.cold,
       isNight: utility.isNight,
       crewStations: (crew?.stations ?? []).map((st) => ({ name: st.name, health: st.health })),
@@ -1473,8 +1429,6 @@ export class StationPanel {
       medical: ['MEDBAY & EXERCISE', `HEALTH: ${Math.round(v.health)}/${v.maxStat}\nBONE DENSITY: ${Math.round(s.boneDensity ?? s.fitness)}%\nFITNESS: ${Math.round(s.fitness)}%\n${doseHistoryText(mission.doseBreakdown)}\n\n${MEDBAY_BONE_TEXT}`, [['treat', 'Use medical station']]],
       science: ['SCIENCE FOR EARTH & RADIO', this._radioText(s), [['sendScience', uploadButtonLabel(this.engine.currentSciencePackage())], ['analyze', `Analyze a sample (${SCIENCE_CONFIG.ANALYZE_POWER_COST}% power)`], ['send', 'Ask Mission Control for advice'], ['upgrade', `Upgrade suit (uses ${SCIENCE_CONFIG.SUIT_UPGRADE_POINTS} unsent science points)`], ['upgradeTool', `Upgrade tool (uses ${SCIENCE_CONFIG.TOOL_UPGRADE_POINTS} unsent science points)`]]],
       galley: ['KITCHEN & PANTRY', this._galleyText(v), [['cookMeal', `Cook fresh meal (1 carrot, ${U.MEAL_WATER_L} L, ${U.MEAL_POWER}% power)`]]],
-      hygiene: ['BATHROOM & WATER RECYCLER', this._hygieneText(v), [['washUp', `Wash up (${U.WASH_WATER_L} L of water)`], ['serviceFilter', `Clean water filter (${U.FILTER_SERVICE_POWER}% power)`]]],
-      workshop: ['WORKSHOP & 3D PRINTER', this._workshopText(v), [['printPart', `Print spare part (${U.PRINT_REGOLITH} regolith, ${U.PRINT_POWER}% power)`]]],
       shelter: ['STORM SHELTER', this._shelterText(mission, v), [['fillWall', `Fill wall (+${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`], ['drainWall', `Drain wall (-${RADIATION_CONFIG.SHELTER_FILL_STEP_L} L)`], ['waitStorm', stormSkipButtonLabel(this.engine.sleep.stormSkipStatus())]]],
     };
     const [title, text, buttons] = pages[this.type];

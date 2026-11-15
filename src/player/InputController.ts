@@ -746,7 +746,7 @@ export class InputController {
       }
 
       const interaction = this.getInteraction?.();
-      if (interaction && ['treadmill', 'bike', 'medical', 'greenhouse'].includes(interaction.type) && (e.button === 0 || e.button === 2)) {
+      if (interaction && ['treadmill', 'bike', 'greenhouse'].includes(interaction.type) && (e.button === 0 || e.button === 2)) {
         this.onInteract?.();
         return;
       }

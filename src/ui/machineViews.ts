@@ -14,8 +14,6 @@ export type MachineStationType =
   | 'medical'
   | 'science'
   | 'galley'
-  | 'hygiene'
-  | 'workshop'
   | 'shelter';
 
 export interface DoseBreakdownView {
@@ -75,8 +73,6 @@ export interface MachineViewData {
   maxCrewFood: number;
   freshFoodActive: boolean;
   graywater: number;
-  waterFilter: number;
-  waterRecoveryPct: number;
   cold: boolean;
   isNight: boolean;
   crewStations: CrewStationHealth[];
@@ -125,8 +121,6 @@ const MACHINE_TITLES: Record<MachineStationType, string> = {
   medical: 'MEDBAY SCAN',
   science: 'SCIENCE & RADIO',
   galley: 'SPACE KITCHEN',
-  hygiene: 'WATER LOOP',
-  workshop: '3D PRINTER',
   shelter: 'STORM SHIELD',
 };
 
@@ -953,179 +947,7 @@ function renderGalley(d: MachineViewData): { top: string; checks: string; stage:
   return { top, checks, stage, side, fact };
 }
 
-/* ---------------- 6. HYGIENE (WATER LOOP) ---------------- */
-function renderHygiene(d: MachineViewData): { top: string; checks: string; stage: string; side: string; fact: string } {
-  const top = [
-    resPill('water', 'drop', `${Math.round(d.baseWater)} L`, 'mc-res-water', 'Clean water tank'),
-    resPill('rock', 'air', `${d.graywater.toFixed(1)} L`, 'mc-res-gray', 'Used gray water'),
-    resPill('beds', 'filter', `${Math.round(d.waterFilter)}%`, 'mc-res-wfilter', 'Water filter'),
-    d.cold ? alertPill('PIPES FROZEN!', 'danger') : '',
-  ].filter(Boolean).join('');
-
-  const cleanH = Math.round((clampPct(d.baseWater, d.maxBaseWater) / 100) * 52);
-  const grayH = Math.round((clampPct(d.graywater, 40) / 100) * 52);
-  const filterColor = d.waterFilter >= U.WORN_FILTER ? '#4ade80' : '#f59e0b';
-
-  const svg = `
-    <svg class="mc-scene-svg" viewBox="0 0 176 128" shape-rendering="crispEdges" aria-hidden="true">
-      <rect x="0" y="0" width="176" height="128" fill="#071921"/>
-      <!-- Top Pipe (Clean -> Wash -> Gray) -->
-      <rect x="34" y="16" width="108" height="6" fill="${d.cold ? '#7dd3fc' : '#0284c7'}"/>
-      <rect x="76" y="10" width="24" height="18" fill="#1e3a4a" stroke="#7dd3fc" stroke-width="2"/>
-      <!-- Clean Tank (Left) -->
-      <rect x="16" y="28" width="38" height="62" fill="#0b222d" stroke="#38bdf8" stroke-width="2"/>
-      <rect x="19" y="${87 - cleanH}" width="32" height="${cleanH}" fill="#0ea5e9"/>
-      <rect x="19" y="${87 - cleanH}" width="32" height="3" fill="#bae6fd"/>
-      <!-- Gray Tank (Right) -->
-      <rect x="122" y="28" width="38" height="62" fill="#162124" stroke="#94a3b8" stroke-width="2"/>
-      <rect x="125" y="${87 - grayH}" width="32" height="${grayH}" fill="#64748b"/>
-      <!-- Bottom Recycle Pipe + Filter -->
-      <rect x="34" y="102" width="108" height="6" fill="${d.cold ? '#7dd3fc' : '#22c55e'}"/>
-      <rect x="34" y="90" width="6" height="14" fill="#22c55e"/>
-      <rect x="136" y="90" width="6" height="14" fill="#64748b"/>
-      <rect x="72" y="94" width="32" height="22" fill="#0d2629" stroke="${filterColor}" stroke-width="2"/>
-      <rect x="76" y="98" width="24" height="14" fill="${filterColor}"/>
-      <!-- Flowing drops -->
-      ${d.cold ? '' : `<g class="mc-anim-flow-rev">
-        <rect x="52" y="103" width="6" height="4" fill="#bbf7d0"/>
-        <rect x="114" y="103" width="6" height="4" fill="#fde047"/>
-      </g>`}
-    </svg>`;
-
-  const stage = `
-    <div class="mc-stage-box">
-      ${svg}
-      <div class="mc-stage-caption">
-        <span class="mc-cap-tag">${d.waterRecoveryPct}% BACK</span>
-        <strong>${d.cold ? 'Pipes frozen! Turn heater on.' : 'Clean -> Use -> Recycle -> Drink!'}</strong>
-      </div>
-    </div>`;
-
-  const side = `
-    <div class="mc-step-bar">WATER RECYCLER</div>
-    <div class="mc-stat-bars">
-      <div class="mc-mini-bar">
-        <span>${pixelIconSvg('filter')} FILTER</span>
-        <div class="mc-bar-track"><i style="width:${Math.round(d.waterFilter)}%;background:${filterColor}"></i></div>
-        <strong>${Math.round(d.waterFilter)}%</strong>
-      </div>
-    </div>
-    <div class="mc-action-stack">
-      ${actionCard({
-        action: 'washUp',
-        icon: 'drop',
-        title: 'WASH UP',
-        costHtml: costChip('drop', `${U.WASH_WATER_L}L`),
-        badgeText: `+${U.WASH_HEAL} HP`,
-        badgeTone: !d.cold && d.baseWater >= U.WASH_WATER_L ? 'ready' : 'off',
-        disabled: d.cold || d.baseWater < U.WASH_WATER_L,
-      })}
-      ${actionCard({
-        action: 'serviceFilter',
-        icon: 'filter',
-        title: d.waterFilter >= 95 ? 'FILTER CLEAN' : 'CLEAN FILTER',
-        costHtml: d.waterFilter >= 95 ? '' : costChip('bolt', `${U.FILTER_SERVICE_POWER}%`),
-        badgeText: d.waterFilter >= 95 ? '98%' : 'FIX!',
-        badgeTone: d.waterFilter >= 95 ? 'on' : 'warn',
-        disabled: d.waterFilter >= 95 || d.energy < U.FILTER_SERVICE_POWER,
-      })}
-    </div>`;
-
-  const fact = `
-    <p><strong>Real Case:</strong> On the International Space Station, the water recycler recovers about <strong>98%</strong> of water (even sweat and urine!).</p>
-    <p>As astronauts say: <em>"Yesterday's coffee becomes tomorrow's coffee!"</em></p>`;
-
-  return { top, checks: '', stage, side, fact };
-}
-
-/* ---------------- 7. WORKSHOP (3D PRINTER) ---------------- */
-function renderWorkshop(d: MachineViewData): { top: string; checks: string; stage: string; side: string; fact: string } {
-  const machines: { name: string; pct: number }[] = [
-    ...d.crewStations.map((st) => ({ name: st.name, pct: Math.round(st.health * 100) })),
-    { name: 'CO2 Filter', pct: Math.round(d.filter) },
-  ];
-  const worst = machines.reduce<{ name: string; pct: number } | null>(
-    (a, b) => (!a || b.pct < a.pct ? b : a),
-    null,
-  );
-  const needsFix = worst !== null && worst.pct < 95;
-
-  const top = [
-    resPill('rock', 'rock', `${d.regolith}`, 'mc-res-dirt', 'Mars dirt (regolith)'),
-    resPill('power', 'bolt', `${Math.round(d.energy)}%`, 'mc-res-power', 'Battery'),
-    needsFix ? alertPill(`FIX: ${worst.name.toUpperCase()}`, 'warn') : '',
-  ].filter(Boolean).join('');
-
-  const canPrint = needsFix && d.regolith >= U.PRINT_REGOLITH && d.energy >= U.PRINT_POWER;
-
-  const svg = `
-    <svg class="mc-scene-svg" viewBox="0 0 168 128" shape-rendering="crispEdges" aria-hidden="true">
-      <rect x="0" y="0" width="168" height="128" fill="#1a120d"/>
-      <!-- 3D Printer Frame -->
-      <rect x="22" y="14" width="8" height="96" fill="#64748b"/>
-      <rect x="138" y="14" width="8" height="96" fill="#64748b"/>
-      <rect x="22" y="14" width="124" height="8" fill="#94a3b8"/>
-      <!-- Regolith Hopper -->
-      <rect x="120" y="24" width="24" height="22" fill="#431407" stroke="#fb923c" stroke-width="2"/>
-      <rect x="124" y="30" width="16" height="12" fill="#c2410c"/>
-      <!-- Moving Extruder Nozzle -->
-      <g class="mc-anim-print">
-        <rect x="64" y="24" width="40" height="10" fill="#475569"/>
-        <rect x="78" y="34" width="12" height="12" fill="#f97316"/>
-        <rect x="82" y="46" width="4" height="22" fill="#fde047" fill-opacity="0.8"/>
-      </g>
-      <!-- Printed Spare Gear on Bed -->
-      <rect x="64" y="72" width="40" height="20" fill="#fb923c"/>
-      <rect x="72" y="66" width="24" height="6" fill="#fdba74"/>
-      <rect x="78" y="76" width="12" height="12" fill="#1a120d"/>
-      <!-- Print Bed -->
-      <rect x="34" y="92" width="100" height="10" fill="#334155"/>
-      <rect x="22" y="102" width="124" height="10" fill="#475569"/>
-    </svg>`;
-
-  const machineBars = machines.map((m) => {
-    const isTarget = needsFix && m.name === worst?.name;
-    const barColor = m.pct < 60 ? '#ef4444' : m.pct < 95 ? '#facc15' : '#4ade80';
-    return `
-      <div class="mc-mini-bar ${isTarget ? 'is-target' : ''}">
-        <span>${escapeHtml(m.name.toUpperCase())}</span>
-        <div class="mc-bar-track"><i style="width:${m.pct}%;background:${barColor}"></i></div>
-        <strong>${m.pct}%</strong>
-      </div>`;
-  }).join('');
-
-  const stage = `
-    <div class="mc-stage-box">
-      ${svg}
-      <div class="mc-stage-caption">
-        <span class="mc-cap-tag">${needsFix ? 'TARGET' : 'READY'}</span>
-        <strong>${needsFix && worst ? `Next fix: ${escapeHtml(worst.name)} (${worst.pct}%)` : 'All base machines 100%!'}</strong>
-      </div>
-    </div>`;
-
-  const side = `
-    <div class="mc-step-bar">BASE MACHINES</div>
-    <div class="mc-stat-bars">${machineBars}</div>
-    <div class="mc-action-stack">
-      ${actionCard({
-        action: 'printPart',
-        icon: 'wrench',
-        title: needsFix ? 'PRINT SPARE PART' : 'ALL FIXED',
-        costHtml: needsFix ? `${costChip('rock', `${U.PRINT_REGOLITH}`)}${costChip('bolt', `${U.PRINT_POWER}%`)}` : '',
-        badgeText: canPrint ? 'PRINT!' : needsFix ? 'NEED' : 'OK',
-        badgeTone: canPrint ? 'ready' : needsFix ? 'warn' : 'on',
-        disabled: !canPrint,
-      })}
-    </div>`;
-
-  const fact = `
-    <p><strong>Real Case:</strong> Spare parts from Earth take months to arrive! The 3D printer melts Mars dirt (regolith) into new parts.</p>
-    <p>The first 3D print in space was made on the International Space Station in <strong>2014</strong>.</p>`;
-
-  return { top, checks: '', stage, side, fact };
-}
-
-/* ---------------- 8. SHELTER (STORM SHIELD) ---------------- */
+/* ---------------- 6. SHELTER (STORM SHIELD) ---------------- */
 function renderShelter(d: MachineViewData): { top: string; checks: string; stage: string; side: string; fact: string } {
   const maxWall = RADIATION_CONFIG.SHELTER_WALL_MAX_L;
   const availableWater = d.shelterWaterL + d.baseWater;
@@ -1318,8 +1140,6 @@ export function renderMachineMonitorHtml(data: MachineViewData): string {
     case 'medical': parts = renderMedical(data); break;
     case 'science': parts = renderScience(data); break;
     case 'galley': parts = renderGalley(data); break;
-    case 'hygiene': parts = renderHygiene(data); break;
-    case 'workshop': parts = renderWorkshop(data); break;
     case 'shelter': parts = renderShelter(data); break;
   }
 

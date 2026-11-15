@@ -54,7 +54,7 @@ export function sciencePanelModel(status: ScienceStatus, pkg: SciencePackage, ra
     usedPoints: status.usedPoints,
     rawSamples,
     next,
-    missing: scienceMissingText({ pendingPoints: status.pendingPoints, sentPoints: status.sentPoints }, config),
+    missing: scienceMissingText({ pendingPoints: status.pendingPoints, sentPoints: status.sentPoints, clues: status.clues }, config),
   };
 }
 

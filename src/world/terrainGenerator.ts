@@ -5,7 +5,8 @@ import { terrainOffset } from '../data/marsTerrain.ts';
 import { HABITAT_LAYOUT } from './habitatLayout.ts';
 
 // Retangulo aplainado para a ala norte (NORTH_WING) e os paineis solares a oeste dela
-const NORTH_PAD = { xMin: -31, xMax: 17, zMin: -42, zMax: -8, blend: 2 };
+// (ia ate z = -42 quando a ala tinha banheiro e oficina; agora acaba logo depois dos dois modulos)
+const NORTH_PAD = { xMin: -31, xMax: 17, zMin: -29, zMax: -8, blend: 2 };
 // Idem para o dormitorio (EAST_WING) e para o foguete de ascensao, a leste e sudeste do habitat
 const EAST_PAD = { xMin: 13, xMax: 30, zMin: -12, zMax: 14, blend: 2 };
 const FLAT_PADS = [NORTH_PAD, EAST_PAD];

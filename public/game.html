@@ -61,6 +61,10 @@
             <span class="story-goal-icon" data-icon="storm"></span>
             <span class="story-pips"></span>
           </span>
+          <span id="story-goal-clues" class="story-goal" title="Mission clues: blue = analyzed, green = sent to Earth">
+            <span class="story-goal-icon" data-icon="rock"></span>
+            <span class="story-pips story-clue-pips"><i></i><i></i><i></i></span>
+          </span>
           <span id="story-goal-data" class="story-goal" title="Science points sent to Earth">
             <span class="story-goal-icon" data-icon="radio"></span>
             <b id="story-goal-points" class="story-goal-points"></b>
@@ -645,6 +649,8 @@
     <div class="mc-menu">
       <h1 class="mc-death-title">Liftoff!</h1>
       <p class="mc-death-sub victory-sub">The MAV is on its way to orbit. Mission complete!</p>
+      <!-- Epilogo: a ultima mensagem da Terra, com a ciencia enviada e o atraso do radio -->
+      <section id="victory-earth" class="victory-earth" aria-label="Message from Earth"></section>
       <!-- Boletim do cadete (issue #90): 4 notas e o perfil -->
       <section id="victory-report" class="report-card" aria-label="Cadet training report"></section>
       <details class="victory-details"><summary>Mission numbers</summary>

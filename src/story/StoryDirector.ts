@@ -1,28 +1,30 @@
 // @ts-nocheck
-import { MISSION_CONFIG, STORY_CONFIG } from '../config/constants.ts';
+import { MAV_CONFIG, MISSION_CONFIG, STORY_CONFIG } from '../config/constants.ts';
 import { CARDS, OBJECTIVES, certificateBadge, certificateById, commsCard, replyCard } from './storyChapters.ts';
 import { findDetours } from './tutorialDetours.ts';
 import { CORE_STEPS, TUTORIAL_STEPS, detourCard, stepCard } from './tutorialSteps.ts';
 
-// A historia do jogo em 3 atos: chegada (tutorial), preparar a volta e janela de lancamento.
+// A historia do jogo em 2 atos: chegada (tutorial) e a missao, com a janela de lancamento ja
+// aberta. Antes eram 3 (a janela so abria depois da tempestade); a espera parava o jogo.
 // O ato 1 e o tutorial guiado (src/story/tutorialSteps.ts): um passo por vez, cada um com um
 // balao proprio, do basico (entrar, beber, comer, avisar a Terra) ao avancado (rover, gelo,
 // foguete, luneta). A resposta da Terra chega sozinha, com o jogador ja no passo seguinte.
-// Do ato 2 em diante o jogo tem uma rotina que se repete ate o tanque encher: buscar gelo, levar
-// ao foguete e voltar a base para recarregar o ar (`needsBase` marca esse ultimo passo).
+// No ato 2 o jogo tem uma rotina que se repete ate o tanque encher: buscar gelo, levar ao foguete
+// e voltar a base para recarregar o ar (`needsBase` marca esse ultimo passo). A tempestade solar
+// chega no meio da janela: e um obstaculo da missao, nao uma espera antes dela.
 // Logica pura, sem DOM nem Three.js: o GameEngine entrega um retrato do jogo a cada frame
 // (`update(snapshot)`) e aplica os eventos que saem em `drainEvents()`.
 //
 // snapshot = { hours, insideHabitat, iceCount, iceNeeded, stormPhase, stormsSurvived,
 //              propellantPct, dataSent, launched,
 //              drinkCount, mealCount, earthCalls, powerChecks, plantCount, harvestCount,
-//              workoutCount, washCount, shelterWaterL, roverDrives, roverIceKg, scanCount }
+//              workoutCount, shelterWaterL, roverDrives, roverIceKg, scanCount }
 //              (a segunda parte so e lida pelos passos do tutorial)
 //            + { baseWaterL, batteryCharge, foodStock, roverBattery, roverActive }: recursos da
 //              base, lidos pelos desvios do tutorial (issue #237, tutorialDetours.ts)
 //
-// `training: true` = tutorial completo. Sem ele sobram os 3 passos centrais (entrar, avisar a
-// Terra, buscar gelo). 4 passos entregam um certificado (issue #88): evento 'certificate' com o
+// `training: true` = passeio completo pela base. Sem ele sobram os passos centrais (entrar,
+// avisar a Terra, buscar gelo, carregar o foguete e escanear): e o tutorial padrao do jogo. 4 passos entregam um certificado (issue #88): evento 'certificate' com o
 // selo. `skipTraining()` pula o que falta (menu Demo Tools).
 // O diretor escreve `needsBase` de volta no retrato, para o painel e a seta lerem a mesma rotina.
 export class StoryDirector {
@@ -34,7 +36,7 @@ export class StoryDirector {
     comms = { millionKm: 0, oneWayMinutes: 0, dateIso: '2026-11-14' },
     gameHoursPerSecond = MISSION_CONFIG.GAME_HOURS_PER_SECOND,
     windowHours = STORY_CONFIG.WINDOW_HOURS,
-    stormsForWindow = STORY_CONFIG.STORMS_FOR_WINDOW,
+    stormsNeeded = MAV_CONFIG.STORMS_TO_SURVIVE,
     training = false,
   } = {}) {
     this.training = training;
@@ -54,12 +56,13 @@ export class StoryDirector {
     this.comms = comms;
     this.gameHoursPerSecond = gameHoursPerSecond;
     this.windowHours = windowHours;
-    this.stormsForWindow = stormsForWindow;
+    // Tempestades que o foguete pede antes do IGNITE (a do tutorial, que cai no meio da janela)
+    this.stormsNeeded = stormsNeeded;
 
     this.act = 0; // 0 = a historia ainda nao comecou
     this.objectiveId = null;
     this.objectiveText = '';
-    this.windowHoursLeft = null; // so existe no ato 3
+    this.windowHoursLeft = null; // so existe no ato 2
     // Segundos reais ate a resposta da Terra chegar; null quando nao ha mensagem a caminho
     this.replySecondsLeft = null;
     // Rotina de trabalho: true depois de entregar gelo no foguete, ate o jogador voltar a base
@@ -70,6 +73,7 @@ export class StoryDirector {
     this._guideShown = false;
     this._guiding = false;
     this._windowClosesAt = 0;
+    this._lastSnapshot = {}; // ultimo retrato visto (o menu que pula o tutorial nao tem um)
     this._finished = false;
     this._events = [];
   }
@@ -83,10 +87,11 @@ export class StoryDirector {
 
   update(s) {
     if (this.act === 0 || this._finished) return;
+    this._lastSnapshot = s;
 
     if (s.launched) {
       // Guarda quanto da janela sobrou na hora da decolagem (vai para a tela de vitoria)
-      if (this.act === 3) this.windowHoursLeft = Math.max(0, this._windowClosesAt - s.hours);
+      if (this.act === 2) this.windowHoursLeft = Math.max(0, this._windowClosesAt - s.hours);
       this._finished = true;
       this.replySecondsLeft = null;
       this._setObjective('done');
@@ -96,8 +101,7 @@ export class StoryDirector {
     this._updateReply(s);
     this._updateRoutine(s);
     if (this.act === 1) this._updateArrival(s);
-    else if (this.act === 2) this._updateBuild(s);
-    else this._updateWindow(s);
+    else this._updateMission(s);
   }
 
   // Passo atual do tutorial, ou null fora dele
@@ -133,7 +137,7 @@ export class StoryDirector {
     }
 
     if (this.stepIndex + 1 < this.steps.length) this._startStep(this.stepIndex + 1, s);
-    else this._finishTutorial();
+    else this._finishTutorial(s);
   }
 
   _startStep(index, s) {
@@ -171,11 +175,14 @@ export class StoryDirector {
     }
   }
 
-  // Fim do tutorial: comeca o ato 2, com as tempestades e a rotina de encher o foguete
-  _finishTutorial() {
+  // Fim do tutorial: comeca o ato 2, a missao. A janela de lancamento abre na hora e as
+  // tempestades comecam a valer.
+  _finishTutorial(s = {}) {
     this._clearDetour();
     this.stepIndex = -1;
     this.act = 2;
+    this._windowClosesAt = (s.hours ?? 0) + this.windowHours;
+    this.windowHoursLeft = this.windowHours;
     this._events.push({ type: 'start-storms' });
     if (this.training) this._card(CARDS.trainingDone);
     this._card(CARDS.act2);
@@ -187,7 +194,7 @@ export class StoryDirector {
   skipTraining() {
     const was = this.inTraining;
     this.training = false;
-    if (was) this._finishTutorial();
+    if (was) this._finishTutorial(this._lastSnapshot);
     else if (this.act === 0) this.steps = CORE_STEPS;
     return was;
   }
@@ -218,14 +225,17 @@ export class StoryDirector {
     this.replySecondsLeft = Math.max(1, Math.ceil(left / this.gameHoursPerSecond - 1e-6));
   }
 
-  _updateBuild(s) {
-    if (s.stormsSurvived >= this.stormsForWindow) {
-      this.act = 3;
-      this._windowClosesAt = s.hours + this.windowHours;
-      this._card(CARDS.window);
-      this._updateWindow(s);
+  // Ato 2: a janela esta aberta e a tempestade solar chega no meio dela
+  _updateMission(s) {
+    const left = this._windowClosesAt - s.hours;
+    if (left <= 0) {
+      this.windowHoursLeft = 0;
+      this._finished = true;
+      this._setObjective('failed');
+      this._events.push({ type: 'window-closed' });
       return;
     }
+    this.windowHoursLeft = left;
 
     // So a primeira tempestade e guiada: card com o trade-off e objetivo de se proteger
     if (!this._guideShown && s.stormPhase === 'warning') {
@@ -237,24 +247,14 @@ export class StoryDirector {
 
     // Com a tempestade em Marte o objetivo e um so: ficar seguro. O gelo espera (teste com
     // jogadores de 15/11/2026: o painel pedia gelo enquanto o alerta mandava para o abrigo).
-    this._setObjective(this._guiding || s.stormPhase === 'active' ? 'storm-guide' : 'act2');
-  }
-
-  _updateWindow(s) {
-    const left = this._windowClosesAt - s.hours;
-    if (left <= 0) {
-      this.windowHoursLeft = 0;
-      this._finished = true;
-      this._setObjective('failed');
-      this._events.push({ type: 'window-closed' });
-      return;
-    }
-    this.windowHoursLeft = left;
-    if (s.stormPhase === 'active') {
+    if (this._guiding || s.stormPhase === 'active') {
       this._setObjective('storm-guide');
       return;
     }
-    this._setObjective(s.propellantPct < 100 ? 'fuel' : !s.dataSent ? 'send-data' : 'ignite');
+    // Tanque cheio e ciencia enviada, mas a tempestade ainda nao passou: 'fuel' deixa o painel
+    // mostrar o trabalho que falta (nextRocketJob devolve 'storms')
+    const stormsLeft = (s.stormsSurvived ?? 0) < this.stormsNeeded;
+    this._setObjective(s.propellantPct < 100 ? 'fuel' : !s.dataSent ? 'send-data' : stormsLeft ? 'fuel' : 'ignite');
   }
 
   _setObjective(id, text = OBJECTIVES[id]) {

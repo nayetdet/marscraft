@@ -6,6 +6,12 @@ import { TRANSIT_DOSE_MSV } from './doseBudget.ts';
 import { discoveryItem, sampleItem } from './sciencePackage.ts';
 
 // `n` descobertas comuns do scanner (1 ponto de ciencia cada)
+// As 3 amostras que sao as pistas da missao (issue #344): 2 + 3 + 4 = 9 pontos
+const clueRocks = () => [
+  sampleItem(100, { typeId: 'sample-ice-core', name: 'Buried Ice Core', points: 2 }),
+  sampleItem(101, { typeId: 'sample-mudstone', name: 'Layered Mudstone', points: 3 }),
+  sampleItem(102, { typeId: 'sample-sulfur', name: 'Yellow Sulfur Crystals', points: 4 }),
+];
 const scienceScans = (n) => Array.from({ length: n }, (_, i) => discoveryItem({ id: `thing-${i}`, title: `Thing ${i}`, category: 'base' }));
 
 // CME com impacto direto previsto em Marte 3 dias depois (aviso de poucos segundos no jogo)
@@ -154,7 +160,7 @@ describe('MissionSystem science points (issues #105 and #269)', () => {
     expect(mission.sentPoints).toBe(0);
   });
 
-  it('allows partial uploads, each paying the radio start again, until the points goal is home', () => {
+  it('allows partial uploads, each paying the radio start again, until the points and the 3 clues are home', () => {
     const mission = createMission(0);
     mission.battery.charge = 100;
     const found = scienceScans(POINTS_TO_LAUNCH);
@@ -167,11 +173,17 @@ describe('MissionSystem science points (issues #105 and #269)', () => {
     expect(mission.sendData(early).status).toBe('empty');
 
     const second = mission.sendData(found);
-    expect(second).toMatchObject({ status: 'sent', items: MAX_ITEMS_PER_UPLOAD - 1, dataSent: true });
-    expect(mission.dataSent).toBe(true);
+    // Os pontos chegaram, mas a Terra ainda nao tem as pistas da missao (issue #344)
+    expect(second).toMatchObject({ status: 'sent', items: MAX_ITEMS_PER_UPLOAD - 1, dataSent: false });
+    expect(mission.dataSent).toBe(false);
     expect(mission.sentPoints).toBe(POINTS_TO_LAUNCH);
     expect(mission.uploads).toBe(2);
     expect(mission.battery.charge).toBeCloseTo(100 - (2 * BASE + POINTS_TO_LAUNCH * PER_ITEM));
+
+    mission.battery.charge = 100;
+    const third = mission.sendData([...found, ...clueRocks()]);
+    expect(third).toMatchObject({ status: 'sent', items: 3, points: 9, dataSent: true });
+    expect(mission.dataSent).toBe(true);
   });
 
   it('sends the samples that are worth more first and caps one upload at an orbiter pass', () => {
@@ -612,9 +624,10 @@ describe('MissionSystem dose budget', () => {
     expect(mission.propellant).toBe(100);
     mission.stormsSurvived = MAV_CONFIG.STORMS_TO_SURVIVE;
     mission.battery.charge = 100;
-    expect(mission.sendData(scienceScans(SCIENCE_CONFIG.POINTS_TO_LAUNCH)).status).toBe('sent');
+    const science = [...scienceScans(SCIENCE_CONFIG.POINTS_TO_LAUNCH), ...clueRocks()];
+    expect(mission.sendData(science).status).toBe('sent');
     mission.battery.charge = 100;
-    mission.sendData(scienceScans(SCIENCE_CONFIG.POINTS_TO_LAUNCH));
+    mission.sendData(science);
     expect(mission.ignite()).toBe(true);
   });
 

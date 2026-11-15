@@ -11,23 +11,25 @@ export const WAYPOINT_LABELS = {
   science: 'SCIENCE & RADIO',
   ice: 'ICE CRATER',
   mav: 'MAV ROCKET',
+  clue: 'CLUE',
   // Lugares do tutorial guiado
   greenhouse: 'FOOD MONITOR',
   gym: 'GYM',
   water: 'WATER TAP',
   kitchen: 'KITCHEN',
-  bathroom: 'BATHROOM',
 };
 
 // Lugares que ficam dentro da base: de fora, o caminho ate eles passa pelo airlock
-const INDOOR = new Set(['console', 'science', 'shelter', 'powerroom', 'lifeSupport', 'recycler', 'brokenWindow', 'greenhouse', 'gym', 'water', 'kitchen', 'bathroom']);
+const INDOOR = new Set(['console', 'science', 'shelter', 'powerroom', 'lifeSupport', 'brokenWindow', 'greenhouse', 'gym', 'water', 'kitchen']);
 
 // Lugar de cada trabalho do foguete (nextRocketJob); fabrica trabalhando e tempestades nao tem lugar
-const JOB_PLACES = { ice: 'ice', load: 'mav', base: 'airlock' };
+const JOB_PLACES = { ice: 'ice', load: 'mav', base: 'airlock', clue: 'clue' };
 
 // Ciencia (issue #105): analisar e enviar acontecem no terminal de ciencia e radio. Escanear vale
 // em qualquer lugar com a luneta, entao a seta some.
+// Buscar uma pista (issue #344) e la fora, no local da amostra ('clue': o GameEngine sabe onde).
 function sciencePlace(s) {
+  if (s.scienceStep === 'clue') return 'clue';
   return s.scienceStep === 'scan' ? null : 'science';
 }
 

@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { formatDateDMY } from '../mission/missionText.ts';
+import { CLUES_ANSWER } from '../mission/clues.ts';
 import { shelterDoseFactor } from '../mission/radiation.ts';
 import { STORY_CONFIG } from '../config/constants.ts';
 import { SPEAKERS } from './radioSpeakers.ts';
@@ -18,16 +19,17 @@ import { SPEAKERS } from './radioSpeakers.ts';
 
 // Os baloes do tutorial (ato 1) ficam em src/story/tutorialSteps.ts, um por passo.
 export const CARDS = {
-  // A rotina que se repete ate o tanque encher. Tempestades e dados entram depois, cada um na
-  // sua hora (card da primeira tempestade, tarefa SEND DATA), para ensinar uma coisa por vez.
+  // A missao inteira num card: a rotina que se repete ate o tanque encher, a ciencia e o prazo.
+  // A janela de lancamento ja esta aberta. A tempestade tem o card dela, na hora em que chega.
   act2: {
     title: 'FILL THE ROCKET',
     speaker: SPEAKERS.engineer,
     lines: [
       { icon: 'ice', text: 'Get ice at the crater' },
       { icon: 'rocket', text: 'Load it into the rocket' },
-      { icon: 'home', text: 'Go back to base for air' },
-      { icon: 'bolt', text: 'Air and fuel share one battery' },
+      { icon: 'rock', text: 'Find 3 clues: was Mars alive?' },
+      { icon: 'radio', text: 'Send the clues to Earth' },
+      { icon: 'clock', text: 'Launch before the window closes' },
     ],
   },
   // Fim do tutorial guiado: dai em diante o jogo e a rotina de encher o foguete
@@ -43,19 +45,11 @@ export const CARDS = {
     title: 'SOLAR STORM COMING',
     // Radiacao e assunto da medica da tripulacao
     speaker: SPEAKERS.medic,
-    lines: [{ icon: 'storm', text: 'Survive this storm, then you can launch' }],
+    lines: [{ icon: 'storm', text: 'Stay safe: the launch window keeps running' }],
     // Escolha na hora, andando: [1] ou [2] (issue #135). Nenhuma e de graca.
     choices: [
       { id: 'hide', key: '1', icon: 'home', name: 'HIDE', good: 'Shelter with water wall', bad: 'No work outside' },
       { id: 'shield', key: '2', icon: 'shield', name: 'SHIELD', good: 'Keep working', bad: 'Eats battery' },
-    ],
-  },
-  window: {
-    title: 'LAUNCH WINDOW OPEN',
-    lines: [
-      { icon: 'rocket', text: 'Fill the tank' },
-      { icon: 'radio', text: 'Send your data' },
-      { icon: 'clock', text: 'Launch before time runs out' },
     ],
   },
 };
@@ -151,6 +145,27 @@ export function replyCard({ oneWayMinutes }) {
   };
 }
 
+// Epilogo: a ultima mensagem da Terra, na tela de vitoria. Fecha a historia com o mesmo atraso de
+// radio que a abriu (CALL EARTH) e diz o que a ciencia enviada valeu. `sentPoints`, `discoveries` e
+// `samples` sao a ciencia que chegou a Terra nesta partida; `oneWayMinutes` vem do CommsLink.
+// `cluesSent`: as 3 pistas da missao chegaram (issue #344): a Terra responde a pergunta da missao.
+export function earthFarewell({ sentPoints = 0, discoveries = 0, samples = 0, oneWayMinutes = 0, cluesSent = false } = {}) {
+  const found = [];
+  if (discoveries > 0) found.push(`${discoveries} ${discoveries === 1 ? 'discovery' : 'discoveries'}`);
+  if (samples > 0) found.push(`${samples} ${samples === 1 ? 'sample' : 'samples'}`);
+  return {
+    title: 'MESSAGE FROM EARTH',
+    lines: [
+      { icon: 'radio', text: 'We saw the liftoff. Well done, Commander!' },
+      { icon: 'scope', text: `Earth got your science: ${sentPoints} points` },
+      ...(found.length > 0 ? [{ icon: 'check', text: found.join(' and ') }] : []),
+      ...(cluesSent ? [{ icon: 'rock', text: `Your 3 clues say: ${CLUES_ANSWER}` }] : []),
+      { icon: 'home', text: 'Now the 7-month trip home' },
+    ],
+    note: `This message left Earth ${oneWayMinutes} min before you read it`,
+  };
+}
+
 // Frase curta de cada objetivo (terminal da base). As dos passos do tutorial ficam em
 // tutorialSteps.ts (`objective`). O painel do objetivo mostra a versao em icones:
 // src/story/objectiveView.ts.
@@ -158,7 +173,7 @@ export const OBJECTIVES = {
   act2: 'Get the rocket ready to go home',
   'storm-guide': 'Get safe: storm shelter with water in its wall, or the Shield Remote',
   fuel: 'Fill the rocket with ice',
-  'send-data': 'Send your science to Earth from the science & radio terminal',
+  'send-data': 'Find the 3 clues and send your science to Earth from the science & radio terminal',
   ignite: 'Go to the rocket and press IGNITE',
   done: 'Liftoff! You are going home',
   failed: 'The launch window closed',

@@ -286,8 +286,8 @@ function buildGymModule(world, groundY) {
   }
 }
 
-// 5. Ala Norte (issue #56, ampliada): corredor central envidracado e quatro modulos separados
-// (energia, cozinha, banheiro, oficina), cada um ligado por um corredor curto. A geometria vem
+// 5. Ala Norte (issue #56, ampliada): corredor central envidracado e dois modulos separados
+// (energia e cozinha), cada um ligado por um corredor curto. A geometria vem
 // de NORTH_WING (habitatLayout.js), a mesma que marca o ar pressurizado.
 function buildNorthModule(world, groundY) {
   const floorY = groundY + 1; // y = 9

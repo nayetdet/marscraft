@@ -57,7 +57,7 @@ function setWidth(node, fraction) {
 // Card de radio (issue #135): mostra o rosto de quem fala, o texto aparece letra por letra e as
 // escolhas com tecla ([1] HIDE / [2] SHIELD) sao feitas na hora, sem soltar o teclado nem parar.
 export class StoryHud {
-  constructor({ cardSeconds = STORY_CONFIG.CARD_SECONDS, stormsNeeded = STORY_CONFIG.STORMS_FOR_WINDOW } = {}) {
+  constructor({ cardSeconds = STORY_CONFIG.CARD_SECONDS, stormsNeeded = MAV_CONFIG.STORMS_TO_SURVIVE } = {}) {
     const $ = (id) => document.getElementById(id);
     this.cardSeconds = cardSeconds;
 
@@ -102,6 +102,8 @@ export class StoryHud {
     this.goalsEl = $('story-goals');
     this.stormsGoalEl = $('story-goal-storms');
     this.dataGoalEl = $('story-goal-data');
+    this.cluesGoalEl = $('story-goal-clues');
+    this.cluePipEls = Array.from(this.cluesGoalEl.querySelectorAll('.story-clue-pips i'));
     this.dataPointsEl = $('story-goal-points');
     this.timerEl = $('story-timer');
     this.timerIconEl = $('story-timer-icon');
@@ -160,7 +162,7 @@ export class StoryHud {
     setIcon(this.taskIconEl, view.task.icon);
     setText(this.taskLabelEl, view.task.label);
     setText(this.taskKeyEl, view.task.key ? `[${view.task.key}]` : '');
-    // Tutorial guiado: a dica do passo e "STEP 4/15" (vazios fora do tutorial: o CSS esconde)
+    // Tutorial guiado: a dica do passo e "STEP 4/5" (vazios fora do tutorial: o CSS esconde)
     setText(this.taskHintEl, view.task.hint ?? '');
     setText(this.stepCountEl, view.progress ? `STEP ${view.progress.now}/${view.progress.total}` : '');
     // Cor da secao da base do passo: pinta o icone, o numero do passo e a borda do painel
@@ -190,6 +192,10 @@ export class StoryHud {
       this.pipEls.forEach((node, i) => setClass(node, i < storms ? 'on' : ''));
       setClass(this.stormsGoalEl, storms >= stormsNeeded ? 'story-goal done' : 'story-goal');
       setClass(this.dataGoalEl, dataSent ? 'story-goal done' : 'story-goal');
+      // Pistas da missao (issue #344): azul = analisada (ou na mochila), verde = a Terra ja tem
+      const clues = view.goals.clues;
+      setClass(this.cluesGoalEl, !clues ? 'story-goal hidden' : clues.every((state) => state === 'sent') ? 'story-goal done' : 'story-goal');
+      if (clues) this.cluePipEls.forEach((node, i) => setClass(node, clues[i] === 'sent' ? 'on' : clues[i] === 'found' ? 'found' : clues[i] === 'bag' ? 'bag' : ''));
     }
 
     setClass(this.timerEl, view.timer ? `story-timer ${view.timer.tone}` : 'story-timer hidden');
