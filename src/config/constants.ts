@@ -377,6 +377,8 @@ export const WATER_SYSTEM_CONFIG = {
 // Uma viagem completa de gelo (ir a cratera, 5 perfuracoes, voltar) gasta cerca de um quarto
 // a um terco da bateria do rover.
 export const ROVER_CONFIG = {
+  INTERACTION_NOTICE_RADIUS: 4, // blocos: aviso de controle remoto perto do rover
+  INTERACTION_NOTICE_HEIGHT: 3, // diferenca vertical maxima em relacao ao rover
   // The rover's local front is -Z; yaw PI points it toward +Z, away from the base wall.
   SPAWN_YAW: Math.PI,
   CAMERA_COLLISION_STEP: 0.2, // steps used to keep the chase camera outside solid voxel blocks
@@ -763,6 +765,27 @@ export const STORY_CONFIG = {
   // que a escolha TANK despeja no tanque da base e segundos reais do card na tela. Regra de jogo.
   FIRST_ICE_BLOCKS: 1,
   FIRST_ICE_CARD_SECONDS: 20,
+};
+
+// Caminho tracejado amarelo no chao guiando o jogador ate o objetivo atual.
+export const WAYPOINT_PATH_CONFIG = {
+  COLOR: 0xffcf3a,
+  OPACITY: 0.3,
+  DASH_LENGTH: 0.46,
+  DASH_GAP: 0.44,
+  DASH_WIDTH: 0.22,
+  FLOW_SPEED: 1.15, // blocos/s na direcao do objetivo
+  SURFACE_OFFSET_Y: 0.03,
+  FADE_IN_START_FOOT: 0.85,
+  FADE_IN_START_ROVER: 1.85,
+  FADE_IN_RANGE: 1.0,
+  FADE_OUT_END: 0.85,
+  FADE_OUT_RANGE: 0.9,
+  HIDE_DISTANCE_FOOT: 1.65,
+  HIDE_DISTANCE_ROVER: 2.8,
+  REPATH_INTERVAL: 0.4,
+  MAX_DASHES: 260,
+  MAX_SEARCH_NODES: 16000,
 };
 
 // Animacoes de chegada e de decolagem (docs/superpowers/plans/2026-11-14-story-arc.md)
