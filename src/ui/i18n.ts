@@ -719,18 +719,6 @@ const DYNAMIC_PATTERNS: Array<{
       : `Muestra analizada, ${translate(sample, language)}: ${facts.split('. ').map((fact) => translate(fact, language)).join('. ')}. Hallazgo real: ${translate(where, language)}. (${translate(source, language)})`,
   },
   {
-    match: /^Source: (.+)$/,
-    format: ([, source], language) => language === 'pt-BR'
-      ? `Fonte: ${translate(source, language)}`
-      : `Fuente: ${translate(source, language)}`,
-  },
-  {
-    match: /^Drill active! Collected \+(\d+)kg Water Ice \((\d+)\/(\d+)kg\)$/,
-    format: ([, amount, cargo, capacity], language) => language === 'pt-BR'
-      ? `Perfuração ativa! +${amount} kg de gelo de água coletados (${cargo}/${capacity} kg)`
-      : `¡Perforación activa! Se recogieron +${amount} kg de hielo de agua (${cargo}/${capacity} kg)`,
-  },
-  {
     match: /^Offloaded (\d+)kg ice to base! Converted to (\d+)L Purified Water\.$/,
     format: ([, ice, water], language) => language === 'pt-BR'
       ? `${ice} kg de gelo descarregados na base! Viraram ${water} L de água purificada.`
