@@ -35,6 +35,11 @@ export class HudManager {
     this._lastSuitContext = null;
     this.selectedSlot = 0;
     this.inventorySelection = null;
+    this._invDrag = null;
+    this._invGhost = null;
+    this._suppressInvClick = false;
+    this._onInvPointerMove = this._onInvPointerMove.bind(this);
+    this._onInvPointerUp = this._onInvPointerUp.bind(this);
 
     this.hotbarEl = document.getElementById('hotbar');
     this.selectedBlockNameEl = document.getElementById('selected-block-name');
@@ -217,9 +222,14 @@ export class HudManager {
     this.currentInventorySlots = inventorySlots;
     const renderSlot = (slotData, index, hotbar = false) => {
       const slot = document.createElement('div');
-      slot.className = `mc-slot inventory-slot ${hotbar && index === this.selectedSlot ? 'active' : ''} ${index === this.inventorySelection ? 'picked' : ''}`;
-      slot.addEventListener('click', () => this._selectInventorySlot(index));
+      slot.className = `mc-slot inventory-slot ${hotbar && index === this.selectedSlot ? 'active' : ''} ${index === this.inventorySelection ? 'picked' : ''} ${slotData ? 'has-item' : ''}`;
+      slot.dataset.slotIndex = String(index);
+      slot.addEventListener('click', () => {
+        if (this._suppressInvClick) return;
+        this._selectInventorySlot(index);
+      });
       if (slotData) {
+        slot.addEventListener('pointerdown', (e) => this._startInvDrag(index, e));
         slot.innerHTML = `
           <div class="mc-slot-icon${slotData.id === BLOCK_IDS.HYDRO_PLANT ? ' carrot' : ''}" style="background-image: url('${this._itemPreview(slotData.id) ?? ''}')"></div>
           <span class="mc-slot-count">${slotData.count > 0 ? slotData.count : ''}</span>
@@ -250,6 +260,8 @@ export class HudManager {
   }
 
   openInventory(inventorySlots) {
+    this._cancelInvDrag();
+    this._suppressInvClick = false;
     this.isInventoryOpen = true;
     document.body.classList.add('inventory-open');
     this.inventorySelection = null;
@@ -260,11 +272,134 @@ export class HudManager {
   }
 
   closeInventory() {
+    this._cancelInvDrag();
+    this._suppressInvClick = false;
     this.isInventoryOpen = false;
     document.body.classList.remove('inventory-open');
     this.inventorySelection = null;
     this.suitPreview?.stop();
     this.inventoryOverlayEl.classList.add('hidden');
+  }
+
+  _startInvDrag(index, event) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (!this.isInventoryOpen || !this.currentInventorySlots?.[index]) return;
+    this._cancelInvDrag();
+    this._invDrag = {
+      pointerId: event.pointerId,
+      fromIndex: index,
+      startX: event.clientX,
+      startY: event.clientY,
+      active: false,
+      sourceSlotEl: event.currentTarget,
+      hoveredSlotEl: null,
+    };
+    window.addEventListener('pointermove', this._onInvPointerMove);
+    window.addEventListener('pointerup', this._onInvPointerUp);
+    window.addEventListener('pointercancel', this._onInvPointerUp);
+  }
+
+  _invSlotElAt(clientX, clientY) {
+    const stack = document.elementsFromPoint?.(clientX, clientY) ?? [];
+    for (const el of stack) {
+      const slotEl = el.closest?.('.inventory-slot[data-slot-index]');
+      if (slotEl && (this.inventoryGridEl?.contains(slotEl) || this.inventoryHotbarEl?.contains(slotEl))) {
+        return slotEl;
+      }
+    }
+    return null;
+  }
+
+  _clearInvHover() {
+    const prev = this._invDrag?.hoveredSlotEl;
+    if (prev) {
+      prev.classList.remove('drag-over');
+      this._invDrag.hoveredSlotEl = null;
+    }
+  }
+
+  _onInvPointerMove(event) {
+    const d = this._invDrag;
+    if (!d || !this.isInventoryOpen) {
+      this._cancelInvDrag();
+      return;
+    }
+    if (event.pointerId !== d.pointerId) return;
+
+    if (!d.active) {
+      if (Math.hypot(event.clientX - d.startX, event.clientY - d.startY) < 6) return;
+      const item = this.currentInventorySlots?.[d.fromIndex];
+      if (!item) {
+        this._cancelInvDrag();
+        return;
+      }
+      d.active = true;
+      this.inventorySelection = null;
+      this.inventoryGridEl?.querySelectorAll('.inventory-slot.picked').forEach((el) => el.classList.remove('picked'));
+      this.inventoryHotbarEl?.querySelectorAll('.inventory-slot.picked').forEach((el) => el.classList.remove('picked'));
+      d.sourceSlotEl?.classList.add('drag-source');
+      document.body?.classList?.add('inventory-dragging');
+      this.onUiClick?.();
+
+      const ghost = document.createElement('div');
+      ghost.className = 'inv-drag-ghost';
+      const preview = this._itemPreview(item.id) ?? '';
+      const carrotCls = item.id === BLOCK_IDS.HYDRO_PLANT ? ' carrot' : '';
+      const countText = item.count > 0 ? String(item.count) : '';
+      ghost.innerHTML = `<div class="mc-slot-icon${carrotCls}" style="background-image: url('${preview}')"></div><span class="mc-slot-count">${countText}</span>`;
+      document.body.appendChild(ghost);
+      this._invGhost = ghost;
+    }
+
+    this._invGhost.style.left = `${event.clientX}px`;
+    this._invGhost.style.top = `${event.clientY}px`;
+
+    const slotEl = this._invSlotElAt(event.clientX, event.clientY);
+    if (slotEl !== d.hoveredSlotEl) this._clearInvHover();
+    if (slotEl && Number(slotEl.dataset.slotIndex) !== d.fromIndex) {
+      d.hoveredSlotEl = slotEl;
+      slotEl.classList.add('drag-over');
+    }
+  }
+
+  _onInvPointerUp(event) {
+    const d = this._invDrag;
+    if (!d || event.pointerId !== d.pointerId) return;
+    const wasActive = d.active;
+    const fromIndex = d.fromIndex;
+    const slotEl = wasActive && event.type !== 'pointercancel'
+      ? this._invSlotElAt(event.clientX, event.clientY)
+      : null;
+    this._cancelInvDrag();
+    if (!wasActive) return;
+
+    // Prevent trailing click event from toggling selection or opening the journal after drop
+    this._suppressInvClick = true;
+    setTimeout(() => { this._suppressInvClick = false; }, 0);
+
+    if (slotEl) {
+      const toIndex = Number(slotEl.dataset.slotIndex);
+      if (Number.isInteger(toIndex) && toIndex !== fromIndex) {
+        const inventorySlots = this.onInventorySwap?.(fromIndex, toIndex) ?? this.currentInventorySlots;
+        this.inventorySelection = null;
+        this.onUiClick?.();
+        this.renderInventory(inventorySlots);
+      }
+    }
+  }
+
+  _cancelInvDrag() {
+    window.removeEventListener('pointermove', this._onInvPointerMove);
+    window.removeEventListener('pointerup', this._onInvPointerUp);
+    window.removeEventListener('pointercancel', this._onInvPointerUp);
+    this._clearInvHover();
+    this._invDrag?.sourceSlotEl?.classList.remove('drag-source');
+    document.body?.classList?.remove('inventory-dragging');
+    if (this._invGhost) {
+      this._invGhost.remove();
+      this._invGhost = null;
+    }
+    this._invDrag = null;
   }
 
   _setElText(el, text) {

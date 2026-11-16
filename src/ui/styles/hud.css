@@ -1010,9 +1010,29 @@
   background: #9e9e9e;
 }
 
-.inventory-slot { cursor: pointer; }
+.inventory-slot { cursor: pointer; user-select: none; }
+.inventory-slot.has-item { cursor: grab; touch-action: none; }
 .inventory-slot:hover { background: #999; }
 .inventory-slot.picked { outline: 3px solid #ffff55; outline-offset: -3px; background: #9d9d74; }
+.inventory-slot.drag-source .mc-slot-icon,
+.inventory-slot.drag-source .mc-slot-count { opacity: 0.3; }
+.inventory-slot.drag-over { outline: 3px solid #7cfc00; outline-offset: -3px; background: #8da68d; }
+body.inventory-dragging,
+body.inventory-dragging * { cursor: grabbing !important; }
+.inv-drag-ghost {
+  position: fixed;
+  z-index: 999;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -65%);
+  pointer-events: none;
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.75));
+}
+.inv-drag-ghost .mc-slot-icon { width: 36px; height: 36px; }
+.inv-drag-ghost .mc-slot-count { right: 4px; bottom: 2px; }
 
 .mc-slot-icon {
   width: 32px;
