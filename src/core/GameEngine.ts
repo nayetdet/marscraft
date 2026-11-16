@@ -1226,7 +1226,7 @@ export class GameEngine {
   }
 
   // Uma amostra do mapa acabou de ser analisada (StationPanel): fato real na tela, ficha no
-  // diario [J] e linha no diario de bordo
+  // diario e linha no diario de bordo
   onSampleAnalyzed(type) {
     if (!type) return;
     const found = this.scanJournal.record(type.id, { mission: false });
@@ -1532,7 +1532,7 @@ export class GameEngine {
   }
 
   // Ciencia para o boletim (issue #271): o que a crianca descobriu nesta partida e a patente do
-  // diario [J] (o diario e guardado no navegador, entao conta tambem partidas antigas)
+  // diario (o diario e guardado no navegador, entao conta tambem partidas antigas)
   _scienceReportStats() {
     const journal = this.scanJournal;
     const status = this.scienceStatus();
@@ -1817,9 +1817,9 @@ export class GameEngine {
     for (const card of this.missionLogFeed.drainCards()) {
       if (card.type === 'summary') {
         const n = card.entry.numbers;
-        this.scannerHud.showDiscovery(card.entry.text.toUpperCase(), n.topDecision ? `Biggest choice: ${n.topDecision}` : 'Full report in your journal [J]', solSummaryLines(n), MISSION_LOG_CONFIG.SUMMARY_CARD_MS);
+        this.scannerHud.showDiscovery(card.entry.text.toUpperCase(), n.topDecision ? `Biggest choice: ${n.topDecision}` : 'Full report in your journal', solSummaryLines(n), MISSION_LOG_CONFIG.SUMMARY_CARD_MS);
       } else if (card.type === 'study') {
-        this.scannerHud.showDiscovery('NEW REAL NASA STUDY', `${card.study.id}: ${card.study.explanation}`, ['Read it in your journal [J], NASA STUDIES'], MISSION_LOG_CONFIG.STUDY_CARD_MS);
+        this.scannerHud.showDiscovery('NEW REAL NASA STUDY', `${card.study.id}: ${card.study.explanation}`, ['Read it in your journal, NASA STUDIES'], MISSION_LOG_CONFIG.STUDY_CARD_MS);
       }
     }
   }
@@ -1843,7 +1843,7 @@ export class GameEngine {
 
   // O jogador colheu `type` no monitor da estufa. A primeira colheita de cada planta ganha um
   // fato "Ciencia espacial na Terra" com animacao de descoberta, uma vez por partida, e ele fica
-  // no diario de bordo [J]. A colheita da tripulacao nao chama isto (issue #216).
+  // no diario de bordo. A colheita da tripulacao nao chama isto (issue #216).
   onPlayerHarvest(type) {
     const card = this.earthFacts.onPlayerHarvest(type);
     if (card) {

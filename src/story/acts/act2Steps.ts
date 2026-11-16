@@ -122,11 +122,11 @@ export const ACT2_STEPS: Act2Step[] = [
     zone: 'science',
     icon: 'medal',
     label: 'OPEN THE JOURNAL',
-    hint: 'Open your journal (J), then follow the circles',
+    hint: 'Open your journal, then follow the circles',
     place: null,
     objective: 'Open your journal and follow the 3 tips',
     lines: [
-      { icon: 'check', text: 'Press J to open your journal' },
+      { icon: 'check', text: 'Select the journal in your hotbar, then right-click or tap USE' },
       { icon: 'scope', text: 'It keeps everything you scan' },
       { icon: 'medal', text: 'Follow the circles: 3 quick tips' },
     ],
