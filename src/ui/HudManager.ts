@@ -216,9 +216,9 @@ export class HudManager {
 
     const current = slots[this.selectedSlot];
     if (current) {
-      this.selectedBlockNameEl.textContent = current.name;
+      this.selectedBlockNameEl.textContent = translate(current.name, getLanguage());
     } else {
-      this.selectedBlockNameEl.textContent = 'Empty';
+      this.selectedBlockNameEl.textContent = translate('Empty', getLanguage());
     }
   }
 

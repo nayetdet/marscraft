@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BLOCK_IDS } from '../config/blockTypes.ts';
+import { setLanguage } from './i18n.ts';
 import { HudManager } from './HudManager.ts';
 
 function makeClassList(initial: string[] = []) {
@@ -128,6 +129,26 @@ function setupDragHarness(slots: Array<{ id: number; name: string; count: number
 describe('HudManager inventory drag and drop', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    setLanguage('en', { setItem: vi.fn() });
+  });
+
+  it('shows the selected item name in the active language', () => {
+    setLanguage('pt-BR', { setItem: vi.fn() });
+    vi.stubGlobal('document', {
+      createElement: () => ({ className: '', dataset: {}, innerHTML: '' }),
+    });
+    const nameEl = { textContent: '' };
+    const hud = Object.create(HudManager.prototype) as HudManager & Record<string, unknown>;
+    Object.assign(hud, {
+      hotbarEl: { innerHTML: '', appendChild: vi.fn() },
+      selectedBlockNameEl: nameEl,
+      selectedSlot: 0,
+      previews: {},
+    });
+
+    hud.renderHotbar([{ id: BLOCK_IDS.HYDRO_PLANT, name: 'Mars Carrot (Right-click to eat)', count: 3 }]);
+
+    expect(nameEl.textContent).toBe('Cenoura de Marte (clique com o botão direito para comer)');
   });
 
   it('drags an item past the threshold and swaps it with the drop target slot', () => {
