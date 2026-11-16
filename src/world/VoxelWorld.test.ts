@@ -342,3 +342,22 @@ describe('VoxelWorld meshing', () => {
     expect(chunk.glassMesh).toBeNull();
   });
 });
+
+describe('world item drops', () => {
+  it('keeps a drop when the bag rejects pickup so it can be collected later', () => {
+    const world = createWorld();
+    world._spawnDrop(0, 2, 0, BLOCK_IDS.BASALT);
+    const drop = world.drops[0];
+    drop.grounded = true;
+    drop.groundY = drop.mesh.position.y;
+    drop.waitingForPlayerToLeave = false;
+    const player = drop.mesh.position.clone();
+    player.y += 1.05;
+
+    world.updateDrops(100, player, () => false);
+    expect(world.drops).toHaveLength(1);
+
+    world.updateDrops(0.1, player, () => true);
+    expect(world.drops).toHaveLength(0);
+  });
+});

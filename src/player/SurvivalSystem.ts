@@ -65,6 +65,39 @@ export class SurvivalSystem {
     this.inventorySlots = [...this.slots, ...Array(27).fill(null)];
   }
 
+  restoreStarterInventoryLayout() {
+    const starterItems = [
+      { id: BLOCK_IDS.JOURNAL, index: 0, item: HOTBAR_BLOCKS.find((entry) => entry.id === BLOCK_IDS.JOURNAL) },
+      { id: BLOCK_IDS.SHIELD_REMOTE, index: 1, item: HOTBAR_BLOCKS.find((entry) => entry.id === BLOCK_IDS.SHIELD_REMOTE) },
+      { id: BLOCK_IDS.HYDRO_PLANT, index: 2, item: HOTBAR_BLOCKS.find((entry) => entry.id === BLOCK_IDS.HYDRO_PLANT) },
+    ];
+
+    for (const { id, index, item } of starterItems) {
+      const existingIndex = this.inventorySlots.findIndex((slot) => slot?.id === id && slot.count > 0);
+      if (existingIndex >= 0) {
+        if (existingIndex !== index) this.swapInventorySlots(existingIndex, index);
+        continue;
+      }
+
+      // Journal and shield are permanent equipment. Restore them in older saves if they
+      // were missing, moving the displaced item into an empty slot instead of deleting it.
+      if (id === BLOCK_IDS.HYDRO_PLANT) continue;
+      const emptyIndex = this.inventorySlots.findIndex((slot) => !slot || slot.count <= 0);
+      if (this.inventorySlots[index] && emptyIndex < 0) continue;
+      if (this.inventorySlots[index]) this.inventorySlots[emptyIndex] = this.inventorySlots[index];
+      this.inventorySlots[index] = {
+        id,
+        name: item.name,
+        count: item.initialCount,
+        consumable: item.consumable,
+        equipment: item.equipment ?? false,
+      };
+    }
+
+    this.slots = this.inventorySlots.slice(0, 9);
+    return this.inventorySlots;
+  }
+
   swapInventorySlots(fromIndex, toIndex) {
     if (fromIndex === toIndex) return this.inventorySlots;
     [this.inventorySlots[fromIndex], this.inventorySlots[toIndex]] = [

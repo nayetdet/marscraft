@@ -415,8 +415,10 @@ export class VoxelWorld {
       if (drop.waitingForPlayerToLeave && pickupDelayPassed && !isClose) {
         drop.waitingForPlayerToLeave = false;
       }
-      const pickedUp = isClose && pickupDelayPassed && !drop.waitingForPlayerToLeave && collect(drop.blockId);
-      if (pickedUp || drop.age >= BLOCK_INTERACTION_CONFIG.DROP_LIFETIME) {
+      const canAttemptPickup = isClose && pickupDelayPassed && !drop.waitingForPlayerToLeave;
+      const pickedUp = canAttemptPickup && collect(drop.blockId);
+      if (canAttemptPickup && !pickedUp) drop.pickupBlocked = true;
+      if (pickedUp || (drop.age >= BLOCK_INTERACTION_CONFIG.DROP_LIFETIME && !drop.pickupBlocked)) {
         if (pickedUp) collected.push(drop.blockId);
         this._removeEffect(drop.mesh);
         this.drops.splice(i, 1);
