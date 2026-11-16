@@ -341,6 +341,7 @@ export class VoxelWorld {
       velocity: new THREE.Vector3(0, 1.5, 0), age: 0, grounded: false,
       bobOffset: Math.random() * Math.PI * 2, groundY: 0,
       pickupDelay: BLOCK_INTERACTION_CONFIG.CROP_PICKUP_DELAY,
+      pickupRadius: BLOCK_INTERACTION_CONFIG.CROP_DROP_PICKUP_RADIUS,
     });
   }
 
@@ -352,6 +353,7 @@ export class VoxelWorld {
     }
     const drop = this.drops[this.drops.length - 1];
     drop.pickupDelay = BLOCK_INTERACTION_CONFIG.PLAYER_DROP_PICKUP_DELAY;
+    drop.pickupRadius = BLOCK_INTERACTION_CONFIG.DROP_PICKUP_RADIUS;
     drop.waitingForPlayerToLeave = true;
     drop.velocity.set(-Math.sin(yaw) * 3, 1.5, -Math.cos(yaw) * 3);
   }
@@ -408,7 +410,7 @@ export class VoxelWorld {
       const dx = position.x - playerPos.x;
       const dy = position.y - (playerPos.y - 1.05);
       const dz = position.z - playerPos.z;
-      const isClose = dx * dx + dy * dy + dz * dz < BLOCK_INTERACTION_CONFIG.DROP_PICKUP_RADIUS ** 2;
+      const isClose = dx * dx + dy * dy + dz * dz < (drop.pickupRadius ?? BLOCK_INTERACTION_CONFIG.DROP_PICKUP_RADIUS) ** 2;
       const pickupDelayPassed = drop.age >= (drop.pickupDelay || 0);
       if (drop.waitingForPlayerToLeave && pickupDelayPassed && !isClose) {
         drop.waitingForPlayerToLeave = false;

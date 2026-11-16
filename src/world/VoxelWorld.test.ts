@@ -244,6 +244,36 @@ describe('VoxelWorld meshing', () => {
     expect(world.drops).toHaveLength(0);
   });
 
+  it.each([BLOCK_IDS.HYDRO_PLANT, ...Object.values(CROP_ITEM_IDS)])('collects harvested crop %i from farther away', (id) => {
+    const position = new THREE.Vector3(0, SKY_Y, 20);
+    world.spawnCropDrop(position, id);
+    const drop = world.drops.at(-1);
+    drop.age = 1;
+    drop.grounded = true;
+    drop.groundY = position.y;
+    drop.bobOffset = 0;
+    drop.mesh.position.copy(position);
+    const player = new THREE.Vector3(1.6, SKY_Y + 1.05, 20);
+    expect(world.updateDrops(0, player, () => false)).toEqual([]);
+    expect(world.updateDrops(0, player, () => true)).toEqual([id]);
+  });
+
+  it('keeps the regular pickup distance for crops dropped by the player', () => {
+    const position = new THREE.Vector3(0, SKY_Y, 20);
+    world.spawnPlayerDrop(position, 0, BLOCK_IDS.HYDRO_PLANT);
+    const drop = world.drops.at(-1);
+    drop.age = 2;
+    drop.grounded = true;
+    drop.groundY = position.y;
+    drop.bobOffset = 0;
+    drop.mesh.position.copy(position);
+    const player = new THREE.Vector3(1.6, SKY_Y + 1.05, 20);
+    expect(world.updateDrops(0, player, () => true)).toEqual([]);
+    expect(drop.waitingForPlayerToLeave).toBe(false);
+    player.x = 0;
+    expect(world.updateDrops(0, player, () => true)).toEqual([BLOCK_IDS.HYDRO_PLANT]);
+  });
+
   it('keeps a player drop on the ground until the player leaves and returns', () => {
     const position = new THREE.Vector3(0, SKY_Y, 20);
     const player = new THREE.Vector3(0, SKY_Y + 1.05, 20);
