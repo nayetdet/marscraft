@@ -3,7 +3,7 @@ import { MARS_TERRAIN, formatCoords } from '../data/marsTerrain.ts';
 import { formatDateDMY } from '../mission/missionText.ts';
 import { LANGUAGES, getLanguage, setLanguage } from './i18n.ts';
 
-// Telas extras do menu: créditos, fontes, opções e ferramentas de demo.
+// Telas extras do menu: fontes, opções e ferramentas de demo.
 // O menu principal e as telas trocam de lugar com a classe `hidden`, como a tela de controles.
 export class MenuScreens {
   constructor({ donkiDate, onDemo, volume = 1, onVolumeChange, onVolumePreview, onLanguageChange = setLanguage }) {
@@ -29,7 +29,6 @@ export class MenuScreens {
     };
     bind('sources');
     bind('options');
-    bind('credits');
     bind('demo').addEventListener('click', (event) => {
       const action = event.target.closest('[data-demo]')?.dataset.demo;
       if (action) feedback.textContent = onDemo(action);
