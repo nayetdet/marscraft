@@ -4,6 +4,7 @@ import { WINDOW_CLOSED } from '../story/storyChapters.ts';
 import { cardSpeaker, speakerFaceSvg } from '../story/radioSpeakers.ts';
 import { pixelIconSvg } from './pixelIcons.ts';
 import { typedChars } from './typewriter.ts';
+import { getLanguage, translate } from './i18n.ts';
 
 // Tempo minimo de um card na tela quando ja existe outro na fila
 const MIN_CARD_SECONDS = 5;
@@ -362,9 +363,10 @@ export class StoryHud {
   showWindowClosed() {
     this.isWindowClosedShown = true;
     this.clearCards();
-    document.getElementById('window-title').textContent = WINDOW_CLOSED.title;
-    document.getElementById('window-text').textContent = WINDOW_CLOSED.text;
-    document.getElementById('window-source').textContent = WINDOW_CLOSED.source;
+    const language = getLanguage();
+    document.getElementById('window-title').textContent = translate(WINDOW_CLOSED.title, language);
+    document.getElementById('window-text').textContent = translate(WINDOW_CLOSED.text, language);
+    document.getElementById('window-source').textContent = translate(WINDOW_CLOSED.source, language);
     this.windowOverlayEl.classList.remove('hidden');
   }
 
@@ -384,10 +386,11 @@ export class StoryHud {
     this.signalEl._cls = undefined;
     this._cardSeconds = this.current.seconds ?? this.cardSeconds; // cada card pode ter o seu tempo
     this.timer = this._cardSeconds;
-    this.titleEl.textContent = this.current.title;
+    const language = getLanguage();
+    this.titleEl.textContent = translate(this.current.title, language);
     // Quem fala: rosto de capacete na cor do traje e o nome (radioSpeakers.ts)
     const speaker = cardSpeaker(this.current);
-    setText(this.speakerEl, `${speaker.name.toUpperCase()} - ${speaker.tag}`);
+    setText(this.speakerEl, `${speaker.name.toUpperCase()} - ${translate(speaker.tag, language).toUpperCase()}`);
     if (this.faceEl._color !== speaker.color) {
       this.faceEl._color = speaker.color;
       this.faceEl.innerHTML = speakerFaceSvg(speaker.color);
@@ -396,7 +399,7 @@ export class StoryHud {
     this.cardEl.classList.toggle('is-step', Boolean(this.current.color));
     this.cardEl.style.setProperty('--step-color', this.current.color ?? 'var(--hud-accent)');
     this._renderBody(this.current);
-    this.sourceEl.textContent = this.current.source ?? '';
+    this.sourceEl.textContent = this.current.source ? translate(this.current.source, language) : '';
     this.cardEl.classList.remove('hidden');
     // Reinicia a animacao de entrada quando um card troca pelo seguinte
     this.cardEl.classList.remove('is-entering');
@@ -407,6 +410,7 @@ export class StoryHud {
   // Monta o desenho do card. So roda quando o card troca, nunca a cada frame.
   _renderBody(card) {
     const body = this.bodyEl;
+    const language = getLanguage();
     body.replaceChildren();
     this._typeChars.length = 0;
     this._typed = 0;
@@ -420,11 +424,11 @@ export class StoryHud {
       const link = el('div', 'story-link');
       link.style.setProperty('--link-seconds', `${this._cardSeconds}s`);
       const mars = el('span', 'story-planet mars');
-      mars.append(el('i'), el('b', '', 'MARS'));
+      mars.append(el('i'), el('b', '', translate('MARS', language)));
       const track = el('span', 'story-link-track');
-      track.append(el('i'), el('b', '', `${card.link.minutes} min`), el('small', '', `${card.link.millionKm} million km`));
+      track.append(el('i'), el('b', '', `${card.link.minutes} min`), el('small', '', `${card.link.millionKm} ${translate('million km', language)}`));
       const earth = el('span', 'story-planet earth');
-      earth.append(el('i'), el('b', '', 'EARTH'));
+      earth.append(el('i'), el('b', '', translate('EARTH', language)));
       link.append(mars, track, earth);
       body.append(link);
     }
@@ -433,16 +437,18 @@ export class StoryHud {
       // Duas saidas lado a lado: o que cada uma da (verde) e o que cada uma custa (vermelho)
       const row = el('div', 'story-choices');
       card.choices.forEach((choice, i) => {
-        if (i > 0) row.append(el('span', 'story-choice-or', 'OR'));
+        if (i > 0) row.append(el('span', 'story-choice-or', translate('OR', language)));
         // Opcao com `id` e um botao: tecla no teclado, toque no celular
         const tile = el(choice.id ? 'button' : 'div', choice.id ? 'story-choice is-pick' : 'story-choice');
         if (choice.id) {
           tile.type = 'button';
           tile.addEventListener('click', () => this._choose(choice));
         }
-        const name = el('strong', '', choice.name);
+        const name = el('strong', '', translate(choice.name, language));
         if (choice.key) name.prepend(el('span', 'story-key', `[${choice.key}]`), ' ');
-        tile.append(iconEl(choice.icon, 'story-choice-icon'), name, el('span', 'good', `+ ${choice.good}`), el('span', 'bad', `- ${choice.bad}`));
+        tile.append(iconEl(choice.icon, 'story-choice-icon'), name,
+          el('span', 'good', `+ ${translate(choice.good, language)}`),
+          el('span', 'bad', `- ${translate(choice.bad, language)}`));
         row.append(tile);
       });
       body.append(row);
@@ -450,12 +456,12 @@ export class StoryHud {
 
     for (const line of card.lines ?? []) {
       const row = el('div', 'story-line');
-      row.append(iconEl(line.icon, 'story-line-icon'), this._typedText(line.text));
+      row.append(iconEl(line.icon, 'story-line-icon'), this._typedText(translate(line.text, language)));
       body.append(row);
     }
 
     // Fato real dos eventos aleatorios (issue #107): data e fonte vao no rodape do card
-    if (card.fact) body.append(el('p', 'story-fact', card.fact));
+    if (card.fact) body.append(el('p', 'story-fact', translate(card.fact, language)));
   }
 
   // Frase do card com uma letra por <span>, escondidas ate a maquina de escrever chegar nelas

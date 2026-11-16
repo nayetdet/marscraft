@@ -1,6 +1,7 @@
 import type { MomentScene, MomentView } from '../story/firstTimeMoments.ts';
 import { pixelIconSvg } from './pixelIcons.ts';
 import { hasPixelSprite, pixelSpriteSvg } from './pixelSprites.ts';
+import { getLanguage, translate } from './i18n.ts';
 import './styles/firstTime.css';
 
 // Animacao de "primeira vez" (src/story/firstTimeMoments.ts) e da recompensa "Space science on
@@ -89,16 +90,18 @@ export class FirstTimeHud {
       spark.style.setProperty('--dy', `${Math.round(Math.sin(angle) * reach * 0.6)}px`);
       sparks.append(spark);
     }
-    const stamp = el('div', 'ft-stamp', view.stamp);
-    stamp.classList.toggle('is-long', view.stamp.length > 11);
-    this.burstEl.replaceChildren(sparks, stamp, sceneEl(view.scene), el('div', 'ft-burst-reason', view.reason));
+    const stampText = translate(view.stamp, getLanguage());
+    const stamp = el('div', 'ft-stamp', stampText);
+    stamp.classList.toggle('is-long', stampText.length > 11);
+    this.burstEl.replaceChildren(sparks, stamp, sceneEl(view.scene), el('div', 'ft-burst-reason', translate(view.reason, getLanguage())));
     this.burstEl.classList.remove('hidden');
     void this.burstEl.offsetWidth; // reinicia as animacoes
   }
 
   private showCard(view: MomentView, cardMs: number): void {
+    const language = getLanguage();
     const titles = el('div', 'ft-titles');
-    titles.append(el('small', '', view.stamp), el('strong', '', view.title));
+    titles.append(el('small', '', translate(view.stamp, language)), el('strong', '', translate(view.title, language)));
     const head = el('header', 'ft-head');
     head.append(titles, sceneEl(view.scene));
 
@@ -109,7 +112,7 @@ export class FirstTimeHud {
       const icon = el('span', 'ft-icon');
       icon.setAttribute('aria-hidden', 'true');
       icon.innerHTML = pixelIconSvg(line.icon);
-      row.append(icon, el('span', '', line.text));
+      row.append(icon, el('span', '', translate(line.text, language)));
       lines.append(row);
     });
 
@@ -117,7 +120,8 @@ export class FirstTimeHud {
     timer.setAttribute('aria-hidden', 'true');
     timer.style.setProperty('--ft-ms', `${cardMs}ms`);
 
-    this.cardEl.replaceChildren(head, el('p', 'ft-reason', view.reason), lines, el('small', 'ft-source', `Source: ${view.source}`), timer);
+    this.cardEl.replaceChildren(head, el('p', 'ft-reason', translate(view.reason, language)), lines,
+      el('small', 'ft-source', translate(`Source: ${view.source}`, language)), timer);
     this.cardEl.classList.remove('hidden', 'is-leaving');
     void this.cardEl.offsetWidth;
     this.later(cardMs - LEAVE_MS, () => this.cardEl.classList.add('is-leaving'));

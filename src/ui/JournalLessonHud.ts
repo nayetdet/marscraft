@@ -1,5 +1,6 @@
 import './styles/journalLesson.css';
 import type { JournalVignette } from '../story/acts/act2Text.ts';
+import { getLanguage, translate } from './i18n.ts';
 
 // Aula do diario (ato 2, issue #408): um circulo em volta de uma parte da tela do diario e um
 // card com seta explicando o que ela faz. Uma vinheta por vez; OK, Enter ou toque avancam.
@@ -40,8 +41,9 @@ export class JournalLessonHud {
     if (!this.root) return;
     this.isVisible = true;
     this.target = vignette.target;
-    if (this.titleEl) this.titleEl.textContent = vignette.title;
-    if (this.textEl) this.textEl.textContent = vignette.text;
+    const language = getLanguage();
+    if (this.titleEl) this.titleEl.textContent = translate(vignette.title, language);
+    if (this.textEl) this.textEl.textContent = translate(vignette.text, language);
     if (this.countEl) this.countEl.textContent = `${index + 1} / ${total}`;
     this.root.classList.remove('hidden');
     this.reposition();
