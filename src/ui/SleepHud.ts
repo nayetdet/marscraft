@@ -1,5 +1,6 @@
 // @ts-nocheck
 import './styles/sleep.css';
+import { getLanguage, translate } from './i18n.ts';
 
 // Tela do sono no beliche (issue #109): escolha (ate o nascer do sol ou cochilo), tela escura
 // com o relogio girando enquanto dorme e o card de uma linha ao acordar.
@@ -22,6 +23,10 @@ export class SleepHud {
         <button type="button" class="mc-btn secondary sleep-btn" data-sleep="cancel">Stay awake</button>
       </div>`;
     document.body.appendChild(this.panel);
+    const language = getLanguage();
+    this.panel.querySelector('#sleep-title').textContent = translate('Bunk', language);
+    this.panel.querySelector('.sleep-note').textContent = translate('Sleeping makes time pass fast. Your body still uses food and water. Life support has backup power, so an empty battery will not wake you. Critical alarms will.', language);
+    this.panel.querySelector('[data-sleep="cancel"]').textContent = translate('Stay awake', language);
     this.sunriseBtn = this.panel.querySelector('[data-sleep="sunrise"]');
     this.napBtn = this.panel.querySelector('[data-sleep="nap"]');
     this.panel.addEventListener('click', (event) => {
@@ -64,9 +69,9 @@ export class SleepHud {
     const cost = ({ food, water }) => `food -${Math.round(food)}, water -${Math.round(water)}`;
     this.sunriseBtn.disabled = sunrise.hours <= 0;
     this.sunriseBtn.textContent = sunrise.hours > 0
-      ? `Sleep until sunrise (${formatHours(sunrise.hours)}: ${cost(sunrise)})`
-      : 'Sleep until sunrise (only at night)';
-    this.napBtn.textContent = `Nap (${formatHours(nap.hours)}: ${cost(nap)})`;
+      ? translate(`Sleep until sunrise (${formatHours(sunrise.hours)}: ${cost(sunrise)})`, getLanguage())
+      : translate('Sleep until sunrise (only at night)', getLanguage());
+    this.napBtn.textContent = translate(`Nap (${formatHours(nap.hours)}: ${cost(nap)})`, getLanguage());
     this.isOpen = true;
     this.panel.classList.remove('hidden');
   }
@@ -80,7 +85,8 @@ export class SleepHud {
   showSleeping(timeText, hoursSlept, label = SLEEPING_LABEL) {
     this.fade.classList.remove('hidden');
     this.timeEl.textContent = timeText;
-    if (this.labelEl.textContent !== label) this.labelEl.textContent = label;
+    const localizedLabel = translate(label, getLanguage());
+    if (this.labelEl.textContent !== localizedLabel) this.labelEl.textContent = localizedLabel;
     // O ponteiro da uma volta inteira a cada 12 h de jogo
     this.fade.style.setProperty('--sleep-turn', `${hoursSlept * 30}deg`);
   }
@@ -90,8 +96,8 @@ export class SleepHud {
   }
 
   showWakeCard(line, fact = '') {
-    this.cardLine.textContent = line;
-    this.cardFact.textContent = fact;
+    this.cardLine.textContent = translate(line, getLanguage());
+    this.cardFact.textContent = translate(fact, getLanguage());
     this.cardFact.classList.toggle('hidden', !fact);
     this.card.classList.remove('hidden');
     clearTimeout(this._cardTimer);

@@ -2,6 +2,7 @@
 import { BLOCK_INTERACTION_CONFIG } from '../config/constants.ts';
 import { BLOCK_IDS, SHIP_BLOCK_IDS } from '../config/blockTypes.ts';
 import { applyMouseLook, requestRawPointerLock } from './mouseLook.ts';
+import { getLanguage, translate } from '../ui/i18n.ts';
 
 export function isPauseMenuOpen(pauseOverlay) {
   return !pauseOverlay.classList.contains('hidden');
@@ -565,8 +566,9 @@ export class InputController {
     const startBtn = document.getElementById('start-btn');
     const startLabel = startBtn.querySelector('.menu-button-label');
     const setStartLabel = (label) => {
-      if (startLabel) startLabel.textContent = label;
-      else startBtn.textContent = label;
+      const localizedLabel = translate(label, getLanguage());
+      if (startLabel) startLabel.textContent = localizedLabel;
+      else startBtn.textContent = localizedLabel;
     };
     const resetWorldBtn = document.getElementById('reset-world-btn');
     const quitBtn = document.getElementById('quit-btn');

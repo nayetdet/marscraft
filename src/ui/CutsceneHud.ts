@@ -2,6 +2,8 @@
 // Camada das animacoes (chegada e decolagem): barras de cinema, legenda, titulo grande,
 // fade de tela cheia e o botao de pular. Enquanto ela esta ativa, o HUD do jogo some
 // (classe `cutscene-active` no body).
+import { getLanguage, translate } from './i18n.ts';
+
 const FADE_OUT_MS = 800;
 
 export class CutsceneHud {
@@ -56,15 +58,16 @@ export class CutsceneHud {
   // da tela. `place` e a etiqueta do passeio pela base: o nome do lugar fica sobre a imagem e a
   // frase (`sub`) vai na barra de baixo.
   setCaption(caption) {
+    const language = getLanguage();
     const place = Boolean(caption?.place);
     const big = Boolean(caption?.big) || place;
-    this.captionEl.textContent = !caption ? '' : place ? caption.sub ?? '' : big ? '' : caption.text;
+    this.captionEl.textContent = !caption ? '' : place ? translate(caption.sub ?? '', language) : big ? '' : translate(caption.text, language);
     this.titleEl.classList.toggle('hidden', !big);
     this.titleEl.classList.toggle('is-side', Boolean(caption?.side));
     this.titleEl.classList.toggle('is-place', place);
     if (big) {
-      this.titleMainEl.textContent = caption.text;
-      this.titleSubEl.textContent = place ? '' : caption.sub ?? '';
+      this.titleMainEl.textContent = translate(caption.text, language);
+      this.titleSubEl.textContent = place ? '' : translate(caption.sub ?? '', language);
       // Reinicia a animacao de "pulso" a cada numero da contagem
       this.titleEl.classList.remove('is-popping');
       void this.titleEl.offsetWidth;
