@@ -6,6 +6,8 @@ Built for the [Build a Junior Astronaut Mission Trainer](https://www.spaceappsch
 
 **Play it:** https://mars-craft.vercel.app
 
+![The Mars base and the launch rocket under the radiation shield](docs/images/radiation-shield.jpg)
+
 ## What is in the game
 
 - A five-act story, from the first ice run to the launch back to Earth.
@@ -13,6 +15,17 @@ Built for the [Build a Junior Astronaut Mission Trainer](https://www.spaceappsch
 - Solar storms, dust storms, meteor impacts and marsquakes.
 - A scope to scan Mars, samples to analyze and science to send home.
 - English, Brazilian Portuguese and Spanish, on desktop and on touch screens in landscape.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![An astronaut outside the airlock, with Earth and the Moon in the sky](docs/images/base-and-earth.jpg) | ![The rover on the real terrain of Gale Crater](docs/images/rover-gale-crater.jpg) |
+| The base, with Earth and the Moon in the Mars sky | The rover on terrain measured by HiRISE |
+| ![The base panel and a solar storm warning](docs/images/storm-warning.jpg) | ![A card that says heat at night drains power](docs/images/tradeoff-card.jpg) |
+| A solar storm warning from real NASA DONKI data | Every choice has a cost |
+| ![The greenhouse screen, where each crop costs water and power](docs/images/greenhouse.jpg) | ![The space journal with finds and NASA studies](docs/images/space-journal.jpg) |
+| Growing food costs water and power | The journal, with NASA studies and REAL VS GAME |
 
 ## Controls
 
