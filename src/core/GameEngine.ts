@@ -10,7 +10,7 @@ import { createBoardingCutscene } from '../story/cutscene/boardingCutscene.ts';
 import { ACT3_CONFIG } from '../config/constants.ts';
 import { FIRST_ICE_NO_ICE_TOAST, FIRST_ICE_ROCKET_ID, FIRST_ICE_ROCKET_TOAST, FIRST_ICE_TANK_ID, firstIceCard, firstIceTankToast, firstIceWaterL, restoreFirstIce, saveFirstIce, shouldAskFirstIce } from '../story/firstIceChoice.ts';
 import * as THREE from 'three';
-import { BLOCK_INTERACTION_CONFIG, CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STORY_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, ROVER_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG, WAYPOINT_PATH_CONFIG } from '../config/constants.ts';
+import { BLOCK_INTERACTION_CONFIG, CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STORY_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, ROVER_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
 import { separateCrew } from '../crew/separateCrew.ts';
 import { CrewManager } from '../crew/CrewManager.ts';
 import { CrewAvatar } from '../crew/CrewAvatar.ts';
@@ -2687,14 +2687,11 @@ export class GameEngine {
       const roverActive = this.roverController.isActive;
       const startPos = roverActive ? this.roverController.pos : this.player.pos;
       const startY = roverActive ? startPos.y : startPos.y - this.player.height;
-      const thirsty = this.survival.water <= SURVIVAL_CONFIG.THIRST_GUIDANCE_THRESHOLD;
-      const thirstTarget = this.waypoints[routeWaypoint('water', inside)];
       this.waypointPath.update({
         dt,
-        color: thirsty ? WAYPOINT_PATH_CONFIG.THIRST_COLOR : WAYPOINT_PATH_CONFIG.COLOR,
         // Com gelo a bordo, o mesmo caminho das quests ajuda a voltar a doca de agua.
         // Alertas da missao continuam tendo prioridade sobre o retorno.
-        target: thirsty ? thirstTarget : roverActive && this.roverController.iceCargo > 0 && !alertPlace
+        target: roverActive && this.roverController.iceCargo > 0 && !alertPlace
           ? WATER_SYSTEM_CONFIG.ICE_DEPOT_POS
           : target,
         startX: startPos.x,

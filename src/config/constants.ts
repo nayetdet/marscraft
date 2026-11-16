@@ -229,8 +229,6 @@ export const SURVIVAL_CONFIG = {
   FOOD_DRAIN_RATE: statDrainPerSecond(TIME_SCALE_CONFIG.PLAYER_FOOD_HOURS),
   STARVE_DAMAGE_RATE: 0.8,
   DANGER_THRESHOLD: 5,
-  THIRST_GUIDANCE_THRESHOLD: 25, // avisa com tempo para voltar ao bebedouro
-
   DAMAGE_FEEDBACK_SECONDS: 0.8,
   DAMAGE_SHAKE_AMPLITUDE: 0.09,
   DAMAGE_SHAKE_RATE: 42,
@@ -773,7 +771,6 @@ export const STORY_CONFIG = {
 
 // Caminho tracejado amarelo no chao guiando o jogador ate o objetivo atual.
 export const WAYPOINT_PATH_CONFIG = {
-  THIRST_COLOR: 0x80dfff,
   COLOR: 0xffcf3a,
   OPACITY: 0.3,
   DASH_LENGTH: 0.46,
