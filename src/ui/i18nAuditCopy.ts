@@ -6,6 +6,8 @@ type Row = readonly [en: string, ptBr: string, es: string];
 
 const COPY: readonly Row[] = [
   // Base decor and prompts
+  ['[F] Exit the rover', '[F] Sair do rover', '[F] Salir del rover'],
+  ['Tap TALK to exit the rover', 'Toque em FALAR para sair do rover', 'Toca HABLAR para salir del rover'],
   ['BASE WATER', 'ÁGUA DA BASE', 'AGUA DE LA BASE'],
   ['[F] Check the water tank', '[F] Ver o tanque de água', '[F] Ver el tanque de agua'],
   ['Check the water tank', 'Ver o tanque de água', 'Ver el tanque de agua'],

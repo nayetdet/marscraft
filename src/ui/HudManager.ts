@@ -182,9 +182,9 @@ export class HudManager {
     }
     if (this.astronautInfoEl) this.astronautInfoEl.classList.toggle('hidden', active);
     if (this.roverInfoEl) this.roverInfoEl.classList.toggle('hidden', !active);
-    if (this.interactionPromptEl && active) {
-      this.interactionPromptEl.classList.add('hidden');
-    }
+    this.setInteractionPrompt(active, document.body.classList.contains('touch-mode')
+      ? 'Tap TALK to exit the rover'
+      : '[F] Exit the rover');
     if (active) {
       this.suitportHoloEl?.classList.add('hidden');
     }
