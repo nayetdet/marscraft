@@ -301,7 +301,7 @@ export class ScannerHud {
     if (state.done && entry.status) {
       this._setText(this.statusEl, 'status', entry.status);
     } else if (state.done) {
-      this._setText(this.statusEl, 'status', alreadyKnown ? 'Scan complete · in journal [J]' : 'Scan complete!');
+      this._setText(this.statusEl, 'status', alreadyKnown ? 'Scan complete · in journal' : 'Scan complete!');
     } else {
       const pct = Math.floor(state.progress * 100);
       this._setText(this.statusEl, 'status', `${alreadyKnown ? 'Re-scanning' : 'Scanning'} ${getCategoryLabel(entry.category).toLowerCase()}... ${pct}%`);
