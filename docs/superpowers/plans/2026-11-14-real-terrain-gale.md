@@ -18,7 +18,7 @@
 - Game axes: east is `+x`, north is `-z`. World is 224 × 48 × 224, `GROUND_LEVEL` is 8.
 - Product: `DTEEC_010573_1755_010639_1755_U01`; window center 4.474328°S, 137.403232°E; resolution 1.0118 m per pixel, so UI says "about 1 meter".
 - Conventional Commits. Never push to `main`.
-- Run commands from the worktree `C:/Users/deric/orca/workspaces/nasa-space-apps/terreno-real`.
+- Run commands from the `terreno-real` worktree of this repository.
 
 ## File Structure
 
