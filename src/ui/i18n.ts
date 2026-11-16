@@ -12,6 +12,7 @@ import { RESEARCH_COPY_ES, RESEARCH_COPY_PT_BR } from './i18nResearchCopy.ts';
 import { SCANNER_COPY_ES, SCANNER_COPY_PT_BR } from './i18nScannerCopy.ts';
 import { HUD_COPY_ES, HUD_COPY_PT_BR } from './i18nHudCopy.ts';
 import { CORE_COPY_ES, CORE_COPY_PT_BR } from './i18nCoreCopy.ts';
+import { AUDIT_COPY_ES, AUDIT_COPY_PT_BR, AUDIT_PATTERNS } from './i18nAuditCopy.ts';
 
 export const LANGUAGE_STORAGE_KEY = 'marscraft.language';
 
@@ -27,6 +28,7 @@ export const LANGUAGE_LABELS: Record<Language, string> = {
 // English is the source key. Keep every visible string that is translated here in
 // both catalogs; checkTranslationCoverage() makes missing language entries testable.
 const PT_BR: Record<string, string> = {
+  ...AUDIT_COPY_PT_BR, // first, so the older catalogs below win when a key is in both
   ...GAMEPLAY_PT_BR,
   ...GAMEPLAY_EXT_PT_BR,
   ...STATION_COPY_PT_BR,
@@ -229,6 +231,7 @@ const PT_BR: Record<string, string> = {
 };
 
 const ES: Record<string, string> = {
+  ...AUDIT_COPY_ES,
   ...GAMEPLAY_ES,
   ...GAMEPLAY_EXT_ES,
   ...STATION_COPY_ES,
@@ -2403,6 +2406,11 @@ const DYNAMIC_PATTERNS: Array<{
       ? '1 dia real de percurso da tempestade = 1 hora de aviso no jogo. As tempestades vêm de dados reais do NASA DONKI.'
       : '1 día real de recorrido de la tormenta = 1 hora de aviso en el juego. Las tormentas provienen de datos reales de NASA DONKI.',
   },
+  // Last, so the hand-written patterns above win: templates from the localization audit
+  ...AUDIT_PATTERNS.map((pattern) => ({
+    match: pattern.match,
+    format: (parts: RegExpMatchArray, language: Language) => pattern.format(parts, language as 'pt-BR' | 'es', translate),
+  })),
 ];
 
 export function isLanguage(value: unknown): value is Language {
@@ -2441,7 +2449,7 @@ export function checkTranslationCoverage(): Record<Exclude<Language, 'en'>, stri
 }
 
 export function checkGameplayTranslationCoverage(): Record<Exclude<Language, 'en'>, string[]> {
-  const ptBr = { ...GAMEPLAY_PT_BR, ...GAMEPLAY_EXT_PT_BR };
+  const ptBr = { ...AUDIT_COPY_PT_BR, ...GAMEPLAY_PT_BR, ...GAMEPLAY_EXT_PT_BR };
   Object.assign(ptBr, STATION_COPY_PT_BR);
   Object.assign(ptBr, SCIENCE_COPY_PT_BR);
   Object.assign(ptBr, RESEARCH_COPY_PT_BR);
@@ -2450,7 +2458,7 @@ export function checkGameplayTranslationCoverage(): Record<Exclude<Language, 'en
   Object.assign(ptBr, CORE_COPY_PT_BR);
   Object.assign(ptBr, STORY_PT_BR, ACT_STEPS_PT_BR, GYM_PT_BR, STORY_MORE_PT_BR, CUTSCENE_PT_BR, FIRST_ICE_PT_BR, STORM_SCANS_PT_BR);
   const es = {
-    ...GAMEPLAY_ES, ...GAMEPLAY_EXT_ES, ...STATION_COPY_ES, ...SCIENCE_COPY_ES, ...RESEARCH_COPY_ES,
+    ...AUDIT_COPY_ES, ...GAMEPLAY_ES, ...GAMEPLAY_EXT_ES, ...STATION_COPY_ES, ...SCIENCE_COPY_ES, ...RESEARCH_COPY_ES,
     ...SCANNER_COPY_ES, ...HUD_COPY_ES, ...CORE_COPY_ES, ...STORY_ES, ...ACT_STEPS_ES, ...GYM_ES, ...STORY_MORE_ES,
     ...CUTSCENE_ES, ...FIRST_ICE_ES, ...STORM_SCANS_ES,
   };
