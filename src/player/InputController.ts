@@ -35,8 +35,7 @@ export function returnToStartMenu(input, {
   menuCardHome.append(menuCard);
   setStartLabel('Play');
   menuMain.classList.remove('hidden');
-  menuMain.closest('.mc-menu').classList.remove('is-controls', 'is-character');
-  input.onReturnToStartMenu?.();
+  menuMain.closest('.mc-menu').classList.remove('is-controls');
   overlay.classList.remove('menu-info-open');
   overlay.classList.remove('hidden');
   pauseOverlay.classList.add('hidden');
@@ -82,8 +81,6 @@ export class InputController {
     onBlockBroken = () => {},
     onFoodConsumed = () => {},
     onWaterConsumed = () => {},
-    onRequestCharacterSetup = null,
-    onReturnToStartMenu = () => {},
   }) {
     this.onToggleShield = onToggleShield;
     this.onToggleThirdPerson = onToggleThirdPerson;
@@ -124,8 +121,6 @@ export class InputController {
     this.onBlockBroken = onBlockBroken;
     this.onFoodConsumed = onFoodConsumed;
     this.onWaterConsumed = onWaterConsumed;
-    this.onRequestCharacterSetup = onRequestCharacterSetup;
-    this.onReturnToStartMenu = onReturnToStartMenu;
 
     this.keys = {};
     this.isLocked = false;
@@ -642,7 +637,6 @@ export class InputController {
     };
 
     startBtn.addEventListener('click', () => {
-      if (!this.hasStarted && this.onRequestCharacterSetup?.(() => resumeGame())) return;
       resumeGame();
     });
 

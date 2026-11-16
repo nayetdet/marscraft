@@ -1583,7 +1583,8 @@
 }
 
 .touch-mode.game-paused .mobile-controls,
-.touch-mode.inventory-open .mobile-controls {
+.touch-mode.inventory-open .mobile-controls,
+.touch-mode.character-open .mobile-controls {
   display: none;
 }
 

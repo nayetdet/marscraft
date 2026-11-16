@@ -1281,6 +1281,11 @@ body.touch-device .mc-menu.is-controls .controls-screen > .mc-btn { min-height: 
 }
 
 /* Character customization screen styled to match the Inventory panels & menu typography */
+.character-overlay {
+  z-index: 34;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
 .mc-overlay:has(.character-screen:not(.hidden)) {
   padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
 }

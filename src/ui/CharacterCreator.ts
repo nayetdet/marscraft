@@ -104,7 +104,7 @@ function hairLengthTemplateSvg(length: PlayerHairLength): string {
 }
 
 /**
- * Interactive astronaut character customization screen shown when clicking Play from the start menu.
+ * Interactive astronaut character customization overlay shown once after the arrival cutscene.
  */
 export class CharacterCreator {
   private appearance: PlayerAppearance;
@@ -113,10 +113,9 @@ export class CharacterCreator {
   private onChange?: (appearance: PlayerAppearance) => void;
   private onUiClick?: () => void;
 
-  private menuMain: HTMLElement | null;
+  private overlay: HTMLElement | null;
   private screen: HTMLElement | null;
   private optionsRoot: HTMLElement | null;
-  private backBtn: HTMLElement | null;
   private startBtn: HTMLElement | null;
   private suitIvaBtn: HTMLElement | null;
   private suitEvaBtn: HTMLElement | null;
@@ -127,10 +126,9 @@ export class CharacterCreator {
     this.onChange = options.onChange;
     this.onUiClick = options.onUiClick;
 
-    this.menuMain = typeof document !== 'undefined' ? document.getElementById('menu-main') : null;
+    this.overlay = typeof document !== 'undefined' ? document.getElementById('character-overlay') : null;
     this.screen = typeof document !== 'undefined' ? document.getElementById('character-screen') : null;
     this.optionsRoot = typeof document !== 'undefined' ? document.getElementById('character-options') : null;
-    this.backBtn = typeof document !== 'undefined' ? document.getElementById('character-back-btn') : null;
     this.startBtn = typeof document !== 'undefined' ? document.getElementById('character-start-btn') : null;
     this.suitIvaBtn = typeof document !== 'undefined' ? document.getElementById('char-suit-iva') : null;
     this.suitEvaBtn = typeof document !== 'undefined' ? document.getElementById('char-suit-eva') : null;
@@ -161,6 +159,7 @@ export class CharacterCreator {
   }
 
   isOpen(): boolean {
+    if (this.overlay) return !this.overlay.classList.contains('hidden');
     return Boolean(this.screen && !this.screen.classList.contains('hidden'));
   }
 
@@ -173,23 +172,17 @@ export class CharacterCreator {
     this.preview?.setAppearance(buildPlayerCadetProfile(this.appearance));
     this.preview?.setState({ equipped: this.previewSuitEquipped });
 
-    if (this.menuMain && this.screen) {
-      this.menuMain.classList.add('hidden');
-      this.screen.classList.remove('hidden');
-      this.menuMain.closest('.mc-menu')?.classList.add('is-character');
-      this.menuMain.closest('.mc-overlay')?.classList.add('menu-info-open');
-    }
+    this.overlay?.classList.remove('hidden');
+    this.screen?.classList.remove('hidden');
+    if (typeof document !== 'undefined') document.body?.classList?.add('character-open');
     this.preview?.start();
   }
 
   close(): void {
     this.preview?.stop();
-    if (this.screen && this.menuMain) {
-      this.screen.classList.add('hidden');
-      this.menuMain.classList.remove('hidden');
-      this.menuMain.closest('.mc-menu')?.classList.remove('is-character');
-      this.menuMain.closest('.mc-overlay')?.classList.remove('menu-info-open');
-    }
+    this.screen?.classList.add('hidden');
+    this.overlay?.classList.add('hidden');
+    if (typeof document !== 'undefined') document.body?.classList?.remove('character-open');
   }
 
   private _renderOptions(): void {
@@ -275,11 +268,6 @@ export class CharacterCreator {
 
     this.suitIvaBtn?.addEventListener('click', () => setSuitPreview(false));
     this.suitEvaBtn?.addEventListener('click', () => setSuitPreview(true));
-
-    this.backBtn?.addEventListener('click', () => {
-      this.onUiClick?.();
-      this.close();
-    });
 
     this.startBtn?.addEventListener('click', () => {
       this.onUiClick?.();
