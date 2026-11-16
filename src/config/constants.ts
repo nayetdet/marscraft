@@ -229,6 +229,8 @@ export const SURVIVAL_CONFIG = {
   FOOD_DRAIN_RATE: statDrainPerSecond(TIME_SCALE_CONFIG.PLAYER_FOOD_HOURS),
   STARVE_DAMAGE_RATE: 0.8,
   DANGER_THRESHOLD: 5,
+  THIRST_GUIDANCE_THRESHOLD: 25, // avisa com tempo para voltar ao bebedouro
+
   DAMAGE_FEEDBACK_SECONDS: 0.8,
   DAMAGE_SHAKE_AMPLITUDE: 0.09,
   DAMAGE_SHAKE_RATE: 42,
@@ -245,6 +247,7 @@ export const SURVIVAL_CONFIG = {
   // Suit telemetry, CO2 scrubber, perchlorate dust, and armor-style wear (issue #167).
   SUIT_OXYGEN_DRAIN_PER_SECOND: 100 / 240, // 4 min full EVA tank -> 94% ~= 3m 45s
   SUIT_OXYGEN_RECHARGE_PER_SECOND: 15, // % per second while docked or inside pressurized base
+  SUIT_INTEGRITY_WARN_THRESHOLD: 25, // integridade baixa no HUD e no aviso
   SUIT_OXYGEN_WARN_THRESHOLD: 30, // % outside warning trigger
   SUIT_OXYGEN_MIN_READY: 20, // minimum % to start EVA from Suitport
   SUIT_THERMAL_MIN_READY: 20,
@@ -729,6 +732,7 @@ export const STATION_CONFIG = {
   MEDBAY_HEAL_PER_HOUR: 2, // pontos de vida por hora de jogo
   MEDBAY_LOW_HEALTH: 8,
   FILTER_DECAY: 0.2, CO2_RISE: 0.08, CO2_CLEAR: 0.12,
+  FILTER_WARNING_THRESHOLD: 30,
   DUST_DAMAGE: 0.015, DECONTAMINATION_COST: 1, FILTER_COST: 2,
   EXERCISE_COST: 2, TREATMENT_COST: 3,
   COMMS_COST: 2, COMMS_DELAY: 40,
@@ -769,6 +773,7 @@ export const STORY_CONFIG = {
 
 // Caminho tracejado amarelo no chao guiando o jogador ate o objetivo atual.
 export const WAYPOINT_PATH_CONFIG = {
+  THIRST_COLOR: 0x80dfff,
   COLOR: 0xffcf3a,
   OPACITY: 0.3,
   DASH_LENGTH: 0.46,

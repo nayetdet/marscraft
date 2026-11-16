@@ -216,6 +216,18 @@ describe('game language catalog', () => {
       .toBe('Aún no hay nada. Escanea con la mira o trae muestras del mapa.');
   });
 
+  it('translates the guidance notices in both languages', () => {
+    const notices = [
+      'You are thirsty! Follow the blue dashed line to drink water.',
+      'Scanning earns science points!',
+      'Air filter low!', 'At life support, select Filter.',
+      'Suit protection low!', 'Repair your suit at the suitport.',
+    ];
+    for (const language of ['pt-BR', 'es'] as const) {
+      for (const notice of notices) expect(translate(notice, language), notice).not.toBe(notice);
+    }
+  });
+
   it('translates every dynamic message found by the localization audit, keeping its values', () => {
     for (const language of ['pt-BR', 'es'] as const) {
       const untranslated = AUDIT_TEMPLATE_SAMPLES.filter((sample) => translate(sample, language) === sample);

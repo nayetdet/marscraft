@@ -1,5 +1,6 @@
 // Compact HUD, station, suit, mission and interaction copy outside the menus.
 export const HUD_COPY_PT_BR: Record<string, string> = {
+  'You are thirsty! Follow the blue dashed line to drink water.': 'Você está com sede! Siga a linha azul tracejada para beber água.',
   '[F] DOCK EVA SUIT': '[F] ACOPLAR O TRAJE EVA', '[R] EMERGENCY PATCH': '[R] REMENDO DE EMERGÊNCIA',
   '[Enter]': '[Enter]', 'BASE O2': 'O₂ DA BASE', 'Base status': 'Estado da base', 'CRAFT': 'FABRICAR',
   'Discovered': 'Descoberto', 'ICE GPS': 'GPS DO GELO', 'LOW': 'BAIXO', 'Mouse': 'Mouse',
@@ -121,6 +122,7 @@ export const HUD_COPY_PT_BR: Record<string, string> = {
 };
 
 export const HUD_COPY_ES: Record<string, string> = {
+  'You are thirsty! Follow the blue dashed line to drink water.': '¡Tienes sed! Sigue la línea azul discontinua para beber agua.',
   '[F] DOCK EVA SUIT': '[F] ACOPLAR EL TRAJE EVA', '[R] EMERGENCY PATCH': '[R] PARCHE DE EMERGENCIA',
   '[Enter]': '[Enter]', 'BASE O2': 'O₂ DE LA BASE', 'Base status': 'Estado de la base', 'CRAFT': 'FABRICAR',
   'Discovered': 'Descubierto', 'ICE GPS': 'GPS DEL HIELO', 'LOW': 'BAJO', 'Mouse': 'Ratón',

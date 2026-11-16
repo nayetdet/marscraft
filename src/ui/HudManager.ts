@@ -642,7 +642,9 @@ export class HudManager {
     if (survival.water <= threshold) warnings.push('WATER');
     if (survival.health <= threshold) warnings.push('HEALTH');
 
-    const text = warnings.map((resource) => `LOW ${resource}`).join(' · ');
+    const thirsty = survival.water <= SURVIVAL_CONFIG.THIRST_GUIDANCE_THRESHOLD;
+    const text = [warnings.map((resource) => `LOW ${resource}`).join(' · '),
+      thirsty ? translate('You are thirsty! Follow the blue dashed line to drink water.', getLanguage()) : ''].filter(Boolean).join(' · ');
     if (text !== this._dangerWarningText) {
       this._dangerWarningText = text;
       if (this.dangerWarningMessageEl) this.dangerWarningMessageEl.textContent = text;
@@ -952,7 +954,7 @@ export class HudManager {
     this.suitIntegrityRowEl.hidden = !suitEquipped;
     this._updateIconBar(this.suitIntegrityBar, integrityBarVal);
     this.suitIntegrityEl.title = suitEquipped ? `Suit integrity: ${integrityPct}%` : 'EVA suit docked';
-    this.suitIntegrityEl.classList.toggle('low', suitEquipped && integrityPct <= 25);
+    this.suitIntegrityEl.classList.toggle('low', suitEquipped && integrityPct <= SURVIVAL_CONFIG.SUIT_INTEGRITY_WARN_THRESHOLD);
     if (suitEquipped) {
       this.suitIntegrityEl.setAttribute('role', 'meter');
       this.suitIntegrityEl.setAttribute('aria-valuenow', String(integrityPct));
