@@ -29,7 +29,8 @@ export const LANGUAGE_LABELS: Record<Language, string> = {
 // English is the source key. Keep every visible string that is translated here in
 // both catalogs; checkTranslationCoverage() makes missing language entries testable.
 const PT_BR: Record<string, string> = {
-  ...AUDIT_COPY_PT_BR, // first, so the older catalogs below win when a key is in both
+  ...MORE_COPY_PT_BR,
+  ...AUDIT_COPY_PT_BR, // curated audit copy wins when a key appears in both catalogs
   ...GAMEPLAY_PT_BR,
   ...GAMEPLAY_EXT_PT_BR,
   ...STATION_COPY_PT_BR,
@@ -38,7 +39,6 @@ const PT_BR: Record<string, string> = {
   ...SCANNER_COPY_PT_BR,
   ...HUD_COPY_PT_BR,
   ...CORE_COPY_PT_BR,
-  ...MORE_COPY_PT_BR,
   ...STORY_PT_BR,
   ...ACT_STEPS_PT_BR,
   ...GYM_PT_BR,
@@ -233,6 +233,7 @@ const PT_BR: Record<string, string> = {
 };
 
 const ES: Record<string, string> = {
+  ...MORE_COPY_ES,
   ...AUDIT_COPY_ES,
   ...GAMEPLAY_ES,
   ...GAMEPLAY_EXT_ES,
@@ -242,7 +243,6 @@ const ES: Record<string, string> = {
   ...SCANNER_COPY_ES,
   ...HUD_COPY_ES,
   ...CORE_COPY_ES,
-  ...MORE_COPY_ES,
   ...STORY_ES,
   ...ACT_STEPS_ES,
   ...GYM_ES,
@@ -1068,7 +1068,7 @@ const DYNAMIC_PATTERNS: Array<{
     match: /^Journal rank: (.+)$/,
     format: ([, rank], language) => language === 'pt-BR'
       ? `Patente no diário: ${translate(rank, language)}`
-      : `Rango en el diario: ${translate(rank, language)}`,
+      : `Rango del diario: ${translate(rank, language)}`,
   },
   {
     match: /^Coolest finds: (.+)$/,
@@ -2508,18 +2508,17 @@ export function checkTranslationCoverage(): Record<Exclude<Language, 'en'>, stri
 }
 
 export function checkGameplayTranslationCoverage(): Record<Exclude<Language, 'en'>, string[]> {
-  const ptBr = { ...AUDIT_COPY_PT_BR, ...GAMEPLAY_PT_BR, ...GAMEPLAY_EXT_PT_BR };
+  const ptBr = { ...MORE_COPY_PT_BR, ...AUDIT_COPY_PT_BR, ...GAMEPLAY_PT_BR, ...GAMEPLAY_EXT_PT_BR };
   Object.assign(ptBr, STATION_COPY_PT_BR);
   Object.assign(ptBr, SCIENCE_COPY_PT_BR);
   Object.assign(ptBr, RESEARCH_COPY_PT_BR);
   Object.assign(ptBr, SCANNER_COPY_PT_BR);
   Object.assign(ptBr, HUD_COPY_PT_BR);
   Object.assign(ptBr, CORE_COPY_PT_BR);
-  Object.assign(ptBr, MORE_COPY_PT_BR);
   Object.assign(ptBr, STORY_PT_BR, ACT_STEPS_PT_BR, GYM_PT_BR, STORY_MORE_PT_BR, CUTSCENE_PT_BR, FIRST_ICE_PT_BR, STORM_SCANS_PT_BR);
   const es = {
-    ...AUDIT_COPY_ES, ...GAMEPLAY_ES, ...GAMEPLAY_EXT_ES, ...STATION_COPY_ES, ...SCIENCE_COPY_ES, ...RESEARCH_COPY_ES,
-    ...SCANNER_COPY_ES, ...HUD_COPY_ES, ...CORE_COPY_ES, ...MORE_COPY_ES, ...STORY_ES, ...ACT_STEPS_ES, ...GYM_ES, ...STORY_MORE_ES,
+    ...MORE_COPY_ES, ...AUDIT_COPY_ES, ...GAMEPLAY_ES, ...GAMEPLAY_EXT_ES, ...STATION_COPY_ES, ...SCIENCE_COPY_ES, ...RESEARCH_COPY_ES,
+    ...SCANNER_COPY_ES, ...HUD_COPY_ES, ...CORE_COPY_ES, ...STORY_ES, ...ACT_STEPS_ES, ...GYM_ES, ...STORY_MORE_ES,
     ...CUTSCENE_ES, ...FIRST_ICE_ES, ...STORM_SCANS_ES,
   };
   const allEnglishCopy = { ...ptBr, ...es };
