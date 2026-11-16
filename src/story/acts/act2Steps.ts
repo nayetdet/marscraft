@@ -126,7 +126,7 @@ export const ACT2_STEPS: Act2Step[] = [
     place: null,
     objective: 'Open your journal and follow the 3 tips',
     lines: [
-      { icon: 'check', text: 'Select the journal in your hotbar, then right-click or tap USE' },
+      { icon: 'check', text: 'Select the journal, then right-click or tap USE' },
       { icon: 'scope', text: 'It keeps everything you scan' },
       { icon: 'medal', text: 'Follow the circles: 3 quick tips' },
     ],

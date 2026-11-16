@@ -49,14 +49,6 @@ export const SHIP_BLOCK_IDS = Object.freeze([
 
 export const HOTBAR_BLOCKS = [
   {
-    id: BLOCK_IDS.SCOPE,
-    name: 'Scope Scanner',
-    // A crianca nao comeca com a luneta: o engenheiro de voo entrega no ato 2 (#408)
-    initialCount: 0,
-    consumable: null,
-    equipment: true,
-  },
-  {
     id: BLOCK_IDS.JOURNAL,
     name: 'Discovery Journal (Use to open)',
     initialCount: 1,
@@ -75,6 +67,14 @@ export const HOTBAR_BLOCKS = [
     name: 'Mars Carrot (Right-click to eat)',
     initialCount: 3,
     consumable: { type: 'food', amount: 6, heal: 2 },
+  },
+  {
+    id: BLOCK_IDS.SCOPE,
+    name: 'Scope Scanner',
+    // A crianca nao comeca com a luneta: o engenheiro de voo entrega no ato 2 (#408)
+    initialCount: 0,
+    consumable: null,
+    equipment: true,
   },
   {
     id: BLOCK_IDS.REGOLITH,

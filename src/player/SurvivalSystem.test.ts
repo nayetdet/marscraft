@@ -148,16 +148,15 @@ describe('SurvivalSystem', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('starts with the equipment before the carrots, and without the scope (the engineer hands it over in act 2)', () => {
+  it('starts with the journal, shield remote, and carrots in the first three slots, without the scope', () => {
     const survival = new SurvivalSystem();
-    expect(survival.slots[0]).toBeNull();
+    expect(survival.slots[0]).toMatchObject({ id: BLOCK_IDS.JOURNAL, count: 1, equipment: true });
+    expect(survival.slots[1]).toMatchObject({ id: BLOCK_IDS.SHIELD_REMOTE, count: 1, equipment: true });
+    expect(survival.slots[2]).toMatchObject({ id: BLOCK_IDS.HYDRO_PLANT, count: 3 });
     expect(survival.countItem(BLOCK_IDS.SCOPE)).toBe(0);
-    // A luneta entregue cai no primeiro espaco livre: o primeiro da hotbar
+    // A luneta entregue no ato 2 cai no primeiro espaco livre da hotbar.
     expect(survival.addBlockToInventory(BLOCK_IDS.SCOPE)).toBe(true);
-    expect(survival.slots[0]).toMatchObject({ id: BLOCK_IDS.SCOPE, count: 1, equipment: true });
-    expect(survival.slots[1]).toMatchObject({ id: BLOCK_IDS.JOURNAL, count: 1, equipment: true });
-    expect(survival.slots[2]).toMatchObject({ id: BLOCK_IDS.SHIELD_REMOTE, count: 1, equipment: true });
-    expect(survival.slots[3]?.id).toBe(BLOCK_IDS.HYDRO_PLANT);
+    expect(survival.slots[3]).toMatchObject({ id: BLOCK_IDS.SCOPE, count: 1, equipment: true });
   });
 
   it('detects player inside Main White Habitat, Pressurized Tunnel, and Greenhouse Dome', () => {
