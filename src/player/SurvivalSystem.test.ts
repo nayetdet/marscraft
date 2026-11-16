@@ -84,10 +84,23 @@ describe('SurvivalSystem', () => {
     const survival = new SurvivalSystem();
     survival.suitIntegrity = 0;
     survival.update(5, { x: 0, y: 11.7, z: 25 }, 100, false);
-    expect(survival.oxygen).toBeLessThan(survival.maxStat);
+    expect(survival.oxygen).toBeCloseTo(survival.maxStat - 5 * SURVIVAL_CONFIG.BREACH_OXYGEN_DRAIN_RATE, 5);
 
     survival.update(2, { x: -18, y: 11.7, z: 0 }, 100, false);
     expect(survival.oxygen).toBeGreaterThan(survival.maxStat - 5 * SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE);
+  });
+
+  it('drains personal oxygen at the same breach rate when all suit shields run out outside as when the base is breached', () => {
+    const wornSuit = new SurvivalSystem();
+    wornSuit.suitIntegrity = 0;
+    wornSuit.update(4, { x: 35, y: 11, z: 35 }, 100, false);
+
+    const breachedBase = new SurvivalSystem();
+    breachedBase.suitOxygen = 0;
+    breachedBase.update(4, { x: 0, y: 11.7, z: 0 }, 100, true);
+
+    expect(wornSuit.oxygen).toBeCloseTo(breachedBase.oxygen, 5);
+    expect(wornSuit.oxygen).toBeCloseTo(wornSuit.maxStat - 4 * SURVIVAL_CONFIG.BREACH_OXYGEN_DRAIN_RATE, 5);
   });
 
   it('starts with a journal that cannot be placed or consumed', () => {

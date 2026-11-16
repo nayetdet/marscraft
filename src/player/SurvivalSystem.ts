@@ -182,8 +182,9 @@ export class SurvivalSystem {
 
         // Minecraft-armor rule: while the EVA suit is intact and has suit O2, personal O2 is protected.
         // Once the suit wears out (0% integrity) or runs out of suit O2, personal O2 drains.
+        // A worn-out suit (0% integrity) leaks at the same breach rate as a depressurized base.
         if (!suitWasProtecting || this.suitIntegrity <= 0 || this.suitOxygen <= 0) {
-          const personalDrain = this.insidePressurizedShip && baseBreached
+          const personalDrain = (this.insidePressurizedShip && baseBreached) || this.suitIntegrity <= 0
             ? SURVIVAL_CONFIG.BREACH_OXYGEN_DRAIN_RATE
             : SURVIVAL_CONFIG.OXYGEN_DRAIN_RATE;
           this.oxygen = Math.max(0, this.oxygen - personalDrain * dt);

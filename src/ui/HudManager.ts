@@ -807,8 +807,9 @@ export class HudManager {
     this._updateIconBar(oxygenBar, survival.oxygen);
     const suitEquipped = Boolean(survival.suitEquipped);
     const integrityPct = Math.max(0, Math.min(100, Math.ceil(survival.suitIntegrity ?? 100)));
+    const integrityBarVal = suitEquipped ? (integrityPct > 0 ? Math.max(1, integrityPct / 5) : 0) : 0;
     this.suitIntegrityRowEl.hidden = !suitEquipped;
-    this._updateIconBar(this.suitIntegrityBar, suitEquipped ? integrityPct / 5 : 0);
+    this._updateIconBar(this.suitIntegrityBar, integrityBarVal);
     this.suitIntegrityEl.title = suitEquipped ? `Suit integrity: ${integrityPct}%` : 'EVA suit docked';
     this.suitIntegrityEl.classList.toggle('low', suitEquipped && integrityPct <= 25);
     if (suitEquipped) {
