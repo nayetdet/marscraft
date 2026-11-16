@@ -13,6 +13,7 @@ import { SCANNER_COPY_ES, SCANNER_COPY_PT_BR } from './i18nScannerCopy.ts';
 import { HUD_COPY_ES, HUD_COPY_PT_BR } from './i18nHudCopy.ts';
 import { CORE_COPY_ES, CORE_COPY_PT_BR } from './i18nCoreCopy.ts';
 import { AUDIT_COPY_ES, AUDIT_COPY_PT_BR, AUDIT_PATTERNS } from './i18nAuditCopy.ts';
+import { MORE_COPY_ES, MORE_COPY_PT_BR } from './i18nMoreCopy.ts';
 
 export const LANGUAGE_STORAGE_KEY = 'marscraft.language';
 
@@ -28,7 +29,8 @@ export const LANGUAGE_LABELS: Record<Language, string> = {
 // English is the source key. Keep every visible string that is translated here in
 // both catalogs; checkTranslationCoverage() makes missing language entries testable.
 const PT_BR: Record<string, string> = {
-  ...AUDIT_COPY_PT_BR, // first, so the older catalogs below win when a key is in both
+  ...MORE_COPY_PT_BR,
+  ...AUDIT_COPY_PT_BR, // curated audit copy wins when a key appears in both catalogs
   ...GAMEPLAY_PT_BR,
   ...GAMEPLAY_EXT_PT_BR,
   ...STATION_COPY_PT_BR,
@@ -231,6 +233,7 @@ const PT_BR: Record<string, string> = {
 };
 
 const ES: Record<string, string> = {
+  ...MORE_COPY_ES,
   ...AUDIT_COPY_ES,
   ...GAMEPLAY_ES,
   ...GAMEPLAY_EXT_ES,
@@ -1028,8 +1031,64 @@ const DYNAMIC_PATTERNS: Array<{
     format: ([, value], language) => language === 'pt-BR' ? `GELO ${value} blocos` : `HIELO ${value} bloques`,
   },
   {
+    match: /^Battery: (.+)% \(charging from the base\)$/,
+    format: ([, value], language) => language === 'pt-BR'
+      ? `Bateria: ${value}% (carregando na base)`
+      : `Batería: ${value}% (cargando desde la base)`,
+  },
+  {
+    match: /^Battery: (.+)% \(LOW: slow, cannot drill\)$/,
+    format: ([, value], language) => language === 'pt-BR'
+      ? `Bateria: ${value}% (BAIXA: lenta, não perfura)`
+      : `Batería: ${value}% (BAJA: lenta, no puede perforar)`,
+  },
+  {
     match: /^Battery: (.+)$/,
     format: ([, value], language) => language === 'pt-BR' ? `Bateria: ${value}` : `Batería: ${value}`,
+  },
+  {
+    match: /^Ice hold is full \((.+)kg\)\. Offload at Habitat Bay!$/,
+    format: ([, amount], language) => language === 'pt-BR'
+      ? `O compartimento de gelo está cheio (${amount} kg). Descarregue na baia do habitat!`
+      : `El compartimento de hielo está lleno (${amount} kg). ¡Descárgalo en la bahía del hábitat!`,
+  },
+  {
+    match: /^Drill active! Collected \+(.+)kg Water Ice \((.+)\/(.+)kg\)$/,
+    format: ([, amount, total, max], language) => language === 'pt-BR'
+      ? `Perfuratriz ativa! Gelo de água coletado: +${amount} kg (${total}/${max} kg)`
+      : `¡Perforadora activa! Hielo de agua recogido: +${amount} kg (${total}/${max} kg)`,
+  },
+  {
+    match: /^Offloaded (.+)kg ice to base! Converted to (.+)L Purified Water\.$/,
+    format: ([, ice, water], language) => language === 'pt-BR'
+      ? `${ice} kg de gelo descarregados na base! Viraram ${water} L de água purificada.`
+      : `¡Se descargaron ${ice} kg de hielo en la base! Se convirtieron en ${water} L de agua purificada.`,
+  },
+  {
+    match: /^Journal rank: (.+)$/,
+    format: ([, rank], language) => language === 'pt-BR'
+      ? `Patente no diário: ${translate(rank, language)}`
+      : `Rango del diario: ${translate(rank, language)}`,
+  },
+  {
+    match: /^Coolest finds: (.+)$/,
+    format: ([, finds], language) => {
+      const localizedFinds = finds.split(', ').map((find) => {
+        const result = find.match(/^(.+) \((\+\d+)\)$/);
+        return result ? `${translate(result[1], language)} (${result[2]})` : translate(find, language);
+      }).join(', ');
+      return language === 'pt-BR' ? `Descobertas mais legais: ${localizedFinds}` : `Hallazgos más geniales: ${localizedFinds}`;
+    },
+  },
+  {
+    match: /^Profile: (.+)\.$/,
+    format: ([, title], language) => language === 'pt-BR'
+      ? `Perfil: ${translate(title, language)}.`
+      : `Perfil: ${translate(title, language)}.`,
+  },
+  {
+    match: /^Grade (.+)$/,
+    format: ([, grade], language) => language === 'pt-BR' ? `Nota ${grade}` : `Calificación ${grade}`,
   },
   {
     match: /^CHARGED (.+)$/,
@@ -2449,7 +2508,7 @@ export function checkTranslationCoverage(): Record<Exclude<Language, 'en'>, stri
 }
 
 export function checkGameplayTranslationCoverage(): Record<Exclude<Language, 'en'>, string[]> {
-  const ptBr = { ...AUDIT_COPY_PT_BR, ...GAMEPLAY_PT_BR, ...GAMEPLAY_EXT_PT_BR };
+  const ptBr = { ...MORE_COPY_PT_BR, ...AUDIT_COPY_PT_BR, ...GAMEPLAY_PT_BR, ...GAMEPLAY_EXT_PT_BR };
   Object.assign(ptBr, STATION_COPY_PT_BR);
   Object.assign(ptBr, SCIENCE_COPY_PT_BR);
   Object.assign(ptBr, RESEARCH_COPY_PT_BR);
@@ -2458,7 +2517,7 @@ export function checkGameplayTranslationCoverage(): Record<Exclude<Language, 'en
   Object.assign(ptBr, CORE_COPY_PT_BR);
   Object.assign(ptBr, STORY_PT_BR, ACT_STEPS_PT_BR, GYM_PT_BR, STORY_MORE_PT_BR, CUTSCENE_PT_BR, FIRST_ICE_PT_BR, STORM_SCANS_PT_BR);
   const es = {
-    ...AUDIT_COPY_ES, ...GAMEPLAY_ES, ...GAMEPLAY_EXT_ES, ...STATION_COPY_ES, ...SCIENCE_COPY_ES, ...RESEARCH_COPY_ES,
+    ...MORE_COPY_ES, ...AUDIT_COPY_ES, ...GAMEPLAY_ES, ...GAMEPLAY_EXT_ES, ...STATION_COPY_ES, ...SCIENCE_COPY_ES, ...RESEARCH_COPY_ES,
     ...SCANNER_COPY_ES, ...HUD_COPY_ES, ...CORE_COPY_ES, ...STORY_ES, ...ACT_STEPS_ES, ...GYM_ES, ...STORY_MORE_ES,
     ...CUTSCENE_ES, ...FIRST_ICE_ES, ...STORM_SCANS_ES,
   };

@@ -43,7 +43,7 @@ function memoryStorage() {
   };
 }
 
-const SOURCE_ROOTS = ['src/core', 'src/crew', 'src/mission', 'src/player', 'src/ui', 'src/data'];
+const SOURCE_ROOTS = ['src'];
 const ALLOWED_SOURCE_NAMES = new Set([
   'NASA RadLab + DONKI', 'NASA ICES 2024: Sabatier', 'NASA OSDR RadLab (Curiosity MSL-RAD, LRO CRaTER)',
   'NASA Science: Deimos', 'NASA JPL, 2017; NASA DONKI', 'Quinn et al., UNH (PREDICCS)',
@@ -82,7 +82,8 @@ function findUntranslatedSourceCopy(): string[] {
       if (entry.isDirectory()) {
         visitDirectory(file);
       } else if (file.endsWith('.ts') && !file.endsWith('.test.ts')
-        && !path.basename(file).startsWith('i18n') && path.basename(file) !== 'DebugOverlay.ts') {
+        && !path.basename(file).startsWith('i18n') && path.basename(file) !== 'DebugOverlay.ts'
+        && !(file.endsWith('/story/acts/act3Gym.ts'))) {
         const sourceFile = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
         const visitNode = (node: ts.Node) => {
           if ((ts.isStringLiteralLike(node) || ts.isNoSubstitutionTemplateLiteral(node)) && isCopyCandidate(node.text)) {
@@ -169,6 +170,12 @@ describe('game language catalog', () => {
     expect(translate('WATER WALL: 5 / 20 L\nBLOCKS: 25% of storm radiation inside this booth\nBASE WATER TANK: 15 / 100 L', 'pt-BR'))
       .toContain('PAREDE DE ÁGUA: 5 / 20 L\nBLOQUEIA 25% da radiação da tempestade neste abrigo\nTANQUE DE ÁGUA DA BASE: 15 / 100 L');
     expect(translate('Battery set to 15%.', 'es')).toBe('Batería ajustada al 15%.');
+    expect(translate('No water ice nearby. Navigate to Northeast Ice Crater!', 'pt-BR'))
+      .toBe('Não há gelo de água por perto. Vá até a Cratera de Gelo Nordeste!');
+    expect(translate('Battery: 9% (LOW: slow, cannot drill)', 'es'))
+      .toBe('Batería: 9% (BAJA: lenta, no puede perforar)');
+    expect(translate('Drill active! Collected +5kg Water Ice (10/20kg)', 'pt-BR'))
+      .toBe('Perfuratriz ativa! Gelo de água coletado: +5 kg (10/20 kg)');
     expect(translate('Scanning sky... 62%', 'pt-BR')).toBe('Escaneando céu... 62%');
     expect(translate('Re-scanning terrain... 45%', 'es')).toBe('Escaneando terreno otra vez... 45%');
     expect(translate('NEW 2/5', 'pt-BR')).toBe('NOVO 2/5');
