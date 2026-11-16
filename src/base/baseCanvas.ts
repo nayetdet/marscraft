@@ -1,6 +1,7 @@
 // @ts-nocheck
 import * as THREE from 'three';
 import { modelKey } from './baseDisplayText.ts';
+import { getLanguage, translate } from '../ui/i18n.ts';
 
 // Texturas em canvas das placas, posteres e telas da base (arte gerada em codigo, sem logos).
 const FONT = '"Monocraft", monospace';
@@ -19,6 +20,19 @@ function toTexture(canvas, { mipmaps = true } = {}) {
   texture.generateMipmaps = mipmaps;
   texture.minFilter = mipmaps ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter;
   texture.anisotropy = 4;
+  return texture;
+}
+
+function localizedTexture(canvas, draw) {
+  const texture = toTexture(canvas);
+  if (typeof window !== 'undefined') {
+    const repaint = () => {
+      draw();
+      texture.needsUpdate = true;
+    };
+    window.addEventListener('marscraft-language-change', repaint);
+    texture.addEventListener('dispose', () => window.removeEventListener('marscraft-language-change', repaint), { once: true });
+  }
   return texture;
 }
 
@@ -59,61 +73,66 @@ export function signTexture({ name, color = '#38bdf8' }, aspect) {
   const H = Math.round(W / aspect);
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
+  const draw = () => {
+    ctx.clearRect(0, 0, W, H);
 
-  // Chassi escuro metalico (contrasta com as paredes claras do habitat)
-  const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-  bgGrad.addColorStop(0, '#17223b');
-  bgGrad.addColorStop(0.5, '#0d1424');
-  bgGrad.addColorStop(1, '#090e1a');
-  ctx.fillStyle = bgGrad;
-  ctx.fillRect(0, 0, W, H);
+    // Chassi escuro metálico (contrasta com as paredes claras do habitat)
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    bgGrad.addColorStop(0, '#17223b');
+    bgGrad.addColorStop(0.5, '#0d1424');
+    bgGrad.addColorStop(1, '#090e1a');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
 
-  // Scanlines sutis no fundo para textura de painel espacial
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-  for (let y = 6; y < H - 6; y += 6) {
-    ctx.fillRect(6, y, W - 12, 2);
-  }
+    // Scanlines sutis no fundo para textura de painel espacial
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+    for (let y = 6; y < H - 6; y += 6) {
+      ctx.fillRect(6, y, W - 12, 2);
+    }
 
-  // Moldura externa metalica + moldura interna na cor da zona
-  ctx.strokeStyle = '#334155';
-  ctx.lineWidth = 6;
-  ctx.strokeRect(3, 3, W - 6, H - 6);
+    // Moldura externa metálica + moldura interna na cor da zona
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(3, 3, W - 6, H - 6);
 
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2.5;
-  ctx.strokeRect(10, 10, W - 20, H - 20);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(10, 10, W - 20, H - 20);
 
-  // Faixa superior/inferior e barras laterais luminosas na cor da zona
-  const barW = 10;
-  ctx.fillStyle = color;
-  ctx.fillRect(14, 14, barW, H - 28);
-  ctx.fillRect(W - 14 - barW, 14, barW, H - 28);
+    // Faixa superior/inferior e barras laterais luminosas na cor da zona
+    const barW = 10;
+    ctx.fillStyle = color;
+    ctx.fillRect(14, 14, barW, H - 28);
+    ctx.fillRect(W - 14 - barW, 14, barW, H - 28);
 
-  // Rebites nos cantos
-  ctx.fillStyle = '#64748b';
-  for (const [rx, ry] of [[30, 18], [W - 36, 18], [30, H - 24], [W - 36, H - 24]]) {
-    ctx.fillRect(rx, ry, 6, 6);
-  }
+    // Rebites nos cantos
+    ctx.fillStyle = '#64748b';
+    for (const [rx, ry] of [[30, 18], [W - 36, 18], [30, H - 24], [W - 36, H - 24]]) {
+      ctx.fillRect(rx, ry, 6, 6);
+    }
 
-  // Tipografia do jogo em branco gelo com brilho colorido da zona
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'center';
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-  const maxTextW = W - H * 0.72;
-  const nameSize = fitFont(ctx, name, maxTextW, Math.round(H * 0.44), 12);
-  setFont(ctx, nameSize, true);
+    // Tipografia do jogo em branco gelo com brilho colorido da zona
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    const localizedName = translate(name, getLanguage());
+    const maxTextW = W - H * 0.72;
+    const nameSize = fitFont(ctx, localizedName, maxTextW, Math.round(H * 0.44), 12);
+    setFont(ctx, nameSize, true);
 
-  ctx.fillStyle = '#050811';
-  ctx.fillText(name, W / 2 + 2, H / 2 + 3);
+    ctx.fillStyle = '#050811';
+    ctx.fillText(localizedName, W / 2 + 2, H / 2 + 3);
 
-  ctx.save();
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 10;
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillText(name, W / 2, H / 2 + 1);
-  ctx.restore();
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillText(localizedName, W / 2, H / 2 + 1);
+    ctx.restore();
+  };
 
-  return toTexture(canvas);
+  draw();
+  return localizedTexture(canvas, draw);
 }
 
 // Etiqueta pequena de equipamento (texto claro em fundo escuro)
@@ -122,14 +141,19 @@ export function labelTexture(text, aspect, color = '#e6ebf5') {
   const H = Math.round(W / aspect);
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = INK;
-  ctx.fillRect(0, 0, W, H);
-  ctx.textBaseline = 'middle';
-  ctx.textAlign = 'center';
-  fitFont(ctx, text, W - 16, Math.round(H * 0.62));
-  ctx.fillStyle = color;
-  ctx.fillText(text, W / 2, H / 2 + 1);
-  return toTexture(canvas);
+  const draw = () => {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = INK;
+    ctx.fillRect(0, 0, W, H);
+    const label = translate(text, getLanguage());
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    fitFont(ctx, label, W - 16, Math.round(H * 0.62));
+    ctx.fillStyle = color;
+    ctx.fillText(label, W / 2, H / 2 + 1);
+  };
+  draw();
+  return localizedTexture(canvas, draw);
 }
 
 function drawHazard(ctx, x, y, w, h, stripe = 18) {
@@ -178,7 +202,8 @@ export class ScreenCanvas {
   }
 
   draw(model) {
-    const key = modelKey(model);
+    const language = getLanguage();
+    const key = `${language}|${modelKey(model)}`;
     if (key === this._key) return false;
     this._key = key;
 
@@ -201,11 +226,11 @@ export class ScreenCanvas {
     ctx.textAlign = 'left';
     setFont(ctx, Math.round(titleH * 0.72));
     ctx.fillStyle = theme.bg;
-    ctx.fillText(model.title, pad, 3 + titleH / 2 + 1);
+    ctx.fillText(translate(model.title, language), pad, 3 + titleH / 2 + 1);
 
     const footerSize = Math.max(11, Math.round(H * 0.052));
     setFont(ctx, footerSize, false);
-    const footerLines = wrapText(ctx, model.footer, W - pad * 2).slice(0, 2);
+    const footerLines = wrapText(ctx, translate(model.footer, language), W - pad * 2).slice(0, 2);
     const footerH = footerLines.length * (footerSize + 3) + 6;
     ctx.fillStyle = theme.dim;
     footerLines.forEach((line, i) => {
@@ -220,14 +245,16 @@ export class ScreenCanvas {
       setFont(ctx, size);
       ctx.textAlign = 'left';
       ctx.fillStyle = theme.dim;
-      ctx.fillText(row.label, pad, mid);
-      const labelW = ctx.measureText(row.label).width;
+      const label = translate(row.label, language);
+      const value = translate(row.value, language);
+      ctx.fillText(label, pad, mid);
+      const labelW = ctx.measureText(label).width;
 
       const color = TONE_COLORS[row.tone] ?? theme.text;
-      fitFont(ctx, row.value, W - pad * 3 - labelW, size, 9);
+      fitFont(ctx, value, W - pad * 3 - labelW, size, 9);
       ctx.textAlign = 'right';
       ctx.fillStyle = color;
-      ctx.fillText(row.value, W - pad, mid);
+      ctx.fillText(value, W - pad, mid);
 
       if (row.bar !== undefined) {
         const barH = Math.max(3, Math.round(rowH * 0.1));
