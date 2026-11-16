@@ -51,6 +51,7 @@ export const HABITAT_LAYOUT = {
   SHELTER_X_MAX: 5.75,
   SHELTER_Z_MIN: 3.85,
   SHELTER_Z_MAX: 5.8,
+  SHELTER_HEIGHT: 2.4,
 };
 
 // Ala norte (issue #56, ampliada): um corredor central com janelas sai da parede norte do

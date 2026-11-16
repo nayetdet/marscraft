@@ -102,7 +102,7 @@ export function missionStatus(mission, source, base = {}) {
       title: `SOLAR STORM! ${formatHours(hoursLeft)} left`,
       text: mission.insideShelter
         ? `In the storm shelter: ${Math.round(mission.shelterWaterL ?? 0)} L of water in the wall.`
-        : shielded ? 'The shield is protecting you. Stay in the bubble.' : 'Enter the storm shelter and press F at the water wall to add shielding.',
+        : shielded ? 'The shield is protecting you. Stay in the bubble.' : 'Enter the storm shelter and add water to the wall for protection.',
       target: mission.insideShelter || shielded ? null : 'shelter',
       fill: clamp01(hoursLeft / Math.max(0.01, storm.end - storm.arrival)),
       source: stormSourceShort(storm, source),
@@ -164,7 +164,7 @@ export function missionStatus(mission, source, base = {}) {
     });
   }
   if (radTone === 'danger' && !shielded && phase !== 'active') {
-    alerts.push({ id: 'radiation', icon: 'radiation', tone: 'danger', title: 'Radiation very high', text: 'Go through the airlock to the storm shelter. Press F at the water wall to add shielding.', target: 'shelter' });
+    alerts.push({ id: 'radiation', icon: 'radiation', tone: 'danger', title: 'Radiation very high', text: 'Go through the airlock to the storm shelter. Add water to the wall for protection.', target: 'shelter' });
   }
   // Depois da decolagem (modo livre, #411) o foguete ja foi embora: sem aviso de IGNITE
   if (progress.ready && !mission.launched) {

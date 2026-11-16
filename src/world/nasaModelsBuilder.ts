@@ -809,7 +809,7 @@ function createStormShelterModel(mats, y) {
   const wall = (cx, cz, w, d) => {
     const g = new THREE.Group();
     g.position.set(cx, y, cz);
-    addBox(g, w, 2.4, d, mats.whiteMetal, 0, 1.2, 0);
+    addBox(g, w, HABITAT_LAYOUT.SHELTER_HEIGHT, d, mats.whiteMetal, 0, HABITAT_LAYOUT.SHELTER_HEIGHT / 2, 0);
     // Faixas de tanque (aros escuros) para ler como parede de agua
     for (const ty of [0.35, 1.2, 2.05]) addBox(g, w + 0.02, 0.06, d + 0.02, mats.darkSlate, 0, ty, 0);
     walls.push(g);

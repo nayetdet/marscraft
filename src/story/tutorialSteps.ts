@@ -194,11 +194,11 @@ export const TUTORIAL_STEPS = [
     certificate: 'cert-shelter',
     icon: 'shield',
     label: 'FILL THE WATER WALL',
-    hint: 'Storm shelter: press F, then FILL WALL',
+    hint: 'Enter the storm shelter, then fill the wall',
     place: 'shelter',
     objective: 'Fill the storm shelter water wall',
     lines: [
-      { icon: 'shield', text: 'Go to the STORM SHELTER: press F' },
+      { icon: 'shield', text: 'Enter the STORM SHELTER' },
       { icon: 'check', text: 'Choose FILL WALL' },
       { icon: 'drop', text: 'Wall water is water you cannot drink' },
     ],

@@ -80,6 +80,7 @@ import { resolveScanTarget, collectScanBlocks } from '../scanner/scanTargeting.t
 import { ScanHighlight } from '../scanner/scanHighlight.ts';
 import { isInsideShieldZone, SHIELD_ZONE } from '../mission/shieldZone.ts';
 import { HABITAT_LAYOUT, SOLAR_FIELD, SOLAR_FIELD_CENTER, isInsideKitchen, isInsideShelter } from '../world/habitatLayout.ts';
+import { ShelterEntry } from '../world/shelterEntry.ts';
 import { rationDeliveryCropWhileInside } from './rationDeliveryTrigger.ts';
 import { ShieldBubble } from '../graphics/shieldBubble.ts';
 import { IceSensorEffect } from '../scanner/iceSensor.ts';
@@ -143,6 +144,7 @@ function getLocalStorage() {
 export class GameEngine {
   constructor(container, { onTutorialComplete = () => {} } = {}) {
     this.container = container;
+    this._shelterEntry = new ShelterEntry();
     this.onTutorialComplete = onTutorialComplete;
     this.scene = new THREE.Scene();
     this.isScannerOpen = false;
@@ -712,7 +714,6 @@ export class GameEngine {
       this._staticInteractions = [
         { type: 'power', x: 10.6, y: 11.4, z: -3, label: 'Press F: life support' },
         { type: 'science', x: 9.75, y: 11.5, z: -10.8, label: 'Press F: science & radio to Earth (call Earth) · [G] send science' },
-        { type: 'shelter', x: 5.7, y: 11.3, z: 4.825, label: 'Press F: storm shelter water wall' },
         { type: 'powerroom', x: -15.5, y: 11.5, z: -16.5, label: 'Press F: power & heat control' },
         { type: 'powerroom', x: -15.5, y: 10.8, z: -24.4, label: 'Press F: power & heat control' },
         { type: 'greenhouse', x: GREENHOUSE_MONITOR_POS.x, y: GREENHOUSE_MONITOR_POS.y, z: GREENHOUSE_MONITOR_POS.z, minDot: 0.72, label: 'Click or press F: Food Monitor' },
@@ -3212,6 +3213,11 @@ export class GameEngine {
 
           this.hud.update({ player: this.player, survival: this.survival, sky: this.sky, camera: this.camera, isScopeOpen: this.isScannerOpen, isRoverActive: false, mission: this.mission, airlock: this.airlock, outsideTempC: outsideTemperatureC(this._skyHours()), suitUpgraded: this.stations.upgraded, dirtySuit: this.stations.dirtySuit });
           this._updateScanner(dt);
+          if (!this.adminPanel.isOpen && !this.tradeoffHud?.isOpen && this._shelterEntry.update(this.player.pos)) {
+            this.currentInteraction = null;
+            this.hud.setInteractionPrompt(false);
+            this.stationPanel.open('shelter');
+          }
         }
       } else if (cutsceneActive) {
         // A animacao comanda a camera. Ela espera se o mouse soltar ou o aparelho for para retrato.
