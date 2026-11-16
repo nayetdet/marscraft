@@ -120,7 +120,7 @@ export function sampleTypeByItem(itemId: number): SampleType | null {
 export function sampleFactView(type: SampleType) {
   return {
     stamp: 'SAMPLE!',
-    title: type.name.toUpperCase(),
+    title: type.name,
     reason: `Lab result: +${type.points} science points`,
     lines: type.lines.map((text, i) => ({ icon: i === 0 ? 'scope' : 'check', tone: 'mars' as const, text })),
     source: type.source.name,

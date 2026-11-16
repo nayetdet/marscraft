@@ -10,6 +10,8 @@ import { doseHistoryText, doseVictoryRows } from '../mission/doseBudget.ts';
 import { missionReport } from '../mission/missionReport.ts';
 import { dustStatus, weatherReportCard } from '../mission/weatherText.ts';
 import { SCAN_CATALOG, SCAN_CATEGORIES } from '../data/scanCatalog.ts';
+import { SAMPLE_TYPES, sampleFactView, sampleLogText } from '../data/sampleTypes.ts';
+import { tubeLoadedText } from '../mission/sampleTubes.ts';
 import { scienceCounterText } from '../story/objectiveView.ts';
 import { scienceMissingText, uploadResultText } from '../mission/sciencePackage.ts';
 import { crewEventMessage } from '../crew/crewText.ts';
@@ -187,6 +189,8 @@ describe('game language catalog', () => {
       .toBe('Cochilo (1 h 30 min: comida −1, água −1)');
     expect(translate('), measured from orbit by HiRISE, a camera on NASA\'s Mars Reconnaissance Orbiter. One block is about 1 meter. Real data from 14/11/2026', 'pt-BR'))
       .toContain('medida em órbita pela HiRISE');
+    expect(translate('Signal lost', 'pt-BR')).toBe('Sinal perdido');
+    expect(translate('RETURN TO MISSION', 'es')).toBe('VOLVER A LA MISIÓN');
   });
 
   it('keeps the official English MarsCraft wordmark unchanged across languages', () => {
@@ -312,6 +316,37 @@ describe('game language catalog', () => {
       .toBe('CIÊNCIA 12 | ENVIADOS 8/30');
     expect(translate(dustDevilPanelsToast(3, 5), 'es'))
       .toBe('¡El remolino de polvo limpió 3 de tus 5 paneles solares! Limpia los demás tú mismo.');
+    expect(translate('Storm: ACTIVE, 1.25 h left (42 uGy total outside)', 'pt-BR'))
+      .toBe('Tempestade: ATIVA, faltam 1.25 h (42 uGy no total lá fora)');
+    expect(translate('Dose rate: 0.123 mSv/h   Total: 365.00 mSv', 'es'))
+      .toBe('Tasa de dosis: 0.123 mSv/h   Total: 365.00 mSv');
+  });
+
+  it('translates every player-facing sample lifecycle message', () => {
+    for (const sample of SAMPLE_TYPES) {
+      const fact = sampleFactView(sample);
+      const copy = [
+        `Press F: collect ${sample.name} (+${sample.points} science in the lab)`,
+        `Collected a sample outside: ${sample.name}.`,
+        `Sample collected: ${sample.name}. Analyze it at the science & radio terminal for +${sample.points} points. 4 sample spots left on the map.`,
+        `Sealed a sample in a tube for Earth: ${sample.name}.`,
+        tubeLoadedText(sample),
+        `${sample.name} is back in your bag. You can analyze it now.`,
+        sampleLogText(sample),
+        fact.stamp,
+        fact.title,
+        fact.reason,
+        `Source: ${sample.source.name}`,
+      ];
+      for (const text of copy) {
+        expect(translate(text, 'pt-BR'), text).not.toBe(text);
+        expect(translate(text, 'es'), text).not.toBe(text);
+      }
+    }
+
+    expect(translate('Sample collected: Dark Dune Sand. Analyze it at the science & radio terminal for +2 points. 4 sample spots left on the map.', 'pt-BR'))
+      .toBe('Amostra coletada: Areia escura de duna. Analise-a no terminal de ciência e rádio para ganhar +2 pontos. Restam 4 locais de amostra no mapa.');
+    expect(translate(tubeLoadedText(SAMPLE_TYPES[0]), 'es')).toContain('Arena oscura de duna');
   });
 
   it('translates dynamic resource and science messages in both selected languages', () => {
