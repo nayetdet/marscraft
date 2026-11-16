@@ -15,7 +15,7 @@ import { separateCrew } from '../crew/separateCrew.ts';
 import { CrewManager } from '../crew/CrewManager.ts';
 import { CrewAvatar } from '../crew/CrewAvatar.ts';
 import { CrewInstances } from '../crew/crewInstances.ts';
-import { buildPlayerCadetProfile, normalizePlayerAppearance } from '../crew/playerAppearance.ts';
+import { buildPlayerCadetProfile, isCharacterCustomizedInSave, normalizePlayerAppearance } from '../crew/playerAppearance.ts';
 import { buildIvaAstronautRig, buildSpacesuitRig, disposeSpacesuitRig } from '../graphics/spacesuitModel.ts';
 import { createBaseStock } from '../crew/baseStock.ts';
 import { createStations, problemText } from '../crew/stations.ts';
@@ -239,11 +239,13 @@ export class GameEngine {
     this.playerFootprints = new PlayerFootprints(this.scene);
     this.survival = new SurvivalSystem();
     this._savedArrivalPlayed = false;
+    this._characterCustomized = false;
     this.playerAppearance = normalizePlayerAppearance(null);
     try {
       const saved = JSON.parse(window.localStorage.getItem('marscraft-save-v1') || 'null');
       this._savedArrivalPlayed = saved?.arrivalPlayed === true;
       this._savedFreePlay = saved?.freePlay === true; // ja decolou nesta partida (ato 5, #411)
+      this._characterCustomized = isCharacterCustomizedInSave(saved);
       if (saved?.playerAppearance) this.playerAppearance = normalizePlayerAppearance(saved.playerAppearance);
       // Trade-offs que valem para a partida inteira: o primeiro gelo (#413) e a maquina parada (#415)
       const firstIce = restoreFirstIce(saved?.firstIce);
@@ -478,17 +480,8 @@ export class GameEngine {
         || this.storyHud.isWindowClosedShown,
       isInputBlocked: () => this.cutscenes.isActive || Boolean(this.sleep?.isSleeping) || Boolean(this.tradeoffHud?.isOpen),
       getInteraction: () => this._getInteraction(),
-      isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen || Boolean(this.sleep?.isPanelOpen),
+      isStationOpen: () => this.stationPanel.isOpen || this.adminPanel.isOpen || Boolean(this.sleep?.isPanelOpen) || this.characterCreator.isOpen(),
       getWorkSpeed: () => (isBodyWeak(this.stations) || this.sleep?.isTired ? ACT3_CONFIG.WEAK_WORK_SPEED : 1) * (this.stations.toolUpgraded ? 1.4 : 1),
-      onRequestCharacterSetup: (confirmAndStart) => {
-        this.characterCreator.open(this.playerAppearance, (chosen) => {
-          this._setPlayerAppearance(chosen);
-          this._saveGame();
-          confirmAndStart();
-        });
-        return true;
-      },
-      onReturnToStartMenu: () => this.characterCreator.close(),
     });
     // Dormir no beliche (issue #109): passa o tempo com custo, no lugar da antiga tecla T
     this.sleep = new SleepController(this);
@@ -2189,6 +2182,30 @@ export class GameEngine {
     // O lookAt da animacao deixa a camera rolada; _updateCamera so escreve yaw e pitch
     this.camera.rotation.set(0, 0, 0);
     this._updateCamera();
+    if (!this._characterCustomized) {
+      this._openPostArrivalCharacterSetup();
+      return;
+    }
+    this._startStoryAfterArrival();
+  }
+
+  _openPostArrivalCharacterSetup() {
+    if (this._characterCustomized || this.characterCreator.isOpen()) return;
+    this.input.keys = {};
+    this.characterCreator.open(this.playerAppearance, (chosen) => {
+      this._characterCustomized = true;
+      this._setPlayerAppearance(chosen);
+      this._saveGame();
+      if (!this.input.isTouchMode) {
+        requestRawPointerLock(this.renderer.domElement, () => this.input._showPauseMenu?.());
+      }
+      this._startStoryAfterArrival();
+    });
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+
+  _startStoryAfterArrival() {
+    if (this.story.act !== 0) return;
     // O primeiro passo (CALL EARTH) le a bateria: o retrato precisa estar em dia antes de a
     // historia comecar, senao ela abre com um desvio de "falta energia" que nao existe
     this._updateStory(0);
@@ -3096,7 +3113,7 @@ export class GameEngine {
     try {
       const survival = {};
       for (const key of ['health','oxygen','suitEquipped','suitThermal','suitOxygen','suitScrubber','suitDust','suitIntegrity','baseOxygen','baseBreached','water','food','baseWater','maxBaseWater','graywater','inventorySlots','isDead']) survival[key] = this.survival[key];
-      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed, freePlay: this.mission.launched, playerAppearance: this.playerAppearance, firstIce: saveFirstIce(this._firstIceAsked, this._firstIceChoice), crewHelp: this.act2.saveState() }));
+      window.localStorage.setItem('marscraft-save-v1', JSON.stringify({ worldEdits: this.world.exportSave(), player: { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, survival, arrivalPlayed: this._arrivalPlayed, freePlay: this.mission.launched, characterCustomized: this._characterCustomized, playerAppearance: this.playerAppearance, firstIce: saveFirstIce(this._firstIceAsked, this._firstIceChoice), crewHelp: this.act2.saveState() }));
       return true;
     } catch { return false; }
   }
@@ -3117,6 +3134,16 @@ export class GameEngine {
 
       // Primeiro Play: a historia abre com a animacao de chegada
       if (!this._arrivalPlayed && this.input.isLocked && !this.input.isPortraitRequired) this._playArrival();
+      else if (
+        this._arrivalPlayed
+        && !this._characterCustomized
+        && !this.cutscenes.isActive
+        && !this.characterCreator.isOpen()
+        && this.input.isLocked
+        && !this.input.isPortraitRequired
+      ) {
+        this._openPostArrivalCharacterSetup();
+      }
       const cutsceneActive = this.cutscenes.isActive;
 
       const isGameRunning = isGameSimulationRunning({
@@ -3125,7 +3152,7 @@ export class GameEngine {
         isDead: this.survival.isDead,
         inventoryOpen: this.hud.isInventoryOpen,
         journalOpen: this.scannerHud.isJournalOpen,
-        stationOpen: this.stationPanel.isOpen,
+        stationOpen: this.stationPanel.isOpen || this.characterCreator.isOpen(),
         victoryShown: this.missionHud.isVictoryShown,
         cutsceneActive,
         storyWindowClosedShown: this.storyHud.isWindowClosedShown,

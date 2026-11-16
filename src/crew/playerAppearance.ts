@@ -136,6 +136,16 @@ const VALID_HAIR_TYPES = new Set<PlayerHairType>(['straight', 'wavy', 'curly', '
 const VALID_HAIR_LENGTHS = new Set<PlayerHairLength>(['short', 'medium', 'long']);
 
 /**
+ * Returns whether character customization has already been completed for a saved world.
+ */
+export function isCharacterCustomizedInSave(
+  saved: { characterCustomized?: unknown; arrivalPlayed?: unknown } | null | undefined,
+): boolean {
+  if (typeof saved?.characterCustomized === 'boolean') return saved.characterCustomized;
+  return saved?.arrivalPlayed === true;
+}
+
+/**
  * Validates and fills defaults for a persisted or partial player appearance payload.
  */
 export function normalizePlayerAppearance(raw: unknown): PlayerAppearance {

@@ -45,15 +45,9 @@ function makeButton() {
 }
 
 function makeCharacterDom() {
-  const overlayClasses = createClassList();
-  const menuClasses = createClassList();
+  const overlayClasses = createClassList(['hidden']);
+  const bodyClasses = createClassList();
   const overlay = { classList: overlayClasses };
-  const menuEl = { classList: menuClasses, closest: vi.fn(() => overlay) };
-
-  const menuMain = {
-    classList: createClassList(),
-    closest: vi.fn((sel: string) => (sel === '.mc-menu' ? menuEl : sel === '.mc-overlay' ? overlay : null)),
-  };
   const screen = { classList: createClassList(['hidden']) };
 
   const optionButtons: MockOptionBtn[] = [];
@@ -91,17 +85,15 @@ function makeCharacterDom() {
     },
   };
 
-  const backBtn = makeButton();
   const startBtn = makeButton();
   const suitIvaBtn = makeButton();
   const suitEvaBtn = makeButton();
   const previewCanvas = { parentElement: {} };
 
   const elements: Record<string, unknown> = {
-    'menu-main': menuMain,
+    'character-overlay': overlay,
     'character-screen': screen,
     'character-options': optionsRoot,
-    'character-back-btn': backBtn,
     'character-start-btn': startBtn,
     'char-suit-iva': suitIvaBtn,
     'char-suit-eva': suitEvaBtn,
@@ -109,15 +101,16 @@ function makeCharacterDom() {
   };
 
   return {
-    document: { getElementById: (id: string) => elements[id] ?? null },
-    menuMain,
+    document: {
+      body: { classList: bodyClasses },
+      getElementById: (id: string) => elements[id] ?? null,
+    },
     screen,
-    menuClasses,
     overlayClasses,
+    bodyClasses,
     optionsRoot,
     optionButtons,
     styleProps,
-    backBtn,
     startBtn,
     suitIvaBtn,
     suitEvaBtn,
@@ -157,8 +150,9 @@ describe('CharacterCreator', () => {
     creator.open(DEFAULT_PLAYER_APPEARANCE, onConfirm);
 
     expect(creator.isOpen()).toBe(true);
-    expect(dom.menuClasses.contains('is-character')).toBe(true);
-    expect(dom.overlayClasses.contains('menu-info-open')).toBe(true);
+    expect(dom.overlayClasses.contains('hidden')).toBe(false);
+    expect(dom.screen.classList.contains('hidden')).toBe(false);
+    expect(dom.bodyClasses.contains('character-open')).toBe(true);
     expect(preview.start).toHaveBeenCalledOnce();
 
     dom.optionsRoot.clickOption('gender', 'man');
@@ -183,6 +177,9 @@ describe('CharacterCreator', () => {
 
     dom.startBtn.fire('click');
     expect(creator.isOpen()).toBe(false);
+    expect(dom.overlayClasses.contains('hidden')).toBe(true);
+    expect(dom.screen.classList.contains('hidden')).toBe(true);
+    expect(dom.bodyClasses.contains('character-open')).toBe(false);
     expect(preview.stop).toHaveBeenCalledOnce();
     expect(onConfirm).toHaveBeenCalledWith({
       gender: 'man',
@@ -193,7 +190,7 @@ describe('CharacterCreator', () => {
     });
   });
 
-  it('returns to the start menu on Back without invoking onConfirm', () => {
+  it('closes cleanly without invoking onConfirm when closed directly', () => {
     const dom = makeCharacterDom();
     vi.stubGlobal('document', dom.document);
     const preview = { start: vi.fn(), stop: vi.fn(), setState: vi.fn(), setAppearance: vi.fn() };
@@ -201,10 +198,11 @@ describe('CharacterCreator', () => {
 
     const creator = new CharacterCreator({ createPreview: () => preview });
     creator.open(DEFAULT_PLAYER_APPEARANCE, onConfirm);
-    dom.backBtn.fire('click');
+    creator.close();
 
     expect(creator.isOpen()).toBe(false);
-    expect(dom.menuClasses.contains('is-character')).toBe(false);
+    expect(dom.overlayClasses.contains('hidden')).toBe(true);
+    expect(dom.bodyClasses.contains('character-open')).toBe(false);
     expect(onConfirm).not.toHaveBeenCalled();
   });
 });

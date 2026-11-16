@@ -7,6 +7,7 @@ import {
   PLAYER_HAIR_TYPES,
   PLAYER_SKIN_TONES,
   buildPlayerCadetProfile,
+  isCharacterCustomizedInSave,
   normalizePlayerAppearance,
 } from './playerAppearance.ts';
 
@@ -74,5 +75,18 @@ describe('playerAppearance', () => {
     expect(manProfile.brows).toBe('straight');
     expect(manProfile.skin).toBe('#f7d6c1');
     expect(manProfile.hair).toBe('#1a1414');
+  });
+
+  it('only treats a world save as customized after confirmation or arrival', () => {
+    expect(isCharacterCustomizedInSave(null)).toBe(false);
+    expect(isCharacterCustomizedInSave(undefined)).toBe(false);
+    expect(isCharacterCustomizedInSave({})).toBe(false);
+    // An idle autosave from the start menu carries default playerAppearance without confirmation.
+    expect(isCharacterCustomizedInSave({ characterCustomized: false, arrivalPlayed: false })).toBe(false);
+    // Reloading after the cutscene started but before confirming character setup still asks once.
+    expect(isCharacterCustomizedInSave({ characterCustomized: false, arrivalPlayed: true })).toBe(false);
+    expect(isCharacterCustomizedInSave({ characterCustomized: true })).toBe(true);
+    // Legacy saves from before characterCustomized existed still skip setup once arrival played.
+    expect(isCharacterCustomizedInSave({ arrivalPlayed: true })).toBe(true);
   });
 });
