@@ -1,6 +1,31 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { StationPanel } from './StationPanel.ts';
 
+describe('Earth radio action', () => {
+  it('closes the station and records the call when transmission starts', () => {
+    const panel = Object.create(StationPanel.prototype) as StationPanel;
+    const stations = { messageTimer: 0, send: vi.fn(() => { stations.messageTimer = 10; return 'Sending'; }) };
+    const tutorialCounts = { earthCalls: 0 };
+    const close = vi.fn();
+    Object.assign(panel, { engine: { stations, tutorialCounts, radioOptions: () => ({}) }, close });
+
+    expect(panel.perform('send')).toBe('Sending');
+    expect(tutorialCounts.earthCalls).toBe(1);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it.each([0, 10])('keeps the station open when a new transmission does not start (timer %s)', (timer) => {
+    const panel = Object.create(StationPanel.prototype) as StationPanel;
+    const tutorialCounts = { earthCalls: 0 };
+    const close = vi.fn();
+    Object.assign(panel, { engine: { stations: { messageTimer: timer, send: () => 'Unavailable' }, tutorialCounts, radioOptions: () => ({}) }, close });
+
+    expect(panel.perform('send')).toBe('Unavailable');
+    expect(tutorialCounts.earthCalls).toBe(0);
+    expect(close).not.toHaveBeenCalled();
+  });
+});
+
 describe('greenhouse drag audio', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

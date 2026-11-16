@@ -10,7 +10,7 @@ import { createBoardingCutscene } from '../story/cutscene/boardingCutscene.ts';
 import { ACT3_CONFIG } from '../config/constants.ts';
 import { FIRST_ICE_NO_ICE_TOAST, FIRST_ICE_ROCKET_ID, FIRST_ICE_ROCKET_TOAST, FIRST_ICE_TANK_ID, firstIceCard, firstIceTankToast, firstIceWaterL, restoreFirstIce, saveFirstIce, shouldAskFirstIce } from '../story/firstIceChoice.ts';
 import * as THREE from 'three';
-import { BLOCK_INTERACTION_CONFIG, CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STORY_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
+import { BLOCK_INTERACTION_CONFIG, CAMERA_CONFIG, CROP_CONFIG, DOSE_CONFIG, MISSION_CONFIG, STORY_CONFIG, STATION_CONFIG, CREW_CONFIG, MAV_CONFIG, RADIATION_CONFIG, ROVER_CONFIG, WATER_SYSTEM_CONFIG, CUTSCENE_CONFIG, PHYSICS_CONFIG, SURVIVAL_CONFIG, WORLD_CONFIG, MISSION_LOG_CONFIG } from '../config/constants.ts';
 import { separateCrew } from '../crew/separateCrew.ts';
 import { CrewManager } from '../crew/CrewManager.ts';
 import { CrewAvatar } from '../crew/CrewAvatar.ts';
@@ -100,6 +100,7 @@ import { Act5Controller } from '../story/acts/Act5Controller.ts';
 import { objectiveView } from '../story/objectiveView.ts';
 import { WAYPOINT_LABELS, objectiveTarget, routeWaypoint } from '../story/waypoints.ts';
 import { WaypointBeacon } from '../story/WaypointBeacon.ts';
+import { WaypointPath } from '../story/WaypointPath.ts';
 import { WaypointHud } from '../ui/WaypointHud.ts';
 import { StoryHud } from '../ui/StoryHud.ts';
 import { CutsceneHud } from '../ui/CutsceneHud.ts';
@@ -545,7 +546,7 @@ export class GameEngine {
     const aimed = this._getInteraction();
     const showSuitportHolo = aimed?.type === 'suitport' && !this.roverController.isActive && !this.gymController.isActive;
     this.hud.updateSuitportHolo(showSuitportHolo, this._suitContext());
-    const hasPriorityInteraction = ['crew', 'water_dispenser', 'rover_terminal', 'mav', 'greenhouse', 'info'].includes(this.currentInteraction);
+    const hasPriorityInteraction = ['crew', 'water_dispenser', 'rover_terminal', 'rover_notice', 'mav', 'greenhouse', 'info'].includes(this.currentInteraction);
     document.getElementById('interaction-hint').textContent = (hasPriorityInteraction || this.gymController.isActive) ? '' : (aimed?.label ?? '');
     document.getElementById('mission-status').textContent = `POWER ${Math.round(this.expedition.energy)}%`;
     document.getElementById('co2-overlay').style.opacity = String(Math.max(0, (this.stations.co2 - 40) / 150));
@@ -1423,6 +1424,7 @@ export class GameEngine {
     this.playerHand.handGroup.visible = false;
     this.highlightBox.visible = false;
     this.waypointBeacon.hide();
+    this.waypointPath.hide();
     const { x, z } = MAV_CONFIG.PAD_POSITION;
     const pad = { x, y: this.mavRocket.position.y, z };
     this.engineFlame.setSize(1.0, 5.5);
@@ -2038,6 +2040,8 @@ export class GameEngine {
     this._brokenWindowIndex = null;
     this._brokenWindowWaypoint = { x: 0, y: 0, z: 0, label: 'BASE BREACH' };
     this.waypointBeacon = new WaypointBeacon(this.scene);
+    this.waypointPath = new WaypointPath(this.scene);
+    this._ignoredPathColliders = new Set(this.airlock.doors.map((door) => door.collider));
     this.waypointHud = new WaypointHud();
 
     this.cutsceneHud = new CutsceneHud({ onSkip: () => this.cutscenes.skip() });
@@ -2607,6 +2611,7 @@ export class GameEngine {
         this.storyHud.showWindowClosed();
         renderReportCard(document.getElementById('window-report'), missionReport(this._reportStats()));
         this.waypointBeacon.hide();
+        this.waypointPath.hide();
         document.exitPointerLock();
       }
     }
@@ -2657,6 +2662,25 @@ export class GameEngine {
     }
     this.waypointBeacon.update(dt, target, this.camera.position);
     this.waypointHud.update(this.camera, target);
+    if (this.gymController.isActive || this.sleep.isSleeping) {
+      this.waypointPath.hide();
+    } else {
+      const roverActive = this.roverController.isActive;
+      const startPos = roverActive ? this.roverController.pos : this.player.pos;
+      const startY = roverActive ? startPos.y : startPos.y - this.player.height;
+      this.waypointPath.update({
+        dt,
+        target,
+        startX: startPos.x,
+        startY,
+        startZ: startPos.z,
+        inside,
+        roverActive,
+        world: this.world,
+        colliders: this.customColliders,
+        ignoredColliders: this._ignoredPathColliders,
+      });
+    }
   }
 
   // Lugar da seta que so um ato conhece (ActController.waypoint)
@@ -2878,6 +2902,14 @@ export class GameEngine {
       return;
     }
 
+    const roverPos = this.roverController.pos;
+    if (Math.hypot(this.player.pos.x - roverPos.x, this.player.pos.z - roverPos.z) < ROVER_CONFIG.INTERACTION_NOTICE_RADIUS &&
+        Math.abs(this.player.pos.y - roverPos.y) < ROVER_CONFIG.INTERACTION_NOTICE_HEIGHT) {
+      this.currentInteraction = 'rover_notice';
+      this.hud.setInteractionPrompt(true, 'Drive the rover from the computer inside the base.');
+      return;
+    }
+
     if (member) {
       this.currentInteraction = 'crew';
       this.talkTarget = member;
@@ -2916,6 +2948,7 @@ export class GameEngine {
 
   handlePlayerInteract() {
     if (this.missionHud.isVictoryShown) return;
+    if (this.currentInteraction === 'rover_notice') return;
     if (this.currentInteraction === 'act2') {
       this.act2.interact();
       return;
@@ -3281,6 +3314,8 @@ export class GameEngine {
       if (isGameRunning) {
         this._updateStory(dt);
         this._updateMoments();
+      } else if (cutsceneActive || this.survival.isDead || this.missionHud.isVictoryShown || this.storyHud.isWindowClosedShown) {
+        this.waypointPath.hide();
       }
 
       const focusPos = this.roverController.isActive ? this.roverController.pos : this.player.pos;

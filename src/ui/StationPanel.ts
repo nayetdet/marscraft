@@ -926,9 +926,13 @@ export class StationPanel {
     }
     if (action === 'treat') return stations.treat(survival);
     if (action === 'send') {
+      const wasSending = stations.messageTimer > 0;
       const msg = stations.send(this.engine.radioOptions(true));
       // So conta como chamada se ha mensagem a caminho (radio mudo ou sem energia nao valem)
-      if (stations.messageTimer > 0) done.earthCalls++;
+      if (!wasSending && stations.messageTimer > 0) {
+        done.earthCalls++;
+        this.close();
+      }
       return msg;
     }
     const spendPoints = (cost) => this.engine.spendSciencePoints(cost);
