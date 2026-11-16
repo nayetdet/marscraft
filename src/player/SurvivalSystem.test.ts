@@ -159,6 +159,28 @@ describe('SurvivalSystem', () => {
     expect(survival.slots[3]).toMatchObject({ id: BLOCK_IDS.SCOPE, count: 1, equipment: true });
   });
 
+  it('repairs a saved starter layout without losing items moved out of the first slots', () => {
+    const survival = new SurvivalSystem();
+    const savedBlock = { id: BLOCK_IDS.BASALT, name: 'Crater Rock', count: 7 };
+    survival.inventorySlots = Array(36).fill(null);
+    survival.inventorySlots[0] = null;
+    survival.inventorySlots[1] = savedBlock;
+    survival.inventorySlots[5] = { id: BLOCK_IDS.SHIELD_REMOTE, count: 1 };
+    survival.inventorySlots[8] = { id: BLOCK_IDS.JOURNAL, count: 1 };
+    survival.inventorySlots[12] = { id: BLOCK_IDS.HYDRO_PLANT, count: 2 };
+
+    survival.restoreStarterInventoryLayout();
+
+    expect(survival.inventorySlots.slice(0, 3).map((slot) => slot?.id)).toEqual([
+      BLOCK_IDS.JOURNAL,
+      BLOCK_IDS.SHIELD_REMOTE,
+      BLOCK_IDS.HYDRO_PLANT,
+    ]);
+    expect(survival.countItem(BLOCK_IDS.BASALT)).toBe(7);
+    expect(survival.countItem(BLOCK_IDS.HYDRO_PLANT)).toBe(2);
+    expect(survival.slots).toEqual(survival.inventorySlots.slice(0, 9));
+  });
+
   it('detects player inside Main White Habitat, Pressurized Tunnel, and Greenhouse Dome', () => {
     const survival = new SurvivalSystem();
 

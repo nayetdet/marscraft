@@ -259,6 +259,7 @@ export class GameEngine {
         Object.assign(this.survival, saved.survival);
         if (Array.isArray(saved.survival.inventorySlots)) {
           this.survival.slots = this.survival.inventorySlots.slice(0, 9);
+          this.survival.restoreStarterInventoryLayout();
         }
       }
       if (saved?.player) this.player.pos.set(saved.player.x, saved.player.y, saved.player.z);
