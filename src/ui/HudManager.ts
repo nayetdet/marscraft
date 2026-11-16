@@ -642,9 +642,7 @@ export class HudManager {
     if (survival.water <= threshold) warnings.push('WATER');
     if (survival.health <= threshold) warnings.push('HEALTH');
 
-    const thirsty = survival.water <= SURVIVAL_CONFIG.THIRST_GUIDANCE_THRESHOLD;
-    const text = [warnings.map((resource) => `LOW ${resource}`).join(' · '),
-      thirsty ? translate('You are thirsty! Follow the blue dashed line to drink water.', getLanguage()) : ''].filter(Boolean).join(' · ');
+    const text = warnings.map((resource) => `LOW ${resource}`).join(' · ');
     if (text !== this._dangerWarningText) {
       this._dangerWarningText = text;
       if (this.dangerWarningMessageEl) this.dangerWarningMessageEl.textContent = text;

@@ -218,7 +218,6 @@ describe('game language catalog', () => {
 
   it('translates the guidance notices in both languages', () => {
     const notices = [
-      'You are thirsty! Follow the blue dashed line to drink water.',
       'Scanning earns science points!',
       'Air filter low!', 'At life support, select Filter.',
       'Suit protection low!', 'Repair your suit at the suitport.',
