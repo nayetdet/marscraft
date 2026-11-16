@@ -2206,11 +2206,28 @@ body.touch-device .char-suit-btn { min-height: 44px; }
   gap: 5px;
   justify-content: flex-start;
 }
+.mc-monitor[data-machine="powerroom"] .mc-body,
+.mc-monitor[data-machine="powerroom"] .mc-side,
+.mc-monitor[data-machine="powerroom"] .pw-switch-grid,
+.mc-monitor[data-machine="powerroom"] .pw-breaker {
+  min-width: 0;
+}
+.mc-monitor[data-machine="powerroom"] .pw-switch-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.mc-monitor[data-machine="powerroom"] .pw-breaker {
+  box-sizing: border-box;
+}
+.mc-monitor[data-machine="powerroom"] .mc-act-main strong,
+.mc-monitor[data-machine="powerroom"] .mc-cost-chip,
+.mc-monitor[data-machine="powerroom"] .mc-stage-caption strong {
+  overflow-wrap: anywhere;
+}
 .mc-monitor[data-machine="powerroom"] .mc-action-stack {
   gap: 5px;
 }
 .mc-monitor[data-machine="powerroom"] .mc-btn.mc-act-card.is-compact {
-  min-height: 40px;
+  min-height: 44px;
   padding: 4px 7px;
 }
 @media (max-height: 480px) {
@@ -2218,7 +2235,7 @@ body.touch-device .char-suit-btn { min-height: 44px; }
   .station-window header { padding: 4px 6px; font-size: 15px; }
   .station-screen { padding: 8px 10px; min-height: 0; }
   .pw-tip-banner { padding: 4px 8px; font-size: 10px; }
-  .mc-monitor[data-machine="powerroom"] .mc-btn.mc-act-card.is-compact { min-height: 36px; padding: 3px 6px; }
+  .mc-monitor[data-machine="powerroom"] .mc-btn.mc-act-card.is-compact { min-height: 44px; padding: 3px 6px; }
 }
 
 /* Machine dashboards: large, readable resources and a single decision cue. */
