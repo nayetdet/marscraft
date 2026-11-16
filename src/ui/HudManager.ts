@@ -11,6 +11,7 @@ import { DOSE_LIMIT_MSV, dosePercent, doseTone } from '../mission/doseBudget.ts'
 import { getJournalItemIcon, getRationItemIcon, getSampleItemIcon, getScopeItemIcon, getShieldRemoteItemIcon } from '../graphics/itemIcons.ts';
 import { sampleTypeByItem } from '../data/sampleTypes.ts';
 import { getStatIconSvg } from './statIcons.ts';
+import { getLanguage, translate } from './i18n.ts';
 
 const ICONS_PER_BAR = 10;
 
@@ -160,7 +161,10 @@ export class HudManager {
   setInteractionPrompt(visible, text = '[F] Operate Rover Remote Terminal') {
     if (!this.interactionPromptEl) return;
     if (visible) {
-      this.interactionPromptEl.textContent = text.replace(/^\[F\]\s*/, 'Press F: ');
+      const language = getLanguage();
+      const prompt = translate(text, language);
+      const press = language === 'pt-BR' ? 'Pressione F: ' : 'Pulsa F: ';
+      this.interactionPromptEl.textContent = prompt.replace(/^\[F\]\s*/, press);
       this.interactionPromptEl.classList.remove('hidden');
     } else {
       this.interactionPromptEl.classList.add('hidden');
@@ -526,7 +530,7 @@ export class HudManager {
   }
 
   showToast(msg, durationMs = 2400) {
-    this.toastEl.textContent = String(msg ?? '');
+    this.toastEl.textContent = translate(String(msg ?? ''), getLanguage());
     this.toastEl.classList.add('visible');
     clearTimeout(this._toastTimer);
     this._toastTimer = setTimeout(() => this.toastEl.classList.remove('visible'), durationMs);
@@ -564,7 +568,7 @@ export class HudManager {
     if (hiddenCount > 0) {
       const queuedCount = document.createElement('span');
       queuedCount.className = 'mc-caption-overflow';
-      queuedCount.textContent = `+${hiddenCount} more messages`;
+      queuedCount.textContent = translate(`+${hiddenCount} more messages`, getLanguage());
       this.captionQueueEl.appendChild(queuedCount);
     }
     this.captionQueueEl.classList.toggle('visible', this._captionQueue.length > 0);
@@ -573,7 +577,8 @@ export class HudManager {
   _createCaptionLine(text, isCurrent) {
     const line = document.createElement('div');
     line.className = `mc-caption-line${isCurrent ? ' is-current' : ''}`;
-    const match = text.match(/^(Ana|Leo|Maya|Sam|Noor|Kai|Iris|Ravi):\s*(.*)$/s);
+    const localizedText = translate(text, getLanguage());
+    const match = localizedText.match(/^(Ana|Leo|Maya|Sam|Noor|Kai|Iris|Ravi):\s*(.*)$/s);
     if (match) {
       const speaker = document.createElement('span');
       speaker.className = `mc-caption-speaker ${match[1].toLowerCase()}`;
@@ -585,14 +590,15 @@ export class HudManager {
       message.textContent = match[2];
       line.append(speaker, message);
     } else {
-      line.textContent = text;
+      line.textContent = localizedText;
     }
     return line;
   }
 
   showSystemNotice(msg, label = 'SYSTEM', durationMs = 4500) {
-    this.systemNoticeLabelEl.textContent = label;
-    this.systemNoticeMessageEl.textContent = String(msg ?? '');
+    const language = getLanguage();
+    this.systemNoticeLabelEl.textContent = translate(label, language);
+    this.systemNoticeMessageEl.textContent = translate(String(msg ?? ''), language);
     this.systemNoticeEl.classList.add('visible');
     clearTimeout(this._systemNoticeTimer);
     this._systemNoticeTimer = setTimeout(() => this.systemNoticeEl.classList.remove('visible'), durationMs);

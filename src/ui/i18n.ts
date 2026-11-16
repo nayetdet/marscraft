@@ -2607,6 +2607,7 @@ function visit(root: Node, force = false): void {
 }
 
 export function setLanguage(language: Language, storage?: Pick<Storage, 'setItem'>): void {
+  const changed = activeLanguage !== language;
   activeLanguage = language;
   let targetStorage = storage;
   if (!targetStorage && typeof window !== 'undefined') {
@@ -2616,6 +2617,7 @@ export function setLanguage(language: Language, storage?: Pick<Storage, 'setItem
   if (typeof document === 'undefined') return;
   document.documentElement.lang = language;
   visit(document, true);
+  if (changed && typeof window !== 'undefined') window.dispatchEvent(new Event('marscraft-language-change'));
 }
 
 export function getLanguage(): Language {

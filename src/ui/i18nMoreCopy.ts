@@ -195,6 +195,9 @@ export const MORE_COPY_PT_BR: Record<string, string> = {
   '[F] Check the water tank': '[F] Confira o tanque de água',
   '[F] Look at the medical bay': '[F] Veja a enfermaria',
   '[F] Look at the suit locker': '[F] Veja o armário de trajes',
+  // Rótulos das placas físicas da base, desenhados em canvas fora do DOM.
+  COMMAND: 'COMANDO', GYM: 'ACADEMIA', KITCHEN: 'COZINHA',
+  'POWER & HEAT': 'ENERGIA E AQUECIMENTO', SUITPORT: 'SUPORTE DO TRAJE',
 };
 
 export const MORE_COPY_ES: Record<string, string> = {
@@ -393,4 +396,7 @@ export const MORE_COPY_ES: Record<string, string> = {
   '[F] Check the water tank': '[F] Revisa el depósito de agua',
   '[F] Look at the medical bay': '[F] Mira la enfermería',
   '[F] Look at the suit locker': '[F] Mira el armario de trajes',
+  // Rótulos de placas físicas de la base, dibujados en canvas y fuera del DOM.
+  COMMAND: 'CONTROL', GYM: 'GIMNASIO', KITCHEN: 'COCINA',
+  'POWER & HEAT': 'ENERGÍA Y CALEFACCIÓN', SUITPORT: 'ESTACIÓN DEL TRAJE',
 };

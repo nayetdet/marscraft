@@ -1895,6 +1895,9 @@ body.inventory-dragging * { cursor: grabbing !important; }
   text-shadow: 1px 1px #000;
 }
 
+html[lang="pt-BR"] .mc-top-info .rover-bucket.is-full::after { content: 'CHEIO'; }
+html[lang="es"] .mc-top-info .rover-bucket.is-full::after { content: 'LLENO'; }
+
 /* Fluxo liquido da bateria ao lado do nome POWER (issue #85) */
 .res-rate { font-size: 10px; color: var(--hud-muted); }
 .res-rate.up { color: var(--hud-good); }

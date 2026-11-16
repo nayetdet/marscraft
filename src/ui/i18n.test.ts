@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import { ITEM_DEFINITIONS } from '../config/blockTypes.ts';
+import { SIGNS } from '../base/basePosters.ts';
 import { eventCard, meteorToast, quakeToast, dustDevilPanelsToast } from '../mission/eventText.ts';
 import { bulletinText, radiationStatusText, stormEventMessage, stormSourceText, stormStatusText } from '../mission/missionText.ts';
 import { doseHistoryText, doseVictoryRows } from '../mission/doseBudget.ts';
@@ -228,6 +229,16 @@ describe('game language catalog', () => {
     expect(translate('Airlock cycling. Please wait.', 'pt-BR')).toBe('A câmara de ar está trabalhando. Espere um pouco.');
     expect(translate('FREE PLAY', 'pt-BR')).toBe('MODO LIVRE');
     expect(translate('Exercise bike', 'es')).toBe('Bicicleta estática');
+  });
+
+  it('translates every physical base sign rendered into canvas textures', () => {
+    const signNames = [...new Set(Object.values(SIGNS).map((sign) => sign.name))];
+    for (const language of ['pt-BR', 'es'] as const) {
+      for (const name of signNames) expect(translate(name, language), `${name} (${language})`).not.toBe(name);
+      for (const label of ['BASE WATER', 'SUITPORT']) {
+        expect(translate(label, language), `${label} (${language})`).not.toBe(label);
+      }
+    }
   });
 
   it('keeps long source copy in the game and HTML translated in both locales', () => {
