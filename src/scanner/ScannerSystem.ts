@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { getScanEntry } from '../data/scanCatalog.ts';
+import { getScanEntry, SAMPLE_CATEGORY } from '../data/scanCatalog.ts';
 import { BLOCK_IDS } from '../config/blockTypes.ts';
 
 // Progresso do "mirar e segurar": o alvo precisa ficar na mira até o anel encher.
@@ -56,7 +56,8 @@ export class ScannerSystem {
 
     this.completedTargetId = targetId;
     const entry = getScanEntry(targetId);
-    const discovery = this.journal.record(targetId);
+    // Sample points come from laboratory analysis, not from scanning the same sample.
+    const discovery = this.journal.record(targetId, { mission: entry?.category !== SAMPLE_CATEGORY });
     return { targetId, progress: 1, done: true, known, completed: { entry, discovery } };
   }
 }

@@ -36,8 +36,7 @@ export const SCAN_CATEGORIES = [
   { id: 'terrain', label: 'Terrain' },
   { id: 'base', label: 'Base' },
   { id: 'landscape', label: 'Landscape' },
-  // Amostras do mapa (issue #270): a ficha abre quando a amostra e analisada no laboratorio,
-  // nao com a luneta
+  // Amostras do mapa: a luneta identifica a amostra; a analise no laboratorio vale pontos.
   { id: SAMPLE_CATEGORY, label: 'Samples' },
 ];
 

@@ -34,6 +34,7 @@ describe('resolveScanTarget: terrain', () => {
     [BLOCK_IDS.REGOLITH, 'regolith'],
     [BLOCK_IDS.SANDSTONE, 'sandstone'],
     [BLOCK_IDS.BASALT, 'crater-rock'],
+    [BLOCK_IDS.DARK_BASALT, 'crater-rock'],
     [BLOCK_IDS.MARS_ICE, 'water-ice'],
     [BLOCK_IDS.METEOR_ICE, 'meteor-ice'],
   ])('identifies block %i as %s', (block, id) => {
@@ -105,6 +106,16 @@ describe('resolveScanTarget: base modules', () => {
 
 describe('resolveScanTarget: 3D objects', () => {
   const box = (scanId, z) => ({ scanId, minX: -1, maxX: 1, minY: 9, maxY: 12, minZ: z - 1, maxZ: z + 1 });
+
+  it('targets a sample pile before the ground and respects intervening blocks', () => {
+    const world = createMapWorld();
+    const sample = { ...box('sample-sulfur', 0), siteId: 'site-1' };
+    const origin = { x: 0.5, y: 10.5, z: 10 };
+    expect(resolveScanTarget({ world, origin, dir: NORTH, objects: [sample], maxDist: 80 }))
+      .toMatchObject({ id: 'sample-sulfur', siteId: 'site-1', scanBox: sample });
+    world.setBlock(0, 10, 5, BLOCK_IDS.REGOLITH);
+    expect(scan(world, origin, NORTH, { objects: [sample] })).toBe('regolith');
+  });
 
   it('uses the scanId of the object in front of the voxel terrain', () => {
     const world = createMapWorld();

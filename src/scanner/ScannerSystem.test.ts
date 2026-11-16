@@ -13,6 +13,13 @@ function setup() {
 }
 
 describe('ScannerSystem', () => {
+  it('identifies samples without awarding scanner science for a lab sample', () => {
+    const { scanner, journal } = setup();
+    const result = scanner.update(DURATION, 'sample-sulfur');
+    expect(result.completed.discovery).toMatchObject({ isNew: true, missionNew: false });
+    expect(journal.has('sample-sulfur')).toBe(true);
+    expect(journal.missionCount).toBe(0);
+  });
   it('fills the ring while the target stays under the crosshair', () => {
     const { scanner } = setup();
     const half = scanner.update(DURATION / 2, 'earth');

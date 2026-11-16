@@ -88,6 +88,16 @@ export class SampleSiteMarkers {
     return this.sites.length - this.collected.size;
   }
 
+  // Bounds cover the rock pile only, not its tall decorative beacon.
+  scanBoxes() {
+    return this.sites.filter((site) => !this.collected.has(site.id)).map((site) => ({
+      scanId: site.typeId, siteId: site.id,
+      minX: site.x + 0.05, maxX: site.x + 1.05,
+      minY: site.y - 0.04, maxY: site.y + 0.35,
+      minZ: site.z + 0.05, maxZ: site.z + 0.95,
+    }));
+  }
+
   collect(siteId: string): void {
     const index = this.sites.findIndex((site) => site.id === siteId);
     if (index < 0 || this.collected.has(siteId)) return;

@@ -975,7 +975,7 @@ export class GameEngine {
       world: this.world,
       origin,
       dir,
-      objects: [...this.customColliders, box, this.act2.stormScanBox()],
+      objects: [...this.customColliders, box, this.act2.stormScanBox(), ...this.sampleSites.scanBoxes()],
       skyBodies: this._skyBodies,
       maxDist: this.scanJournal.scanRange(),
     }));
@@ -1004,13 +1004,14 @@ export class GameEngine {
       return;
     }
     const h = target.hit;
-    const key = TERRAIN_PATCH_IDS.has(target.id) && h ? `${target.id}@${h.x},${h.y},${h.z}` : target.id;
+    const key = target.siteId ?? (TERRAIN_PATCH_IDS.has(target.id) && h ? `${target.id}@${h.x},${h.y},${h.z}` : target.id);
     if (key !== this.scanHighlight.key) this.scanHighlight.setTarget(key, this._scanHighlightShape(target));
     this.scanHighlight.update(dt, state);
   }
 
   _scanHighlightShape(target) {
     const { id } = target;
+    if (target.scanBox) return { boxes: [target.scanBox] };
     if (SKY_HIGHLIGHT_RADII[id]) {
       return { sphere: { radius: SKY_HIGHLIGHT_RADII[id], getPosition: (t) => this._skyGetters[id](t) } };
     }

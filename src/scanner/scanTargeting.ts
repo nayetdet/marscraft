@@ -19,6 +19,7 @@ const TERRAIN_BLOCKS = {
   [BLOCK_IDS.REGOLITH]: 'regolith',
   [BLOCK_IDS.SANDSTONE]: 'sandstone',
   [BLOCK_IDS.BASALT]: 'crater-rock',
+  [BLOCK_IDS.DARK_BASALT]: 'crater-rock',
   [BLOCK_IDS.MARS_ICE]: 'water-ice',
   [BLOCK_IDS.METEOR_ICE]: 'meteor-ice',
 };
@@ -161,7 +162,7 @@ export function resolveScanTarget({ world, origin, dir, objects = [], skyBodies 
 
   if (objectHit && (!voxelHit.hit || objectHit.distance <= voxelHit.distance)) {
     const { obj, distance } = objectHit;
-    if (obj.scanId) return { id: obj.scanId, distance, hit: null };
+    if (obj.scanId) return { id: obj.scanId, distance, hit: null, ...(obj.siteId ? { siteId: obj.siteId, scanBox: obj } : {}) };
     const p = {
       x: origin.x + dir.x * distance,
       y: origin.y + dir.y * distance,
