@@ -350,7 +350,7 @@ function airFactoryCue(
   if (!hasPower) return { tag: 'NO PWR', text: 'Battery empty!', tone: 'danger' };
   if (isWater && d.baseWater < O.LOW_WATER_WARN_L) return { tag: 'LOW H2O', text: 'Try Mars air!', tone: 'warn' };
   if (!isWater && d.energy < O.LOW_BATTERY_WARN_PCT) return { tag: 'LOW PWR', text: 'Try Water!', tone: 'warn' };
-  if (d.filter < 30) return { tag: 'FILTER', text: 'Replace filter soon', tone: 'warn' };
+  if (d.filter < C.FILTER_WARNING_THRESHOLD) return { tag: 'FILTER', text: 'Replace filter soon', tone: 'warn' };
   return {
     tag: isWater ? 'OGA' : 'MOXIE',
     text: isWater ? 'Making O2 from water' : 'Making O2 from Mars air',
@@ -375,7 +375,7 @@ function renderPowerAir(d: MachineViewData): { top: string; checks: string; stag
           : !hasPower ? alertPill('NO POWER!', 'danger')
             : isWater && d.baseWater < O.LOW_WATER_WARN_L ? alertPill('LOW WATER!', 'warn')
               : !isWater && d.energy < O.LOW_BATTERY_WARN_PCT ? alertPill('LOW POWER!', 'warn')
-                : d.filter < 30 ? alertPill('FILTER LOW!', 'warn')
+                : d.filter < C.FILTER_WARNING_THRESHOLD ? alertPill('FILTER LOW!', 'warn')
                   : '';
 
   const top = [

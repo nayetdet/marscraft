@@ -22,6 +22,7 @@ export type WaypointPathTarget = {
 export type WaypointPathUpdateInput = {
   dt: number;
   target: WaypointPathTarget | null;
+  color?: number;
   startX: number;
   startY: number;
   startZ: number;
@@ -97,6 +98,7 @@ export class WaypointPath {
     const {
       dt,
       target,
+      color = WAYPOINT_PATH_CONFIG.COLOR,
       startX,
       startY,
       startZ,
@@ -112,6 +114,7 @@ export class WaypointPath {
       return;
     }
 
+    (this.mesh.material as THREE.MeshBasicMaterial).color.setHex(color);
     this.time += dt;
     this.repathTimer += dt;
 
