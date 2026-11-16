@@ -95,19 +95,23 @@ export function createBlockMaterials() {
     ctx.fillRect(5, 13, 1, 2);
   });
 
-  // Gelo antigo enterrado: azul-acinzentado com poucos minerais escuros.
+  // Gelo antigo enterrado: azul glacial profundo (compensa a luz alaranjada de Marte para nao parecer cinza).
   register(BLOCK_IDS.MARS_ICE, (ctx) => {
-    fillNoise(ctx, [143, 177, 211], 18, 404);
+    fillNoise(ctx, [78, 152, 224], 16, 404);
     const rand = createSeededRandom(405);
     for (let i = 0; i < 12; i++) {
-      ctx.fillStyle = rand() > 0.64 ? '#a9c8e5' : '#7895b3';
+      ctx.fillStyle = rand() > 0.55 ? '#9fd6ff' : '#3d84c8';
       ctx.fillRect(Math.floor(rand() * 16), Math.floor(rand() * 16), 1, 1);
     }
-    ctx.fillStyle = 'rgba(104, 139, 173, 0.24)';
-    ctx.fillRect(2, 4, 2, 1);
-    ctx.fillRect(10, 10, 1, 1);
-    ctx.fillRect(6, 13, 2, 1);
-  });
+    ctx.fillStyle = 'rgba(52, 118, 190, 0.35)';
+    ctx.fillRect(1, 7, 3, 1);
+    ctx.fillRect(9, 2, 2, 1);
+    ctx.fillRect(11, 13, 3, 1);
+    ctx.fillStyle = 'rgba(186, 232, 255, 0.65)';
+    ctx.fillRect(2, 3, 3, 1);
+    ctx.fillRect(10, 9, 2, 1);
+    ctx.fillRect(5, 13, 3, 1);
+  }, { emissive: new THREE.Color('#3b9be8'), emissiveIntensity: 0.14 });
 
   // Gelo fresco do impacto: azul-gelo vivo, com facetas e brilho proprio sutil.
   register(BLOCK_IDS.METEOR_ICE, (ctx) => {
