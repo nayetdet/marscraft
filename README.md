@@ -6,6 +6,8 @@ Built for the [Build a Junior Astronaut Mission Trainer](https://www.spaceappsch
 
 **Play it:** https://mars-craft.vercel.app
 
+**Watch the video:** https://youtu.be/l8mtjMg6JgA
+
 ![The Mars base and the launch rocket under the radiation shield](docs/images/radiation-shield.jpg)
 
 ## What is in the game
